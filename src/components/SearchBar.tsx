@@ -2,10 +2,8 @@ interface SearchBarProps {
   query: string;
   onQueryChange: (query: string) => void;
   onRefresh: () => void;
-  onExportApiDocs: () => void;
   onOpenSettings: () => void;
   syncing: boolean;
-  exportingDocs: boolean;
   bookmarkCount: number;
   onBack?: () => void;
 }
@@ -14,10 +12,8 @@ export function SearchBar({
   query,
   onQueryChange,
   onRefresh,
-  onExportApiDocs,
   onOpenSettings,
   syncing,
-  exportingDocs,
   bookmarkCount,
   onBack,
 }: SearchBarProps) {
@@ -62,18 +58,6 @@ export function SearchBar({
         >
           <svg viewBox="0 0 24 24" className={`w-5 h-5 ${syncing ? "animate-spin" : ""}`} fill="currentColor">
             <path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z" />
-          </svg>
-        </button>
-
-        <button
-          onClick={onExportApiDocs}
-          disabled={exportingDocs}
-          aria-label="Export GraphQL API docs"
-          className="p-2 text-x-text-secondary hover:text-x-blue hover:bg-x-blue/10 rounded-full transition-colors disabled:opacity-50"
-          title="Export GraphQL API docs"
-        >
-          <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor">
-            <path d="M14 2H6.5A2.5 2.5 0 0 0 4 4.5v15A2.5 2.5 0 0 0 6.5 22h11a2.5 2.5 0 0 0 2.5-2.5V8zm0 2.44L18.56 9H14zM6.5 4H12v6.5h6V19.5a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-15a.5.5 0 0 1 .5-.5z" />
           </svg>
         </button>
 

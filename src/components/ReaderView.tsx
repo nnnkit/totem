@@ -5,6 +5,7 @@ import type { ThemePreference } from "../hooks/useTheme";
 
 import { resolveTweetKind } from "./reader/utils";
 import { TweetRenderer } from "./reader/TweetRenderer";
+import { useReadingProgress } from "../hooks/useReadingProgress";
 
 function nextThemePreference(current: ThemePreference): ThemePreference {
   const order: ThemePreference[] = ["system", "light", "dark"];
@@ -81,9 +82,10 @@ export function ReaderView({
     };
   }, [bookmark.tweetId, bookmark.sortIndex]);
 
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [bookmark.tweetId]);
+  useReadingProgress({
+    tweetId: bookmark.tweetId,
+    contentReady: !detailLoading,
+  });
 
   const displayBookmark = resolvedBookmark || bookmark;
   const displayKind = useMemo(
@@ -137,7 +139,7 @@ export function ReaderView({
                 className={`size-5 ${unbookmarking ? "animate-pulse" : ""}`}
                 fill="currentColor"
               >
-                <path d="M5.5 3h13A1.5 1.5 0 0120 4.5v17.72l-8-4.62-8 4.62V4.5A1.5 1.5 0 015.5 3zm0 1a.5.5 0 00-.5.5v15.99l7-4.04 7 4.04V4.5a.5.5 0 00-.5-.5h-13z" />
+                <path d="M5.5 3h13A1.5 1.5 0 0120 4.5v17.72l-8-4.62-8 4.62V4.5A1.5 1.5 0 015.5 3z" />
               </svg>
             </button>
           </div>

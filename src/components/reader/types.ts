@@ -8,6 +8,7 @@ export type TocSection = {
 
 export type ReaderTweet = {
   text: string;
+  author?: Bookmark["author"];
   media: Media[];
   urls: TweetUrl[];
   article?: Bookmark["article"];

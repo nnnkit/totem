@@ -2,7 +2,6 @@ import { useEffect, useRef, useMemo } from "react";
 import type {
   Bookmark,
   UserSettings,
-  WallpaperSource,
 } from "../types";
 import type { ThemePreference } from "../hooks/useTheme";
 
@@ -20,23 +19,6 @@ const THEME_OPTIONS: { value: ThemePreference; label: string }[] = [
   { value: "system", label: "Auto" },
   { value: "light", label: "Light" },
   { value: "dark", label: "Dark" },
-];
-
-const WALLPAPER_SOURCE_OPTIONS: {
-  value: WallpaperSource;
-  label: string;
-  description: string;
-}[] = [
-  {
-    value: "bing",
-    label: "Bing",
-    description: "Official Bing wallpaper of the day",
-  },
-  {
-    value: "wikimedia",
-    label: "Wiki",
-    description: "Wikipedia featured image of the day",
-  },
 ];
 
 export function SettingsModal({
@@ -159,30 +141,6 @@ export function SettingsModal({
                 </button>
               </label>
 
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-sm text-x-text">Wallpaper source</span>
-                <div className="flex rounded-xl border border-x-border overflow-hidden">
-                  {WALLPAPER_SOURCE_OPTIONS.map((opt) => (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      onClick={() =>
-                        onUpdateSettings({
-                          wallpaperSource: opt.value,
-                        })
-                      }
-                      title={opt.description}
-                      className={`px-3 py-1.5 text-xs font-medium transition-colors ${
-                        settings.wallpaperSource === opt.value
-                          ? "bg-x-blue text-white"
-                          : "text-x-text-secondary hover:text-x-text hover:bg-x-hover"
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
             </div>
           </section>
 

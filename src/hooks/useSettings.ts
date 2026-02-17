@@ -3,15 +3,8 @@ import type { UserSettings } from "../types";
 
 const SETTINGS_KEY = "ui_settings";
 
-const VALID_WIDGET_STYLES = new Set(["stack", "swiper", "filmstrip"]);
-const VALID_WALLPAPER_SOURCES = new Set(["bing", "wikimedia"]);
-
 const DEFAULT_SETTINGS: UserSettings = {
-  showBookmarkStack: true,
-  stackSize: 5,
   showTopSites: false,
-  widgetStyle: "stack",
-  wallpaperSource: "bing",
 };
 
 function hasChromeStorageSync() {
@@ -26,30 +19,10 @@ function normalizeSettings(value: unknown): UserSettings {
   if (!value || typeof value !== "object") return DEFAULT_SETTINGS;
   const raw = value as Record<string, unknown>;
   return {
-    showBookmarkStack:
-      typeof raw.showBookmarkStack === "boolean"
-        ? raw.showBookmarkStack
-        : DEFAULT_SETTINGS.showBookmarkStack,
-    stackSize:
-      typeof raw.stackSize === "number" &&
-      raw.stackSize >= 3 &&
-      raw.stackSize <= 10
-        ? raw.stackSize
-        : DEFAULT_SETTINGS.stackSize,
     showTopSites:
       typeof raw.showTopSites === "boolean"
         ? raw.showTopSites
         : DEFAULT_SETTINGS.showTopSites,
-    widgetStyle:
-      typeof raw.widgetStyle === "string" &&
-      VALID_WIDGET_STYLES.has(raw.widgetStyle as string)
-        ? (raw.widgetStyle as UserSettings["widgetStyle"])
-        : DEFAULT_SETTINGS.widgetStyle,
-    wallpaperSource:
-      typeof raw.wallpaperSource === "string" &&
-      VALID_WALLPAPER_SOURCES.has(raw.wallpaperSource as string)
-        ? (raw.wallpaperSource as UserSettings["wallpaperSource"])
-        : DEFAULT_SETTINGS.wallpaperSource,
   };
 }
 

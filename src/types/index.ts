@@ -128,13 +128,16 @@ export interface SyncState {
   error?: string;
 }
 
-export type WidgetStyle = "stack" | "swiper" | "filmstrip";
-export type WallpaperSource = "bing" | "wikimedia";
+export interface ReadingProgress {
+  tweetId: string;
+  scrollPercent: number;
+  scrollY: number;
+  scrollHeight: number;
+  lastReadAt: number;
+  completed: boolean;
+  contentBased?: boolean;
+}
 
 export interface UserSettings {
-  showBookmarkStack: boolean;
-  stackSize: number;
   showTopSites: boolean;
-  widgetStyle: WidgetStyle;
-  wallpaperSource: WallpaperSource;
 }

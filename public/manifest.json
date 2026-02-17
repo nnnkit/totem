@@ -13,8 +13,7 @@
   ],
   "host_permissions": [
     "https://x.com/*",
-    "https://www.bing.com/*",
-    "https://en.wikipedia.org/*"
+    "https://www.bing.com/*"
   ],
   "content_scripts": [
     {

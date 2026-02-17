@@ -7,6 +7,13 @@ export { compactPreview, normalizeText, truncateLabel } from "../../lib/text";
 export const baseTweetTextClass =
   "break-words [&_a]:text-x-blue [&_a:hover]:underline";
 
+const URL_REGEX = /https?:\/\/[^\s<]+/g;
+const URL_TOKEN_REGEX = /__URL_TOKEN_(\d+)__/g;
+const MENTION_REGEX =
+  /(^|[^A-Za-z0-9_])@([A-Za-z0-9_]{1,15})(?=$|[^A-Za-z0-9_])/g;
+const HASHTAG_REGEX =
+  /(^|[^A-Za-z0-9_])#([A-Za-z0-9_]+)(?=$|[^A-Za-z0-9_])/g;
+
 export function formatDate(ts: number): string {
   if (!ts) return "";
   return new Date(ts).toLocaleDateString("en-US", {
@@ -169,6 +176,9 @@ export function renderBlockInlineContent(
   return segments
     .map((seg) => {
       let html = escapeHtml(seg.text);
+      if (seg.entityKey < 0) {
+        html = linkifyMentionsAndTags(html);
+      }
       if (seg.bold) html = `<strong>${html}</strong>`;
       if (seg.italic) html = `<em>${html}</em>`;
       if (seg.entityKey >= 0) {
@@ -185,13 +195,27 @@ export function renderBlockInlineContent(
     .join("");
 }
 
+function linkifyMentionsAndTags(text: string): string {
+  const withMentions = text.replace(
+    MENTION_REGEX,
+    (_match, prefix: string, handle: string) =>
+      `${prefix}<a href="https://x.com/${handle}" target="_blank" rel="noopener noreferrer">@${handle}</a>`,
+  );
+
+  return withMentions.replace(
+    HASHTAG_REGEX,
+    (_match, prefix: string, tag: string) =>
+      `${prefix}<a href="https://x.com/hashtag/${tag}" target="_blank" rel="noopener noreferrer">#${tag}</a>`,
+  );
+}
+
 export function linkifyText(text: string): string {
   if (!text) return "";
 
   const escaped = escapeHtml(text);
   const urlTokens: string[] = [];
 
-  const withUrlTokens = escaped.replace(/https?:\/\/[^\s<]+/g, (url) => {
+  const withUrlTokens = escaped.replace(URL_REGEX, (url) => {
     const token = `__URL_TOKEN_${urlTokens.length}__`;
     urlTokens.push(
       `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`,
@@ -199,20 +223,10 @@ export function linkifyText(text: string): string {
     return token;
   });
 
-  const withMentions = withUrlTokens.replace(
-    /(^|[\s(])@([A-Za-z0-9_]{1,15})/g,
-    (_match, prefix: string, handle: string) =>
-      `${prefix}<a href="https://x.com/${handle}" target="_blank" rel="noopener noreferrer">@${handle}</a>`,
-  );
+  const withSocialLinks = linkifyMentionsAndTags(withUrlTokens);
 
-  const withTags = withMentions.replace(
-    /(^|[\s(])#([A-Za-z0-9_]+)/g,
-    (_match, prefix: string, tag: string) =>
-      `${prefix}<a href="https://x.com/hashtag/${tag}" target="_blank" rel="noopener noreferrer">#${tag}</a>`,
-  );
-
-  return withTags.replace(
-    /__URL_TOKEN_(\d+)__/g,
+  return withSocialLinks.replace(
+    URL_TOKEN_REGEX,
     (_match, tokenIndex: string) => {
       const index = Number(tokenIndex);
       return Number.isFinite(index) ? urlTokens[index] || "" : "";
@@ -303,6 +317,7 @@ export function toEmbeddedReaderTweet(
 ): ReaderTweet {
   return {
     text: tweet.text,
+    author: tweet.author,
     media: tweet.media,
     urls: tweet.urls || [],
     article: tweet.article || null,

@@ -1,32 +1,27 @@
-import { useEffect, useState } from "react";
-import type { WallpaperSource } from "../types";
+import { useCallback, useEffect, useState } from "react";
 
-interface WallpaperCache {
+interface WallpaperImage {
   url: string;
   title: string;
-  cachedAt: string; // UTC date string YYYY-MM-DD
-  provider: WallpaperSource;
 }
 
-interface WallpaperCacheStore {
-  bing?: WallpaperCache;
-  wikimedia?: WallpaperCache;
+interface WallpaperGalleryCache {
+  images: WallpaperImage[];
+  cachedAt: string; // local date YYYY-MM-DD
 }
 
-interface UseWallpaperResult {
+export interface UseWallpaperResult {
   wallpaperUrl: string | null;
   wallpaperTitle: string | null;
   loading: boolean;
+  hasNext: boolean;
+  hasPrev: boolean;
+  next: () => void;
+  prev: () => void;
 }
 
-const STORAGE_KEY = "tw_wallpaper_cache_v3";
+const STORAGE_KEY = "tw_wallpaper_cache_v5";
 const BING_ENDPOINT = "https://www.bing.com/HPImageArchive.aspx";
-const WIKIMEDIA_ENDPOINT = "https://en.wikipedia.org/api/rest_v1/feed/featured";
-
-const PROVIDER_FALLBACK_ORDER: Record<WallpaperSource, WallpaperSource[]> = {
-  bing: ["bing", "wikimedia"],
-  wikimedia: ["wikimedia", "bing"],
-};
 
 function todayLocal(): string {
   const now = new Date();
@@ -45,47 +40,27 @@ function toString(value: unknown): string {
   return typeof value === "string" ? value : "";
 }
 
-function normalizeCache(
-  value: unknown,
-  fallbackProvider: WallpaperSource,
-): WallpaperCache | null {
+function normalizeCache(value: unknown): WallpaperGalleryCache | null {
   const record = toRecord(value);
   if (!record) return null;
 
-  const url = toString(record.url);
   const cachedAt = toString(record.cachedAt);
-  if (!url || !cachedAt) return null;
+  if (!cachedAt) return null;
 
-  const providerRaw = toString(record.provider);
-  const provider: WallpaperSource =
-    providerRaw === "bing" || providerRaw === "wikimedia"
-      ? providerRaw
-      : fallbackProvider;
+  const rawImages = Array.isArray(record.images) ? record.images : [];
+  const images: WallpaperImage[] = rawImages
+    .map((img) => {
+      const r = toRecord(img);
+      if (!r) return null;
+      const url = toString(r.url);
+      if (!url) return null;
+      return { url, title: toString(r.title) };
+    })
+    .filter((img): img is WallpaperImage => img !== null);
 
-  return {
-    url,
-    title: toString(record.title),
-    cachedAt,
-    provider,
-  };
-}
+  if (images.length === 0) return null;
 
-function normalizeCacheStore(value: unknown): WallpaperCacheStore {
-  const record = toRecord(value);
-  if (!record) return {};
-
-  // Legacy cache migration: previous versions stored a single object.
-  if (!record.bing && !record.wikimedia) {
-    const legacy = normalizeCache(record, "bing");
-    return legacy ? { bing: legacy } : {};
-  }
-
-  const store: WallpaperCacheStore = {};
-  const bing = normalizeCache(record.bing, "bing");
-  const wikimedia = normalizeCache(record.wikimedia, "wikimedia");
-  if (bing) store.bing = bing;
-  if (wikimedia) store.wikimedia = wikimedia;
-  return store;
+  return { images, cachedAt };
 }
 
 function wallpaperSizeForScreen() {
@@ -109,45 +84,7 @@ function wallpaperSizeForScreen() {
   return { width, height };
 }
 
-function utcDatePath() {
-  const now = new Date();
-  const year = now.getUTCFullYear();
-  const month = String(now.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(now.getUTCDate()).padStart(2, "0");
-  return `${year}/${month}/${day}`;
-}
-
-function pickBingImage(
-  images: unknown[],
-  previousUrl: string | null,
-): Record<string, unknown> | null {
-  const normalizedPreviousUrl =
-    typeof previousUrl === "string" && previousUrl
-      ? previousUrl
-      : null;
-
-  const records = images
-    .map((value) => toRecord(value))
-    .filter((value): value is Record<string, unknown> => Boolean(value));
-
-  if (!records.length) return null;
-
-  if (!normalizedPreviousUrl) return records[0];
-
-  for (const record of records) {
-    const rawUrl = toString(record.url);
-    const absoluteUrl = rawUrl.startsWith("http")
-      ? rawUrl
-      : `https://www.bing.com${rawUrl}`;
-    if (absoluteUrl !== normalizedPreviousUrl) return record;
-  }
-
-  return records[0];
-}
-
-async function fetchBingWallpaper(
-  previousUrl: string | null,
-): Promise<WallpaperCache> {
+async function fetchBingGallery(): Promise<WallpaperGalleryCache> {
   const { width, height } = wallpaperSizeForScreen();
   const params = new URLSearchParams({
     format: "js",
@@ -165,59 +102,32 @@ async function fetchBingWallpaper(
   if (!res.ok) throw new Error(`Bing API ${res.status}`);
 
   const data = toRecord(await res.json());
-  const images = Array.isArray(data?.images) ? data.images : [];
-  const image = pickBingImage(images, previousUrl);
+  const rawImages = Array.isArray(data?.images) ? data.images : [];
 
-  const rawUrl = toString(image?.url);
-  if (!rawUrl) throw new Error("Bing API missing image URL");
+  const images: WallpaperImage[] = rawImages
+    .map((img) => {
+      const record = toRecord(img);
+      if (!record) return null;
+      const rawUrl = toString(record.url);
+      if (!rawUrl) return null;
+      return {
+        url: rawUrl.startsWith("http") ? rawUrl : `https://www.bing.com${rawUrl}`,
+        title: toString(record.copyright) || "Bing daily wallpaper",
+      };
+    })
+    .filter((img): img is WallpaperImage => img !== null);
+
+  if (images.length === 0) throw new Error("Bing API returned no images");
 
   return {
-    url: rawUrl.startsWith("http") ? rawUrl : `https://www.bing.com${rawUrl}`,
-    title: toString(image?.copyright) || "Bing daily wallpaper",
+    images,
     cachedAt: todayLocal(),
-    provider: "bing",
   };
 }
 
-async function fetchWikimediaWallpaper(): Promise<WallpaperCache> {
-  const res = await fetch(`${WIKIMEDIA_ENDPOINT}/${utcDatePath()}`, {
-    cache: "no-store",
-  });
-  if (!res.ok) throw new Error(`Wikimedia API ${res.status}`);
-
-  const data = toRecord(await res.json());
-  const image = toRecord(data?.image);
-  const fullImage = toRecord(image?.image);
-  const thumbnail = toRecord(image?.thumbnail);
-
-  const url = toString(fullImage?.source) || toString(thumbnail?.source);
-  if (!url) throw new Error("Wikimedia API missing image URL");
-
-  const description = toRecord(image?.description);
-
-  return {
-    url,
-    title:
-      toString(description?.text) ||
-      toString(image?.title) ||
-      "Wikimedia featured image",
-    cachedAt: todayLocal(),
-    provider: "wikimedia",
-  };
-}
-
-async function fetchWallpaper(
-  provider: WallpaperSource,
-  previousUrl: string | null,
-): Promise<WallpaperCache> {
-  return provider === "bing"
-    ? fetchBingWallpaper(previousUrl)
-    : fetchWikimediaWallpaper();
-}
-
-export function useWallpaper(source: WallpaperSource): UseWallpaperResult {
-  const [wallpaperUrl, setWallpaperUrl] = useState<string | null>(null);
-  const [wallpaperTitle, setWallpaperTitle] = useState<string | null>(null);
+export function useWallpaper(): UseWallpaperResult {
+  const [gallery, setGallery] = useState<WallpaperImage[]>([]);
+  const [index, setIndex] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -226,13 +136,12 @@ export function useWallpaper(source: WallpaperSource): UseWallpaperResult {
     async function load() {
       try {
         const stored = await chrome.storage.local.get(STORAGE_KEY);
-        const cacheStore = normalizeCacheStore(stored[STORAGE_KEY]);
-        const cached = cacheStore[source];
+        const cached = normalizeCache(stored[STORAGE_KEY]);
 
         if (cached && cached.cachedAt === todayLocal()) {
           if (!cancelled) {
-            setWallpaperUrl(cached.url);
-            setWallpaperTitle(cached.title);
+            setGallery(cached.images);
+            setIndex(0);
             setLoading(false);
           }
           return;
@@ -240,31 +149,23 @@ export function useWallpaper(source: WallpaperSource): UseWallpaperResult {
 
         // Use stale cache while fetching fresh wallpaper.
         if (cached && !cancelled) {
-          setWallpaperUrl(cached.url);
-          setWallpaperTitle(cached.title);
+          setGallery(cached.images);
+          setIndex(0);
         }
 
-        for (const provider of PROVIDER_FALLBACK_ORDER[source]) {
-          try {
-            const fresh = await fetchWallpaper(provider, cached?.url ?? null);
-            const nextCacheStore: WallpaperCacheStore = {
-              ...cacheStore,
-              [source]: fresh,
-              [provider]: fresh,
-            };
-            await chrome.storage.local.set({ [STORAGE_KEY]: nextCacheStore });
+        try {
+          const fresh = await fetchBingGallery();
+          await chrome.storage.local.set({ [STORAGE_KEY]: fresh });
 
-            if (!cancelled) {
-              setWallpaperUrl(fresh.url);
-              setWallpaperTitle(fresh.title);
-            }
-            return;
-          } catch {
-            // try next provider
+          if (!cancelled) {
+            setGallery(fresh.images);
+            setIndex(0);
           }
+        } catch {
+          // Keep stale cache if available
         }
       } catch {
-        // Keep stale cache (if available) and fail silently.
+        // Fail silently.
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -275,7 +176,25 @@ export function useWallpaper(source: WallpaperSource): UseWallpaperResult {
     return () => {
       cancelled = true;
     };
-  }, [source]);
+  }, []);
 
-  return { wallpaperUrl, wallpaperTitle, loading };
+  const current = gallery[index] ?? null;
+
+  const next = useCallback(() => {
+    setIndex((i) => Math.min(i + 1, gallery.length - 1));
+  }, [gallery.length]);
+
+  const prev = useCallback(() => {
+    setIndex((i) => Math.max(i - 1, 0));
+  }, []);
+
+  return {
+    wallpaperUrl: current?.url ?? null,
+    wallpaperTitle: current?.title ?? null,
+    loading,
+    hasNext: index < gallery.length - 1,
+    hasPrev: index > 0,
+    next,
+    prev,
+  };
 }

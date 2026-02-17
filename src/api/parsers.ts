@@ -135,6 +135,11 @@ function pickLongest(values: Array<string | null>): string {
     .sort((a, b) => b.length - a.length)[0] || "";
 }
 
+function isLikelyProfileImageUrl(value: string | null): boolean {
+  if (!value) return false;
+  return /\/profile_images\//i.test(value);
+}
+
 function textFromArticleBlocks(contentState: UnknownRecord | null): string {
   if (!contentState) return "";
   const blocks = asRecords(contentState.blocks);
@@ -337,8 +342,7 @@ function articleCoverImageFromNode(node: UnknownRecord): string {
   const coverMediaInfo = asRecord(coverMedia?.media_info);
   const directMediaInfo = asRecord(node.media_info);
   const imageRecord = asRecord(node.image);
-
-  return pickLongest([
+  const candidates = [
     asString(coverMediaInfo?.original_img_url),
     asString(directMediaInfo?.original_img_url),
     asString(node.original_img_url),
@@ -346,7 +350,9 @@ function articleCoverImageFromNode(node: UnknownRecord): string {
     asString(imageRecord?.url),
     asString(node.media_url_https),
     asString(node.media_url),
-  ]);
+  ].filter((value): value is string => Boolean(value && !isLikelyProfileImageUrl(value)));
+
+  return pickLongest(candidates);
 }
 
 function extractArticle(tweet: UnknownRecord): ArticleContent | null {

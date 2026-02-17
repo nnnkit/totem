@@ -12,6 +12,21 @@ import {
 } from "./utils";
 import { RichTextBlock } from "./TweetText";
 
+function isLikelyProfileAvatarUrl(value: string): boolean {
+  return /\/profile_images\//i.test(value);
+}
+
+function normalizeAvatarCandidateUrl(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  const withoutHash = trimmed.split("#")[0];
+  const [withoutQuery] = withoutHash.split("?");
+
+  return withoutQuery
+    .replace(/_(normal|bigger|mini)(?=\.[a-z0-9]+$)/i, "")
+    .toLowerCase();
+}
+
 function ArticleBlockRenderer({
   blocks,
   entityMap,
@@ -192,11 +207,30 @@ function ArticleBlockRenderer({
 export function TweetArticle({
   article,
   compact = false,
+  authorProfileImageUrl,
 }: {
   article: NonNullable<Bookmark["article"]>;
   compact?: boolean;
+  authorProfileImageUrl?: string;
 }) {
   const plainText = article.plainText?.trim() || "";
+  const coverImageUrl = useMemo(() => {
+    const cover = article.coverImageUrl?.trim() || "";
+    if (!cover) return "";
+    if (isLikelyProfileAvatarUrl(cover)) return "";
+
+    const authorAvatar = authorProfileImageUrl?.trim() || "";
+    if (!authorAvatar) return cover;
+
+    const normalizedCover = normalizeAvatarCandidateUrl(cover);
+    const normalizedAvatar = normalizeAvatarCandidateUrl(authorAvatar);
+    if (normalizedCover && normalizedCover === normalizedAvatar) {
+      return "";
+    }
+
+    return cover;
+  }, [article.coverImageUrl, authorProfileImageUrl]);
+
   const hasBlocks =
     article.contentBlocks !== undefined && article.contentBlocks.length > 0;
   const headings = useMemo(
@@ -210,9 +244,9 @@ export function TweetArticle({
   if (hasBlocks) {
     return (
       <section>
-        {article.coverImageUrl && (
+        {coverImageUrl && (
           <img
-            src={article.coverImageUrl}
+            src={coverImageUrl}
             alt=""
             className="mb-5 w-full rounded-xl object-cover break-inside-avoid"
             loading="lazy"
@@ -239,9 +273,9 @@ export function TweetArticle({
   if (headings.length === 0) {
     return (
       <section>
-        {article.coverImageUrl && (
+        {coverImageUrl && (
           <img
-            src={article.coverImageUrl}
+            src={coverImageUrl}
             alt=""
             className="mb-5 w-full rounded-xl object-cover"
             loading="lazy"
@@ -300,9 +334,9 @@ export function TweetArticle({
 
   return (
     <section>
-      {article.coverImageUrl && (
+      {coverImageUrl && (
         <img
-          src={article.coverImageUrl}
+          src={coverImageUrl}
           alt=""
           className="mb-5 w-full rounded-xl object-cover"
           loading="lazy"

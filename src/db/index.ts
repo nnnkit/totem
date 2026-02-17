@@ -1,10 +1,11 @@
 import { openDB, type DBSchema, type IDBPDatabase } from "idb";
-import type { Bookmark, TweetDetailCache } from "../types";
+import type { Bookmark, TweetDetailCache, ReadingProgress } from "../types";
 
 const DB_NAME = "xbt";
-const DB_VERSION = 4;
+const DB_VERSION = 5;
 const STORE_NAME = "bookmarks";
 const DETAIL_STORE_NAME = "tweet_details";
+const PROGRESS_STORE_NAME = "reading_progress";
 
 interface XBookmarksDbSchema extends DBSchema {
   bookmarks: {
@@ -22,6 +23,13 @@ interface XBookmarksDbSchema extends DBSchema {
     value: TweetDetailCache;
     indexes: {
       fetchedAt: number;
+    };
+  };
+  reading_progress: {
+    key: string;
+    value: ReadingProgress;
+    indexes: {
+      lastReadAt: number;
     };
   };
 }
@@ -58,6 +66,14 @@ function createDb() {
 
       if (!detailStore.indexNames.contains("fetchedAt")) {
         detailStore.createIndex("fetchedAt", "fetchedAt", { unique: false });
+      }
+
+      const progressStore = db.objectStoreNames.contains(PROGRESS_STORE_NAME)
+        ? tx.objectStore(PROGRESS_STORE_NAME)
+        : db.createObjectStore(PROGRESS_STORE_NAME, { keyPath: "tweetId" });
+
+      if (!progressStore.indexNames.contains("lastReadAt")) {
+        progressStore.createIndex("lastReadAt", "lastReadAt", { unique: false });
       }
     },
     blocked() {
@@ -115,7 +131,10 @@ export async function getBookmarkCount(): Promise<number> {
 
 export async function clearBookmarks(): Promise<void> {
   const db = await getDb();
-  await db.clear(STORE_NAME);
+  const tx = db.transaction([STORE_NAME, PROGRESS_STORE_NAME], "readwrite");
+  tx.objectStore(STORE_NAME).clear();
+  tx.objectStore(PROGRESS_STORE_NAME).clear();
+  await tx.done;
 }
 
 export async function deleteBookmarksByTweetIds(tweetIds: string[]): Promise<void> {
@@ -125,9 +144,10 @@ export async function deleteBookmarksByTweetIds(tweetIds: string[]): Promise<voi
   if (uniqueIds.length === 0) return;
 
   const db = await getDb();
-  const tx = db.transaction([STORE_NAME, DETAIL_STORE_NAME], "readwrite");
+  const tx = db.transaction([STORE_NAME, DETAIL_STORE_NAME, PROGRESS_STORE_NAME], "readwrite");
   const bookmarkStore = tx.objectStore(STORE_NAME);
   const detailStore = tx.objectStore(DETAIL_STORE_NAME);
+  const progressStore = tx.objectStore(PROGRESS_STORE_NAME);
   const tweetIndex = bookmarkStore.index("tweetId");
 
   for (const tweetId of uniqueIds) {
@@ -136,6 +156,7 @@ export async function deleteBookmarksByTweetIds(tweetIds: string[]): Promise<voi
       await bookmarkStore.delete(bookmarkId as string);
     }
     await detailStore.delete(tweetId);
+    await progressStore.delete(tweetId);
   }
 
   await tx.done;
@@ -156,6 +177,55 @@ export async function getTweetDetailCache(
   const db = await getDb();
   const cached = await db.get(DETAIL_STORE_NAME, tweetId);
   return cached || null;
+}
+
+export async function upsertReadingProgress(
+  progress: ReadingProgress,
+): Promise<void> {
+  const db = await getDb();
+  await db.put(PROGRESS_STORE_NAME, progress);
+}
+
+export async function getReadingProgress(
+  tweetId: string,
+): Promise<ReadingProgress | null> {
+  if (!tweetId) return null;
+  const db = await getDb();
+  const record = await db.get(PROGRESS_STORE_NAME, tweetId);
+  return record || null;
+}
+
+export async function getAllReadingProgress(): Promise<ReadingProgress[]> {
+  const db = await getDb();
+  const tx = db.transaction(PROGRESS_STORE_NAME, "readonly");
+  const rows: ReadingProgress[] = [];
+
+  let cursor = await tx.store.index("lastReadAt").openCursor(null, "prev");
+  while (cursor) {
+    rows.push(cursor.value);
+    cursor = await cursor.continue();
+  }
+
+  await tx.done;
+  return rows;
+}
+
+export async function deleteReadingProgress(tweetId: string): Promise<void> {
+  if (!tweetId) return;
+  const db = await getDb();
+  await db.delete(PROGRESS_STORE_NAME, tweetId);
+}
+
+export async function deleteReadingProgressByTweetIds(
+  tweetIds: string[],
+): Promise<void> {
+  if (tweetIds.length === 0) return;
+  const db = await getDb();
+  const tx = db.transaction(PROGRESS_STORE_NAME, "readwrite");
+  for (const tweetId of tweetIds) {
+    await tx.store.delete(tweetId);
+  }
+  await tx.done;
 }
 
 export async function cleanupOldTweetDetails(maxAgeMs: number): Promise<number> {

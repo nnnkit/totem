@@ -87,9 +87,13 @@ export function useTheme() {
 
   useEffect(() => {
     const root = document.documentElement;
-    root.dataset.theme = resolvedTheme;
+    if (themePreference === "system") {
+      delete root.dataset.theme;
+    } else {
+      root.dataset.theme = themePreference;
+    }
     root.style.colorScheme = resolvedTheme;
-  }, [resolvedTheme]);
+  }, [themePreference, resolvedTheme]);
 
   useEffect(() => {
     if (!preferenceReady || !hasChromeStorageSync()) return;

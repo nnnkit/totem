@@ -96,10 +96,11 @@ function TweetBody({
         <TweetArticle
           article={tweet.article!}
           compact={compact}
+          authorProfileImageUrl={tweet.author?.profileImageUrl}
         />
       )}
 
-      <TweetUrls urls={tweet.urls} />
+      <TweetUrls urls={tweet.urls} preferArticleButton={Boolean(showArticle)} />
     </>
   );
 }
