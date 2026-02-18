@@ -366,26 +366,15 @@
   max-width: 36rem;
   margin-inline: auto;
   border-radius: 9999px;
-  background: rgba(32, 33, 36, 0.85);
+  background: rgba(30, 27, 25, 0.82);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--breath-border);
   box-shadow:
     0 1px 6px rgba(0, 0, 0, 0.2),
     0 4px 24px rgba(0, 0, 0, 0.12);
-  transition:
-    background-color var(--motion-fast) var(--motion-ease-hover),
-    border-color var(--motion-fast) var(--motion-ease-hover),
-    box-shadow var(--motion-fast) var(--motion-ease-hover);
 }
 
-.breath-search:focus-within {
-  background: rgba(32, 33, 36, 0.92);
-  border-color: rgba(255, 255, 255, 0.12);
-  box-shadow:
-    0 1px 8px rgba(0, 0, 0, 0.24),
-    0 6px 32px rgba(0, 0, 0, 0.16);
-}
 
 .breath-search-logo {
   display: flex;
@@ -803,11 +792,6 @@
     color: rgba(255, 255, 255, 0.7);
   }
 
-  .breath-search-input:hover {
-    border-color: rgba(255, 255, 255, 0.2);
-    background: rgba(255, 255, 255, 0.1);
-    box-shadow: 0 1px 8px rgba(0, 0, 0, 0.16), 0 4px 24px rgba(0, 0, 0, 0.1);
-  }
 
   .breath-icon-btn:hover {
     border-color: var(--breath-border-strong);

@@ -5,6 +5,7 @@ import { useTheme } from "./hooks/useTheme";
 import { useSettings } from "./hooks/useSettings";
 import { useKeyboardNavigation } from "./hooks/useKeyboard";
 import { pickRelatedBookmarks } from "./lib/related";
+import { resetLocalData } from "./lib/reset";
 import { Onboarding } from "./components/Onboarding";
 import { NewTabHome } from "./components/NewTabHome";
 import { ReaderView } from "./components/ReaderView";
@@ -16,7 +17,7 @@ import type { Bookmark } from "./types";
 type AppView = "home" | "reading";
 
 export default function App() {
-  const { phase } = useAuth();
+  const { phase, startLogin } = useAuth();
   const { themePreference, setThemePreference } = useTheme();
   const { settings, updateSettings } = useSettings();
   const isReady = phase === "ready";
@@ -77,6 +78,11 @@ export default function App() {
     refreshContinueReading();
   }, [refreshContinueReading]);
 
+  const handleResetLocalData = useCallback(async () => {
+    await resetLocalData();
+    window.location.reload();
+  }, []);
+
   useKeyboardNavigation({
     selectedBookmark,
     filteredBookmarks: bookmarks,
@@ -101,7 +107,7 @@ export default function App() {
   }
 
   if (phase === "need_login" || phase === "connecting") {
-    return <Onboarding phase={phase} />;
+    return <Onboarding phase={phase} onLogin={startLogin} />;
   }
 
   const mainContent = (() => {
@@ -161,6 +167,7 @@ export default function App() {
         themePreference={themePreference}
         onThemePreferenceChange={setThemePreference}
         bookmarks={bookmarks}
+        onResetLocalData={handleResetLocalData}
       />
     </>
   );

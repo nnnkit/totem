@@ -137,6 +137,18 @@ export async function clearBookmarks(): Promise<void> {
   await tx.done;
 }
 
+export async function clearAllLocalData(): Promise<void> {
+  const db = await getDb();
+  const tx = db.transaction(
+    [STORE_NAME, DETAIL_STORE_NAME, PROGRESS_STORE_NAME],
+    "readwrite",
+  );
+  tx.objectStore(STORE_NAME).clear();
+  tx.objectStore(DETAIL_STORE_NAME).clear();
+  tx.objectStore(PROGRESS_STORE_NAME).clear();
+  await tx.done;
+}
+
 export async function deleteBookmarksByTweetIds(tweetIds: string[]): Promise<void> {
   if (tweetIds.length === 0) return;
 

@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import type { AuthStatus } from "../types";
 import { checkAuth, startAuthCapture, closeAuthTab } from "../api/core/auth";
+import { MANUAL_LOGIN_REQUIRED_KEY } from "../lib/reset";
 
 type AuthPhase = "loading" | "need_login" | "connecting" | "ready";
 
 interface UseAuthReturn {
   phase: AuthPhase;
+  startLogin: () => Promise<void>;
 }
 
 export function useAuth(): UseAuthReturn {
@@ -15,7 +16,17 @@ export function useAuth(): UseAuthReturn {
 
   const doCheck = useCallback(async () => {
     try {
-      const status: AuthStatus = await checkAuth();
+      const [status, resetGuard] = await Promise.all([
+        checkAuth(),
+        chrome.storage.local.get([MANUAL_LOGIN_REQUIRED_KEY]),
+      ]);
+
+      const requiresManualLogin = Boolean(resetGuard[MANUAL_LOGIN_REQUIRED_KEY]);
+      if (requiresManualLogin) {
+        captureStarted.current = false;
+        setPhase("need_login");
+        return;
+      }
 
       if (!status.hasUser) {
         captureStarted.current = false;
@@ -62,7 +73,8 @@ export function useAuth(): UseAuthReturn {
       if (
         changes.current_user_id ||
         changes.tw_auth_headers ||
-        changes.tw_query_id
+        changes.tw_query_id ||
+        changes[MANUAL_LOGIN_REQUIRED_KEY]
       ) {
         doCheck();
       }
@@ -78,5 +90,15 @@ export function useAuth(): UseAuthReturn {
     return () => clearInterval(interval);
   }, [phase, doCheck]);
 
-  return { phase };
+  const startLogin = useCallback(async () => {
+    try {
+      await chrome.storage.local.remove([MANUAL_LOGIN_REQUIRED_KEY]);
+    } catch {
+      // Ignore storage failures and continue with auth check fallback.
+    }
+    captureStarted.current = false;
+    await doCheck();
+  }, [doCheck]);
+
+  return { phase, startLogin };
 }

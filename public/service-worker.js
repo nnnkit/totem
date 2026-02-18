@@ -1030,7 +1030,6 @@ async function persistSeenTweetDisplayTypes(payload) {
   }
 
   await chrome.storage.local.set({ tw_seen_tweet_display_types: merged });
-  console.log("[xbt] tweetDisplayType values seen:", merged);
 }
 
 async function fetchTweetResultByRestIdForDebug({
@@ -1117,25 +1116,8 @@ async function logTweetEndpointComparison({
       preferredQueryId: preferredTweetResultQueryId,
     });
 
-    console.groupCollapsed(`[xbt] Tweet endpoint compare: ${tweetId}`);
-    console.log("TweetDetail", {
-      queryId: detailQueryId,
-      data: detailData,
-    });
-    console.log("TweetResultByRestId", {
-      queryId: tweetResult.queryId,
-      fieldToggles: tweetResult.fieldToggles,
-      data: tweetResult.data,
-    });
-    console.groupEnd();
   } catch (error) {
-    console.groupCollapsed(`[xbt] Tweet endpoint compare: ${tweetId}`);
-    console.log("TweetDetail", {
-      queryId: detailQueryId,
-      data: detailData,
-    });
-    console.log("TweetResultByRestId_ERROR", error?.message || String(error));
-    console.groupEnd();
+    // silently ignore debug comparison errors
   }
 }
 

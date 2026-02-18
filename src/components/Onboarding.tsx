@@ -1,8 +1,9 @@
 interface Props {
   phase: "need_login" | "connecting";
+  onLogin: () => Promise<void>;
 }
 
-export function Onboarding({ phase }: Props) {
+export function Onboarding({ phase, onLogin }: Props) {
   if (phase === "connecting") {
     return (
       <div className="flex flex-col items-center justify-center min-h-dvh bg-x-bg text-x-text">
@@ -33,6 +34,9 @@ export function Onboarding({ phase }: Props) {
         href="https://x.com/login"
         target="_blank"
         rel="noopener noreferrer"
+        onClick={() => {
+          onLogin().catch(() => {});
+        }}
         className="bg-x-blue hover:bg-x-blue/90 text-white font-bold py-3 px-8 rounded-full text-lg transition-colors"
       >
         Log in to X

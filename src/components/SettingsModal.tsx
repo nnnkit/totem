@@ -1,4 +1,4 @@
-import { useEffect, useRef, useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type {
   Bookmark,
   UserSettings,
@@ -13,6 +13,7 @@ interface Props {
   themePreference: ThemePreference;
   onThemePreferenceChange: (value: ThemePreference) => void;
   bookmarks: Bookmark[];
+  onResetLocalData: () => Promise<void>;
 }
 
 const THEME_OPTIONS: { value: ThemePreference; label: string; icon: "monitor" | "sun" | "moon" }[] = [
@@ -29,8 +30,11 @@ export function SettingsModal({
   themePreference,
   onThemePreferenceChange,
   bookmarks,
+  onResetLocalData,
 }: Props) {
   const backdropRef = useRef<HTMLDivElement>(null);
+  const [resetting, setResetting] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -57,6 +61,26 @@ export function SettingsModal({
       articles,
     };
   }, [bookmarks]);
+
+  const handleResetLocalData = async () => {
+    if (resetting) return;
+
+    const confirmed = window.confirm(
+      "Reset local data on this device? This clears cached bookmarks and requires manual login before sync.",
+    );
+    if (!confirmed) return;
+
+    setResetError(null);
+    setResetting(true);
+
+    try {
+      await onResetLocalData();
+    } catch {
+      setResetError("Reset failed. Please try again.");
+    } finally {
+      setResetting(false);
+    }
+  };
 
   if (!open) return null;
 
@@ -245,6 +269,28 @@ export function SettingsModal({
                 </p>
               </div>
             </div>
+          </section>
+
+          <section>
+            <h3 className="text-sm font-semibold text-x-text-secondary uppercase tracking-wider mb-3">
+              Data
+            </h3>
+            <p className="text-sm text-x-text-secondary mb-3">
+              Clear local IndexedDB and session state for this device.
+            </p>
+            <button
+              type="button"
+              onClick={handleResetLocalData}
+              disabled={resetting}
+              className="w-full rounded-xl border border-red-500/40 bg-red-500/10 px-3 py-2.5 text-sm font-semibold text-red-200 hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-70 transition-colors"
+            >
+              {resetting ? "Resetting..." : "Reset local data"}
+            </button>
+            {resetError ? (
+              <p className="text-xs text-red-300 mt-2">
+                {resetError}
+              </p>
+            ) : null}
           </section>
         </div>
 
