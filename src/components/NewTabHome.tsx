@@ -458,6 +458,7 @@ export function NewTabHome({
                 onKeyDown={(event) => {
                   if (event.key === "Enter" || event.key === " ") {
                     event.preventDefault();
+                    event.stopPropagation();
                     openForReading(currentItem);
                   }
                 }}

@@ -223,19 +223,19 @@ export function useBookmarks(isReady: boolean): UseBookmarksReturn {
 
       if (deletedIds.length > 0) {
         const toDelete = new Set(deletedIds);
-        let nextTotal = 0;
+        const current = bookmarksRef.current;
+        const filtered = current.filter((bookmark) => !toDelete.has(bookmark.tweetId));
 
-        setBookmarks((prev) => {
-          const filtered = prev.filter((bookmark) => !toDelete.has(bookmark.tweetId));
-          nextTotal = filtered.length;
-          return filtered;
-        });
+        if (filtered.length !== current.length) {
+          bookmarksRef.current = filtered;
+          setBookmarks(filtered);
+        }
 
         await deleteBookmarksByTweetIds(deletedIds);
         setSyncState((prev) => ({
           ...prev,
           phase: prev.phase === "idle" ? "done" : prev.phase,
-          total: nextTotal,
+          total: filtered.length,
         }));
         ackIds.push(...deleteEvents.map((event) => event.id));
       } else if (deleteEvents.length > 0) {
@@ -260,11 +260,14 @@ export function useBookmarks(isReady: boolean): UseBookmarksReturn {
   const unbookmark = useCallback(async (tweetId: string) => {
     if (!tweetId) return;
 
-    let removed: Bookmark | null = null;
-    setBookmarks((prev) => {
-      removed = prev.find((bookmark) => bookmark.tweetId === tweetId) || null;
-      return prev.filter((bookmark) => bookmark.tweetId !== tweetId);
-    });
+    const current = bookmarksRef.current;
+    const removed = current.find((bookmark) => bookmark.tweetId === tweetId) || null;
+    const filtered = current.filter((bookmark) => bookmark.tweetId !== tweetId);
+
+    if (filtered.length !== current.length) {
+      bookmarksRef.current = filtered;
+      setBookmarks(filtered);
+    }
 
     await deleteBookmarksByTweetIds([tweetId]);
 
@@ -273,16 +276,20 @@ export function useBookmarks(isReady: boolean): UseBookmarksReturn {
       setSyncState((prev) => ({
         ...prev,
         phase: prev.phase === "idle" ? "done" : prev.phase,
-        total: Math.max(0, prev.total - 1),
+        total: Math.max(0, prev.total - (removed ? 1 : 0)),
       }));
     } catch (error) {
       if (removed) {
         const removedBookmark = removed;
         await upsertBookmarks([removedBookmark]);
-        setBookmarks((prev) => {
-          if (prev.some((bookmark) => bookmark.tweetId === tweetId)) return prev;
-          return [removedBookmark, ...prev].toSorted(compareSortIndexDesc);
-        });
+        const currentAfterError = bookmarksRef.current;
+        if (!currentAfterError.some((bookmark) => bookmark.tweetId === tweetId)) {
+          const restored = [removedBookmark, ...currentAfterError].toSorted(
+            compareSortIndexDesc,
+          );
+          bookmarksRef.current = restored;
+          setBookmarks(restored);
+        }
       }
       throw error;
     }

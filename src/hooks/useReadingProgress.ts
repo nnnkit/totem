@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { upsertReadingProgress, getReadingProgress } from "../db";
 import type { ReadingProgress } from "../types";
 
@@ -15,22 +15,37 @@ export function useReadingProgress({
   const restoredRef = useRef(false);
   const tweetIdRef = useRef(tweetId);
   const debounceTimer = useRef<number | null>(null);
+  const [progressLoaded, setProgressLoaded] = useState(false);
 
   // Reset on tweet change
   useEffect(() => {
+    let cancelled = false;
+
     tweetIdRef.current = tweetId;
     restoredRef.current = false;
     savedProgress.current = null;
+    setProgressLoaded(false);
 
-    getReadingProgress(tweetId).then((progress) => {
-      if (tweetIdRef.current !== tweetId) return;
-      savedProgress.current = progress;
-    });
+    getReadingProgress(tweetId)
+      .then((progress) => {
+        if (cancelled || tweetIdRef.current !== tweetId) return;
+        savedProgress.current = progress;
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled && tweetIdRef.current === tweetId) {
+          setProgressLoaded(true);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [tweetId]);
 
   // Scroll restoration
   useEffect(() => {
-    if (!contentReady || restoredRef.current) return;
+    if (!contentReady || !progressLoaded || restoredRef.current) return;
     restoredRef.current = true;
 
     const progress = savedProgress.current;
@@ -63,7 +78,7 @@ export function useReadingProgress({
         }
       }
     });
-  }, [contentReady, tweetId]);
+  }, [contentReady, progressLoaded, tweetId]);
 
   // Scroll tracking
   useEffect(() => {
