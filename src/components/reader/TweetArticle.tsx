@@ -27,13 +27,12 @@ function normalizeAvatarCandidateUrl(value: string): string {
     .toLowerCase();
 }
 
-function ArticleBlockRenderer({
-  blocks,
-  entityMap,
-}: {
+interface ArticleBlockRendererProps {
   blocks: ArticleContentBlock[];
   entityMap: Record<string, ArticleContentEntity>;
-}) {
+}
+
+function ArticleBlockRenderer({ blocks, entityMap }: ArticleBlockRendererProps) {
   const groups = useMemo(() => groupBlocks(blocks), [blocks]);
   const serifFont = `font-[Charter,"Iowan Old Style","Palatino Linotype","Book Antiqua",Georgia,serif]`;
   const bodyClass = `${baseTweetTextClass} text-x-text text-pretty ${serifFont} text-[1.04rem] leading-8`;
@@ -204,15 +203,13 @@ function ArticleBlockRenderer({
   );
 }
 
-export function TweetArticle({
-  article,
-  compact = false,
-  authorProfileImageUrl,
-}: {
+interface Props {
   article: NonNullable<Bookmark["article"]>;
   compact?: boolean;
   authorProfileImageUrl?: string;
-}) {
+}
+
+export function TweetArticle({ article, compact = false, authorProfileImageUrl }: Props) {
   const plainText = article.plainText?.trim() || "";
   const coverImageUrl = useMemo(() => {
     const cover = article.coverImageUrl?.trim() || "";

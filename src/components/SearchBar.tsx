@@ -1,4 +1,4 @@
-interface SearchBarProps {
+interface Props {
   query: string;
   onQueryChange: (query: string) => void;
   onRefresh: () => void;
@@ -16,7 +16,7 @@ export function SearchBar({
   syncing,
   bookmarkCount,
   onBack,
-}: SearchBarProps) {
+}: Props) {
   return (
     <div className="sticky top-0 z-10 bg-x-bg/80 backdrop-blur-md border-b border-x-border">
       <div className="max-w-3xl mx-auto px-4 py-3 flex items-center gap-4">

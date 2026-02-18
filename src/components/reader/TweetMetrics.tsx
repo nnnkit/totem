@@ -1,11 +1,11 @@
 import type { Bookmark } from "../../types";
 import { formatDate, formatNumber } from "./utils";
 
-export function TweetMetrics({
-  bookmark,
-}: {
+interface Props {
   bookmark: Bookmark;
-}) {
+}
+
+export function TweetMetrics({ bookmark }: Props) {
   return (
     <section className="mt-6 border-t border-x-border pt-4">
       <p className="text-sm text-x-text-secondary">

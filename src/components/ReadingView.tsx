@@ -3,7 +3,7 @@ import type { Bookmark } from "../types";
 import type { ContinueReadingItem } from "../hooks/useContinueReading";
 import { compactPreview } from "../lib/text";
 
-interface ReadingViewProps {
+interface Props {
   continueReadingItems: ContinueReadingItem[];
   unreadBookmarks: Bookmark[];
   onOpenBookmark: (bookmark: Bookmark) => void;
@@ -77,7 +77,7 @@ export function ReadingView({
   unreadBookmarks,
   onOpenBookmark,
   onBack,
-}: ReadingViewProps) {
+}: Props) {
   const containerWidthClass = "max-w-3xl";
   const [focusedIndex, setFocusedIndex] = useState(-1);
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -136,7 +136,6 @@ export function ReadingView({
 
   return (
     <div className="min-h-dvh bg-x-bg">
-      {/* Sticky header */}
       <div className="sticky top-0 z-10 border-b border-x-border bg-x-bg/80 backdrop-blur-md">
         <div
           className={`mx-auto flex items-center gap-3 px-4 py-3 ${containerWidthClass}`}
@@ -155,7 +154,6 @@ export function ReadingView({
       </div>
 
       <main className={`${containerWidthClass} mx-auto px-4 pb-16 pt-6`}>
-        {/* Continue Reading - In Progress */}
         {inProgress.length > 0 && (
           <section className="mb-8">
             <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-x-text-secondary">
@@ -204,7 +202,6 @@ export function ReadingView({
           </section>
         )}
 
-        {/* Completed */}
         {completed.length > 0 && (
           <section className="mb-8">
             <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-x-text-secondary">
@@ -243,7 +240,6 @@ export function ReadingView({
           </section>
         )}
 
-        {/* Unread */}
         {unreadBookmarks.length > 0 && (
           <section>
             <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-x-text-secondary">
@@ -284,7 +280,6 @@ export function ReadingView({
           </section>
         )}
 
-        {/* Empty state */}
         {continueReadingItems.length === 0 &&
           unreadBookmarks.length === 0 && (
             <div className="flex flex-col items-center justify-center py-20 text-center">

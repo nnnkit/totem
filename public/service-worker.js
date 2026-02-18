@@ -71,6 +71,8 @@ const FALLBACK_DETAIL_QUERY_IDS = [
   "bFUhQzgl9zjo-teD0pAQZw",
   "VwKJcAd7zqlBOitPLUrB8A",
 ];
+const DEFAULT_TWEET_RESULT_QUERY_ID = "d6YKjvQ920F-D4Y1PruO-A";
+const FALLBACK_TWEET_RESULT_QUERY_IDS = [DEFAULT_TWEET_RESULT_QUERY_ID];
 const DEFAULT_DELETE_BOOKMARK_QUERY_ID = "Wlmlj2-xzyS1GN3a6cj-mQ";
 const FALLBACK_DELETE_BOOKMARK_QUERY_IDS = [
   DEFAULT_DELETE_BOOKMARK_QUERY_ID,
@@ -942,10 +944,164 @@ function parseFeatureSet(raw) {
   return {};
 }
 
+function collectTweetDisplayTypes(payload) {
+  const found = new Set();
+  const stack = [payload];
+  const seen = new Set();
+
+  while (stack.length > 0) {
+    const current = stack.pop();
+    if (!current || typeof current !== "object") continue;
+    if (seen.has(current)) continue;
+    seen.add(current);
+
+    if (Array.isArray(current)) {
+      for (const item of current) stack.push(item);
+      continue;
+    }
+
+    for (const [key, value] of Object.entries(current)) {
+      if (key === "tweetDisplayType" && typeof value === "string") {
+        found.add(value);
+      }
+      if (value && typeof value === "object") {
+        stack.push(value);
+      }
+    }
+  }
+
+  return Array.from(found).sort();
+}
+
+async function persistSeenTweetDisplayTypes(payload) {
+  const incoming = collectTweetDisplayTypes(payload);
+  if (incoming.length === 0) return;
+
+  const stored = await chrome.storage.local.get(["tw_seen_tweet_display_types"]);
+  const existing = Array.isArray(stored.tw_seen_tweet_display_types)
+    ? stored.tw_seen_tweet_display_types.filter((item) => typeof item === "string")
+    : [];
+
+  const merged = Array.from(new Set([...existing, ...incoming])).sort();
+  if (merged.length === existing.length && merged.every((item, idx) => item === existing[idx])) {
+    return;
+  }
+
+  await chrome.storage.local.set({ tw_seen_tweet_display_types: merged });
+  console.log("[xbt] tweetDisplayType values seen:", merged);
+}
+
+async function fetchTweetResultByRestIdForDebug({
+  tweetId,
+  requestHeaders,
+  featureSet,
+  preferredQueryId,
+}) {
+  const queryIds = Array.from(
+    new Set([preferredQueryId, ...FALLBACK_TWEET_RESULT_QUERY_IDS].filter(Boolean)),
+  );
+  const variables = {
+    tweetId,
+    includePromotedContent: true,
+    withBirdwatchNotes: true,
+    withVoice: true,
+    withCommunity: true,
+  };
+  const fieldToggleCandidates = [
+    {
+      withArticleRichContentState: true,
+      withArticlePlainText: false,
+    },
+    {
+      withArticleRichContentState: true,
+      withArticlePlainText: true,
+    },
+  ];
+
+  let lastError = "TWEET_RESULT_ERROR";
+
+  for (const fieldToggles of fieldToggleCandidates) {
+    const params = new URLSearchParams({
+      variables: JSON.stringify(variables),
+      features: JSON.stringify(featureSet),
+      fieldToggles: JSON.stringify(fieldToggles),
+    });
+
+    for (const queryId of queryIds) {
+      const url = `https://x.com/i/api/graphql/${queryId}/TweetResultByRestId?${params}`;
+      const response = await fetch(url, {
+        method: "GET",
+        credentials: "include",
+        headers: requestHeaders,
+      });
+
+      if (response.ok) {
+        if (preferredQueryId !== queryId) {
+          chrome.storage.local.set({ tw_tweet_result_query_id: queryId }).catch(() => {});
+        }
+        return {
+          queryId,
+          fieldToggles,
+          data: await response.json(),
+        };
+      }
+
+      const body = await response.text().catch(() => "");
+      lastError = `TWEET_RESULT_${response.status}: ${body.slice(0, 200)}`;
+
+      // 400/404 usually indicates stale query ID or toggle mismatch.
+      if (response.status !== 400 && response.status !== 404) {
+        break;
+      }
+    }
+  }
+
+  throw new Error(lastError);
+}
+
+async function logTweetEndpointComparison({
+  tweetId,
+  detailQueryId,
+  detailData,
+  requestHeaders,
+  featureSet,
+  preferredTweetResultQueryId,
+}) {
+  try {
+    const tweetResult = await fetchTweetResultByRestIdForDebug({
+      tweetId,
+      requestHeaders,
+      featureSet,
+      preferredQueryId: preferredTweetResultQueryId,
+    });
+
+    console.groupCollapsed(`[xbt] Tweet endpoint compare: ${tweetId}`);
+    console.log("TweetDetail", {
+      queryId: detailQueryId,
+      data: detailData,
+    });
+    console.log("TweetResultByRestId", {
+      queryId: tweetResult.queryId,
+      fieldToggles: tweetResult.fieldToggles,
+      data: tweetResult.data,
+    });
+    console.groupEnd();
+  } catch (error) {
+    console.groupCollapsed(`[xbt] Tweet endpoint compare: ${tweetId}`);
+    console.log("TweetDetail", {
+      queryId: detailQueryId,
+      data: detailData,
+    });
+    console.log("TweetResultByRestId_ERROR", error?.message || String(error));
+    console.groupEnd();
+  }
+}
+
 async function handleFetchTweetDetail(tweetId, _retried = false) {
   const stored = await chrome.storage.local.get([
     "tw_auth_headers",
     "tw_detail_query_id",
+    "tw_tweet_result_query_id",
     "tw_features",
   ]);
 
@@ -1011,10 +1167,20 @@ async function handleFetchTweetDetail(tweetId, _retried = false) {
       }
 
       if (response.ok) {
+        const detailData = await response.json();
+        persistSeenTweetDisplayTypes(detailData).catch(() => {});
         if (stored.tw_detail_query_id !== queryId) {
           chrome.storage.local.set({ tw_detail_query_id: queryId });
         }
-        return { data: await response.json() };
+        logTweetEndpointComparison({
+          tweetId,
+          detailQueryId: queryId,
+          detailData,
+          requestHeaders,
+          featureSet,
+          preferredTweetResultQueryId: stored.tw_tweet_result_query_id,
+        }).catch(() => {});
+        return { data: detailData };
       }
 
       const body = await response.text().catch(() => "");
@@ -1074,6 +1240,13 @@ chrome.webRequest.onSendHeaders.addListener(
     const detailMatch = details.url.match(/\/i\/api\/graphql\/([^/]+)\/TweetDetail/);
     if (detailMatch) {
       chrome.storage.local.set({ tw_detail_query_id: detailMatch[1] });
+    }
+
+    const tweetResultMatch = details.url.match(
+      /\/i\/api\/graphql\/([^/]+)\/TweetResultByRestId/,
+    );
+    if (tweetResultMatch) {
+      chrome.storage.local.set({ tw_tweet_result_query_id: tweetResultMatch[1] });
     }
 
     const deleteMatch = details.url.match(

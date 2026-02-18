@@ -1,5 +1,9 @@
-import type { Bookmark, TweetKind } from "../../types";
-import { normalizeText, resolveTweetKind, toEmbeddedReaderTweet } from "./utils";
+import type { Bookmark, ThreadTweet, TweetKind } from "../../types";
+import {
+  normalizeText,
+  resolveTweetKind,
+  toEmbeddedReaderTweet,
+} from "./utils";
 import { TweetHeader } from "./TweetHeader";
 import { RichTextBlock } from "./TweetText";
 import { TweetMedia } from "./TweetMedia";
@@ -10,15 +14,13 @@ import { TweetMetrics } from "./TweetMetrics";
 import { TweetRecommendations } from "./TweetRecommendations";
 import type { ReaderTweet } from "./types";
 
-function TweetBody({
-  tweet,
-  compact = false,
-  sectionIdPrefix,
-}: {
+interface TweetBodyProps {
   tweet: ReaderTweet;
   compact?: boolean;
   sectionIdPrefix?: string;
-}) {
+}
+
+function TweetBody({ tweet, compact = false, sectionIdPrefix }: TweetBodyProps) {
   const kind = resolveTweetKind(tweet);
 
   if (kind === "repost" && tweet.retweetedTweet) {
@@ -30,11 +32,7 @@ function TweetBody({
     return (
       <>
         {repostComment && (
-          <RichTextBlock
-            text={repostComment}
-            compact={compact}
-            style="tweet"
-          />
+          <RichTextBlock text={repostComment} compact={compact} style="tweet" />
         )}
         <div className="mt-4 rounded-2xl border border-x-border p-4">
           <p className="text-xs uppercase text-x-text-secondary">
@@ -73,7 +71,6 @@ function TweetBody({
   const isArticleKind = kind === "article" && hasArticle;
   const hasArticleBlocks = Boolean(tweet.article?.contentBlocks?.length);
 
-  // Prefer rich article rendering when structured blocks exist (even for threads)
   const showArticle =
     hasArticle && (isArticleKind || !textMatchesArticle || hasArticleBlocks);
   const showText = !((isArticleKind || hasArticleBlocks) && textMatchesArticle);
@@ -105,25 +102,59 @@ function TweetBody({
   );
 }
 
-export function TweetRenderer({
-  displayBookmark,
-  displayKind,
-  detailLoading,
-  detailError,
-  relatedBookmarks,
-  onOpenBookmark,
-  onShuffle,
-  tweetSectionIdPrefix,
-}: {
+interface ThreadTweetsProps {
+  tweets: ThreadTweet[];
+}
+
+function ThreadTweets({ tweets }: ThreadTweetsProps) {
+  if (tweets.length === 0) return null;
+
+  return (
+    <section className="mt-8 space-y-4">
+      <p className="text-xs font-semibold uppercase tracking-wider text-x-text-secondary">
+        Thread
+      </p>
+      {tweets.map((tweet, index) => (
+        <article
+          key={tweet.tweetId}
+          id={`section-thread-${index + 1}`}
+          className="rounded-2xl border border-x-border p-4"
+        >
+          <div className="mb-3 flex items-center gap-2 text-xs text-x-text-secondary">
+            <span className="font-medium text-x-text">#{index + 1}</span>
+            <span>•</span>
+            <span>@{tweet.author.screenName}</span>
+          </div>
+          <TweetBody tweet={tweet} compact />
+        </article>
+      ))}
+    </section>
+  );
+}
+
+interface Props {
   displayBookmark: Bookmark;
   displayKind: TweetKind;
+  detailThread: ThreadTweet[];
   detailLoading: boolean;
   detailError: string | null;
   relatedBookmarks: Bookmark[];
   onOpenBookmark: (bookmark: Bookmark) => void;
   onShuffle?: () => void;
   tweetSectionIdPrefix?: string;
-}) {
+}
+
+export function TweetRenderer({
+  displayBookmark,
+  displayKind,
+  detailThread,
+  detailLoading,
+  detailError,
+  relatedBookmarks,
+  onOpenBookmark,
+  onShuffle,
+  tweetSectionIdPrefix,
+}: Props) {
   return (
     <div>
       <TweetHeader
@@ -137,6 +168,7 @@ export function TweetRenderer({
           tweet={displayBookmark}
           sectionIdPrefix={tweetSectionIdPrefix}
         />
+        <ThreadTweets tweets={detailThread} />
       </div>
 
       {detailLoading && (

@@ -1,15 +1,13 @@
 import type { Bookmark } from "../../types";
 import { compactPreview } from "./utils";
 
-export function TweetRecommendations({
-  relatedBookmarks,
-  onOpenBookmark,
-  onShuffle,
-}: {
+interface Props {
   relatedBookmarks: Bookmark[];
   onOpenBookmark: (bookmark: Bookmark) => void;
   onShuffle?: () => void;
-}) {
+}
+
+export function TweetRecommendations({ relatedBookmarks, onOpenBookmark, onShuffle }: Props) {
   if (relatedBookmarks.length === 0) return null;
 
   return (
@@ -27,8 +25,22 @@ export function TweetRecommendations({
               aria-label="Shuffle recommendations"
               title="Shuffle recommendations"
             >
-              <svg viewBox="0 0 24 24" className="size-4" fill="currentColor">
-                <path d="M18 4l3 3-3 3-1.41-1.41L17.17 8H15c-1.1 0-2.08.53-2.73 1.33l-.93 1.17-1.58-1.25.93-1.17C11.6 6.81 13.22 6 15 6h2.17l-.58-.59L18 4zm0 12l3 3-3 3-1.41-1.41.58-.59H15c-1.78 0-3.4-.81-4.31-2.08L5.84 12l4.85-6.92C11.6 3.81 13.22 3 15 3h2.17l-.58-.59L18 1l3 3-3 3-1.41-1.41.58-.59H15c-1.1 0-2.08.53-2.73 1.33L7.58 12l4.69 6.67C12.92 19.47 13.9 20 15 20h2.17l-.58-.59L18 18z" />
+              <svg
+                viewBox="0 0 24 24"
+                className="size-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.9"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M18 4l3 3-3 3" />
+                <path d="M18 17l3 3-3 3" />
+                <path d="M3 7h6a4 4 0 0 1 4 4" />
+                <path d="M3 20h6a4 4 0 0 0 4-4" />
+                <path d="M14 11h7" />
+                <path d="M14 20h7" />
               </svg>
               Shuffle
             </button>

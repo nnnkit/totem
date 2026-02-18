@@ -11,7 +11,7 @@ import {
 import { useWallpaper } from "../hooks/useWallpaper";
 import { useTopSites } from "../hooks/useTopSites";
 
-interface NewTabHomeProps {
+interface Props {
   bookmarks: Bookmark[];
   syncing: boolean;
   showTopSites: boolean;
@@ -129,7 +129,7 @@ export function NewTabHome({
   onOpenBookmark,
   onOpenSettings,
   onOpenReading,
-}: NewTabHomeProps) {
+}: Props) {
   const [now, setNow] = useState(() => new Date());
   const [imgLoaded, setImgLoaded] = useState(false);
   const [imgError, setImgError] = useState(false);

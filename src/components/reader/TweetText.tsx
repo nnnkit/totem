@@ -1,17 +1,14 @@
 import { useMemo } from "react";
 import { paragraphizeText, paragraphHtml, textClassForMode } from "./utils";
 
-export function RichTextBlock({
-  text,
-  compact = false,
-  style = "tweet",
-  sectionIdPrefix,
-}: {
+interface Props {
   text: string;
   compact?: boolean;
   style?: "tweet" | "article";
   sectionIdPrefix?: string;
-}) {
+}
+
+export function RichTextBlock({ text, compact = false, style = "tweet", sectionIdPrefix }: Props) {
   const paragraphs = useMemo(
     () => paragraphizeText(text, style),
     [text, style],

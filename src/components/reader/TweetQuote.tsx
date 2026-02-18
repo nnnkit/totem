@@ -4,11 +4,11 @@ import { RichTextBlock } from "./TweetText";
 import { TweetMedia } from "./TweetMedia";
 import { TweetUrls } from "./TweetUrls";
 
-export function TweetQuote({
-  quotedTweet,
-}: {
+interface Props {
   quotedTweet: Bookmark["quotedTweet"];
-}) {
+}
+
+export function TweetQuote({ quotedTweet }: Props) {
   if (!quotedTweet) return null;
 
   const articleText = quotedTweet.article?.plainText?.trim() || "";

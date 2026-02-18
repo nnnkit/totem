@@ -469,16 +469,17 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 1.4em;
+  min-width: 1.3em;
   margin-left: 0.5rem;
-  padding: 0.1em 0.35em;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 0.2em 0.45em;
   border-radius: 4px;
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.14);
   font-family: inherit;
-  font-size: 0.72em;
+  font-size: 0.78em;
+  font-weight: 500;
   line-height: 1;
-  opacity: 0.5;
+  letter-spacing: 0.03em;
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .breath-btn--ghost {

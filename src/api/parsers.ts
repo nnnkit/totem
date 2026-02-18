@@ -712,7 +712,35 @@ export function parseBookmarkPagePayload(payload: unknown): BookmarkPageResult {
   return { bookmarks, cursor: nextCursor };
 }
 
-function parseItemContent(
+const TWEET_DISPLAY_TYPE_TWEET = "Tweet";
+const TWEET_DISPLAY_TYPE_SELF_THREAD = "SelfThread";
+
+function normalizeTweetDisplayType(value: string | null): string {
+  return value || TWEET_DISPLAY_TYPE_TWEET;
+}
+
+function isSelfThreadDisplayType(value: string | undefined): boolean {
+  return value === TWEET_DISPLAY_TYPE_SELF_THREAD;
+}
+
+function applyDisplayTypeToBookmark(
+  bookmark: Bookmark,
+  tweetDisplayType: string,
+): Bookmark {
+  const isSelfThread = isSelfThreadDisplayType(tweetDisplayType);
+
+  return {
+    ...bookmark,
+    tweetDisplayType,
+    isThread: bookmark.isThread || isSelfThread,
+    tweetKind:
+      isSelfThread && bookmark.tweetKind !== "repost"
+        ? "thread"
+        : bookmark.tweetKind,
+  };
+}
+
+function parseDetailTimelineItem(
   itemContent: UnknownRecord | null,
   sortIndex: string | undefined,
   entryId: string,
@@ -727,21 +755,12 @@ function parseItemContent(
   const parsed = parseTweetRecord(tweetResult, sortIndex);
   if (!parsed) return null;
 
-  const tweetDisplayType = asString(itemContent.tweetDisplayType) || "Tweet";
-  const bookmark: Bookmark = {
-    ...parsed.bookmark,
-    tweetDisplayType,
-    isThread:
-      parsed.bookmark.isThread || tweetDisplayType === "SelfThread",
-    tweetKind:
-      tweetDisplayType === "SelfThread" &&
-      parsed.bookmark.tweetKind !== "repost"
-        ? "thread"
-        : parsed.bookmark.tweetKind,
-  };
+  const tweetDisplayType = normalizeTweetDisplayType(
+    asString(itemContent.tweetDisplayType),
+  );
 
   return {
-    bookmark,
+    bookmark: applyDisplayTypeToBookmark(parsed.bookmark, tweetDisplayType),
     conversationId: parsed.conversationId,
     tweetDisplayType,
     entryId,
@@ -752,7 +771,6 @@ function parseDetailTimelineTweets(payload: unknown): DetailTimelineTweet[] {
   const data = asRecord(asRecord(payload)?.data);
   const threaded = asRecord(data?.threaded_conversation_with_injections_v2);
   const instructions = asRecords(threaded?.instructions);
-
   const timelineTweets: DetailTimelineTweet[] = [];
 
   for (const instruction of instructions) {
@@ -764,23 +782,22 @@ function parseDetailTimelineTweets(payload: unknown): DetailTimelineTweet[] {
       const content = asRecord(entry.content);
       if (!content) continue;
 
-      const timelineItem = parseItemContent(
+      const topLevelTweet = parseDetailTimelineItem(
         asRecord(content.itemContent),
         sortIndex,
         entryId,
       );
-      if (timelineItem) {
-        timelineTweets.push(timelineItem);
+      if (topLevelTweet) {
+        timelineTweets.push(topLevelTweet);
       }
 
       for (const item of asRecords(content.items)) {
         const moduleItemContent = asRecord(asRecord(item.item)?.itemContent);
-        const moduleTweet = parseItemContent(
+        const moduleTweet = parseDetailTimelineItem(
           moduleItemContent,
           sortIndex,
           asString(item.entryId) || entryId,
         );
-
         if (moduleTweet) {
           timelineTweets.push(moduleTweet);
         }
@@ -789,6 +806,118 @@ function parseDetailTimelineTweets(payload: unknown): DetailTimelineTweet[] {
   }
 
   return timelineTweets;
+}
+
+function findDetailFocalTweet(
+  timelineTweets: DetailTimelineTweet[],
+  tweetId: string,
+): DetailTimelineTweet | null {
+  return (
+    timelineTweets.find((item) => item.bookmark.tweetId === tweetId) ||
+    timelineTweets.find((item) => item.entryId.includes(tweetId)) ||
+    null
+  );
+}
+
+function sortTimelineTweetsByCreatedAt(
+  tweets: DetailTimelineTweet[],
+): DetailTimelineTweet[] {
+  return tweets.toSorted((a, b) => a.bookmark.createdAt - b.bookmark.createdAt);
+}
+
+function buildReplyChain(
+  candidates: DetailTimelineTweet[],
+  rootTweetId: string,
+): DetailTimelineTweet[] {
+  if (candidates.length === 0) return [];
+
+  const byReplyTo = new Map<string, DetailTimelineTweet[]>();
+  for (const item of candidates) {
+    const replyToId = item.bookmark.inReplyToTweetId;
+    if (!replyToId) continue;
+    const list = byReplyTo.get(replyToId) || [];
+    list.push(item);
+    byReplyTo.set(replyToId, list);
+  }
+
+  for (const list of byReplyTo.values()) {
+    list.sort((a, b) => a.bookmark.createdAt - b.bookmark.createdAt);
+  }
+
+  const chain: DetailTimelineTweet[] = [];
+  const seen = new Set<string>();
+  let currentId = rootTweetId;
+
+  while (true) {
+    const next = (byReplyTo.get(currentId) || []).find(
+      (item) => !seen.has(item.bookmark.tweetId),
+    );
+    if (!next) break;
+
+    chain.push(next);
+    seen.add(next.bookmark.tweetId);
+    currentId = next.bookmark.tweetId;
+  }
+
+  return chain;
+}
+
+function orderThreadCandidates(
+  candidates: DetailTimelineTweet[],
+  focalTweetId: string,
+): DetailTimelineTweet[] {
+  if (candidates.length === 0) return [];
+
+  const chain = buildReplyChain(candidates, focalTweetId);
+  if (chain.length === 0) {
+    return sortTimelineTweetsByCreatedAt(candidates);
+  }
+
+  const seen = new Set(chain.map((item) => item.bookmark.tweetId));
+  const remainder = sortTimelineTweetsByCreatedAt(
+    candidates.filter((item) => !seen.has(item.bookmark.tweetId)),
+  );
+  return [...chain, ...remainder];
+}
+
+function collectThreadCandidates(
+  timelineTweets: DetailTimelineTweet[],
+  focal: DetailTimelineTweet | null,
+  tweetId: string,
+): DetailTimelineTweet[] {
+  if (!focal) return [];
+
+  const focalTweet = focal.bookmark;
+  const focalConversationId = focal.conversationId || focalTweet.tweetId;
+  const focalAuthor = focalTweet.author.screenName;
+
+  const sameConversationAndAuthor = (item: DetailTimelineTweet): boolean =>
+    item.bookmark.tweetId !== tweetId &&
+    item.conversationId === focalConversationId &&
+    item.bookmark.author.screenName === focalAuthor;
+
+  const canonicalSelfThreadCandidates = timelineTweets.filter(
+    (item) =>
+      sameConversationAndAuthor(item) &&
+      isSelfThreadDisplayType(item.tweetDisplayType),
+  );
+  if (canonicalSelfThreadCandidates.length > 0) {
+    return orderThreadCandidates(canonicalSelfThreadCandidates, focalTweet.tweetId);
+  }
+
+  const focalLooksLikeThread = Boolean(
+    focalTweet.isThread || isSelfThreadDisplayType(focalTweet.tweetDisplayType),
+  );
+  if (!focalLooksLikeThread) {
+    return [];
+  }
+
+  const fallbackCandidates = timelineTweets.filter((item) => {
+    if (!sameConversationAndAuthor(item)) return false;
+    return Boolean(item.bookmark.inReplyToTweetId);
+  });
+
+  return orderThreadCandidates(fallbackCandidates, focalTweet.tweetId);
 }
 
 function toThreadTweet(bookmark: Bookmark): ThreadTweet {
@@ -818,38 +947,18 @@ export function parseTweetDetailPayload(
   const directTweetResult = asRecord(
     asRecord(asRecord(responseData?.data)?.tweetResult)?.result,
   );
+  const directParsed = directTweetResult ? parseTweetRecord(directTweetResult) : null;
   const timelineTweets = parseDetailTimelineTweets(payload);
   if (timelineTweets.length === 0) {
-    if (directTweetResult) {
-      const parsed = parseTweetRecord(directTweetResult);
-      if (parsed) {
-        return { focalTweet: parsed.bookmark, thread: [] };
-      }
+    if (directParsed) {
+      return { focalTweet: directParsed.bookmark, thread: [] };
     }
     return { focalTweet: null, thread: [] };
   }
 
-  const focal =
-    timelineTweets.find((item) => item.bookmark.tweetId === tweetId) ||
-    timelineTweets.find((item) => item.entryId.includes(tweetId)) ||
-    null;
-
-  const focalTweet = focal?.bookmark || null;
-
-  let threadCandidates = timelineTweets.filter(
-    (item) =>
-      item.bookmark.tweetId !== tweetId && item.tweetDisplayType === "SelfThread",
-  );
-
-  // Fallback for response variations where self-thread tweets are not tagged.
-  if (threadCandidates.length === 0 && focalTweet) {
-    threadCandidates = timelineTweets.filter(
-      (item) =>
-        item.bookmark.tweetId !== tweetId &&
-        item.conversationId === focalTweet.tweetId &&
-        item.bookmark.author.screenName === focalTweet.author.screenName,
-    );
-  }
+  const focal = findDetailFocalTweet(timelineTweets, tweetId);
+  const focalTweet = focal?.bookmark || directParsed?.bookmark || null;
+  const threadCandidates = collectThreadCandidates(timelineTweets, focal, tweetId);
 
   const seen = new Set<string>();
   const thread = threadCandidates

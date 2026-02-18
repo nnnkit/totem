@@ -5,7 +5,7 @@ import type {
 } from "../types";
 import type { ThemePreference } from "../hooks/useTheme";
 
-interface SettingsModalProps {
+interface Props {
   open: boolean;
   onClose: () => void;
   settings: UserSettings;
@@ -29,7 +29,7 @@ export function SettingsModal({
   themePreference,
   onThemePreferenceChange,
   bookmarks,
-}: SettingsModalProps) {
+}: Props) {
   const backdropRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -72,7 +72,6 @@ export function SettingsModal({
       }}
     >
       <div className="max-w-md mx-auto mt-[15vh] rounded-3xl border border-x-border bg-x-card shadow-2xl">
-        {/* Header */}
         <div className="flex items-center justify-between px-6 pt-6 pb-4">
           <h2 id="settings-title" className="text-xl font-bold text-x-text">Settings</h2>
           <button
@@ -88,7 +87,6 @@ export function SettingsModal({
         </div>
 
         <div className="px-6 pb-6 space-y-6">
-          {/* Appearance */}
           <section>
             <h3 className="text-sm font-semibold text-x-text-secondary uppercase tracking-wider mb-3">
               Appearance
@@ -111,7 +109,6 @@ export function SettingsModal({
             </div>
           </section>
 
-          {/* New Tab */}
           <section>
             <h3 className="text-sm font-semibold text-x-text-secondary uppercase tracking-wider mb-3">
               New Tab
@@ -197,7 +194,6 @@ export function SettingsModal({
             </div>
           </section>
 
-          {/* Stats */}
           <section>
             <h3 className="text-sm font-semibold text-x-text-secondary uppercase tracking-wider mb-3">
               Stats
@@ -239,7 +235,6 @@ export function SettingsModal({
           </section>
         </div>
 
-        {/* Footer */}
         <div className="border-t border-x-border px-6 py-4">
           <p className="text-xs text-x-text-secondary text-center">
             Settings sync across your devices

@@ -53,15 +53,13 @@ export function useScrolledPast(threshold = 300): boolean {
   return scrolled;
 }
 
-export function TableOfContents({
-  sections,
-  activeId,
-  scrolledPast,
-}: {
+interface Props {
   sections: TocSection[];
   activeId: string | null;
   scrolledPast: boolean;
-}) {
+}
+
+export function TableOfContents({ sections, activeId, scrolledPast }: Props) {
   const scrollToSection = useCallback((id: string) => {
     const el = document.getElementById(id);
     if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -69,7 +67,6 @@ export function TableOfContents({
 
   return (
     <>
-      {/* Expanded sidebar — visible on xl+ when near top */}
       <nav
         className={`sticky top-24 hidden max-h-[calc(100vh-8rem)] overflow-y-auto pr-4 transition-opacity duration-300 xl:block ${
           scrolledPast ? "pointer-events-none opacity-0" : "opacity-100"
@@ -97,7 +94,6 @@ export function TableOfContents({
         </ul>
       </nav>
 
-      {/* Minimap — visible on md-xl always, or xl+ when scrolled */}
       <nav
         className={`fixed left-3 top-1/2 z-20 hidden -translate-y-1/2 flex-col gap-2 md:flex ${
           scrolledPast ? "xl:flex" : "xl:hidden"

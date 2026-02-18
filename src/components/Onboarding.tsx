@@ -1,8 +1,8 @@
-interface OnboardingProps {
+interface Props {
   phase: "need_login" | "connecting";
 }
 
-export function Onboarding({ phase }: OnboardingProps) {
+export function Onboarding({ phase }: Props) {
   if (phase === "connecting") {
     return (
       <div className="flex flex-col items-center justify-center min-h-dvh bg-x-bg text-x-text">

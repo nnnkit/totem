@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import type { Bookmark } from "../types";
+import type { Bookmark, ThreadTweet } from "../types";
 import { fetchTweetDetail } from "../api/core/posts";
 import type { ThemePreference } from "../hooks/useTheme";
 
@@ -20,7 +20,7 @@ function themeLabel(value: ThemePreference): string {
   return "Dark";
 }
 
-interface ReaderViewProps {
+interface Props {
   bookmark: Bookmark;
   relatedBookmarks: Bookmark[];
   onOpenBookmark: (bookmark: Bookmark) => void;
@@ -42,10 +42,11 @@ export function ReaderView({
   onUnbookmark,
   unbookmarking,
   onShuffle,
-}: ReaderViewProps) {
+}: Props) {
   const [resolvedBookmark, setResolvedBookmark] = useState<Bookmark | null>(
     null,
   );
+  const [detailThread, setDetailThread] = useState<ThreadTweet[]>([]);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
 
@@ -53,6 +54,7 @@ export function ReaderView({
     let cancelled = false;
 
     setResolvedBookmark(null);
+    setDetailThread([]);
     setDetailError(null);
     setDetailLoading(true);
 
@@ -65,6 +67,12 @@ export function ReaderView({
             ...detail.focalTweet,
             sortIndex: bookmark.sortIndex,
           });
+        }
+
+        if (detail.thread.length > 0) {
+          setDetailThread(
+            detail.thread.toSorted((a, b) => a.createdAt - b.createdAt),
+          );
         }
       })
       .catch((error) => {
@@ -97,7 +105,6 @@ export function ReaderView({
 
   return (
     <div className="min-h-dvh bg-x-bg">
-      {/* Sticky header */}
       <div className="sticky top-0 z-10 border-b border-x-border bg-x-bg/80 backdrop-blur-md">
         <div
           className={`mx-auto flex items-center gap-3 px-4 py-3 ${containerWidthClass}`}
@@ -150,6 +157,7 @@ export function ReaderView({
         <TweetRenderer
           displayBookmark={displayBookmark}
           displayKind={displayKind}
+          detailThread={detailThread}
           detailLoading={detailLoading}
           detailError={detailError}
           relatedBookmarks={relatedBookmarks}

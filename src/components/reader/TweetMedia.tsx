@@ -6,7 +6,11 @@ function mediaHeightClass(total: number, index: number): string {
   return "h-44";
 }
 
-export function TweetMedia({ items }: { items: Media[] }) {
+interface Props {
+  items: Media[];
+}
+
+export function TweetMedia({ items }: Props) {
   if (items.length === 0) return null;
 
   const prefersReducedMotion =

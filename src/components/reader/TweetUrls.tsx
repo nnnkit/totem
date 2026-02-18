@@ -9,7 +9,11 @@ type ResolvedUrl = {
   displayUrl: string;
 };
 
-function LinkCards({ urls }: { urls: ResolvedUrl[] }) {
+interface LinkCardsProps {
+  urls: ResolvedUrl[];
+}
+
+function LinkCards({ urls }: LinkCardsProps) {
   if (urls.length === 0) return null;
   return (
     <div className="mt-5 flex flex-col gap-2.5">
@@ -35,13 +39,12 @@ function LinkCards({ urls }: { urls: ResolvedUrl[] }) {
   );
 }
 
-export function TweetUrls({
-  urls,
-  preferArticleButton = false,
-}: {
+interface Props {
   urls: TweetUrl[];
   preferArticleButton?: boolean;
-}) {
+}
+
+export function TweetUrls({ urls, preferArticleButton = false }: Props) {
   const resolvedUrls: ResolvedUrl[] = urls
     .map((url) => {
       const href = (url.expandedUrl || url.url || "").trim();

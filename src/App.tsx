@@ -72,7 +72,6 @@ export default function App() {
           setSelectedBookmark(null);
         }
       } catch {
-        // ReaderView already renders inline error states for detail fetches.
       } finally {
         setUnbookmarkingId(null);
       }
@@ -87,7 +86,6 @@ export default function App() {
     setSelectedBookmark,
   });
 
-  // Loading
   if (phase === "loading") {
     return (
       <div className="flex items-center justify-center min-h-dvh bg-x-bg">
@@ -104,7 +102,6 @@ export default function App() {
     );
   }
 
-  // Not logged in or connecting
   if (phase === "need_login" || phase === "connecting") {
     return <Onboarding phase={phase} />;
   }
