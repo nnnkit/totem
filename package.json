@@ -13,6 +13,7 @@
     "release:prepare": "node scripts/prepare-release.mjs"
   },
   "dependencies": {
+    "driver.js": "^1.4.0",
     "idb": "^8.0.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

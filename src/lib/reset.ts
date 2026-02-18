@@ -8,6 +8,7 @@ export async function resetLocalData(): Promise<void> {
 
   if (typeof localStorage !== "undefined") {
     localStorage.removeItem(READ_IDS_KEY);
+    localStorage.removeItem("xbt_tour_completed");
   }
 
   if (typeof chrome === "undefined" || !chrome.storage?.local) {

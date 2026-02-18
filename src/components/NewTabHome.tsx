@@ -26,36 +26,11 @@ interface DecoratedBookmark {
   bookmark: Bookmark;
   title: string;
   excerpt: string;
-  savedLabel: string;
   minutes: number | null;
   isRead: boolean;
 }
 
 const READ_IDS_KEY = "tw_breath_read_ids";
-const MAX_ROTATION_ITEMS = 5;
-const ROTATION_INTERVAL_MS = 30000;
-const TRANSITION_MS = 220;
-
-function formatSavedLabel(timestamp: number, nowMs: number): string {
-  const diffMs = nowMs - timestamp;
-  if (!Number.isFinite(diffMs) || diffMs < 0) return "saved recently";
-
-  const minutes = Math.floor(diffMs / 60_000);
-  if (minutes <= 0) return "saved just now";
-  if (minutes < 60) return `saved ${minutes || 1} min ago`;
-
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `saved ${hours} hour${hours === 1 ? "" : "s"} ago`;
-
-  const days = Math.floor(hours / 24);
-  if (days < 30) return `saved ${days} day${days === 1 ? "" : "s"} ago`;
-
-  const savedOn = new Date(timestamp).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  });
-  return `saved ${savedOn}`;
-}
 
 function loadReadIds(): Set<string> {
   if (typeof localStorage === "undefined") return new Set<string>();
@@ -75,12 +50,6 @@ function persistReadIds(value: Set<string>) {
   if (typeof localStorage === "undefined") return;
   localStorage.setItem(READ_IDS_KEY, JSON.stringify(Array.from(value)));
 }
-
-const BOOKMARK_ICON = (
-  <svg viewBox="0 0 24 24" className="size-5" fill="currentColor">
-    <path d="M4 4.5C4 3.12 5.119 2 6.5 2h11C18.881 2 20 3.12 20 4.5v18.44l-8-5.71-8 5.71V4.5zM6.5 4c-.276 0-.5.22-.5.5v14.56l6-4.29 6 4.29V4.5c0-.28-.224-.5-.5-.5h-11z" />
-  </svg>
-);
 
 const SETTINGS_ICON = (
   <svg viewBox="0 0 24 24" className="size-5" fill="currentColor">
@@ -108,28 +77,6 @@ const CHEVRON_RIGHT_ICON = (
   </svg>
 );
 
-function usePrefersReducedMotion() {
-  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
-
-  useEffect(() => {
-    if (
-      typeof window === "undefined" ||
-      typeof window.matchMedia !== "function"
-    ) {
-      return;
-    }
-
-    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const update = () => setPrefersReducedMotion(media.matches);
-
-    update();
-    media.addEventListener("change", update);
-    return () => media.removeEventListener("change", update);
-  }, []);
-
-  return prefersReducedMotion;
-}
-
 const SEARCH_ICON = (
   <svg viewBox="0 0 20 20" fill="currentColor" className="size-4 opacity-50">
     <path
@@ -141,11 +88,27 @@ const SEARCH_ICON = (
 );
 
 const GOOGLE_LOGO = (
-  <svg viewBox="0 0 24 24" className="size-5 shrink-0" xmlns="http://www.w3.org/2000/svg">
-    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4" />
-    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
-    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
-    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+  <svg
+    viewBox="0 0 24 24"
+    className="size-5 shrink-0"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path
+      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
+      fill="#4285F4"
+    />
+    <path
+      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+      fill="#34A853"
+    />
+    <path
+      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+      fill="#FBBC05"
+    />
+    <path
+      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+      fill="#EA4335"
+    />
   </svg>
 );
 
@@ -164,16 +127,10 @@ export function NewTabHome({
   const [now, setNow] = useState(() => new Date());
   const [imgLoaded, setImgLoaded] = useState(false);
   const [imgError, setImgError] = useState(false);
-  const [isDocumentVisible, setIsDocumentVisible] = useState(
-    () => document.visibilityState === "visible",
-  );
   const [readIds, setReadIds] = useState<Set<string>>(() => loadReadIds());
-  const [currentIndex, setCurrentIndex] = useState(0);
   const [cardEngaged, setCardEngaged] = useState(false);
-  const [cardTransitioning, setCardTransitioning] = useState(false);
+  const [mountSeed] = useState(() => Math.random());
   const searchRef = useRef<HTMLInputElement>(null);
-  const transitionTimerRef = useRef<number | null>(null);
-  const prefersReducedMotion = usePrefersReducedMotion();
   const {
     wallpaperUrl,
     wallpaperTitle,
@@ -191,7 +148,6 @@ export function NewTabHome({
       bookmark,
       title: pickTitle(bookmark),
       excerpt: pickExcerpt(bookmark),
-      savedLabel: formatSavedLabel(bookmark.createdAt, nowMinute * 60000),
       minutes: detailedTweetIds.has(bookmark.tweetId)
         ? estimateReadingMinutes(bookmark)
         : null,
@@ -201,14 +157,13 @@ export function NewTabHome({
     return { items: allItems, unreadItems: unread };
   }, [bookmarks, detailedTweetIds, nowMinute, readIds]);
 
-  const rotationPool = useMemo(
-    () =>
-      (unreadItems.length > 0 ? unreadItems : items).slice(
-        0,
-        MAX_ROTATION_ITEMS,
-      ),
-    [items, unreadItems],
-  );
+  const currentItem = useMemo(() => {
+    const pool = unreadItems.length > 0 ? unreadItems : items;
+    if (pool.length === 0) return null;
+    const index = Math.floor(mountSeed * pool.length);
+    return pool[index];
+  }, [items, unreadItems, mountSeed]);
+
   const [prevWallpaperUrl, setPrevWallpaperUrl] = useState(wallpaperUrl);
   if (wallpaperUrl !== prevWallpaperUrl) {
     setPrevWallpaperUrl(wallpaperUrl);
@@ -216,26 +171,11 @@ export function NewTabHome({
     setImgError(false);
   }
 
-  if (rotationPool.length === 0 && currentIndex !== 0) {
-    setCurrentIndex(0);
-  } else if (rotationPool.length > 0 && currentIndex >= rotationPool.length) {
-    setCurrentIndex(rotationPool.length - 1);
-  }
-
   const showWallpaper = Boolean(wallpaperUrl && !imgError);
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(new Date()), 30_000);
     return () => window.clearInterval(timer);
-  }, []);
-
-  useEffect(() => {
-    const onVisibilityChange = () => {
-      setIsDocumentVisible(document.visibilityState === "visible");
-    };
-    document.addEventListener("visibilitychange", onVisibilityChange);
-    return () =>
-      document.removeEventListener("visibilitychange", onVisibilityChange);
   }, []);
 
   useEffect(() => {
@@ -263,17 +203,6 @@ export function NewTabHome({
     });
   }, [bookmarks]);
 
-  useEffect(
-    () => () => {
-      if (transitionTimerRef.current !== null) {
-        window.clearTimeout(transitionTimerRef.current);
-      }
-    },
-    [],
-  );
-
-  const currentItem = rotationPool[currentIndex] ?? null;
-
   const markAsRead = useCallback((tweetId: string) => {
     setReadIds((previous) => {
       if (previous.has(tweetId)) return previous;
@@ -293,44 +222,12 @@ export function NewTabHome({
     [markAsRead, onOpenBookmark],
   );
 
-  const switchCard = useCallback(
-    (targetIndex: number) => {
-      if (rotationPool.length <= 1) return;
-
-      const normalized =
-        ((targetIndex % rotationPool.length) + rotationPool.length) %
-        rotationPool.length;
-
-      if (transitionTimerRef.current !== null) {
-        window.clearTimeout(transitionTimerRef.current);
-      }
-
-      setCardTransitioning(true);
-      transitionTimerRef.current = window.setTimeout(() => {
-        setCurrentIndex(normalized);
-        setCardTransitioning(false);
-        transitionTimerRef.current = null;
-      }, TRANSITION_MS);
-    },
-    [rotationPool.length],
-  );
-
-  const rotationPaused =
-    prefersReducedMotion ||
-    !isDocumentVisible ||
-    cardEngaged ||
-    cardTransitioning ||
-    rotationPool.length <= 1;
-
-  useEffect(() => {
-    if (rotationPaused) return;
-
-    const timer = window.setTimeout(() => {
-      switchCard(currentIndex + 1);
-    }, ROTATION_INTERVAL_MS);
-
-    return () => window.clearTimeout(timer);
-  }, [rotationPaused, switchCard, currentIndex]);
+  const surpriseMe = useCallback(() => {
+    if (items.length === 0) return;
+    const pool = unreadItems.length > 0 ? unreadItems : items;
+    const pick = pool[Math.floor(Math.random() * pool.length)];
+    openForReading(pick);
+  }, [items, unreadItems, openForReading]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -340,20 +237,18 @@ export function NewTabHome({
       if (e.key === "/") {
         e.preventDefault();
         searchRef.current?.focus();
-      } else if (e.key === "ArrowLeft") {
-        switchCard(currentIndex - 1);
-      } else if (e.key === "ArrowRight") {
-        switchCard(currentIndex + 1);
       } else if (e.key === "Enter" || e.key === "o") {
         openForReading(currentItem);
       } else if (e.key === "l") {
         onOpenReading();
+      } else if (e.key === "s") {
+        surpriseMe();
       }
     };
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [currentIndex, currentItem, switchCard, openForReading, onOpenReading]);
+  }, [currentItem, openForReading, onOpenReading, surpriseMe]);
 
   return (
     <div className="breath-home relative min-h-dvh overflow-hidden">
@@ -398,9 +293,7 @@ export function NewTabHome({
                   placeholder="Search the web"
                   autoComplete="off"
                 />
-                <span className="breath-search-trail">
-                  {SEARCH_ICON}
-                </span>
+                <span className="breath-search-trail">{SEARCH_ICON}</span>
               </form>
             )}
 
@@ -475,26 +368,9 @@ export function NewTabHome({
                     : ""
                 }`}
               >
-                <div
-                  className="breath-progress-track"
-                  role="progressbar"
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                  aria-valuenow={rotationPaused ? 0 : undefined}
-                >
-                  <span
-                    key={currentIndex}
-                    className={`breath-progress-fill${rotationPaused ? "" : " is-animating"}`}
-                  />
-                </div>
-
-                <div
-                  className={`breath-card-content ${
-                    cardTransitioning ? "breath-card-content--leaving" : ""
-                  }`}
-                >
+                <div className="breath-card-content">
                   <div className="flex justify-between">
-                    <p className="breath-eyebrow">Pick up where you left off</p>
+                    <p className="breath-eyebrow uppercase">recommended</p>
                     <kbd className="breath-kbd">O</kbd>
                   </div>
 
@@ -512,29 +388,6 @@ export function NewTabHome({
                 </div>
               </article>
 
-              <div
-                className="breath-dots-row"
-                role="tablist"
-                aria-label="Recommendation dots"
-              >
-                {rotationPool.map((item, index) => {
-                  const active = index === currentIndex;
-                  return (
-                    <button
-                      key={item.bookmark.tweetId}
-                      type="button"
-                      role="tab"
-                      aria-selected={active}
-                      aria-label={`Article ${index + 1} of ${rotationPool.length}`}
-                      className={`breath-dot ${active ? "is-active" : ""}`}
-                      onClick={() => switchCard(index)}
-                    >
-                      <span className="breath-dot-visual" />
-                    </button>
-                  );
-                })}
-              </div>
-
               <div className="breath-actions">
                 <button
                   type="button"
@@ -543,6 +396,14 @@ export function NewTabHome({
                 >
                   Open all bookmarks
                   <kbd className="breath-kbd">L</kbd>
+                </button>
+                <button
+                  type="button"
+                  className="breath-btn breath-btn--secondary"
+                  onClick={surpriseMe}
+                >
+                  Surprise me
+                  <kbd className="breath-kbd">S</kbd>
                 </button>
               </div>
             </div>
@@ -564,16 +425,6 @@ export function NewTabHome({
             </article>
           )}
         </footer>
-
-        <button
-          type="button"
-          onClick={onOpenReading}
-          className="breath-icon-btn breath-reading-btn"
-          aria-label="Reading progress"
-          title="Reading"
-        >
-          {BOOKMARK_ICON}
-        </button>
 
         <button
           type="button"
