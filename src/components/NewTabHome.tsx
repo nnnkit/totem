@@ -164,7 +164,6 @@ export function NewTabHome({
   const [cardTransitioning, setCardTransitioning] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
   const transitionTimerRef = useRef<number | null>(null);
-  const currentIndexRef = useRef(0);
   const prefersReducedMotion = usePrefersReducedMotion();
   const {
     wallpaperUrl,
@@ -201,6 +200,19 @@ export function NewTabHome({
       ),
     [items, unreadItems],
   );
+  const [prevWallpaperUrl, setPrevWallpaperUrl] = useState(wallpaperUrl);
+  if (wallpaperUrl !== prevWallpaperUrl) {
+    setPrevWallpaperUrl(wallpaperUrl);
+    setImgLoaded(false);
+    setImgError(false);
+  }
+
+  if (rotationPool.length === 0 && currentIndex !== 0) {
+    setCurrentIndex(0);
+  } else if (rotationPool.length > 0 && currentIndex >= rotationPool.length) {
+    setCurrentIndex(rotationPool.length - 1);
+  }
+
   const showWallpaper = Boolean(wallpaperUrl && !imgError);
 
   useEffect(() => {
@@ -216,11 +228,6 @@ export function NewTabHome({
     return () =>
       document.removeEventListener("visibilitychange", onVisibilityChange);
   }, []);
-
-  useEffect(() => {
-    setImgLoaded(false);
-    setImgError(false);
-  }, [wallpaperUrl]);
 
   useEffect(() => {
     if (bookmarks.length === 0) return;
@@ -246,21 +253,6 @@ export function NewTabHome({
       return next;
     });
   }, [bookmarks]);
-
-  useEffect(() => {
-    if (rotationPool.length === 0) {
-      setCurrentIndex(0);
-      return;
-    }
-
-    setCurrentIndex((previous) =>
-      Math.min(previous, Math.max(0, rotationPool.length - 1)),
-    );
-  }, [rotationPool.length]);
-
-  useEffect(() => {
-    currentIndexRef.current = currentIndex;
-  }, [currentIndex]);
 
   useEffect(
     () => () => {
@@ -325,7 +317,7 @@ export function NewTabHome({
     if (rotationPaused) return;
 
     const timer = window.setTimeout(() => {
-      switchCard(currentIndexRef.current + 1);
+      switchCard(currentIndex + 1);
     }, ROTATION_INTERVAL_MS);
 
     return () => window.clearTimeout(timer);

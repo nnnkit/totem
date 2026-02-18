@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useAuth } from "./hooks/useAuth";
 import { useBookmarks, useDetailedTweetIds } from "./hooks/useBookmarks";
 import { useTheme } from "./hooks/useTheme";
@@ -34,15 +34,14 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [shuffleSeed, setShuffleSeed] = useState(0);
 
-  useEffect(() => {
-    if (!selectedBookmark) return;
-    const stillExists = bookmarks.some(
+  if (
+    selectedBookmark &&
+    !bookmarks.some(
       (bookmark) => bookmark.tweetId === selectedBookmark.tweetId,
-    );
-    if (!stillExists) {
-      setSelectedBookmark(null);
-    }
-  }, [bookmarks, selectedBookmark]);
+    )
+  ) {
+    setSelectedBookmark(null);
+  }
 
   const relatedBookmarks = useMemo(
     () => pickRelatedBookmarks(selectedBookmark, bookmarks, 3, shuffleSeed > 0),

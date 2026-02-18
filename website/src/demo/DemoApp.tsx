@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useTheme } from "@ext/hooks/useTheme";
 import { useSettings } from "@ext/hooks/useSettings";
 import { useKeyboardNavigation } from "@ext/hooks/useKeyboard";
@@ -32,15 +32,12 @@ export default function DemoApp() {
   const [shuffleSeed, setShuffleSeed] = useState(0);
   const [syncing, setSyncing] = useState(false);
 
-  useEffect(() => {
-    if (!selectedBookmark) return;
-    const stillExists = bookmarks.some(
-      (b) => b.tweetId === selectedBookmark.tweetId,
-    );
-    if (!stillExists) {
-      setSelectedBookmark(null);
-    }
-  }, [bookmarks, selectedBookmark]);
+  if (
+    selectedBookmark &&
+    !bookmarks.some((b) => b.tweetId === selectedBookmark.tweetId)
+  ) {
+    setSelectedBookmark(null);
+  }
 
   const relatedBookmarks = useMemo(
     () =>
