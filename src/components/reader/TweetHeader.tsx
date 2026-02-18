@@ -22,23 +22,33 @@ interface Props {
   author: Bookmark["author"];
   displayKind: TweetKind;
   isLongText?: boolean;
+  readingMinutes?: number | null;
 }
 
-export function TweetHeader({ author, displayKind, isLongText }: Props) {
+export function TweetHeader({ author, displayKind, isLongText, readingMinutes }: Props) {
+  const authorUrl = `https://x.com/${author.screenName}`;
+
   return (
     <>
       <div className="mb-5 flex items-center gap-3">
-        <img
-          src={author.profileImageUrl}
-          alt=""
-          className="size-12 rounded-full"
-          loading="lazy"
-        />
+        <a href={authorUrl} target="_blank" rel="noopener noreferrer">
+          <img
+            src={author.profileImageUrl}
+            alt=""
+            className="size-12 rounded-full"
+            loading="lazy"
+          />
+        </a>
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <span className="truncate font-bold text-x-text">
+            <a
+              href={authorUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="truncate font-bold text-x-text hover:underline"
+            >
               {author.name}
-            </span>
+            </a>
             {author.verified && (
               <svg
                 viewBox="0 0 22 22"
@@ -49,10 +59,20 @@ export function TweetHeader({ author, displayKind, isLongText }: Props) {
               </svg>
             )}
           </div>
-          <span className="text-sm text-x-text-secondary">
+          <a
+            href={authorUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm text-x-text-secondary hover:underline"
+          >
             @{author.screenName}
-          </span>
+          </a>
         </div>
+        {readingMinutes != null && (
+          <span className="ml-auto shrink-0 text-sm text-x-text-secondary">
+            {readingMinutes} min read
+          </span>
+        )}
       </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-2">

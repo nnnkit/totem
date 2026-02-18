@@ -20,7 +20,7 @@ export default function App() {
   const { themePreference, setThemePreference } = useTheme();
   const { settings, updateSettings } = useSettings();
   const isReady = phase === "ready";
-  const { bookmarks, syncState, refresh, unbookmark } = useBookmarks(isReady);
+  const { bookmarks, syncState, refresh } = useBookmarks(isReady);
   const detailedTweetIds = useDetailedTweetIds();
   const {
     continueReading,
@@ -31,7 +31,6 @@ export default function App() {
   const [selectedBookmark, setSelectedBookmark] = useState<Bookmark | null>(
     null,
   );
-  const [unbookmarkingId, setUnbookmarkingId] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [shuffleSeed, setShuffleSeed] = useState(0);
 
@@ -61,24 +60,6 @@ export default function App() {
     setSelectedBookmark(null);
     refreshContinueReading();
   }, [refreshContinueReading]);
-
-  const handleUnbookmark = useCallback(
-    async (tweetId: string) => {
-      if (!tweetId || unbookmarkingId === tweetId) return;
-      setUnbookmarkingId(tweetId);
-
-      try {
-        await unbookmark(tweetId);
-        if (selectedBookmark?.tweetId === tweetId) {
-          setSelectedBookmark(null);
-        }
-      } catch {
-      } finally {
-        setUnbookmarkingId(null);
-      }
-    },
-    [unbookmark, selectedBookmark, unbookmarkingId],
-  );
 
   useKeyboardNavigation({
     selectedBookmark,
@@ -114,11 +95,7 @@ export default function App() {
           bookmark={selectedBookmark}
           relatedBookmarks={relatedBookmarks}
           onOpenBookmark={openBookmark}
-          themePreference={themePreference}
-          onThemePreferenceChange={setThemePreference}
           onBack={closeReader}
-          onUnbookmark={handleUnbookmark}
-          unbookmarking={unbookmarkingId === selectedBookmark.tweetId}
           onShuffle={() => setShuffleSeed((s) => s + 1)}
         />
       );

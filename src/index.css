@@ -215,6 +215,43 @@
       "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Palatino, serif;
   }
 
+  code, pre, kbd, samp {
+    font-family:
+      "Berkeley Mono", "IBM Plex Mono", "JetBrains Mono", "Fira Code",
+      ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+
+  :not(pre) > code {
+    @apply rounded bg-x-card px-1.5 py-0.5 text-[0.88em];
+  }
+
+  kbd {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    vertical-align: middle;
+    min-width: 1.6em;
+    padding: 0.2em 0.4em;
+    border-radius: 3px;
+    border: 1px solid var(--x-border);
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--x-card) 80%, white 20%) 0%,
+      var(--x-card) 100%
+    );
+    box-shadow:
+      0 1px 0 1px color-mix(in srgb, var(--x-border) 90%, transparent),
+      0 2px 4px color-mix(in srgb, black 14%, transparent),
+      inset 0 1px 0 color-mix(in srgb, white 8%, transparent);
+    font-family: inherit;
+    font-size: 0.78em;
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: 0.04em;
+    color: var(--x-text-secondary);
+    text-shadow: 0 0.5px 0 color-mix(in srgb, var(--x-bg) 50%, transparent);
+  }
+
   ::selection {
     background-color: color-mix(in srgb, var(--x-blue) 28%, transparent);
   }
@@ -533,6 +570,9 @@
 }
 
 .breath-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 0.62rem;
   font-size: 0.79rem;
   font-weight: 600;
@@ -565,20 +605,19 @@
 }
 
 .breath-kbd {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 1.3em;
   margin-left: 0.5rem;
-  padding: 0.2em 0.45em;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.14);
-  font-family: inherit;
-  font-size: 0.78em;
-  font-weight: 500;
-  line-height: 1;
-  letter-spacing: 0.03em;
-  color: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.18) 0%,
+    rgba(255, 255, 255, 0.1) 100%
+  );
+  box-shadow:
+    0 1px 0 1px rgba(255, 255, 255, 0.08),
+    0 2px 4px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.8);
+  text-shadow: 0 0.5px 0 rgba(0, 0, 0, 0.4);
 }
 
 .breath-btn--ghost {

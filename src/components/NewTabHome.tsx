@@ -89,13 +89,21 @@ const SETTINGS_ICON = (
 
 const CHEVRON_LEFT_ICON = (
   <svg viewBox="0 0 20 20" fill="currentColor" className="size-3.5">
-    <path fillRule="evenodd" d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z" clipRule="evenodd" />
+    <path
+      fillRule="evenodd"
+      d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z"
+      clipRule="evenodd"
+    />
   </svg>
 );
 
 const CHEVRON_RIGHT_ICON = (
   <svg viewBox="0 0 20 20" fill="currentColor" className="size-3.5">
-    <path fillRule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+    <path
+      fillRule="evenodd"
+      d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z"
+      clipRule="evenodd"
+    />
   </svg>
 );
 
@@ -103,7 +111,10 @@ function usePrefersReducedMotion() {
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
   useEffect(() => {
-    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+    if (
+      typeof window === "undefined" ||
+      typeof window.matchMedia !== "function"
+    ) {
       return;
     }
 
@@ -142,7 +153,14 @@ export function NewTabHome({
   const transitionTimerRef = useRef<number | null>(null);
   const currentIndexRef = useRef(0);
   const prefersReducedMotion = usePrefersReducedMotion();
-  const { wallpaperUrl, wallpaperTitle, hasNext, hasPrev, next: nextWallpaper, prev: prevWallpaper } = useWallpaper();
+  const {
+    wallpaperUrl,
+    wallpaperTitle,
+    hasNext,
+    hasPrev,
+    next: nextWallpaper,
+    prev: prevWallpaper,
+  } = useWallpaper();
   const { sites: topSites } = useTopSites(topSitesLimit);
 
   const nowMinute = useMemo(() => Math.floor(now.getTime() / 60000), [now]);
@@ -164,7 +182,10 @@ export function NewTabHome({
 
   const rotationPool = useMemo(
     () =>
-      (unreadItems.length > 0 ? unreadItems : items).slice(0, MAX_ROTATION_ITEMS),
+      (unreadItems.length > 0 ? unreadItems : items).slice(
+        0,
+        MAX_ROTATION_ITEMS,
+      ),
     [items, unreadItems],
   );
   const showWallpaper = Boolean(wallpaperUrl && !imgError);
@@ -179,7 +200,8 @@ export function NewTabHome({
       setIsDocumentVisible(document.visibilityState === "visible");
     };
     document.addEventListener("visibilitychange", onVisibilityChange);
-    return () => document.removeEventListener("visibilitychange", onVisibilityChange);
+    return () =>
+      document.removeEventListener("visibilitychange", onVisibilityChange);
   }, []);
 
   useEffect(() => {
@@ -332,174 +354,175 @@ export function NewTabHome({
       <div className="breath-grain pointer-events-none absolute inset-0" />
 
       <div className="relative z-10 mx-auto flex min-h-dvh w-full max-w-4xl flex-col px-5 py-6 sm:px-8">
-        <main
-          className="mx-auto flex w-full max-w-2xl flex-1 flex-col justify-end pb-10"
-        >
-            <section className="mx-auto w-full max-w-lg space-y-4">
-              <div className="text-center">
-                <h1
-                  className="breath-clock text-balance tabular-nums"
-                  aria-label={`Current time: ${formatClock(now)}`}
-                >
-                  {formatClock(now)}
-                </h1>
-              </div>
+        <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col justify-end pb-10">
+          <section className="mx-auto w-full max-w-lg space-y-4">
+            <div className="text-center">
+              <h1
+                className="breath-clock text-balance tabular-nums"
+                aria-label={`Current time: ${formatClock(now)}`}
+              >
+                {formatClock(now)}
+              </h1>
+            </div>
 
-              {showTopSites && topSites.length > 0 && (
-                <nav
-                  className="flex items-center justify-center gap-4 flex-wrap"
-                  aria-label="Quick links"
-                >
-                  {topSites.map((site) => (
-                    <a
-                      key={site.url}
-                      href={site.url}
-                      className="breath-quick-link"
-                      title={site.title}
-                    >
-                      <span className="breath-quick-link-icon">
-                        <img
-                          src={site.faviconUrl}
-                          alt=""
-                          width={20}
-                          height={20}
-                          loading="lazy"
-                        />
-                      </span>
-                      <span className="breath-quick-link-label">
-                        {site.hostname.replace(/^www\./, "")}
-                      </span>
-                    </a>
-                  ))}
-                </nav>
-              )}
-
-              {currentItem ? (
-                <>
-                  <article
-                    className={`breath-card breath-card--zen ${
-                      cardEngaged ? "is-engaged" : ""
-                    }`}
-                    onMouseEnter={() => setCardEngaged(true)}
-                    onMouseLeave={() => setCardEngaged(false)}
-                    onFocusCapture={() => setCardEngaged(true)}
-                    onBlurCapture={(event) => {
-                      const nextTarget =
-                        event.relatedTarget instanceof Node
-                          ? event.relatedTarget
-                          : null;
-                      if (!nextTarget || !event.currentTarget.contains(nextTarget)) {
-                        setCardEngaged(false);
-                      }
-                    }}
-                    onClick={() => openForReading(currentItem)}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter" || event.key === " ") {
-                        event.preventDefault();
-                        openForReading(currentItem);
-                      }
-                    }}
-                    tabIndex={0}
-                    role="button"
-                    aria-label={`Read ${currentItem.title} by @${
-                      currentItem.bookmark.author.screenName
-                    }${
-                      currentItem.minutes !== null
-                        ? `, ${currentItem.minutes} min read`
-                        : ""
-                    }`}
+            {showTopSites && topSites.length > 0 && (
+              <nav
+                className="flex items-center justify-center gap-4 flex-wrap"
+                aria-label="Quick links"
+              >
+                {topSites.map((site) => (
+                  <a
+                    key={site.url}
+                    href={site.url}
+                    className="breath-quick-link"
+                    title={site.title}
                   >
-                    <div
-                      className="breath-progress-track"
-                      role="progressbar"
-                      aria-valuemin={0}
-                      aria-valuemax={100}
-                      aria-valuenow={rotationPaused ? 0 : undefined}
-                    >
-                      <span
-                        key={currentIndex}
-                        className={`breath-progress-fill${rotationPaused ? "" : " is-animating"}`}
+                    <span className="breath-quick-link-icon">
+                      <img
+                        src={site.faviconUrl}
+                        alt=""
+                        width={20}
+                        height={20}
+                        loading="lazy"
                       />
-                    </div>
+                    </span>
+                    <span className="breath-quick-link-label">
+                      {site.hostname.replace(/^www\./, "")}
+                    </span>
+                  </a>
+                ))}
+              </nav>
+            )}
 
-                    <div
-                      className={`breath-card-content ${
-                        cardTransitioning ? "breath-card-content--leaving" : ""
-                      }`}
-                    >
-                      <p className="breath-eyebrow">Pick up where you left off</p>
-
-                      <h2 className="breath-title mt-4 text-balance">
-                        {currentItem.title}
-                      </h2>
-                      <p className="breath-description mt-2.5 text-pretty">
-                        {currentItem.excerpt}
-                      </p>
-                      <div className="mt-3 flex items-end justify-between gap-3">
-                        <p className="breath-meta">
-                          @{currentItem.bookmark.author.screenName} ·{" "}
-                          {currentItem.savedLabel}
-                          {currentItem.minutes !== null
-                            ? ` · ${currentItem.minutes} min`
-                            : ""}
-                        </p>
-                        <kbd className="breath-kbd">O</kbd>
-                      </div>
-                    </div>
-                  </article>
+            {currentItem ? (
+              <>
+                <article
+                  className={`breath-card breath-card--zen ${
+                    cardEngaged ? "is-engaged" : ""
+                  }`}
+                  onMouseEnter={() => setCardEngaged(true)}
+                  onMouseLeave={() => setCardEngaged(false)}
+                  onFocusCapture={() => setCardEngaged(true)}
+                  onBlurCapture={(event) => {
+                    const nextTarget =
+                      event.relatedTarget instanceof Node
+                        ? event.relatedTarget
+                        : null;
+                    if (
+                      !nextTarget ||
+                      !event.currentTarget.contains(nextTarget)
+                    ) {
+                      setCardEngaged(false);
+                    }
+                  }}
+                  onClick={() => openForReading(currentItem)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      openForReading(currentItem);
+                    }
+                  }}
+                  tabIndex={0}
+                  role="button"
+                  aria-label={`Read ${currentItem.title} by @${
+                    currentItem.bookmark.author.screenName
+                  }${
+                    currentItem.minutes !== null
+                      ? `, ${currentItem.minutes} min read`
+                      : ""
+                  }`}
+                >
+                  <div
+                    className="breath-progress-track"
+                    role="progressbar"
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={rotationPaused ? 0 : undefined}
+                  >
+                    <span
+                      key={currentIndex}
+                      className={`breath-progress-fill${rotationPaused ? "" : " is-animating"}`}
+                    />
+                  </div>
 
                   <div
-                    className="breath-dots-row"
-                    role="tablist"
-                    aria-label="Recommendation dots"
+                    className={`breath-card-content ${
+                      cardTransitioning ? "breath-card-content--leaving" : ""
+                    }`}
                   >
-                    {rotationPool.map((item, index) => {
-                      const active = index === currentIndex;
-                      return (
-                        <button
-                          key={item.bookmark.tweetId}
-                          type="button"
-                          role="tab"
-                          aria-selected={active}
-                          aria-label={`Article ${index + 1} of ${rotationPool.length}`}
-                          className={`breath-dot ${active ? "is-active" : ""}`}
-                          onClick={() => switchCard(index)}
-                        >
-                          <span className="breath-dot-visual" />
-                        </button>
-                      );
-                    })}
-                  </div>
+                    <div className="flex justify-between">
+                      <p className="breath-eyebrow">
+                        Pick up where you left off
+                      </p>
+                      <kbd className="breath-kbd">O</kbd>
+                    </div>
 
-                  <div className="breath-actions">
-                    <button
-                      type="button"
-                      className="breath-btn breath-btn--secondary"
-                      onClick={onOpenReading}
-                    >
-                      Open all bookmarks
-                      <kbd className="breath-kbd">L</kbd>
-                    </button>
+                    <h2 className="breath-title mt-4 text-balance">
+                      {currentItem.title}
+                    </h2>
+                    <p className="breath-description mt-2.5 text-pretty">
+                      {currentItem.excerpt}
+                    </p>
+                    <div className="mt-3 flex items-end justify-between gap-3">
+                      <p className="breath-meta">
+                        @{currentItem.bookmark.author.screenName}
+                      </p>
+                    </div>
                   </div>
-                </>
-              ) : (
-                <article className="breath-card text-center">
-                  <p className="breath-eyebrow">Your reading list is quiet</p>
-                  <p className="breath-empty mt-4 text-pretty">
-                    Sync your bookmarks once, and this tab will gently surface what
-                    to read next.
-                  </p>
+                </article>
+
+                <div
+                  className="breath-dots-row"
+                  role="tablist"
+                  aria-label="Recommendation dots"
+                >
+                  {rotationPool.map((item, index) => {
+                    const active = index === currentIndex;
+                    return (
+                      <button
+                        key={item.bookmark.tweetId}
+                        type="button"
+                        role="tab"
+                        aria-selected={active}
+                        aria-label={`Article ${index + 1} of ${rotationPool.length}`}
+                        className={`breath-dot ${active ? "is-active" : ""}`}
+                        onClick={() => switchCard(index)}
+                      >
+                        <span className="breath-dot-visual" />
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="breath-actions">
                   <button
                     type="button"
-                    onClick={onSync}
-                    disabled={syncing}
-                    className="breath-btn breath-btn--primary mt-6"
+                    className="breath-btn breath-btn--secondary"
+                    onClick={onOpenReading}
                   >
-                    {syncing ? "Syncing..." : "Sync bookmarks"}
+                    Open all bookmarks
+                    <kbd className="breath-kbd">L</kbd>
                   </button>
-                </article>
-              )}
-            </section>
+                </div>
+              </>
+            ) : (
+              <article className="breath-card text-center">
+                <p className="breath-eyebrow">Your reading list is quiet</p>
+                <p className="breath-empty mt-4 text-pretty">
+                  Sync your bookmarks once, and this tab will gently surface
+                  what to read next.
+                </p>
+                <button
+                  type="button"
+                  onClick={onSync}
+                  disabled={syncing}
+                  className="breath-btn breath-btn--primary mt-6"
+                >
+                  {syncing ? "Syncing..." : "Sync bookmarks"}
+                </button>
+              </article>
+            )}
+          </section>
         </main>
 
         <button

@@ -28,7 +28,6 @@ export default function DemoApp() {
   const [selectedBookmark, setSelectedBookmark] = useState<Bookmark | null>(
     null,
   );
-  const [unbookmarkingId, setUnbookmarkingId] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [shuffleSeed, setShuffleSeed] = useState(0);
   const [syncing, setSyncing] = useState(false);
@@ -58,23 +57,6 @@ export default function DemoApp() {
     refreshContinueReading();
   }, [refreshContinueReading]);
 
-  const handleUnbookmark = useCallback(
-    async (tweetId: string) => {
-      if (!tweetId || unbookmarkingId === tweetId) return;
-      setUnbookmarkingId(tweetId);
-      try {
-        setBookmarks((prev) => prev.filter((b) => b.tweetId !== tweetId));
-        await deleteBookmarksByTweetIds([tweetId]);
-        if (selectedBookmark?.tweetId === tweetId) {
-          setSelectedBookmark(null);
-        }
-      } finally {
-        setUnbookmarkingId(null);
-      }
-    },
-    [selectedBookmark, unbookmarkingId],
-  );
-
   const handleSync = useCallback(() => {
     setSyncing(true);
     setTimeout(() => setSyncing(false), 1500);
@@ -94,11 +76,7 @@ export default function DemoApp() {
           bookmark={selectedBookmark}
           relatedBookmarks={relatedBookmarks}
           onOpenBookmark={openBookmark}
-          themePreference={themePreference}
-          onThemePreferenceChange={setThemePreference}
           onBack={closeReader}
-          onUnbookmark={handleUnbookmark}
-          unbookmarking={unbookmarkingId === selectedBookmark.tweetId}
           onShuffle={() => setShuffleSeed((s) => s + 1)}
         />
       );

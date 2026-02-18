@@ -4,6 +4,7 @@ import {
   resolveTweetKind,
   toEmbeddedReaderTweet,
 } from "./utils";
+import { estimateReadingMinutes } from "../../lib/bookmark-utils";
 import { TweetHeader } from "./TweetHeader";
 import { RichTextBlock } from "./TweetText";
 import { TweetMedia } from "./TweetMedia";
@@ -161,6 +162,7 @@ export function TweetRenderer({
         author={displayBookmark.author}
         displayKind={displayKind}
         isLongText={displayBookmark.isLongText}
+        readingMinutes={estimateReadingMinutes(displayBookmark)}
       />
 
       <div id="section-main-tweet" className="px-6">
