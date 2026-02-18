@@ -29,11 +29,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build extension
-        run: pnpm build
-
-      - name: Package extension ZIP
-        run: node scripts/package-extension.mjs
+      - name: Validate and package release artifact
+        run: pnpm release:check
 
       - name: Read manifest version
         id: manifest

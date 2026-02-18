@@ -7,7 +7,10 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "package:extension": "pnpm build && node scripts/package-extension.mjs"
+    "package:extension": "pnpm build && node scripts/package-extension.mjs",
+    "release:version:check": "node scripts/check-version-sync.mjs",
+    "release:check": "pnpm release:version:check && pnpm package:extension",
+    "release:prepare": "node scripts/prepare-release.mjs"
   },
   "dependencies": {
     "idb": "^8.0.3",
