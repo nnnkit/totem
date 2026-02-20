@@ -1,11 +1,15 @@
-import { useEffect, useMemo, useState } from "react";
-import type { Bookmark, ThreadTweet } from "../types";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { Bookmark, Highlight, ThreadTweet } from "../types";
 import type { ThemePreference } from "../hooks/useTheme";
 import { fetchTweetDetail } from "../api/core/posts";
 
 import { resolveTweetKind } from "./reader/utils";
 import { TweetRenderer } from "./reader/TweetRenderer";
+import { SelectionToolbar } from "./reader/SelectionToolbar";
+import { HighlightPopover } from "./reader/HighlightPopover";
 import { useReadingProgress } from "../hooks/useReadingProgress";
+import { useSelectionToolbar } from "../hooks/useSelectionToolbar";
+import { useHighlights } from "../hooks/useHighlights";
 
 const THEME_CYCLE: ThemePreference[] = ["system", "light", "dark"];
 
@@ -40,6 +44,8 @@ export function ReaderView({
   const [detailThread, setDetailThread] = useState<ThreadTweet[]>([]);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
+
+  const articleRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -85,6 +91,49 @@ export function ReaderView({
     tweetId: bookmark.tweetId,
     contentReady: !detailLoading,
   });
+
+  const { addHighlight, removeHighlight, updateHighlightNote, getHighlight } =
+    useHighlights({
+      tweetId: bookmark.tweetId,
+      contentReady: !detailLoading,
+      containerRef: articleRef,
+    });
+
+  const { toolbarState, dismiss: dismissToolbar } =
+    useSelectionToolbar(articleRef);
+
+  const [popoverState, setPopoverState] = useState<{
+    highlight: Highlight;
+    position: { x: number; y: number };
+  } | null>(null);
+
+  const handleArticleClick = useCallback(
+    (e: React.MouseEvent) => {
+      const target = e.target as HTMLElement;
+
+      const mark = target.closest("mark.xbt-highlight") as HTMLElement | null;
+      const star = target.closest(".xbt-note-star") as HTMLElement | null;
+
+      const el = star || mark;
+      if (!el) return;
+
+      const highlightId = el.dataset.highlightId;
+      if (!highlightId) return;
+
+      const highlight = getHighlight(highlightId);
+      if (!highlight) return;
+
+      const rect = el.getBoundingClientRect();
+      setPopoverState({
+        highlight,
+        position: {
+          x: rect.left + rect.width / 2,
+          y: rect.bottom,
+        },
+      });
+    },
+    [getHighlight],
+  );
 
   const displayBookmark = resolvedBookmark || bookmark;
   const displayKind = useMemo(
@@ -186,7 +235,11 @@ export function ReaderView({
         </button>
       )}
 
-      <article className={`${containerWidthClass} mx-auto px-5 pb-16 pt-6`}>
+      <article
+        ref={articleRef}
+        className={`${containerWidthClass} mx-auto px-5 pb-16 pt-6`}
+        onClick={handleArticleClick}
+      >
         <TweetRenderer
           displayBookmark={displayBookmark}
           displayKind={displayKind}
@@ -196,9 +249,37 @@ export function ReaderView({
           relatedBookmarks={relatedBookmarks}
           onOpenBookmark={onOpenBookmark}
           onShuffle={onShuffle}
+          tweetSectionIdPrefix="section-tweet"
         />
       </article>
 
+      {toolbarState && (
+        <SelectionToolbar
+          position={toolbarState.position}
+          ranges={toolbarState.ranges}
+          onHighlight={(ranges, note) => {
+            addHighlight(ranges, note);
+            dismissToolbar();
+          }}
+          onDismiss={dismissToolbar}
+        />
+      )}
+
+      {popoverState && (
+        <HighlightPopover
+          highlight={popoverState.highlight}
+          position={popoverState.position}
+          onDelete={(id) => {
+            removeHighlight(id);
+            setPopoverState(null);
+          }}
+          onUpdateNote={(id, note) => {
+            updateHighlightNote(id, note);
+            setPopoverState(null);
+          }}
+          onDismiss={() => setPopoverState(null)}
+        />
+      )}
     </div>
   );
 }

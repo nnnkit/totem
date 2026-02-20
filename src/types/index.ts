@@ -143,3 +143,14 @@ export interface UserSettings {
   showSearchBar: boolean;
   topSitesLimit: number;
 }
+
+export interface Highlight {
+  id: string;
+  tweetId: string;
+  sectionId: string;
+  startOffset: number;
+  endOffset: number;
+  selectedText: string;
+  note: string | null;
+  createdAt: number;
+}

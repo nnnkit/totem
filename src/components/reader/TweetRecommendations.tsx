@@ -7,7 +7,11 @@ interface Props {
   onShuffle?: () => void;
 }
 
-export function TweetRecommendations({ relatedBookmarks, onOpenBookmark, onShuffle }: Props) {
+export function TweetRecommendations({
+  relatedBookmarks,
+  onOpenBookmark,
+  onShuffle,
+}: Props) {
   if (relatedBookmarks.length === 0) return null;
 
   return (
@@ -45,7 +49,6 @@ export function TweetRecommendations({ relatedBookmarks, onOpenBookmark, onShuff
               Shuffle
             </button>
           )}
-          <span className="text-xs text-x-text-secondary">3 picks</span>
         </div>
       </div>
 

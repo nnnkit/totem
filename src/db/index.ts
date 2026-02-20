@@ -1,11 +1,12 @@
 import { openDB, type DBSchema, type IDBPDatabase } from "idb";
-import type { Bookmark, TweetDetailCache, ReadingProgress } from "../types";
+import type { Bookmark, TweetDetailCache, ReadingProgress, Highlight } from "../types";
 
 const DB_NAME = "xbt";
-const DB_VERSION = 5;
+const DB_VERSION = 6;
 const STORE_NAME = "bookmarks";
 const DETAIL_STORE_NAME = "tweet_details";
 const PROGRESS_STORE_NAME = "reading_progress";
+const HIGHLIGHTS_STORE_NAME = "highlights";
 
 interface XBookmarksDbSchema extends DBSchema {
   bookmarks: {
@@ -30,6 +31,14 @@ interface XBookmarksDbSchema extends DBSchema {
     value: ReadingProgress;
     indexes: {
       lastReadAt: number;
+    };
+  };
+  highlights: {
+    key: string;
+    value: Highlight;
+    indexes: {
+      tweetId: string;
+      createdAt: number;
     };
   };
 }
@@ -74,6 +83,17 @@ function createDb() {
 
       if (!progressStore.indexNames.contains("lastReadAt")) {
         progressStore.createIndex("lastReadAt", "lastReadAt", { unique: false });
+      }
+
+      const highlightsStore = db.objectStoreNames.contains(HIGHLIGHTS_STORE_NAME)
+        ? tx.objectStore(HIGHLIGHTS_STORE_NAME)
+        : db.createObjectStore(HIGHLIGHTS_STORE_NAME, { keyPath: "id" });
+
+      if (!highlightsStore.indexNames.contains("tweetId")) {
+        highlightsStore.createIndex("tweetId", "tweetId", { unique: false });
+      }
+      if (!highlightsStore.indexNames.contains("createdAt")) {
+        highlightsStore.createIndex("createdAt", "createdAt", { unique: false });
       }
     },
     blocked() {
@@ -131,21 +151,23 @@ export async function getBookmarkCount(): Promise<number> {
 
 export async function clearBookmarks(): Promise<void> {
   const db = await getDb();
-  const tx = db.transaction([STORE_NAME, PROGRESS_STORE_NAME], "readwrite");
+  const tx = db.transaction([STORE_NAME, PROGRESS_STORE_NAME, HIGHLIGHTS_STORE_NAME], "readwrite");
   tx.objectStore(STORE_NAME).clear();
   tx.objectStore(PROGRESS_STORE_NAME).clear();
+  tx.objectStore(HIGHLIGHTS_STORE_NAME).clear();
   await tx.done;
 }
 
 export async function clearAllLocalData(): Promise<void> {
   const db = await getDb();
   const tx = db.transaction(
-    [STORE_NAME, DETAIL_STORE_NAME, PROGRESS_STORE_NAME],
+    [STORE_NAME, DETAIL_STORE_NAME, PROGRESS_STORE_NAME, HIGHLIGHTS_STORE_NAME],
     "readwrite",
   );
   tx.objectStore(STORE_NAME).clear();
   tx.objectStore(DETAIL_STORE_NAME).clear();
   tx.objectStore(PROGRESS_STORE_NAME).clear();
+  tx.objectStore(HIGHLIGHTS_STORE_NAME).clear();
   await tx.done;
 }
 
@@ -156,11 +178,13 @@ export async function deleteBookmarksByTweetIds(tweetIds: string[]): Promise<voi
   if (uniqueIds.length === 0) return;
 
   const db = await getDb();
-  const tx = db.transaction([STORE_NAME, DETAIL_STORE_NAME, PROGRESS_STORE_NAME], "readwrite");
+  const tx = db.transaction([STORE_NAME, DETAIL_STORE_NAME, PROGRESS_STORE_NAME, HIGHLIGHTS_STORE_NAME], "readwrite");
   const bookmarkStore = tx.objectStore(STORE_NAME);
   const detailStore = tx.objectStore(DETAIL_STORE_NAME);
   const progressStore = tx.objectStore(PROGRESS_STORE_NAME);
+  const highlightsStore = tx.objectStore(HIGHLIGHTS_STORE_NAME);
   const tweetIndex = bookmarkStore.index("tweetId");
+  const highlightTweetIndex = highlightsStore.index("tweetId");
 
   for (const tweetId of uniqueIds) {
     const bookmarkIds = await tweetIndex.getAllKeys(IDBKeyRange.only(tweetId));
@@ -169,6 +193,11 @@ export async function deleteBookmarksByTweetIds(tweetIds: string[]): Promise<voi
     }
     await detailStore.delete(tweetId);
     await progressStore.delete(tweetId);
+
+    const highlightIds = await highlightTweetIndex.getAllKeys(IDBKeyRange.only(tweetId));
+    for (const highlightId of highlightIds) {
+      await highlightsStore.delete(highlightId as string);
+    }
   }
 
   await tx.done;
@@ -264,4 +293,37 @@ export async function cleanupOldTweetDetails(maxAgeMs: number): Promise<number> 
 
   await tx.done;
   return removed;
+}
+
+export async function upsertHighlight(highlight: Highlight): Promise<void> {
+  const db = await getDb();
+  await db.put(HIGHLIGHTS_STORE_NAME, highlight);
+}
+
+export async function deleteHighlight(id: string): Promise<void> {
+  if (!id) return;
+  const db = await getDb();
+  await db.delete(HIGHLIGHTS_STORE_NAME, id);
+}
+
+export async function getHighlightsByTweetId(tweetId: string): Promise<Highlight[]> {
+  if (!tweetId) return [];
+  const db = await getDb();
+  return db.getAllFromIndex(HIGHLIGHTS_STORE_NAME, "tweetId", tweetId);
+}
+
+export async function deleteHighlightsByTweetIds(tweetIds: string[]): Promise<void> {
+  if (tweetIds.length === 0) return;
+  const db = await getDb();
+  const tx = db.transaction(HIGHLIGHTS_STORE_NAME, "readwrite");
+  const index = tx.store.index("tweetId");
+
+  for (const tweetId of tweetIds) {
+    const keys = await index.getAllKeys(IDBKeyRange.only(tweetId));
+    for (const key of keys) {
+      await tx.store.delete(key as string);
+    }
+  }
+
+  await tx.done;
 }
