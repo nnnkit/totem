@@ -219,6 +219,20 @@ export async function ensureReadingProgressExists(
   }
 }
 
+export async function markReadingProgressCompleted(tweetId: string): Promise<void> {
+  if (!tweetId) return;
+  const db = await getDb();
+  const existing = await db.get(PROGRESS_STORE_NAME, tweetId);
+  const now = Date.now();
+  if (existing) {
+    await db.put(PROGRESS_STORE_NAME, { ...existing, lastReadAt: now, completed: true });
+  } else {
+    await db.put(PROGRESS_STORE_NAME, {
+      tweetId, openedAt: now, lastReadAt: now, scrollY: 0, scrollHeight: 0, completed: true,
+    });
+  }
+}
+
 export async function getReadingProgress(
   tweetId: string,
 ): Promise<ReadingProgress | null> {

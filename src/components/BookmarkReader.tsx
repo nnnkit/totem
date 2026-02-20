@@ -46,10 +46,6 @@ export function BookmarkReader({
   const [detailError, setDetailError] = useState<string | null>(null);
 
   useEffect(() => {
-    setIsMarkedRead(false);
-  }, [bookmark.tweetId]);
-
-  useEffect(() => {
     let cancelled = false;
 
     setResolvedBookmark(null);

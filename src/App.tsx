@@ -4,8 +4,7 @@ import { useBookmarks, useDetailedTweetIds } from "./hooks/useBookmarks";
 import { useTheme } from "./hooks/useTheme";
 import { useSettings } from "./hooks/useSettings";
 import { useKeyboardNavigation } from "./hooks/useKeyboard";
-import { useReadIds } from "./hooks/useReadIds";
-import { ensureReadingProgressExists } from "./db";
+import { ensureReadingProgressExists, markReadingProgressCompleted } from "./db";
 import { pickRelatedBookmarks } from "./lib/related";
 import { resetLocalData } from "./lib/reset";
 import { Onboarding } from "./components/Onboarding";
@@ -25,7 +24,6 @@ export default function App() {
   const isReady = phase === "ready";
   const { bookmarks, syncState, refresh, unbookmark } = useBookmarks(isReady);
   const detailedTweetIds = useDetailedTweetIds();
-  const { markAsRead } = useReadIds(bookmarks);
   const {
     continueReading,
     allUnread,
@@ -90,6 +88,10 @@ export default function App() {
       setSelectedBookmark(bookmarks[idx + 1]);
   }, [bookmarks, selectedBookmark]);
 
+  const handleMarkAsRead = useCallback((tweetId: string) => {
+    markReadingProgressCompleted(tweetId);
+  }, []);
+
   const closeReader = useCallback(() => {
     setSelectedBookmark(null);
     refreshContinueReading();
@@ -142,6 +144,7 @@ export default function App() {
     if (selectedBookmark) {
       return (
         <BookmarkReader
+          key={selectedBookmark.tweetId}
           bookmark={selectedBookmark}
           relatedBookmarks={relatedBookmarks}
           onOpenBookmark={openBookmark}
@@ -155,7 +158,7 @@ export default function App() {
           }}
           themePreference={themePreference}
           onThemeChange={setThemePreference}
-          onMarkAsRead={markAsRead}
+          onMarkAsRead={handleMarkAsRead}
         />
       );
     }
