@@ -44,6 +44,11 @@ export function BookmarkReader({
   const [detailThread, setDetailThread] = useState<ThreadTweet[]>([]);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
+  const { isCompleted } = useReadingProgress({
+    tweetId: bookmark.tweetId,
+    contentReady: !detailLoading,
+  });
+  const effectiveMarkedRead = isMarkedRead || isCompleted;
 
   useEffect(() => {
     let cancelled = false;
@@ -84,11 +89,6 @@ export function BookmarkReader({
       cancelled = true;
     };
   }, [bookmark.tweetId, bookmark.sortIndex]);
-
-  useReadingProgress({
-    tweetId: bookmark.tweetId,
-    contentReady: !detailLoading,
-  });
 
   const displayBookmark = resolvedBookmark || bookmark;
   const displayKind = useMemo(
@@ -204,7 +204,7 @@ export function BookmarkReader({
             onMarkAsRead(bookmark.tweetId);
             setIsMarkedRead(true);
           } : undefined}
-          isMarkedRead={isMarkedRead}
+          isMarkedRead={effectiveMarkedRead}
         />
       </article>
 

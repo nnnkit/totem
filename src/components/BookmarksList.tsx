@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import type { Bookmark } from "../types";
 import type { ContinueReadingItem } from "../hooks/useContinueReading";
-import { compactPreview } from "../lib/text";
+import { pickTitle, estimateReadingMinutes } from "../lib/bookmark-utils";
+import { timeAgo } from "../lib/time";
 import { cn } from "../lib/cn";
 
 export type ReadingTab = "continue" | "unread";
@@ -18,65 +19,11 @@ interface Props {
   onBack: () => void;
 }
 
-function toSingleLine(value: string): string {
-  return value.replace(/\s+/g, " ").trim();
-}
-
-function pickTitle(bookmark: Bookmark): string {
-  const articleTitle = bookmark.article?.title?.trim();
-  if (articleTitle) return articleTitle;
-  return compactPreview(toSingleLine(bookmark.text), 92);
-}
-
-function estimateReadingMinutes(bookmark: Bookmark): number {
-  const tweetText = toSingleLine(bookmark.text);
-  const articleText = toSingleLine(bookmark.article?.plainText ?? "");
-  const quoteText = toSingleLine(bookmark.quotedTweet?.text ?? "");
-  const fullText = toSingleLine(`${tweetText} ${articleText} ${quoteText}`);
-  const words = fullText.length === 0 ? 0 : fullText.split(" ").length;
-
-  let estimate = Math.ceil(words / 180);
-
-  if (bookmark.isThread || bookmark.tweetKind === "thread") {
-    estimate = Math.max(estimate, 2);
-  }
-  if (bookmark.article?.plainText) {
-    const articleWords =
-      articleText.length === 0 ? 0 : articleText.split(" ").length;
-    estimate = Math.max(estimate, Math.ceil(articleWords / 200), 2);
-  }
-  if (bookmark.hasLink) {
-    estimate = Math.max(estimate, 2);
-  }
-
-  return Math.max(1, estimate);
-}
-
 function inferKindBadge(bookmark: Bookmark): string {
   if (bookmark.tweetKind === "article") return "Article";
   if (bookmark.tweetKind === "thread" || bookmark.isThread) return "Thread";
   if (bookmark.hasLink) return "Link";
   return "Post";
-}
-
-function formatTimeAgo(timestamp: number): string {
-  const diffMs = Date.now() - timestamp;
-  if (!Number.isFinite(diffMs) || diffMs < 0) return "just now";
-
-  const minutes = Math.floor(diffMs / 60_000);
-  if (minutes <= 0) return "just now";
-  if (minutes < 60) return `${minutes}m ago`;
-
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-
-  const days = Math.floor(hours / 24);
-  if (days < 30) return `${days}d ago`;
-
-  return new Date(timestamp).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  });
 }
 
 export function BookmarksList({
@@ -91,14 +38,25 @@ export function BookmarksList({
 }: Props) {
   const containerWidthClass = "max-w-3xl";
   const [focusedIndex, setFocusedIndex] = useState(-1);
+  const [prevActiveTab, setPrevActiveTab] = useState(activeTab);
+  if (prevActiveTab !== activeTab) {
+    setPrevActiveTab(activeTab);
+    setFocusedIndex(-1);
+  }
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
-  const inProgress = continueReadingItems.filter(
-    (item) => !item.progress.completed,
-  );
-  const completed = continueReadingItems.filter(
-    (item) => item.progress.completed,
-  );
+  const { inProgress, completed } = useMemo(() => {
+    const ip: ContinueReadingItem[] = [];
+    const cp: ContinueReadingItem[] = [];
+    for (const item of continueReadingItems) {
+      if (item.progress.completed) {
+        cp.push(item);
+      } else {
+        ip.push(item);
+      }
+    }
+    return { inProgress: ip, completed: cp };
+  }, [continueReadingItems]);
 
   const newestUnreadId = useMemo(() => {
     if (unreadBookmarks.length === 0) return null;
@@ -118,10 +76,6 @@ export function BookmarksList({
     }
     return unreadBookmarks;
   }, [activeTab, inProgress, completed, unreadBookmarks]);
-
-  useEffect(() => {
-    setFocusedIndex(-1);
-  }, [activeTab]);
 
   useEffect(() => {
     if (focusedIndex >= 0 && focusedIndex < itemRefs.current.length) {
@@ -258,7 +212,7 @@ export function BookmarksList({
                         </p>
                         <p className="mt-1 text-xs text-x-text-secondary">
                           @{bookmark.author.screenName} &middot; Last read{" "}
-                          {formatTimeAgo(progress.lastReadAt)}
+                          {timeAgo(progress.lastReadAt)}
                         </p>
                       </div>
                     </button>
@@ -296,7 +250,7 @@ export function BookmarksList({
                         <p className="mt-1 text-xs text-x-text-secondary">
                           <span className="text-x-success">Done</span> &middot; @
                           {bookmark.author.screenName} &middot;{" "}
-                          {formatTimeAgo(progress.lastReadAt)}
+                          {timeAgo(progress.lastReadAt)}
                         </p>
                       </div>
                     </button>

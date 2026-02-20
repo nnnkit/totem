@@ -88,10 +88,6 @@ export default function App() {
       setSelectedBookmark(bookmarks[idx + 1]);
   }, [bookmarks, selectedBookmark]);
 
-  const handleMarkAsRead = useCallback((tweetId: string) => {
-    markReadingProgressCompleted(tweetId);
-  }, []);
-
   const closeReader = useCallback(() => {
     setSelectedBookmark(null);
     refreshContinueReading();
@@ -158,7 +154,7 @@ export default function App() {
           }}
           themePreference={themePreference}
           onThemeChange={setThemePreference}
-          onMarkAsRead={handleMarkAsRead}
+          onMarkAsRead={markReadingProgressCompleted}
         />
       );
     }

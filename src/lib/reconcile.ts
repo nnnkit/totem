@@ -19,12 +19,18 @@ export async function reconcileBookmarks(
 ): Promise<ReconcileResult> {
   const { localIds, fetchPage, fullReconcile, onPage } = opts;
   const seen = new Set(localIds);
+  const seenCursors = new Set<string>();
   const remoteIds = new Set<string>();
   const allNew: Bookmark[] = [];
   let cursor: string | undefined;
   let pagesRequested = 0;
 
-  do {
+  while (true) {
+    if (cursor) {
+      if (seenCursors.has(cursor)) break;
+      seenCursors.add(cursor);
+    }
+
     const result = await fetchPage(cursor);
     pagesRequested++;
 
@@ -37,6 +43,7 @@ export async function reconcileBookmarks(
     }
 
     if (pageNew.length === 0 && !fullReconcile) break;
+    if (result.stopOnEmptyResponse && result.bookmarks.length === 0) break;
 
     if (pageNew.length > 0) {
       for (const b of pageNew) {
@@ -46,8 +53,11 @@ export async function reconcileBookmarks(
       onPage?.(pageNew);
     }
 
-    cursor = result.cursor || undefined;
-  } while (cursor);
+    const nextCursor = result.cursor || undefined;
+    if (!nextCursor) break;
+    if (nextCursor === cursor) break;
+    cursor = nextCursor;
+  }
 
   let staleIds: string[] = [];
   if (fullReconcile) {

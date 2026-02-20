@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { hasChromeStorageSync, hasChromeStorageOnChanged } from "../lib/chrome";
 
 export type ThemePreference = "system" | "light" | "dark";
@@ -24,8 +24,6 @@ function normalizeThemePreference(value: unknown): ThemePreference {
 export function useTheme() {
   const [themePreference, setThemePreference] = useState<ThemePreference>("system");
   const [systemTheme, setSystemTheme] = useState<ResolvedTheme>(() => getSystemTheme());
-  const [preferenceReady, setPreferenceReady] = useState(false);
-
   const resolvedTheme: ResolvedTheme = useMemo(
     () => (themePreference === "system" ? systemTheme : themePreference),
     [themePreference, systemTheme],
@@ -50,10 +48,7 @@ export function useTheme() {
     let cancelled = false;
 
     const loadPreference = async () => {
-      if (!hasChromeStorageSync()) {
-        if (!cancelled) setPreferenceReady(true);
-        return;
-      }
+      if (!hasChromeStorageSync()) return;
 
       try {
         const stored = await chrome.storage.sync.get({
@@ -64,10 +59,6 @@ export function useTheme() {
         }
       } catch {
         // Use default system preference if sync storage is not available.
-      } finally {
-        if (!cancelled) {
-          setPreferenceReady(true);
-        }
       }
     };
 
@@ -89,11 +80,6 @@ export function useTheme() {
   }, [themePreference, resolvedTheme]);
 
   useEffect(() => {
-    if (!preferenceReady || !hasChromeStorageSync()) return;
-    chrome.storage.sync.set({ [THEME_PREFERENCE_KEY]: themePreference }).catch(() => {});
-  }, [themePreference, preferenceReady]);
-
-  useEffect(() => {
     if (!hasChromeStorageOnChanged()) return;
 
     const onStorageChange = (
@@ -110,9 +96,16 @@ export function useTheme() {
     return () => chrome.storage.onChanged.removeListener(onStorageChange);
   }, []);
 
+  const updateThemePreference = useCallback((pref: ThemePreference) => {
+    setThemePreference(pref);
+    if (hasChromeStorageSync()) {
+      chrome.storage.sync.set({ [THEME_PREFERENCE_KEY]: pref }).catch(() => {});
+    }
+  }, []);
+
   return {
     themePreference,
     resolvedTheme,
-    setThemePreference,
+    setThemePreference: updateThemePreference,
   };
 }

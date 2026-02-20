@@ -1,7 +1,7 @@
 const BASE_HUES = [210, 230, 250, 270, 290, 320, 340, 180, 160, 195];
 const ANGLES = [135, 150, 210, 225, 315, 330];
 
-function simpleHash(str: string): number {
+export function simpleHash(str: string): number {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
     hash = (hash * 31 + str.charCodeAt(i)) | 0;

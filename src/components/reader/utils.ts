@@ -2,7 +2,6 @@ import type { ArticleContentBlock } from "../../types";
 import type { ReaderTweet } from "./types";
 import type { TweetKind } from "../../types";
 import { cn } from "../../lib/cn";
-export { formatNumber } from "../../lib/format";
 export { compactPreview, normalizeText, truncateLabel } from "../../lib/text";
 
 export const baseTweetTextClass =

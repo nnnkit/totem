@@ -34,6 +34,7 @@ function makePaginatedFetcher(
     return {
       bookmarks,
       cursor: nextIndex < pages.length ? String(nextIndex) : null,
+      stopOnEmptyResponse: false,
     };
   };
 }
@@ -110,6 +111,64 @@ describe("reconcileBookmarks", () => {
       });
 
       expect(result.pagesRequested).toBe(3);
+      expect(result.staleIds).toHaveLength(0);
+    });
+
+    it("full reconcile stops on terminal empty response", async () => {
+      const localIds = new Set(["1"]);
+
+      const fetchPage = async (cursor?: string): Promise<BookmarkPageResult> => {
+        if (!cursor) {
+          return {
+            bookmarks: [makeBookmark("1")],
+            cursor: "loop",
+            stopOnEmptyResponse: false,
+          };
+        }
+
+        return {
+          bookmarks: [],
+          cursor: "loop",
+          stopOnEmptyResponse: true,
+        };
+      };
+
+      const result = await reconcileBookmarks({
+        localIds,
+        fetchPage,
+        fullReconcile: true,
+      });
+
+      expect(result.pagesRequested).toBe(2);
+      expect(result.staleIds).toHaveLength(0);
+    });
+
+    it("full reconcile stops when cursor repeats", async () => {
+      const localIds = new Set(["1"]);
+
+      const fetchPage = async (cursor?: string): Promise<BookmarkPageResult> => {
+        if (!cursor) {
+          return {
+            bookmarks: [makeBookmark("1")],
+            cursor: "loop",
+            stopOnEmptyResponse: false,
+          };
+        }
+
+        return {
+          bookmarks: [makeBookmark("1")],
+          cursor: "loop",
+          stopOnEmptyResponse: false,
+        };
+      };
+
+      const result = await reconcileBookmarks({
+        localIds,
+        fetchPage,
+        fullReconcile: true,
+      });
+
+      expect(result.pagesRequested).toBe(2);
       expect(result.staleIds).toHaveLength(0);
     });
 

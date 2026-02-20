@@ -70,12 +70,39 @@ export function useBookmarks(isReady: boolean): UseBookmarksReturn {
 
   useEffect(() => {
     if (!isReady) return;
-    getAllBookmarks().then((stored) => {
-      if (stored.length > 0) {
-        setBookmarks(stored);
+    let cancelled = false;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+    Promise.race([
+      getAllBookmarks(),
+      new Promise<Bookmark[]>((_, reject) => {
+        timeoutId = setTimeout(() => reject(new Error("DB_INIT_TIMEOUT")), 8000);
+      }),
+    ])
+      .then((stored) => {
+        if (cancelled) return;
+        if (stored.length > 0) {
+          setBookmarks(stored);
+        }
+        setSyncState({ phase: "done", total: stored.length });
+      })
+      .catch(() => {
+        if (cancelled) return;
+        // Fail open so UI is usable even when IndexedDB bootstrap stalls.
+        setSyncState({ phase: "done", total: bookmarksRef.current.length });
+      })
+      .finally(() => {
+        if (timeoutId !== null) {
+          clearTimeout(timeoutId);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+      if (timeoutId !== null) {
+        clearTimeout(timeoutId);
       }
-      setSyncState({ phase: "done", total: stored.length });
-    });
+    };
   }, [isReady]);
 
   const handleSyncError = useCallback(

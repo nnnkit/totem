@@ -65,19 +65,6 @@ const DETAIL_FEATURE_OVERRIDES = {
   responsive_web_twitter_article_data_v2_enabled: true,
 };
 
-const DEFAULT_DETAIL_QUERY_ID = "nBS-WpgA6ZG0CyNHD517JQ";
-const FALLBACK_DETAIL_QUERY_IDS = [
-  DEFAULT_DETAIL_QUERY_ID,
-  "bFUhQzgl9zjo-teD0pAQZw",
-  "VwKJcAd7zqlBOitPLUrB8A",
-];
-const DEFAULT_TWEET_RESULT_QUERY_ID = "d6YKjvQ920F-D4Y1PruO-A";
-const FALLBACK_TWEET_RESULT_QUERY_IDS = [DEFAULT_TWEET_RESULT_QUERY_ID];
-const DEFAULT_DELETE_BOOKMARK_QUERY_ID = "Wlmlj2-xzyS1GN3a6cj-mQ";
-const FALLBACK_DELETE_BOOKMARK_QUERY_IDS = [
-  DEFAULT_DELETE_BOOKMARK_QUERY_ID,
-  "ZYKSe-w7KEslx3JhSIk5LA",
-];
 
 // ═══════════════════════════════════════════════════════════
 // AUTH & COOKIE HELPERS
@@ -137,19 +124,14 @@ async function syncAuthSessionFromCookie(storedState = null) {
     return userId;
   }
 
-  const hasStoredAuthState = storedState
-    ? Boolean(
-        storedState.current_user_id ||
-          storedState.tw_auth_headers?.authorization ||
-          storedState.tw_auth_time,
-      )
-    : true;
-
-  if (hasStoredAuthState) {
-    await clearAuthSessionState();
-  }
-
-  return null;
+  // Avoid clearing stored auth state here: cookie reads can be unavailable
+  // transiently in service worker context even when the user is signed in.
+  const storedUserId =
+    typeof storedState?.current_user_id === "string" &&
+    storedState.current_user_id
+      ? storedState.current_user_id
+      : null;
+  return storedUserId;
 }
 
 let authTabId = null;
@@ -816,11 +798,12 @@ async function handleCheckAuth() {
   ]);
 
   const userId = await syncAuthSessionFromCookie(stored);
-  const hasUser = Boolean(userId);
+  const hasAuthHeader = !!stored.tw_auth_headers?.authorization;
+  const hasUser = Boolean(userId || hasAuthHeader);
 
   return {
     hasUser,
-    hasAuth: hasUser && !!(stored.tw_auth_headers?.authorization),
+    hasAuth: hasAuthHeader,
     hasQueryId: !!stored.tw_query_id,
     userId,
   };
@@ -880,57 +863,38 @@ async function handleDeleteBookmark(tweetId, _retried = false) {
     "tw_delete_query_id",
   ]);
   if (!stored.tw_auth_headers?.authorization) throw new Error("NO_AUTH");
+  if (!stored.tw_delete_query_id) throw new Error("NO_QUERY_ID");
 
-  const queryIds = Array.from(
-    new Set(
-      [stored.tw_delete_query_id, ...FALLBACK_DELETE_BOOKMARK_QUERY_IDS].filter(
-        Boolean,
-      ),
-    ),
-  );
-
+  const queryId = stored.tw_delete_query_id;
   const requestHeaders = await buildHeaders();
-  let lastError = "DELETE_BOOKMARK_FAILED";
 
-  for (const queryId of queryIds) {
-    const url = `https://x.com/i/api/graphql/${queryId}/DeleteBookmark`;
-    const response = await fetch(url, {
-      method: "POST",
-      credentials: "include",
-      headers: requestHeaders,
-      body: JSON.stringify({
-        variables: { tweet_id: tweetId },
-        queryId,
-      }),
-    });
+  const url = `https://x.com/i/api/graphql/${queryId}/DeleteBookmark`;
+  const response = await fetch(url, {
+    method: "POST",
+    credentials: "include",
+    headers: requestHeaders,
+    body: JSON.stringify({
+      variables: { tweet_id: tweetId },
+      queryId,
+    }),
+  });
 
-    if (response.status === 401 || response.status === 403) {
-      if (!_retried) {
-        await chrome.storage.local.remove(["tw_auth_headers", "tw_auth_time"]);
-        const success = await reAuthSilently();
-        if (success) return handleDeleteBookmark(tweetId, true);
-      }
-      throw new Error("AUTH_EXPIRED");
+  if (response.status === 401 || response.status === 403) {
+    if (!_retried) {
+      await chrome.storage.local.remove(["tw_auth_headers", "tw_auth_time"]);
+      const success = await reAuthSilently();
+      if (success) return handleDeleteBookmark(tweetId, true);
     }
-
-    if (response.ok) {
-      if (stored.tw_delete_query_id !== queryId) {
-        chrome.storage.local.set({ tw_delete_query_id: queryId });
-      }
-      await pushBookmarkEvent("DeleteBookmark", tweetId, "extension");
-      return { ok: true, queryId, data: await response.json().catch(() => null) };
-    }
-
-    const body = await response.text().catch(() => "");
-    lastError = `DELETE_BOOKMARK_${response.status}: ${body.slice(0, 200)}`;
-
-    // 400/404 usually means stale query ID.
-    if (response.status !== 400 && response.status !== 404) {
-      break;
-    }
+    throw new Error("AUTH_EXPIRED");
   }
 
-  throw new Error(lastError);
+  if (!response.ok) {
+    const body = await response.text().catch(() => "");
+    throw new Error(`DELETE_BOOKMARK_${response.status}: ${body.slice(0, 200)}`);
+  }
+
+  await pushBookmarkEvent("DeleteBookmark", tweetId, "extension");
+  return { ok: true, queryId, data: await response.json().catch(() => null) };
 }
 
 function parseFeatureSet(raw) {
@@ -990,110 +954,15 @@ async function persistSeenTweetDisplayTypes(payload) {
   await chrome.storage.local.set({ tw_seen_tweet_display_types: merged });
 }
 
-async function fetchTweetResultByRestIdForDebug({
-  tweetId,
-  requestHeaders,
-  featureSet,
-  preferredQueryId,
-}) {
-  const queryIds = Array.from(
-    new Set([preferredQueryId, ...FALLBACK_TWEET_RESULT_QUERY_IDS].filter(Boolean)),
-  );
-  const variables = {
-    tweetId,
-    includePromotedContent: true,
-    withBirdwatchNotes: true,
-    withVoice: true,
-    withCommunity: true,
-  };
-  const fieldToggleCandidates = [
-    {
-      withArticleRichContentState: true,
-      withArticlePlainText: false,
-    },
-    {
-      withArticleRichContentState: true,
-      withArticlePlainText: true,
-    },
-  ];
-
-  let lastError = "TWEET_RESULT_ERROR";
-
-  for (const fieldToggles of fieldToggleCandidates) {
-    const params = new URLSearchParams({
-      variables: JSON.stringify(variables),
-      features: JSON.stringify(featureSet),
-      fieldToggles: JSON.stringify(fieldToggles),
-    });
-
-    for (const queryId of queryIds) {
-      const url = `https://x.com/i/api/graphql/${queryId}/TweetResultByRestId?${params}`;
-      const response = await fetch(url, {
-        method: "GET",
-        credentials: "include",
-        headers: requestHeaders,
-      });
-
-      if (response.ok) {
-        if (preferredQueryId !== queryId) {
-          chrome.storage.local.set({ tw_tweet_result_query_id: queryId }).catch(() => {});
-        }
-        return {
-          queryId,
-          fieldToggles,
-          data: await response.json(),
-        };
-      }
-
-      const body = await response.text().catch(() => "");
-      lastError = `TWEET_RESULT_${response.status}: ${body.slice(0, 200)}`;
-
-      // 400/404 usually indicates stale query ID or toggle mismatch.
-      if (response.status !== 400 && response.status !== 404) {
-        break;
-      }
-    }
-  }
-
-  throw new Error(lastError);
-}
-
-async function logTweetEndpointComparison({
-  tweetId,
-  detailQueryId,
-  detailData,
-  requestHeaders,
-  featureSet,
-  preferredTweetResultQueryId,
-}) {
-  try {
-    const tweetResult = await fetchTweetResultByRestIdForDebug({
-      tweetId,
-      requestHeaders,
-      featureSet,
-      preferredQueryId: preferredTweetResultQueryId,
-    });
-
-  } catch (error) {
-    // silently ignore debug comparison errors
-  }
-}
-
 async function handleFetchTweetDetail(tweetId, _retried = false) {
   const stored = await chrome.storage.local.get([
     "tw_auth_headers",
     "tw_detail_query_id",
-    "tw_tweet_result_query_id",
     "tw_features",
   ]);
 
   if (!stored.tw_auth_headers?.authorization) throw new Error("NO_AUTH");
-  const queryIds = Array.from(
-    new Set([
-      stored.tw_detail_query_id,
-      ...FALLBACK_DETAIL_QUERY_IDS,
-    ].filter(Boolean)),
-  );
+  if (!stored.tw_detail_query_id) throw new Error("NO_QUERY_ID");
   const featureSet = {
     ...DEFAULT_FEATURES,
     ...parseFeatureSet(stored.tw_features),
@@ -1110,72 +979,44 @@ async function handleFetchTweetDetail(tweetId, _retried = false) {
     withVoice: true,
     withV2Timeline: true,
   };
+  const queryId = stored.tw_detail_query_id;
   const requestHeaders = await buildHeaders();
-  let lastError = "DETAIL_ERROR";
-  const fieldToggleCandidates = [
-    {
-      withArticleRichContentState: true,
-      withArticlePlainText: true,
-      withGrokAnalyze: false,
-    },
-    {
-      withArticleRichContentState: true,
-      withArticlePlainText: false,
-      withGrokAnalyze: false,
-    },
-  ];
+  const fieldToggles = {
+    withArticleRichContentState: true,
+    withArticlePlainText: true,
+    withGrokAnalyze: false,
+  };
 
-  for (const fieldToggles of fieldToggleCandidates) {
-    const params = new URLSearchParams({
-      variables: JSON.stringify(variables),
-      features: JSON.stringify(featureSet),
-      fieldToggles: JSON.stringify(fieldToggles),
-    });
-    for (const queryId of queryIds) {
-      const url = `https://x.com/i/api/graphql/${queryId}/TweetDetail?${params}`;
-      const response = await fetch(url, {
-        method: "GET",
-        credentials: "include",
-        headers: requestHeaders,
-      });
+  const params = new URLSearchParams({
+    variables: JSON.stringify(variables),
+    features: JSON.stringify(featureSet),
+    fieldToggles: JSON.stringify(fieldToggles),
+  });
 
-      if (response.status === 401 || response.status === 403) {
-        if (!_retried) {
-          await chrome.storage.local.remove(["tw_auth_headers", "tw_auth_time"]);
-          const success = await reAuthSilently();
-          if (success) return handleFetchTweetDetail(tweetId, true);
-        }
-        throw new Error("AUTH_EXPIRED");
-      }
+  const url = `https://x.com/i/api/graphql/${queryId}/TweetDetail?${params}`;
+  const response = await fetch(url, {
+    method: "GET",
+    credentials: "include",
+    headers: requestHeaders,
+  });
 
-      if (response.ok) {
-        const detailData = await response.json();
-        persistSeenTweetDisplayTypes(detailData).catch(() => {});
-        if (stored.tw_detail_query_id !== queryId) {
-          chrome.storage.local.set({ tw_detail_query_id: queryId });
-        }
-        logTweetEndpointComparison({
-          tweetId,
-          detailQueryId: queryId,
-          detailData,
-          requestHeaders,
-          featureSet,
-          preferredTweetResultQueryId: stored.tw_tweet_result_query_id,
-        }).catch(() => {});
-        return { data: detailData };
-      }
-
-      const body = await response.text().catch(() => "");
-      lastError = `DETAIL_ERROR_${response.status}: ${body.slice(0, 200)}`;
-
-      // 400/404 often indicates stale query ID or toggle mismatch.
-      if (response.status !== 400 && response.status !== 404) {
-        break;
-      }
+  if (response.status === 401 || response.status === 403) {
+    if (!_retried) {
+      await chrome.storage.local.remove(["tw_auth_headers", "tw_auth_time"]);
+      const success = await reAuthSilently();
+      if (success) return handleFetchTweetDetail(tweetId, true);
     }
+    throw new Error("AUTH_EXPIRED");
   }
 
-  throw new Error(lastError);
+  if (!response.ok) {
+    const body = await response.text().catch(() => "");
+    throw new Error(`DETAIL_ERROR_${response.status}: ${body.slice(0, 200)}`);
+  }
+
+  const detailData = await response.json();
+  persistSeenTweetDisplayTypes(detailData).catch(() => {});
+  return { data: detailData };
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1222,13 +1063,6 @@ chrome.webRequest.onSendHeaders.addListener(
     const detailMatch = details.url.match(/\/i\/api\/graphql\/([^/]+)\/TweetDetail/);
     if (detailMatch) {
       chrome.storage.local.set({ tw_detail_query_id: detailMatch[1] });
-    }
-
-    const tweetResultMatch = details.url.match(
-      /\/i\/api\/graphql\/([^/]+)\/TweetResultByRestId/,
-    );
-    if (tweetResultMatch) {
-      chrome.storage.local.set({ tw_tweet_result_query_id: tweetResultMatch[1] });
     }
 
     const deleteMatch = details.url.match(

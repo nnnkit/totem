@@ -41,11 +41,14 @@ export function SettingsModal({
   }, [onClose]);
 
   const stats = useMemo(() => {
-    const uniqueAuthors = new Set(bookmarks.map((b) => b.author.screenName));
-    const withMedia = bookmarks.filter((b) => b.media.length > 0).length;
-    const articles = bookmarks.filter(
-      (b) => b.tweetKind === "article" || b.isThread,
-    ).length;
+    const uniqueAuthors = new Set<string>();
+    let withMedia = 0;
+    let articles = 0;
+    for (const b of bookmarks) {
+      uniqueAuthors.add(b.author.screenName);
+      if (b.media.length > 0) withMedia++;
+      if (b.tweetKind === "article" || b.isThread) articles++;
+    }
     return {
       total: bookmarks.length,
       uniqueAuthors: uniqueAuthors.size,

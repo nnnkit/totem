@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { LOCAL_WALLPAPERS } from "../data/local-wallpapers";
-import { generateGradient } from "../lib/gradient";
+import { generateGradient, simpleHash } from "../lib/gradient";
 import type { BackgroundMode } from "../types";
 
 export interface UseWallpaperResult {
@@ -15,14 +15,6 @@ function todayLocal(): string {
   const month = String(now.getMonth() + 1).padStart(2, "0");
   const day = String(now.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
-}
-
-function simpleHash(str: string): number {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = (hash * 31 + str.charCodeAt(i)) | 0;
-  }
-  return Math.abs(hash);
 }
 
 function resolveLocalWallpaper(): { url: string; title: string } | null {

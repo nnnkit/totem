@@ -14,17 +14,15 @@ import { TweetLinks } from "./TweetLinks";
 
 import { TweetRecommendations } from "./TweetRecommendations";
 import type { ReaderTweet } from "./types";
+import { cn } from "../../lib/cn";
 
 interface TweetBodyProps {
   tweet: ReaderTweet;
   compact?: boolean;
   sectionIdPrefix?: string;
-  viewOnXUrl?: string;
-  onMarkAsRead?: () => void;
-  isMarkedRead?: boolean;
 }
 
-function TweetBody({ tweet, compact = false, sectionIdPrefix, viewOnXUrl, onMarkAsRead, isMarkedRead }: TweetBodyProps) {
+function TweetBody({ tweet, compact = false, sectionIdPrefix }: TweetBodyProps) {
   const kind = resolveTweetKind(tweet);
 
   if (kind === "repost" && tweet.retweetedTweet) {
@@ -101,14 +99,17 @@ function TweetBody({ tweet, compact = false, sectionIdPrefix, viewOnXUrl, onMark
         />
       )}
 
-      <TweetLinks
-        urls={tweet.urls}
-        viewOnXUrl={viewOnXUrl}
-        onMarkAsRead={onMarkAsRead}
-        isMarkedRead={isMarkedRead}
-      />
+      <TweetLinks urls={tweet.urls} />
     </>
   );
+}
+
+function formatThreadDate(timestamp: number): string {
+  return new Date(timestamp).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
 interface ThreadTweetsProps {
@@ -119,24 +120,51 @@ function ThreadTweets({ tweets }: ThreadTweetsProps) {
   if (tweets.length === 0) return null;
 
   return (
-    <section className="mt-8 space-y-4">
-      <p className="text-xs font-semibold uppercase tracking-wider text-x-text-secondary">
+    <section className="mt-8">
+      <p className="mb-4 text-xs font-semibold uppercase tracking-wider text-x-text-secondary">
         Thread
       </p>
-      {tweets.map((tweet, index) => (
-        <article
-          key={tweet.tweetId}
-          id={`section-thread-${index + 1}`}
-          className="rounded-2xl border border-x-border p-4"
-        >
-          <div className="mb-3 flex items-center gap-2 text-xs text-x-text-secondary">
-            <span className="font-medium text-x-text">#{index + 1}</span>
-            <span>•</span>
-            <span>@{tweet.author.screenName}</span>
-          </div>
-          <TweetBody tweet={tweet} compact />
-        </article>
-      ))}
+      <div>
+        {tweets.map((tweet, index) => {
+          const isLast = index === tweets.length - 1;
+          return (
+            <article
+              key={tweet.tweetId}
+              id={`section-thread-${index + 1}`}
+              className="relative flex gap-3"
+            >
+              <div className="flex flex-col items-center">
+                <img
+                  src={tweet.author.profileImageUrl}
+                  alt=""
+                  className="size-10 shrink-0 rounded-full"
+                  loading="lazy"
+                />
+                {!isLast && (
+                  <div className="mt-1 w-0.5 flex-1 bg-x-border" />
+                )}
+              </div>
+              <div className={cn("min-w-0 flex-1", !isLast && "pb-5")}>
+                <div className="flex items-center gap-1.5 text-sm">
+                  <span className="truncate font-bold text-x-text">
+                    {tweet.author.name}
+                  </span>
+                  <span className="truncate text-x-text-secondary">
+                    @{tweet.author.screenName}
+                  </span>
+                  <span className="text-x-text-secondary">&middot;</span>
+                  <span className="shrink-0 text-x-text-secondary">
+                    {formatThreadDate(tweet.createdAt)}
+                  </span>
+                </div>
+                <div className="mt-1">
+                  <TweetBody tweet={tweet} compact />
+                </div>
+              </div>
+            </article>
+          );
+        })}
+      </div>
     </section>
   );
 }
@@ -168,6 +196,8 @@ export function TweetContent({
   onMarkAsRead,
   isMarkedRead,
 }: Props) {
+  const viewOnXUrl = `https://x.com/${displayBookmark.author.screenName}/status/${displayBookmark.tweetId}`;
+
   return (
     <div>
       <TweetHeader
@@ -180,11 +210,14 @@ export function TweetContent({
         <TweetBody
           tweet={displayBookmark}
           sectionIdPrefix={tweetSectionIdPrefix}
-          viewOnXUrl={`https://x.com/${displayBookmark.author.screenName}/status/${displayBookmark.tweetId}`}
+        />
+        <ThreadTweets tweets={detailThread} />
+        <TweetLinks
+          urls={[]}
+          viewOnXUrl={viewOnXUrl}
           onMarkAsRead={onMarkAsRead}
           isMarkedRead={isMarkedRead}
         />
-        <ThreadTweets tweets={detailThread} />
       </div>
 
       {detailLoading && (

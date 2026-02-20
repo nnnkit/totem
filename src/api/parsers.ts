@@ -728,6 +728,7 @@ function parseTweetRecord(
 export interface BookmarkPageResult {
   bookmarks: Bookmark[];
   cursor: string | null;
+  stopOnEmptyResponse: boolean;
 }
 
 export function parseBookmarkPagePayload(payload: unknown): BookmarkPageResult {
@@ -735,22 +736,29 @@ export function parseBookmarkPagePayload(payload: unknown): BookmarkPageResult {
     asRecord(asRecord(payload)?.data)?.bookmark_timeline_v2,
   )?.timeline;
   const timelineRecord = asRecord(timeline);
-  if (!timelineRecord) return { bookmarks: [], cursor: null };
+  if (!timelineRecord) {
+    return { bookmarks: [], cursor: null, stopOnEmptyResponse: false };
+  }
 
   const addEntries = asRecords(timelineRecord.instructions).find(
     (instruction) => instruction.type === "TimelineAddEntries",
   );
-  if (!addEntries) return { bookmarks: [], cursor: null };
+  if (!addEntries) {
+    return { bookmarks: [], cursor: null, stopOnEmptyResponse: false };
+  }
 
   const entries = asRecords(addEntries.entries);
   const bookmarks: Bookmark[] = [];
   let nextCursor: string | null = null;
+  let stopOnEmptyResponse = false;
 
   for (const entry of entries) {
     const entryId = asString(entry.entryId) || "";
 
     if (entryId.startsWith("cursor-bottom")) {
-      nextCursor = asString(asRecord(entry.content)?.value);
+      const content = asRecord(entry.content);
+      nextCursor = asString(content?.value);
+      stopOnEmptyResponse = content?.stopOnEmptyResponse === true;
       continue;
     }
 
@@ -767,7 +775,11 @@ export function parseBookmarkPagePayload(payload: unknown): BookmarkPageResult {
     bookmarks.push(parsed.bookmark);
   }
 
-  return { bookmarks, cursor: nextCursor };
+  return {
+    bookmarks,
+    cursor: nextCursor,
+    stopOnEmptyResponse,
+  };
 }
 
 const TWEET_DISPLAY_TYPE_TWEET = "Tweet";

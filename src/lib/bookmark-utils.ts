@@ -40,4 +40,3 @@ export function estimateReadingMinutes(bookmark: Bookmark): number {
   return Math.max(1, estimate);
 }
 
-

@@ -7,15 +7,20 @@ interface UseReadingProgressOptions {
   contentReady: boolean;
 }
 
+interface UseReadingProgressResult {
+  isCompleted: boolean;
+}
+
 export function useReadingProgress({
   tweetId,
   contentReady,
-}: UseReadingProgressOptions): void {
+}: UseReadingProgressOptions): UseReadingProgressResult {
   const savedProgress = useRef<ReadingProgress | null>(null);
   const restoredRef = useRef(false);
   const debounceTimer = useRef<number | null>(null);
   const shortContentTimer = useRef<number | null>(null);
   const [progressLoaded, setProgressLoaded] = useState(false);
+  const [isCompleted, setIsCompleted] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -24,11 +29,13 @@ export function useReadingProgress({
     restoredRef.current = false;
     savedProgress.current = null;
     setProgressLoaded(false);
+    setIsCompleted(false);
 
     getReadingProgress(currentTweetId)
       .then((progress) => {
         if (cancelled) return;
         savedProgress.current = progress;
+        if (progress?.completed) setIsCompleted(true);
       })
       .catch(() => {})
       .finally(() => {
@@ -148,4 +155,6 @@ export function useReadingProgress({
       saveProgress();
     };
   }, [tweetId, contentReady]);
+
+  return { isCompleted };
 }

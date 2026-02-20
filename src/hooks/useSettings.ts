@@ -40,16 +40,12 @@ function normalizeSettings(value: unknown): UserSettings {
 
 export function useSettings() {
   const [settings, setSettings] = useState<UserSettings>(DEFAULT_SETTINGS);
-  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
 
     const load = async () => {
-      if (!hasChromeStorageSync()) {
-        if (!cancelled) setReady(true);
-        return;
-      }
+      if (!hasChromeStorageSync()) return;
 
       try {
         const stored = await chrome.storage.sync.get({
@@ -60,8 +56,6 @@ export function useSettings() {
         }
       } catch {
         // fallback to defaults
-      } finally {
-        if (!cancelled) setReady(true);
       }
     };
 
@@ -70,11 +64,6 @@ export function useSettings() {
       cancelled = true;
     };
   }, []);
-
-  useEffect(() => {
-    if (!ready || !hasChromeStorageSync()) return;
-    chrome.storage.sync.set({ [SETTINGS_KEY]: settings }).catch(() => {});
-  }, [settings, ready]);
 
   useEffect(() => {
     if (!hasChromeStorageOnChanged()) return;
@@ -94,7 +83,13 @@ export function useSettings() {
   }, []);
 
   const updateSettings = (patch: Partial<UserSettings>) => {
-    setSettings((prev) => ({ ...prev, ...patch }));
+    setSettings((prev) => {
+      const next = { ...prev, ...patch };
+      if (hasChromeStorageSync()) {
+        chrome.storage.sync.set({ [SETTINGS_KEY]: next }).catch(() => {});
+      }
+      return next;
+    });
   };
 
   return { settings, updateSettings };

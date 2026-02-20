@@ -95,8 +95,6 @@ export function NewTabHome({
   const { wallpaperUrl, wallpaperTitle, gradientCss } = useWallpaper(backgroundMode);
   const { sites: topSites } = useTopSites(topSitesLimit, showTopSites);
 
-  const nowMinute = useMemo(() => Math.floor(now.getTime() / 60000), [now]);
-
   const { items, unreadItems } = useMemo(() => {
     const allItems: DecoratedBookmark[] = bookmarks.map((bookmark) => ({
       bookmark,
@@ -109,7 +107,7 @@ export function NewTabHome({
     }));
     const unread = allItems.filter((item) => !item.isRead);
     return { items: allItems, unreadItems: unread };
-  }, [bookmarks, detailedTweetIds, nowMinute, openedTweetIds]);
+  }, [bookmarks, detailedTweetIds, openedTweetIds]);
 
   const currentItem = useMemo(() => {
     const pool = unreadItems.length > 0 ? unreadItems : items;
