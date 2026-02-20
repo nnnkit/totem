@@ -1,6 +1,7 @@
 import type { Bookmark, TweetKind } from "../../types";
 import { KIND_LABEL } from "./types";
 import { kindPillClass } from "./utils";
+import { cn } from "../../lib/cn";
 
 interface TweetKindPillProps {
   kind: TweetKind;
@@ -9,7 +10,7 @@ interface TweetKindPillProps {
 function TweetKindPill({ kind }: TweetKindPillProps) {
   return (
     <span
-      className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-medium ${kindPillClass(kind)}`}
+      className={cn("inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-medium", kindPillClass(kind))}
     >
       {KIND_LABEL[kind]}
     </span>
@@ -21,11 +22,10 @@ export { TweetKindPill };
 interface Props {
   author: Bookmark["author"];
   displayKind: TweetKind;
-  isLongText?: boolean;
   readingMinutes?: number | null;
 }
 
-export function TweetHeader({ author, displayKind, isLongText, readingMinutes }: Props) {
+export function TweetHeader({ author, displayKind, readingMinutes }: Props) {
   const authorUrl = `https://x.com/${author.screenName}`;
 
   return (
@@ -77,11 +77,6 @@ export function TweetHeader({ author, displayKind, isLongText, readingMinutes }:
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <TweetKindPill kind={displayKind} />
-        {isLongText && (
-          <span className="rounded-full border border-x-border px-2.5 py-1 text-[11px] text-x-text-secondary">
-            Long form
-          </span>
-        )}
       </div>
     </>
   );

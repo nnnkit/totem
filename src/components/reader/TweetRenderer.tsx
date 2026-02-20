@@ -11,7 +11,7 @@ import { TweetMedia } from "./TweetMedia";
 import { TweetQuote } from "./TweetQuote";
 import { TweetArticle } from "./TweetArticle";
 import { TweetUrls } from "./TweetUrls";
-import { TweetMetrics } from "./TweetMetrics";
+
 import { TweetRecommendations } from "./TweetRecommendations";
 import type { ReaderTweet } from "./types";
 
@@ -19,9 +19,11 @@ interface TweetBodyProps {
   tweet: ReaderTweet;
   compact?: boolean;
   sectionIdPrefix?: string;
+  onMarkAsRead?: () => void;
+  isMarkedRead?: boolean;
 }
 
-function TweetBody({ tweet, compact = false, sectionIdPrefix }: TweetBodyProps) {
+function TweetBody({ tweet, compact = false, sectionIdPrefix, onMarkAsRead, isMarkedRead }: TweetBodyProps) {
   const kind = resolveTweetKind(tweet);
 
   if (kind === "repost" && tweet.retweetedTweet) {
@@ -98,7 +100,12 @@ function TweetBody({ tweet, compact = false, sectionIdPrefix }: TweetBodyProps) 
         />
       )}
 
-      <TweetUrls urls={tweet.urls} preferArticleButton={Boolean(showArticle)} />
+      <TweetUrls
+        urls={tweet.urls}
+        preferArticleButton={Boolean(showArticle)}
+        onMarkAsRead={onMarkAsRead}
+        isMarkedRead={isMarkedRead}
+      />
     </>
   );
 }
@@ -143,6 +150,8 @@ interface Props {
   onOpenBookmark: (bookmark: Bookmark) => void;
   onShuffle?: () => void;
   tweetSectionIdPrefix?: string;
+  onMarkAsRead?: () => void;
+  isMarkedRead?: boolean;
 }
 
 export function TweetRenderer({
@@ -155,13 +164,14 @@ export function TweetRenderer({
   onOpenBookmark,
   onShuffle,
   tweetSectionIdPrefix,
+  onMarkAsRead,
+  isMarkedRead,
 }: Props) {
   return (
     <div>
       <TweetHeader
         author={displayBookmark.author}
         displayKind={displayKind}
-        isLongText={displayBookmark.isLongText}
         readingMinutes={estimateReadingMinutes(displayBookmark)}
       />
 
@@ -169,7 +179,22 @@ export function TweetRenderer({
         <TweetBody
           tweet={displayBookmark}
           sectionIdPrefix={tweetSectionIdPrefix}
+          onMarkAsRead={onMarkAsRead}
+          isMarkedRead={isMarkedRead}
         />
+
+        <a
+          href={`https://x.com/${displayBookmark.author.screenName}/status/${displayBookmark.tweetId}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-5 inline-flex items-center gap-1.5 text-sm text-x-text-secondary transition-colors hover:text-x-text"
+        >
+          View on X
+          <svg viewBox="0 0 24 24" className="size-3.5" fill="currentColor">
+            <path d="M18 13v6a1 1 0 01-1 1H5a1 1 0 01-1-1V7a1 1 0 011-1h6v2H6v10h10v-5h2zm-6.29-6.29l1.41 1.41L17 4.24V11h2V1h-10v2h6.76l-4.05 4.05z" />
+          </svg>
+        </a>
+
         <ThreadTweets tweets={detailThread} />
       </div>
 
@@ -187,8 +212,6 @@ export function TweetRenderer({
       )}
 
       <div className="px-6">
-        <TweetMetrics bookmark={displayBookmark} />
-
         <TweetRecommendations
           relatedBookmarks={relatedBookmarks}
           onOpenBookmark={onOpenBookmark}

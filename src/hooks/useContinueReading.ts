@@ -13,15 +13,6 @@ interface UseContinueReadingReturn {
   refresh: () => void;
 }
 
-function hasSubstantialContent(bookmark: Bookmark): boolean {
-  if (bookmark.tweetKind === "article") return true;
-  if (bookmark.tweetKind === "thread" || bookmark.isThread) return true;
-  if (bookmark.isLongText) return true;
-  if (bookmark.hasLink) return true;
-  if (bookmark.article?.plainText) return true;
-  return false;
-}
-
 export function useContinueReading(
   bookmarks: Bookmark[],
 ): UseContinueReadingReturn {
@@ -56,20 +47,11 @@ export function useContinueReading(
       }
     }
 
-    // Recommended: bookmarks with no progress record, preferring substantial content and recent saves
     const unread = bookmarks.filter((b) => !progressIds.has(b.tweetId));
-    const scored = unread.map((b) => {
-      let score = 0;
-      if (hasSubstantialContent(b)) score += 10;
-      // Prefer more recent saves (higher sortIndex = more recent)
-      score += Number(b.sortIndex) / 1e18;
-      return { bookmark: b, score };
-    });
-    scored.sort((a, b) => b.score - a.score);
 
     return {
       continueReading: nextContinueReading,
-      allUnread: scored.map((s) => s.bookmark),
+      allUnread: unread,
       orphanIds: nextOrphanIds,
     };
   }, [allProgress, bookmarks]);

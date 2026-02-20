@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { TocSection } from "./types";
 import { truncateLabel } from "./utils";
+import { cn } from "../../lib/cn";
 
 export function useActiveSection(sectionIds: string[]): string | null {
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -68,9 +69,10 @@ export function TableOfContents({ sections, activeId, scrolledPast }: Props) {
   return (
     <>
       <nav
-        className={`sticky top-24 hidden max-h-[calc(100vh-8rem)] overflow-y-auto pr-4 transition-opacity duration-300 xl:block ${
-          scrolledPast ? "pointer-events-none opacity-0" : "opacity-100"
-        }`}
+        className={cn(
+          "sticky top-24 hidden max-h-[calc(100vh-8rem)] overflow-y-auto pr-4 transition-opacity duration-300 xl:block",
+          scrolledPast ? "pointer-events-none opacity-0" : "opacity-100",
+        )}
       >
         <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-x-text-secondary">
           Contents
@@ -81,11 +83,12 @@ export function TableOfContents({ sections, activeId, scrolledPast }: Props) {
               <button
                 type="button"
                 onClick={() => scrollToSection(section.id)}
-                className={`w-full rounded px-2 py-1.5 text-left text-[13px] leading-snug transition-colors ${
+                className={cn(
+                  "w-full rounded px-2 py-1.5 text-left text-[13px] leading-snug transition-colors",
                   activeId === section.id
                     ? "bg-x-blue/8 font-medium text-x-blue"
-                    : "text-x-text-secondary hover:text-x-text"
-                }`}
+                    : "text-x-text-secondary hover:text-x-text",
+                )}
               >
                 {truncateLabel(section.label, 40)}
               </button>
@@ -95,9 +98,10 @@ export function TableOfContents({ sections, activeId, scrolledPast }: Props) {
       </nav>
 
       <nav
-        className={`fixed left-3 top-1/2 z-20 hidden -translate-y-1/2 flex-col gap-2 md:flex ${
-          scrolledPast ? "xl:flex" : "xl:hidden"
-        }`}
+        className={cn(
+          "fixed left-3 top-1/2 z-20 hidden -translate-y-1/2 flex-col gap-2 md:flex",
+          scrolledPast ? "xl:flex" : "xl:hidden",
+        )}
       >
         {sections.map((section) => (
           <button
@@ -106,11 +110,12 @@ export function TableOfContents({ sections, activeId, scrolledPast }: Props) {
             onClick={() => scrollToSection(section.id)}
             aria-label={truncateLabel(section.label, 40)}
             title={truncateLabel(section.label, 40)}
-            className={`rounded-full transition-all ${
+            className={cn(
+              "rounded-full transition-all",
               activeId === section.id
                 ? "h-1 w-5 bg-x-blue"
-                : "h-1 w-2.5 bg-x-text-secondary/40 hover:bg-x-text-secondary"
-            }`}
+                : "h-1 w-2.5 bg-x-text-secondary/40 hover:bg-x-text-secondary",
+            )}
           />
         ))}
       </nav>

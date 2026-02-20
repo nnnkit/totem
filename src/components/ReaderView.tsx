@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { Bookmark, ThreadTweet } from "../types";
 import type { ThemePreference } from "../hooks/useTheme";
 import { fetchTweetDetail } from "../api/core/posts";
+import { cn } from "../lib/cn";
 
 import { resolveTweetKind } from "./reader/utils";
 import { TweetRenderer } from "./reader/TweetRenderer";
@@ -20,6 +21,7 @@ interface Props {
   onUnbookmark: () => void;
   themePreference: ThemePreference;
   onThemeChange: (pref: ThemePreference) => void;
+  onMarkAsRead?: (tweetId: string) => void;
 }
 
 export function ReaderView({
@@ -33,13 +35,19 @@ export function ReaderView({
   onUnbookmark,
   themePreference,
   onThemeChange,
+  onMarkAsRead,
 }: Props) {
+  const [isMarkedRead, setIsMarkedRead] = useState(false);
   const [resolvedBookmark, setResolvedBookmark] = useState<Bookmark | null>(
     null,
   );
   const [detailThread, setDetailThread] = useState<ThreadTweet[]>([]);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setIsMarkedRead(false);
+  }, [bookmark.tweetId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -114,7 +122,7 @@ export function ReaderView({
     <div className="min-h-dvh bg-x-bg">
       <div className="sticky top-0 z-10 border-b border-x-border bg-x-bg/80 backdrop-blur-md">
         <div
-          className={`mx-auto flex items-center gap-3 px-4 py-3 ${containerWidthClass}`}
+          className={cn("mx-auto flex items-center gap-3 px-4 py-3", containerWidthClass)}
         >
           <button
             onClick={onBack}
@@ -186,7 +194,7 @@ export function ReaderView({
         </button>
       )}
 
-      <article className={`${containerWidthClass} mx-auto px-5 pb-16 pt-6`}>
+      <article className={cn(containerWidthClass, "mx-auto px-5 pb-16 pt-6")}>
         <TweetRenderer
           displayBookmark={displayBookmark}
           displayKind={displayKind}
@@ -196,6 +204,11 @@ export function ReaderView({
           relatedBookmarks={relatedBookmarks}
           onOpenBookmark={onOpenBookmark}
           onShuffle={onShuffle}
+          onMarkAsRead={onMarkAsRead ? () => {
+            onMarkAsRead(bookmark.tweetId);
+            setIsMarkedRead(true);
+          } : undefined}
+          isMarkedRead={isMarkedRead}
         />
       </article>
 

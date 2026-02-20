@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useHotkeys } from "react-hotkeys-hook";
 import type { Bookmark } from "../types";
 
 export function useKeyboardNavigation(opts: {
@@ -7,43 +7,30 @@ export function useKeyboardNavigation(opts: {
   closeReader: () => void;
   setSelectedBookmark: (b: Bookmark) => void;
 }): void {
-  const selectedRef = useRef(opts.selectedBookmark);
-  const bookmarksRef = useRef(opts.filteredBookmarks);
-  const closeRef = useRef(opts.closeReader);
-  const setSelectedRef = useRef(opts.setSelectedBookmark);
+  const { selectedBookmark, filteredBookmarks, closeReader, setSelectedBookmark } = opts;
 
-  selectedRef.current = opts.selectedBookmark;
-  bookmarksRef.current = opts.filteredBookmarks;
-  closeRef.current = opts.closeReader;
-  setSelectedRef.current = opts.setSelectedBookmark;
+  useHotkeys("escape", () => closeReader(), {
+    enabled: !!selectedBookmark,
+    preventDefault: true,
+  }, [closeReader]);
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const selected = selectedRef.current;
-      if (!selected) return;
+  useHotkeys("j, ArrowRight", () => {
+    const idx = filteredBookmarks.findIndex((b) => b.id === selectedBookmark!.id);
+    if (idx < filteredBookmarks.length - 1) {
+      setSelectedBookmark(filteredBookmarks[idx + 1]);
+    }
+  }, {
+    enabled: !!selectedBookmark,
+    preventDefault: true,
+  }, [selectedBookmark, filteredBookmarks, setSelectedBookmark]);
 
-      if (e.key === "Escape") {
-        closeRef.current();
-        return;
-      }
-      if (e.key === "j" || e.key === "ArrowRight") {
-        const bookmarks = bookmarksRef.current;
-        const idx = bookmarks.findIndex((b) => b.id === selected.id);
-        if (idx < bookmarks.length - 1) {
-          setSelectedRef.current(bookmarks[idx + 1]);
-        }
-        return;
-      }
-      if (e.key === "k" || e.key === "ArrowLeft") {
-        const bookmarks = bookmarksRef.current;
-        const idx = bookmarks.findIndex((b) => b.id === selected.id);
-        if (idx > 0) {
-          setSelectedRef.current(bookmarks[idx - 1]);
-        }
-      }
-    };
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  useHotkeys("k, ArrowLeft", () => {
+    const idx = filteredBookmarks.findIndex((b) => b.id === selectedBookmark!.id);
+    if (idx > 0) {
+      setSelectedBookmark(filteredBookmarks[idx - 1]);
+    }
+  }, {
+    enabled: !!selectedBookmark,
+    preventDefault: true,
+  }, [selectedBookmark, filteredBookmarks, setSelectedBookmark]);
 }

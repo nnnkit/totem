@@ -3,6 +3,7 @@ import type {
   ArticleContentBlock,
   ArticleContentEntity,
   Bookmark,
+  LinkCard,
   Media,
   ThreadTweet,
   TweetKind,
@@ -451,6 +452,63 @@ function extractArticle(tweet: UnknownRecord): ArticleContent | null {
   return best;
 }
 
+function parseCard(
+  tweet: UnknownRecord,
+): { cardUrl: string; card: LinkCard } | null {
+  const cardRecord = asRecord(tweet.card);
+  const cardLegacy = asRecord(cardRecord?.legacy);
+  if (!cardLegacy) return null;
+
+  const cardName = asString(cardLegacy.name) || "";
+  if (cardName !== "summary" && cardName !== "summary_large_image") return null;
+
+  const bindingValues = asRecords(cardLegacy.binding_values);
+  if (bindingValues.length === 0) return null;
+
+  const lookup = new Map<string, UnknownRecord>();
+  for (const entry of bindingValues) {
+    const key = asString(entry.key);
+    const value = asRecord(entry.value);
+    if (key && value) lookup.set(key, value);
+  }
+
+  const str = (key: string): string =>
+    asString(lookup.get(key)?.string_value) || "";
+  const img = (key: string): string =>
+    asString(asRecord(lookup.get(key)?.image_value)?.url) || "";
+
+  const cardUrl = str("card_url");
+  if (!cardUrl) return null;
+
+  const title = str("title");
+  if (!title) return null;
+
+  const imageUrl =
+    img("thumbnail_image_original") ||
+    img("summary_photo_image_large") ||
+    img("photo_image_full_size_large") ||
+    img("thumbnail_image_large");
+
+  return {
+    cardUrl,
+    card: {
+      title,
+      description: str("description") || undefined,
+      imageUrl: imageUrl || undefined,
+      imageAlt: str("photo_image_full_size_alt_text") || undefined,
+      domain: str("vanity_url") || str("domain") || undefined,
+      cardType: cardName,
+    },
+  };
+}
+
+function attachCardToUrls(tweet: UnknownRecord, urls: TweetUrl[]): void {
+  const parsed = parseCard(tweet);
+  if (!parsed) return;
+  const match = urls.find((u) => u.url === parsed.cardUrl);
+  if (match) match.card = parsed.card;
+}
+
 function parseTweetText(tweet: UnknownRecord, legacy: UnknownRecord) {
   const noteTweet = asRecord(tweet.note_tweet);
   const noteResult = asRecord(asRecord(noteTweet?.note_tweet_results)?.result);
@@ -459,10 +517,11 @@ function parseTweetText(tweet: UnknownRecord, legacy: UnknownRecord) {
     const noteEntities = asRecord(noteResult.entity_set);
     const noteText = asString(noteResult.text);
     if (noteText) {
+      const urls = parseUrls(noteEntities);
+      attachCardToUrls(tweet, urls);
       return {
         text: expandText(noteText, parseUrlMappings(noteEntities)),
-        urls: parseUrls(noteEntities),
-        isLongText: true,
+        urls,
       };
     }
   }
@@ -471,6 +530,7 @@ function parseTweetText(tweet: UnknownRecord, legacy: UnknownRecord) {
   const fullText = asString(legacy.full_text) || "";
   const expanded = expandText(fullText, parseUrlMappings(entities));
   const urls = parseUrls(entities);
+  attachCardToUrls(tweet, urls);
   const article = extractArticle(tweet);
 
   const isUrlOnly =
@@ -486,7 +546,6 @@ function parseTweetText(tweet: UnknownRecord, legacy: UnknownRecord) {
         ? articleFallback || expanded
         : expanded,
     urls,
-    isLongText: false,
   };
 }
 
@@ -604,7 +663,7 @@ function parseTweetRecord(
     const author = parseAuthor(core);
     if (!author) return null;
 
-    const { text, urls, isLongText } = parseTweetText(tweet, legacy);
+    const { text, urls } = parseTweetText(tweet, legacy);
     const media = parseMedia(legacy);
     const views = asRecord(tweet.views);
     const quotedTweet = parseQuotedTweet(tweet);
@@ -649,7 +708,6 @@ function parseTweetRecord(
         (item) => item.type === "video" || item.type === "animated_gif",
       ),
       hasLink: urls.length > 0,
-      isLongText,
       quotedTweet,
       retweetedTweet,
       article,
@@ -896,10 +954,13 @@ function collectThreadCandidates(
     item.conversationId === focalConversationId &&
     item.bookmark.author.screenName === focalAuthor;
 
+  const isConversationRoot = (item: DetailTimelineTweet): boolean =>
+    item.bookmark.tweetId === focalConversationId;
+
   const canonicalSelfThreadCandidates = timelineTweets.filter(
     (item) =>
       sameConversationAndAuthor(item) &&
-      isSelfThreadDisplayType(item.tweetDisplayType),
+      (isSelfThreadDisplayType(item.tweetDisplayType) || isConversationRoot(item)),
   );
   if (canonicalSelfThreadCandidates.length > 0) {
     return orderThreadCandidates(canonicalSelfThreadCandidates, focalTweet.tweetId);

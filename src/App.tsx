@@ -1,9 +1,11 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { useAuth } from "./hooks/useAuth";
 import { useBookmarks, useDetailedTweetIds } from "./hooks/useBookmarks";
 import { useTheme } from "./hooks/useTheme";
 import { useSettings } from "./hooks/useSettings";
 import { useKeyboardNavigation } from "./hooks/useKeyboard";
+import { useReadIds } from "./hooks/useReadIds";
+import { ensureReadingProgressExists } from "./db";
 import { pickRelatedBookmarks } from "./lib/related";
 import { resetLocalData } from "./lib/reset";
 import { Onboarding } from "./components/Onboarding";
@@ -23,6 +25,7 @@ export default function App() {
   const isReady = phase === "ready";
   const { bookmarks, syncState, refresh, unbookmark } = useBookmarks(isReady);
   const detailedTweetIds = useDetailedTweetIds();
+  const { markAsRead } = useReadIds(bookmarks);
   const {
     continueReading,
     allUnread,
@@ -49,11 +52,17 @@ export default function App() {
     [selectedBookmark, bookmarks, shuffleSeed],
   );
 
+  const openedTweetIds = useMemo(
+    () => new Set(continueReading.map((item) => item.progress.tweetId)),
+    [continueReading],
+  );
+
   const openBookmark = useCallback(
     (bookmark: Bookmark) => {
+      ensureReadingProgressExists(bookmark.tweetId).then(refreshContinueReading);
       setSelectedBookmark(bookmark);
     },
-    [],
+    [refreshContinueReading],
   );
 
   const selectedIndex = selectedBookmark
@@ -90,7 +99,18 @@ export default function App() {
     setSelectedBookmark,
   });
 
-  if (phase === "loading") {
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const readTweetId = params.get("read");
+    if (!readTweetId || bookmarks.length === 0) return;
+    const target = bookmarks.find((b) => b.tweetId === readTweetId);
+    if (target) {
+      openBookmark(target);
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, [bookmarks, openBookmark]);
+
+  if (phase === "loading" || (isReady && syncState.phase === "idle")) {
     return (
       <div className="flex items-center justify-center min-h-dvh bg-x-bg">
         <div className="animate-pulse">
@@ -127,6 +147,7 @@ export default function App() {
           }}
           themePreference={themePreference}
           onThemeChange={setThemePreference}
+          onMarkAsRead={markAsRead}
         />
       );
     }
@@ -135,7 +156,9 @@ export default function App() {
         <ReadingView
           continueReadingItems={continueReading}
           unreadBookmarks={allUnread}
+          syncing={syncState.phase === "syncing"}
           onOpenBookmark={openBookmark}
+          onSync={refresh}
           onBack={() => setView("home")}
         />
       );
@@ -144,11 +167,11 @@ export default function App() {
       <NewTabHome
         bookmarks={bookmarks}
         detailedTweetIds={detailedTweetIds}
-        syncing={syncState.phase === "syncing"}
         showTopSites={settings.showTopSites}
         showSearchBar={settings.showSearchBar}
         topSitesLimit={settings.topSitesLimit}
-        onSync={refresh}
+        backgroundMode={settings.backgroundMode}
+        openedTweetIds={openedTweetIds}
         onOpenBookmark={openBookmark}
         onOpenSettings={() => setSettingsOpen(true)}
         onOpenReading={() => setView("reading")}

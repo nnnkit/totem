@@ -1,9 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import type {
-  Bookmark,
-  UserSettings,
-} from "../types";
+import { useMemo, useRef, useState } from "react";
+import { useHotkeys } from "react-hotkeys-hook";
+import type { Bookmark, UserSettings } from "../types";
 import type { ThemePreference } from "../hooks/useTheme";
+import { cn } from "../lib/cn";
 
 interface Props {
   open: boolean;
@@ -36,17 +35,10 @@ export function SettingsModal({
   const [resetting, setResetting] = useState(false);
   const [resetError, setResetError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!open) return;
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.stopPropagation();
-        onClose();
-      }
-    };
-    window.addEventListener("keydown", onKeyDown, true);
-    return () => window.removeEventListener("keydown", onKeyDown, true);
-  }, [open, onClose]);
+  useHotkeys("escape", () => onClose(), {
+    enabled: open,
+    enableOnFormTags: true,
+  }, [onClose]);
 
   const stats = useMemo(() => {
     const uniqueAuthors = new Set(bookmarks.map((b) => b.author.screenName));
@@ -121,11 +113,12 @@ export function SettingsModal({
                   key={opt.value}
                   type="button"
                   onClick={() => onThemePreferenceChange(opt.value)}
-                  className={`flex-1 py-2.5 text-sm font-medium transition-colors flex items-center justify-center gap-1.5 ${
+                  className={cn(
+                    "flex-1 py-2.5 text-sm font-medium transition-colors flex items-center justify-center gap-1.5",
                     themePreference === opt.value
                       ? "bg-x-blue text-white"
-                      : "text-x-text-secondary hover:text-x-text hover:bg-x-hover"
-                  }`}
+                      : "text-x-text-secondary hover:text-x-text hover:bg-x-hover",
+                  )}
                 >
                   {opt.icon === "monitor" ? (
                     <svg viewBox="0 0 256 256" className="size-4" fill="currentColor">
@@ -146,6 +139,11 @@ export function SettingsModal({
             </div>
           </section>
 
+          <BackgroundSettings
+            settings={settings}
+            onUpdateSettings={onUpdateSettings}
+          />
+
           <section>
             <h3 className="text-sm font-semibold text-x-text-secondary uppercase tracking-wider mb-3">
               New Tab
@@ -164,16 +162,16 @@ export function SettingsModal({
                       showSearchBar: !settings.showSearchBar,
                     })
                   }
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    settings.showSearchBar ? "bg-x-blue" : "bg-x-border"
-                  }`}
+                  className={cn(
+                    "relative inline-flex h-6 w-11 items-center rounded-full transition-colors",
+                    settings.showSearchBar ? "bg-x-blue" : "bg-x-border",
+                  )}
                 >
                   <span
-                    className={`inline-block size-4 rounded-full bg-white transition-transform ${
-                      settings.showSearchBar
-                        ? "translate-x-6"
-                        : "translate-x-1"
-                    }`}
+                    className={cn(
+                      "inline-block size-4 rounded-full bg-white transition-transform",
+                      settings.showSearchBar ? "translate-x-6" : "translate-x-1",
+                    )}
                   />
                 </button>
               </label>
@@ -186,21 +184,31 @@ export function SettingsModal({
                   type="button"
                   role="switch"
                   aria-checked={settings.showTopSites}
-                  onClick={() =>
+                  onClick={async () => {
+                    if (!settings.showTopSites) {
+                      try {
+                        const granted = await chrome.permissions.request({
+                          permissions: ["topSites"],
+                        });
+                        if (!granted) return;
+                      } catch {
+                        return;
+                      }
+                    }
                     onUpdateSettings({
                       showTopSites: !settings.showTopSites,
-                    })
-                  }
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    settings.showTopSites ? "bg-x-blue" : "bg-x-border"
-                  }`}
+                    });
+                  }}
+                  className={cn(
+                    "relative inline-flex h-6 w-11 items-center rounded-full transition-colors",
+                    settings.showTopSites ? "bg-x-blue" : "bg-x-border",
+                  )}
                 >
                   <span
-                    className={`inline-block size-4 rounded-full bg-white transition-transform ${
-                      settings.showTopSites
-                        ? "translate-x-6"
-                        : "translate-x-1"
-                    }`}
+                    className={cn(
+                      "inline-block size-4 rounded-full bg-white transition-transform",
+                      settings.showTopSites ? "translate-x-6" : "translate-x-1",
+                    )}
                   />
                 </button>
               </label>
@@ -301,5 +309,42 @@ export function SettingsModal({
         </div>
       </div>
     </div>
+  );
+}
+
+interface BackgroundSettingsProps {
+  settings: UserSettings;
+  onUpdateSettings: (patch: Partial<UserSettings>) => void;
+}
+
+const BACKGROUND_OPTIONS: { value: UserSettings["backgroundMode"]; label: string }[] = [
+  { value: "gradient", label: "Gradient" },
+  { value: "images", label: "Images" },
+];
+
+function BackgroundSettings({ settings, onUpdateSettings }: BackgroundSettingsProps) {
+  return (
+    <section>
+      <h3 className="text-sm font-semibold text-x-text-secondary uppercase tracking-wider mb-3">
+        Background
+      </h3>
+      <div className="flex rounded-xl border border-x-border overflow-hidden">
+        {BACKGROUND_OPTIONS.map((opt) => (
+          <button
+            key={opt.value}
+            type="button"
+            onClick={() => onUpdateSettings({ backgroundMode: opt.value })}
+            className={cn(
+              "flex-1 py-2.5 text-sm font-medium transition-colors",
+              settings.backgroundMode === opt.value
+                ? "bg-x-blue text-white"
+                : "text-x-text-secondary hover:text-x-text hover:bg-x-hover",
+            )}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+    </section>
   );
 }

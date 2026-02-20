@@ -213,12 +213,6 @@
             sans-serif;
     }
 
-    .home-display {
-        font-family:
-            "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Palatino,
-            serif;
-    }
-
     code,
     pre,
     kbd,
@@ -760,94 +754,6 @@
     }
 }
 
-.lib-list-item {
-    width: 100%;
-    border: none;
-    background: transparent;
-    display: flex;
-    align-items: center;
-    gap: 0.95rem;
-    padding: 0.78rem 0;
-    cursor: pointer;
-    transition: opacity var(--motion-fast, 150ms) ease;
-    content-visibility: auto;
-    contain-intrinsic-size: auto 3.5rem;
-}
-
-.lib-time-badge {
-    min-width: 2rem;
-    height: 2rem;
-    border-radius: 0.5rem;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--x-blue);
-    font-size: 0.75rem;
-    font-weight: 600;
-    background: color-mix(in srgb, var(--x-blue) 12%, transparent);
-    flex-shrink: 0;
-}
-
-.lib-item-title {
-    display: -webkit-box;
-    overflow: hidden;
-    color: var(--x-text);
-    font-size: 1rem;
-    line-height: 1.25;
-    font-weight: 400;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    font-family:
-        "Spectral", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
-}
-
-.lib-item-meta {
-    display: block;
-    margin-top: 0.25rem;
-    color: var(--x-text-secondary);
-    font-size: 0.72rem;
-    line-height: 1.2;
-}
-
-.lib-unbookmark-btn {
-    flex-shrink: 0;
-    border: none;
-    background: none;
-    color: var(--x-text-secondary);
-    padding: 0.35rem;
-    border-radius: 9999px;
-    cursor: pointer;
-    opacity: 0;
-    transition:
-        opacity 150ms ease,
-        color 150ms ease;
-}
-
-.lib-list-item:hover .lib-unbookmark-btn,
-.lib-list-item:focus-within .lib-unbookmark-btn {
-    opacity: 1;
-}
-
-.lib-unbookmark-btn:hover {
-    color: var(--x-text);
-}
-
-.lib-unbookmark-btn:disabled {
-    opacity: 0.4;
-    cursor: default;
-}
-
-@media (hover: hover) and (pointer: fine) {
-    .lib-list-item:hover .lib-item-title {
-        color: var(--x-blue);
-    }
-}
-
-.lib-list-item:focus-visible {
-    outline: 2px solid var(--x-blue);
-    outline-offset: 2px;
-}
-
 @media (prefers-reduced-motion: reduce) {
     .breath-wallpaper,
     .breath-card-content,
@@ -856,4 +762,89 @@
     .breath-icon-btn {
         transition: none;
     }
+}
+
+.xbt-tour-popover {
+    background: rgba(24, 22, 20, 0.96) !important;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(224, 122, 95, 0.18) !important;
+    border-radius: 0.75rem !important;
+    color: rgba(255, 255, 255, 0.92) !important;
+    box-shadow:
+        0 4px 24px rgba(0, 0, 0, 0.4),
+        0 1px 4px rgba(0, 0, 0, 0.2) !important;
+}
+
+.xbt-tour-popover .driver-popover-title {
+    color: rgba(255, 255, 255, 0.92) !important;
+    font-size: 0.9rem !important;
+    font-weight: 600 !important;
+    font-family:
+        "DM Sans", "Avenir Next", "Avenir", "Segoe UI", "Helvetica Neue",
+        Helvetica, sans-serif !important;
+}
+
+.xbt-tour-popover .driver-popover-description {
+    color: rgba(255, 255, 255, 0.72) !important;
+    font-size: 0.82rem !important;
+    line-height: 1.5 !important;
+    font-family:
+        "DM Sans", "Avenir Next", "Avenir", "Segoe UI", "Helvetica Neue",
+        Helvetica, sans-serif !important;
+}
+
+.xbt-tour-popover .driver-popover-description kbd {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    vertical-align: middle;
+    min-width: 1.6em;
+    padding: 0.15em 0.35em;
+    border-radius: 3px;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06);
+    font-size: 0.85em;
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: 0.04em;
+    color: rgba(255, 255, 255, 0.88);
+}
+
+.xbt-tour-popover .driver-popover-navigation-btns {
+    gap: 0.5rem !important;
+}
+
+.xbt-tour-popover .driver-popover-prev-btn,
+.xbt-tour-popover .driver-popover-next-btn {
+    border-radius: 0.4rem !important;
+    font-size: 0.79rem !important;
+    font-weight: 600 !important;
+    padding: 0.45rem 0.9rem !important;
+    text-shadow: none !important;
+}
+
+.xbt-tour-popover .driver-popover-prev-btn {
+    border: 1px solid rgba(255, 255, 255, 0.14) !important;
+    background: rgba(255, 255, 255, 0.06) !important;
+    color: rgba(255, 255, 255, 0.8) !important;
+}
+
+.xbt-tour-popover .driver-popover-next-btn {
+    border: none !important;
+    background: #e07a5f !important;
+    color: white !important;
+}
+
+.xbt-tour-popover .driver-popover-arrow-side-left,
+.xbt-tour-popover .driver-popover-arrow-side-right,
+.xbt-tour-popover .driver-popover-arrow-side-top,
+.xbt-tour-popover .driver-popover-arrow-side-bottom {
+    border-color: rgba(24, 22, 20, 0.96) !important;
+}
+
+.xbt-tour-popover .driver-popover-progress-text {
+    color: rgba(255, 255, 255, 0.4) !important;
+    font-size: 0.72rem !important;
 }

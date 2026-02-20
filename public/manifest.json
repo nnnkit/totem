@@ -9,11 +9,13 @@
     "webRequest",
     "declarativeNetRequest",
     "tabs",
+    "favicon"
+  ],
+  "optional_permissions": [
     "topSites"
   ],
   "host_permissions": [
-    "https://x.com/*",
-    "https://www.bing.com/*"
+    "https://x.com/*"
   ],
   "content_scripts": [
     {
@@ -28,6 +30,10 @@
   ],
   "background": {
     "service_worker": "service-worker.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "X Bookmarks"
   },
   "chrome_url_overrides": {
     "newtab": "newtab.html"

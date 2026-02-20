@@ -1,13 +1,16 @@
 import { useEffect, useState } from "react";
-import type { UserSettings } from "../types";
+import type { BackgroundMode, UserSettings } from "../types";
 import { hasChromeStorageSync, hasChromeStorageOnChanged } from "../lib/chrome";
 
 const SETTINGS_KEY = "ui_settings";
+
+const VALID_BACKGROUND_MODES: BackgroundMode[] = ["gradient", "images"];
 
 const DEFAULT_SETTINGS: UserSettings = {
   showTopSites: false,
   showSearchBar: true,
   topSitesLimit: 5,
+  backgroundMode: "images",
 };
 
 function normalizeSettings(value: unknown): UserSettings {
@@ -28,6 +31,10 @@ function normalizeSettings(value: unknown): UserSettings {
       raw.topSitesLimit <= 10
         ? raw.topSitesLimit
         : DEFAULT_SETTINGS.topSitesLimit,
+    backgroundMode:
+      VALID_BACKGROUND_MODES.includes(raw.backgroundMode as BackgroundMode)
+        ? (raw.backgroundMode as BackgroundMode)
+        : DEFAULT_SETTINGS.backgroundMode,
   };
 }
 

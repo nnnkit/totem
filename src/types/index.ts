@@ -22,10 +22,20 @@ export interface Media {
   altText?: string;
 }
 
+export interface LinkCard {
+  title?: string;
+  description?: string;
+  imageUrl?: string;
+  imageAlt?: string;
+  domain?: string;
+  cardType?: string;
+}
+
 export interface TweetUrl {
   url: string;
   displayUrl: string;
   expandedUrl: string;
+  card?: LinkCard;
 }
 
 export interface ArticleContentBlock {
@@ -98,7 +108,6 @@ export interface Bookmark {
   hasImage: boolean;
   hasVideo: boolean;
   hasLink: boolean;
-  isLongText: boolean;
   quotedTweet: QuotedTweet | null;
   retweetedTweet?: QuotedTweet | null;
   article?: ArticleContent | null;
@@ -130,16 +139,18 @@ export interface SyncState {
 
 export interface ReadingProgress {
   tweetId: string;
-  scrollPercent: number;
+  openedAt: number;
+  lastReadAt: number;
   scrollY: number;
   scrollHeight: number;
-  lastReadAt: number;
   completed: boolean;
-  contentBased?: boolean;
 }
+
+export type BackgroundMode = "gradient" | "images";
 
 export interface UserSettings {
   showTopSites: boolean;
   showSearchBar: boolean;
   topSitesLimit: number;
+  backgroundMode: BackgroundMode;
 }

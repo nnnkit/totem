@@ -7,12 +7,28 @@ export interface TopSite {
   faviconUrl: string;
 }
 
-export function useTopSites(limit = 8) {
+async function hasTopSitesPermission(): Promise<boolean> {
+  try {
+    return await chrome.permissions.contains({ permissions: ["topSites"] });
+  } catch {
+    return false;
+  }
+}
+
+export function useTopSites(limit = 8, enabled = true) {
   const [sites, setSites] = useState<TopSite[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchSites = useCallback(async () => {
-    if (!chrome.topSites?.get) {
+    if (!enabled) {
+      setSites([]);
+      setLoading(false);
+      return;
+    }
+
+    const permitted = await hasTopSitesPermission();
+    if (!permitted || !chrome.topSites?.get) {
+      setSites([]);
       setLoading(false);
       return;
     }
@@ -25,7 +41,7 @@ export function useTopSites(limit = 8) {
           title: s.title || hostname,
           url: s.url,
           hostname,
-          faviconUrl: `https://www.google.com/s2/favicons?domain=${hostname}&sz=64`,
+          faviconUrl: `chrome-extension://${chrome.runtime.id}/_favicon/?pageUrl=${encodeURIComponent(s.url)}&size=64`,
         };
       });
       setSites(mapped);
@@ -34,7 +50,7 @@ export function useTopSites(limit = 8) {
     } finally {
       setLoading(false);
     }
-  }, [limit]);
+  }, [limit, enabled]);
 
   useEffect(() => {
     fetchSites();

@@ -1,12 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useHotkeys } from "react-hotkeys-hook";
 import type { Bookmark } from "../types";
 import type { ContinueReadingItem } from "../hooks/useContinueReading";
 import { compactPreview } from "../lib/text";
+import { cn } from "../lib/cn";
 
 interface Props {
   continueReadingItems: ContinueReadingItem[];
   unreadBookmarks: Bookmark[];
+  syncing: boolean;
   onOpenBookmark: (bookmark: Bookmark) => void;
+  onSync: () => void;
   onBack: () => void;
 }
 
@@ -37,7 +41,7 @@ function estimateReadingMinutes(bookmark: Bookmark): number {
       articleText.length === 0 ? 0 : articleText.split(" ").length;
     estimate = Math.max(estimate, Math.ceil(articleWords / 200), 2);
   }
-  if (bookmark.isLongText || bookmark.hasLink) {
+  if (bookmark.hasLink) {
     estimate = Math.max(estimate, 2);
   }
 
@@ -47,7 +51,6 @@ function estimateReadingMinutes(bookmark: Bookmark): number {
 function inferKindBadge(bookmark: Bookmark): string {
   if (bookmark.tweetKind === "article") return "Article";
   if (bookmark.tweetKind === "thread" || bookmark.isThread) return "Thread";
-  if (bookmark.isLongText) return "Long post";
   if (bookmark.hasLink) return "Link";
   return "Post";
 }
@@ -77,7 +80,9 @@ type Tab = "continue" | "unread";
 export function ReadingView({
   continueReadingItems,
   unreadBookmarks,
+  syncing,
   onOpenBookmark,
+  onSync,
   onBack,
 }: Props) {
   const containerWidthClass = "max-w-3xl";
@@ -125,36 +130,29 @@ export function ReadingView({
     }
   }, [focusedIndex]);
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const tag = (e.target as HTMLElement).tagName;
-      if (tag === "INPUT" || tag === "TEXTAREA") return;
+  useHotkeys("j, ArrowDown", () => {
+    setFocusedIndex((prev) =>
+      prev < visibleBookmarks.length - 1 ? prev + 1 : prev,
+    );
+  }, { preventDefault: true }, [visibleBookmarks.length]);
 
-      if (e.key === "j" || e.key === "ArrowDown") {
-        e.preventDefault();
-        setFocusedIndex((prev) =>
-          prev < visibleBookmarks.length - 1 ? prev + 1 : prev,
-        );
-      } else if (e.key === "k" || e.key === "ArrowUp") {
-        e.preventDefault();
-        setFocusedIndex((prev) => (prev > 0 ? prev - 1 : prev));
-      } else if (
-        (e.key === "Enter" || e.key === "o") &&
-        focusedIndex >= 0 &&
-        focusedIndex < visibleBookmarks.length
-      ) {
-        onOpenBookmark(visibleBookmarks[focusedIndex]);
-      } else if (e.key === "Escape") {
-        onBack();
-      } else if (e.key === "Tab" && !e.ctrlKey && !e.metaKey) {
-        e.preventDefault();
-        setActiveTab((prev) => (prev === "continue" ? "unread" : "continue"));
-      }
-    };
+  useHotkeys("k, ArrowUp", () => {
+    setFocusedIndex((prev) => (prev > 0 ? prev - 1 : prev));
+  }, { preventDefault: true });
 
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [focusedIndex, visibleBookmarks, onOpenBookmark, onBack]);
+  useHotkeys("enter, o", () => {
+    if (focusedIndex >= 0 && focusedIndex < visibleBookmarks.length) {
+      onOpenBookmark(visibleBookmarks[focusedIndex]);
+    }
+  }, { preventDefault: true }, [focusedIndex, visibleBookmarks, onOpenBookmark]);
+
+  useHotkeys("escape", () => onBack(), {
+    preventDefault: true,
+  }, [onBack]);
+
+  useHotkeys("tab", () => {
+    setActiveTab((prev) => (prev === "continue" ? "unread" : "continue"));
+  }, { preventDefault: true });
 
   let itemIndex = 0;
 
@@ -162,7 +160,7 @@ export function ReadingView({
     <div className="min-h-dvh bg-x-bg">
       <div className="sticky top-0 z-10 border-b border-x-border bg-x-bg/80 backdrop-blur-md">
         <div
-          className={`mx-auto flex items-center gap-3 px-4 py-3 ${containerWidthClass}`}
+          className={cn("mx-auto flex items-center gap-3 px-4 py-3", containerWidthClass)}
         >
           <button
             onClick={onBack}
@@ -174,14 +172,32 @@ export function ReadingView({
             </svg>
           </button>
           <span className="text-lg font-semibold text-x-text">Reading</span>
+          <div className="ml-auto">
+            <button
+              type="button"
+              onClick={onSync}
+              disabled={syncing}
+              className="rounded-full p-2 text-x-text-secondary transition-colors hover:bg-x-hover hover:text-x-text"
+              aria-label="Sync bookmarks"
+              title="Sync bookmarks"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                className={cn("size-5", syncing && "animate-spin")}
+                fill="currentColor"
+              >
+                <path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z" />
+              </svg>
+            </button>
+          </div>
         </div>
-        <div className={`mx-auto flex ${containerWidthClass} px-4`} role="tablist">
+        <div className={cn("mx-auto flex px-4", containerWidthClass)} role="tablist">
           <button
             type="button"
             role="tab"
             aria-selected={activeTab === "continue"}
             onClick={() => setActiveTab("continue")}
-            className={`relative px-4 py-2.5 text-sm font-medium transition-colors ${activeTab === "continue" ? "text-x-text" : "text-x-text-secondary hover:text-x-text"}`}
+            className={cn("relative px-4 py-2.5 text-sm font-medium transition-colors", activeTab === "continue" ? "text-x-text" : "text-x-text-secondary hover:text-x-text")}
           >
             Continue Reading
             {inProgress.length > 0 && (
@@ -198,7 +214,7 @@ export function ReadingView({
             role="tab"
             aria-selected={activeTab === "unread"}
             onClick={() => setActiveTab("unread")}
-            className={`relative px-4 py-2.5 text-sm font-medium transition-colors ${activeTab === "unread" ? "text-x-text" : "text-x-text-secondary hover:text-x-text"}`}
+            className={cn("relative px-4 py-2.5 text-sm font-medium transition-colors", activeTab === "unread" ? "text-x-text" : "text-x-text-secondary hover:text-x-text")}
           >
             Unread
             {unreadBookmarks.length > 0 && (
@@ -213,7 +229,7 @@ export function ReadingView({
         </div>
       </div>
 
-      <main className={`${containerWidthClass} mx-auto px-4 pb-16 pt-6`}>
+      <main className={cn(containerWidthClass, "mx-auto px-4 pb-16 pt-6")}>
         {activeTab === "continue" && (
           <>
             {inProgress.length > 0 && (
@@ -230,7 +246,7 @@ export function ReadingView({
                       ref={(el) => { itemRefs.current[idx] = el; }}
                       type="button"
                       onClick={() => onOpenBookmark(bookmark)}
-                      className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-colors hover:bg-x-hover ${focusedIndex === idx ? "border-x-blue ring-2 ring-x-blue/40 bg-x-hover" : "border-x-border bg-x-card"}`}
+                      className={cn("flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-colors hover:bg-x-hover", focusedIndex === idx ? "border-x-blue ring-2 ring-x-blue/40 bg-x-hover" : "border-x-border bg-x-card")}
                     >
                       <img
                         src={bookmark.author.profileImageUrl}
@@ -241,19 +257,8 @@ export function ReadingView({
                         <p className="truncate text-sm font-medium text-x-text">
                           {pickTitle(bookmark)}
                         </p>
-                        <div className="mt-1.5 flex items-center gap-2">
-                          <div className="h-1 flex-1 overflow-hidden rounded-full bg-x-border">
-                            <div
-                              className="h-full rounded-full bg-x-blue transition-all"
-                              style={{ width: `${progress.scrollPercent}%` }}
-                            />
-                          </div>
-                          <span className="shrink-0 text-xs text-x-text-secondary">
-                            {progress.scrollPercent}%
-                          </span>
-                        </div>
                         <p className="mt-1 text-xs text-x-text-secondary">
-                          @{bookmark.author.screenName} &middot;{" "}
+                          @{bookmark.author.screenName} &middot; Last read{" "}
                           {formatTimeAgo(progress.lastReadAt)}
                         </p>
                       </div>
@@ -278,7 +283,7 @@ export function ReadingView({
                       ref={(el) => { itemRefs.current[idx] = el; }}
                       type="button"
                       onClick={() => onOpenBookmark(bookmark)}
-                      className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-colors ${focusedIndex === idx ? "border-x-blue ring-2 ring-x-blue/40 bg-x-hover opacity-100" : "border-x-border bg-x-card opacity-70 hover:bg-x-hover hover:opacity-100"}`}
+                      className={cn("flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-colors", focusedIndex === idx ? "border-x-blue ring-2 ring-x-blue/40 bg-x-hover opacity-100" : "border-x-border bg-x-card opacity-70 hover:bg-x-hover hover:opacity-100")}
                     >
                       <img
                         src={bookmark.author.profileImageUrl}
@@ -325,7 +330,7 @@ export function ReadingView({
                     ref={(el) => { itemRefs.current[idx] = el; }}
                     type="button"
                     onClick={() => onOpenBookmark(bookmark)}
-                    className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-colors hover:bg-x-hover ${focusedIndex === idx ? "border-x-blue ring-2 ring-x-blue/40 bg-x-hover" : "border-x-border bg-x-card"}`}
+                    className={cn("flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-colors hover:bg-x-hover", focusedIndex === idx ? "border-x-blue ring-2 ring-x-blue/40 bg-x-hover" : "border-x-border bg-x-card")}
                   >
                     <img
                       src={bookmark.author.profileImageUrl}

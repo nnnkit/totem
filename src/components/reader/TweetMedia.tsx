@@ -1,4 +1,5 @@
 import type { Media } from "../../types";
+import { cn } from "../../lib/cn";
 
 function mediaHeightClass(total: number, index: number): string {
   if (total === 1) return "max-h-[72vh]";
@@ -22,8 +23,8 @@ export function TweetMedia({ items, bleed = false }: Props) {
   const visible = items.slice(0, 4);
 
   return (
-    <div className={`mt-5 overflow-hidden rounded-2xl border border-x-border bg-x-border ${bleed ? "-mx-6" : ""}`}>
-      <div className={`grid ${columns} gap-px`}>
+    <div className={cn("mt-5 overflow-hidden rounded-2xl border border-x-border bg-x-border", bleed && "-mx-6")}>
+      <div className={cn("grid gap-px", columns)}>
         {visible.map((item, index) => {
           const heightClass = mediaHeightClass(visible.length, index);
           const spanClass = visible.length === 3 && index === 0 ? "col-span-2" : "";
@@ -38,7 +39,7 @@ export function TweetMedia({ items, bleed = false }: Props) {
                 autoPlay={item.type === "animated_gif" && !prefersReducedMotion}
                 muted={item.type === "animated_gif"}
                 playsInline
-                className={`w-full bg-black object-contain ${heightClass}`}
+                className={cn("w-full bg-black object-contain", heightClass)}
                 poster={item.url}
               />
             ) : (
@@ -46,7 +47,7 @@ export function TweetMedia({ items, bleed = false }: Props) {
                 key={`${item.url}-${index}`}
                 src={item.url}
                 alt={item.altText || ""}
-                className={`w-full bg-black object-contain ${heightClass} ${spanClass}`}
+                className={cn("w-full bg-black object-contain", heightClass, spanClass)}
                 loading="lazy"
               />
             );
@@ -57,7 +58,7 @@ export function TweetMedia({ items, bleed = false }: Props) {
               key={`${item.url}-${index}`}
               src={item.url}
               alt={item.altText || ""}
-              className={`w-full object-cover ${heightClass} ${spanClass}`}
+              className={cn("w-full object-cover", heightClass, spanClass)}
               loading="lazy"
             />
           );
