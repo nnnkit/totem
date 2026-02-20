@@ -33,7 +33,7 @@ export function TweetMedia({ items, bleed = false }: Props) {
 
   return (
     <>
-      <div className={cn("mt-5 overflow-hidden rounded-2xl border border-x-border bg-x-border", bleed && "-mx-6")}>
+      <div className={cn("mt-5 overflow-hidden rounded-xl border border-x-border bg-x-border", bleed && "-mx-6")}>
         <div className={cn("grid gap-px", columns)}>
           {visible.map((item, index) => {
             const heightClass = mediaHeightClass(visible.length, index);

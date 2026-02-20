@@ -5,7 +5,7 @@ import { cn } from "../../lib/cn";
 export { compactPreview, normalizeText, truncateLabel } from "../../lib/text";
 
 export const baseTweetTextClass =
-  "break-words [&_a]:text-x-blue [&_a:hover]:underline";
+  "break-words [&_a]:text-accent [&_a:hover]:underline";
 
 function sanitizeUrl(url: string): string {
   if (/^https?:\/\//i.test(url)) return url;
@@ -47,7 +47,7 @@ export function textClassForMode(
 export function kindPillClass(kind: TweetKind): string {
   if (kind === "repost")
     return "bg-pill-green-bg text-pill-green-text border-pill-green-border";
-  if (kind === "reply") return "bg-x-blue/12 text-x-blue border-x-blue/40";
+  if (kind === "reply") return "bg-accent/12 text-accent border-accent/40";
   if (kind === "thread")
     return "bg-pill-amber-bg text-pill-amber-text border-pill-amber-border";
   if (kind === "quote")

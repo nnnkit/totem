@@ -34,6 +34,7 @@ export function SettingsModal({
 }: Props) {
   const [resetting, setResetting] = useState(false);
   const [resetError, setResetError] = useState<string | null>(null);
+  const [confirmingReset, setConfirmingReset] = useState(false);
 
   const stats = useMemo(() => {
     const uniqueAuthors = new Set<string>();
@@ -55,11 +56,6 @@ export function SettingsModal({
   const handleResetLocalData = async () => {
     if (resetting) return;
 
-    const confirmed = window.confirm(
-      "Reset local data on this device? This clears cached bookmarks and requires manual login before sync.",
-    );
-    if (!confirmed) return;
-
     setResetError(null);
     setResetting(true);
 
@@ -69,22 +65,23 @@ export function SettingsModal({
       setResetError("Reset failed. Please try again.");
     } finally {
       setResetting(false);
+      setConfirmingReset(false);
     }
   };
 
   return (
-    <Modal open={open} onClose={onClose} className="bg-black/50 backdrop-blur-sm" ariaLabelledBy="settings-title">
+    <Modal open={open} onClose={onClose} className="bg-black/50" ariaLabelledBy="settings-title">
       {(closing) => (
       <div className={cn(
-        "max-w-md mx-auto mt-[15vh] rounded-3xl border border-x-border bg-x-card shadow-2xl",
+        "max-w-md mx-auto mt-[10vh] max-h-[80vh] flex flex-col rounded-xl border border-x-border bg-x-card shadow-xl",
         closing ? "animate-preview-out" : "animate-preview-in",
       )}>
-        <div className="flex items-center justify-between px-6 pt-6 pb-4">
-          <h2 id="settings-title" className="text-xl font-bold text-x-text">Settings</h2>
+        <div className="flex shrink-0 items-center justify-between px-6 pt-5 pb-3">
+          <h2 id="settings-title" className="text-lg font-semibold text-x-text">Settings</h2>
           <button
             type="button"
             onClick={onClose}
-            className="p-2 -mr-2 rounded-full text-x-text-secondary hover:text-x-text hover:bg-x-hover transition-colors"
+            className="p-2 -mr-2 rounded-lg text-x-text-secondary hover:text-x-text hover:bg-x-hover transition-colors"
             aria-label="Close settings"
             title="Close"
           >
@@ -92,22 +89,22 @@ export function SettingsModal({
           </button>
         </div>
 
-        <div className="px-6 pb-6 space-y-6">
+        <div className="overflow-y-auto px-6 pb-6 space-y-5">
           <section>
-            <h3 className="text-sm font-semibold text-x-text-secondary uppercase tracking-wider mb-3">
+            <h3 className="text-xs font-medium text-x-text-secondary mb-2.5">
               Appearance
             </h3>
-            <div className="flex rounded-xl border border-x-border overflow-hidden">
+            <div className="flex gap-1 rounded-lg bg-x-bg p-1">
               {THEME_OPTIONS.map((opt) => (
                 <button
                   key={opt.value}
                   type="button"
                   onClick={() => onThemePreferenceChange(opt.value)}
                   className={cn(
-                    "flex-1 py-2.5 text-sm font-medium transition-colors flex items-center justify-center gap-1.5",
+                    "flex-1 py-2 text-sm font-medium rounded-md transition-colors flex items-center justify-center gap-1.5",
                     themePreference === opt.value
-                      ? "bg-x-blue text-white"
-                      : "text-x-text-secondary hover:text-x-text hover:bg-x-hover",
+                      ? "bg-accent/15 text-accent"
+                      : "text-x-text-secondary hover:text-x-text",
                   )}
                 >
                   {opt.icon === "monitor" ? (
@@ -129,18 +126,19 @@ export function SettingsModal({
           />
 
           <section>
-            <h3 className="text-sm font-semibold text-x-text-secondary uppercase tracking-wider mb-3">
+            <h3 className="text-xs font-medium text-x-text-secondary mb-2.5">
               New Tab
             </h3>
             <div className="space-y-3">
               <label className="flex items-center justify-between cursor-pointer">
-                <span className="text-sm text-x-text">
+                <span id="label-search-bar" className="text-sm text-x-text">
                   Show search bar
                 </span>
                 <button
                   type="button"
                   role="switch"
                   aria-checked={settings.showSearchBar}
+                  aria-labelledby="label-search-bar"
                   onClick={() =>
                     onUpdateSettings({
                       showSearchBar: !settings.showSearchBar,
@@ -148,7 +146,7 @@ export function SettingsModal({
                   }
                   className={cn(
                     "relative inline-flex h-6 w-11 items-center rounded-full transition-colors",
-                    settings.showSearchBar ? "bg-x-blue" : "bg-x-border",
+                    settings.showSearchBar ? "bg-accent" : "bg-x-border",
                   )}
                 >
                   <span
@@ -161,13 +159,14 @@ export function SettingsModal({
               </label>
 
               <label className="flex items-center justify-between cursor-pointer">
-                <span className="text-sm text-x-text">
+                <span id="label-quick-links" className="text-sm text-x-text">
                   Show quick links
                 </span>
                 <button
                   type="button"
                   role="switch"
                   aria-checked={settings.showTopSites}
+                  aria-labelledby="label-quick-links"
                   onClick={async () => {
                     if (!settings.showTopSites) {
                       try {
@@ -185,7 +184,7 @@ export function SettingsModal({
                   }}
                   className={cn(
                     "relative inline-flex h-6 w-11 items-center rounded-full transition-colors",
-                    settings.showTopSites ? "bg-x-blue" : "bg-x-border",
+                    settings.showTopSites ? "bg-accent" : "bg-x-border",
                   )}
                 >
                   <span
@@ -209,7 +208,7 @@ export function SettingsModal({
                         topSitesLimit: Number(e.target.value),
                       })
                     }
-                    className="rounded-lg border border-x-border bg-x-bg px-2.5 py-1.5 text-sm text-x-text focus:border-x-blue focus:outline-none transition-colors"
+                    className="rounded-lg border border-x-border bg-x-bg px-2.5 py-1.5 text-sm text-x-text focus:border-accent focus:outline-none transition-colors"
                   >
                     {[3, 4, 5, 6, 8, 10].map((n) => (
                       <option key={n} value={n}>
@@ -219,75 +218,91 @@ export function SettingsModal({
                   </select>
                 </div>
               )}
-
             </div>
           </section>
 
           <section>
-            <h3 className="text-sm font-semibold text-x-text-secondary uppercase tracking-wider mb-3">
+            <h3 className="text-xs font-medium text-x-text-secondary mb-2.5">
               Stats
             </h3>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-xl border border-x-border bg-x-bg p-3">
-                <p className="text-2xl font-bold text-x-text tabular-nums">
+            <div className="grid grid-cols-4 gap-2">
+              <div className="rounded-lg bg-x-bg p-2.5">
+                <p className="text-lg font-semibold text-x-text tabular-nums">
                   {stats.total}
                 </p>
-                <p className="text-xs text-x-text-secondary mt-0.5">
+                <p className="text-xs text-x-text-secondary">
                   Bookmarks
                 </p>
               </div>
-              <div className="rounded-xl border border-x-border bg-x-bg p-3">
-                <p className="text-2xl font-bold text-x-text tabular-nums">
+              <div className="rounded-lg bg-x-bg p-2.5">
+                <p className="text-lg font-semibold text-x-text tabular-nums">
                   {stats.uniqueAuthors}
                 </p>
-                <p className="text-xs text-x-text-secondary mt-0.5">
-                  Unique authors
+                <p className="text-xs text-x-text-secondary">
+                  Authors
                 </p>
               </div>
-              <div className="rounded-xl border border-x-border bg-x-bg p-3">
-                <p className="text-2xl font-bold text-x-text tabular-nums">
+              <div className="rounded-lg bg-x-bg p-2.5">
+                <p className="text-lg font-semibold text-x-text tabular-nums">
                   {stats.withMedia}
                 </p>
-                <p className="text-xs text-x-text-secondary mt-0.5">
-                  With media
+                <p className="text-xs text-x-text-secondary">
+                  Media
                 </p>
               </div>
-              <div className="rounded-xl border border-x-border bg-x-bg p-3">
-                <p className="text-2xl font-bold text-x-text tabular-nums">
+              <div className="rounded-lg bg-x-bg p-2.5">
+                <p className="text-lg font-semibold text-x-text tabular-nums">
                   {stats.articles}
                 </p>
-                <p className="text-xs text-x-text-secondary mt-0.5">
-                  Articles & threads
+                <p className="text-xs text-x-text-secondary">
+                  Articles
                 </p>
               </div>
             </div>
           </section>
 
           <section>
-            <h3 className="text-sm font-semibold text-x-text-secondary uppercase tracking-wider mb-3">
+            <h3 className="text-xs font-medium text-x-text-secondary mb-2.5">
               Data
             </h3>
-            <p className="text-sm text-x-text-secondary mb-3">
-              Clear local IndexedDB and session state for this device.
-            </p>
-            <button
-              type="button"
-              onClick={handleResetLocalData}
-              disabled={resetting}
-              className="w-full rounded-xl border border-red-500/40 bg-red-500/10 px-3 py-2.5 text-sm font-semibold text-red-200 hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-70 transition-colors"
-            >
-              {resetting ? "Resetting..." : "Reset local data"}
-            </button>
+            {confirmingReset ? (
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setConfirmingReset(false)}
+                  disabled={resetting}
+                  className="flex-1 rounded-lg border border-x-border bg-x-bg px-3 py-2 text-sm font-medium text-x-text-secondary transition-colors hover:bg-x-hover disabled:opacity-70"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleResetLocalData}
+                  disabled={resetting}
+                  className="flex-1 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm font-medium text-red-400 transition-colors hover:bg-red-500/20 disabled:opacity-70"
+                >
+                  {resetting ? "Resetting..." : "Confirm reset"}
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setConfirmingReset(true)}
+                className="w-full rounded-lg border border-x-border bg-x-bg px-3 py-2 text-sm font-medium text-x-text-secondary transition-colors hover:bg-x-hover"
+              >
+                Reset local data
+              </button>
+            )}
             {resetError ? (
-              <p className="text-xs text-red-300 mt-2">
+              <p className="text-xs text-red-400 mt-2">
                 {resetError}
               </p>
             ) : null}
           </section>
         </div>
 
-        <div className="border-t border-x-border px-6 py-4">
-          <p className="text-xs text-x-text-secondary text-center">
+        <div className="shrink-0 border-t border-x-border px-6 py-3">
+          <p className="text-xs text-x-text-secondary/60 text-center text-pretty">
             Settings sync across your devices
           </p>
         </div>
@@ -310,20 +325,20 @@ const BACKGROUND_OPTIONS: { value: UserSettings["backgroundMode"]; label: string
 function BackgroundSettings({ settings, onUpdateSettings }: BackgroundSettingsProps) {
   return (
     <section>
-      <h3 className="text-sm font-semibold text-x-text-secondary uppercase tracking-wider mb-3">
+      <h3 className="text-xs font-medium text-x-text-secondary mb-2.5">
         Background
       </h3>
-      <div className="flex rounded-xl border border-x-border overflow-hidden">
+      <div className="flex gap-1 rounded-lg bg-x-bg p-1">
         {BACKGROUND_OPTIONS.map((opt) => (
           <button
             key={opt.value}
             type="button"
             onClick={() => onUpdateSettings({ backgroundMode: opt.value })}
             className={cn(
-              "flex-1 py-2.5 text-sm font-medium transition-colors",
+              "flex-1 py-2 text-sm font-medium rounded-md transition-colors",
               settings.backgroundMode === opt.value
-                ? "bg-x-blue text-white"
-                : "text-x-text-secondary hover:text-x-text hover:bg-x-hover",
+                ? "bg-accent/15 text-accent"
+                : "text-x-text-secondary hover:text-x-text",
             )}
           >
             {opt.label}

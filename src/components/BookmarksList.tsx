@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { ArrowLeft, ArrowsClockwise } from "@phosphor-icons/react";
 import type { Bookmark } from "../types";
@@ -7,7 +7,7 @@ import { pickTitle, estimateReadingMinutes } from "../lib/bookmark-utils";
 import { timeAgo } from "../lib/time";
 import { cn } from "../lib/cn";
 
-export type ReadingTab = "continue" | "unread";
+export type ReadingTab = "continue" | "read" | "unread";
 
 interface Props {
   continueReadingItems: ContinueReadingItem[];
@@ -45,6 +45,33 @@ export function BookmarksList({
     setFocusedIndex(-1);
   }
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const tabListRef = useRef<HTMLDivElement>(null);
+  const continueTabRef = useRef<HTMLButtonElement>(null);
+  const readTabRef = useRef<HTMLButtonElement>(null);
+  const unreadTabRef = useRef<HTMLButtonElement>(null);
+  const [indicator, setIndicator] = useState({ left: 0, width: 0 });
+
+  const tabRefs: Record<ReadingTab, React.RefObject<HTMLButtonElement | null>> = {
+    continue: continueTabRef,
+    read: readTabRef,
+    unread: unreadTabRef,
+  };
+
+  const updateIndicator = useCallback(() => {
+    const container = tabListRef.current;
+    const tab = tabRefs[activeTab].current;
+    if (!container || !tab) return;
+    const containerRect = container.getBoundingClientRect();
+    const tabRect = tab.getBoundingClientRect();
+    setIndicator({
+      left: tabRect.left - containerRect.left,
+      width: tabRect.width,
+    });
+  }, [activeTab]);
+
+  useLayoutEffect(() => {
+    updateIndicator();
+  }, [updateIndicator]);
 
   const { inProgress, completed } = useMemo(() => {
     const ip: ContinueReadingItem[] = [];
@@ -70,10 +97,10 @@ export function BookmarksList({
 
   const visibleBookmarks = useMemo(() => {
     if (activeTab === "continue") {
-      return [
-        ...inProgress.map((item) => item.bookmark),
-        ...completed.map((item) => item.bookmark),
-      ];
+      return inProgress.map((item) => item.bookmark);
+    }
+    if (activeTab === "read") {
+      return completed.map((item) => item.bookmark);
     }
     return unreadBookmarks;
   }, [activeTab, inProgress, completed, unreadBookmarks]);
@@ -104,8 +131,10 @@ export function BookmarksList({
     preventDefault: true,
   }, [onBack]);
 
+  const tabOrder: ReadingTab[] = ["unread", "continue", "read"];
   useHotkeys("tab", () => {
-    onTabChange(activeTab === "continue" ? "unread" : "continue");
+    const idx = tabOrder.indexOf(activeTab);
+    onTabChange(tabOrder[(idx + 1) % tabOrder.length]);
   }, { preventDefault: true }, [activeTab, onTabChange]);
 
   let continueIdx = 0;
@@ -120,7 +149,7 @@ export function BookmarksList({
             onClick={onBack}
             aria-label="Back to home"
             title="Back"
-            className="rounded-full p-2 text-x-text transition-colors hover:bg-x-hover"
+            className="rounded-lg p-2 text-x-text transition-colors hover:bg-x-hover"
           >
             <ArrowLeft className="size-5" />
           </button>
@@ -130,7 +159,7 @@ export function BookmarksList({
               type="button"
               onClick={onSync}
               disabled={syncing}
-              className="rounded-full p-2 text-x-text-secondary transition-colors hover:bg-x-hover hover:text-x-text"
+              className="rounded-lg p-2 text-x-text-secondary transition-colors hover:bg-x-hover hover:text-x-text"
               aria-label="Sync bookmarks"
               title="Sync bookmarks"
             >
@@ -138,141 +167,62 @@ export function BookmarksList({
             </button>
           </div>
         </div>
-        <div className={cn("mx-auto flex px-4", containerWidthClass)} role="tablist">
+        <div ref={tabListRef} className={cn("relative mx-auto flex px-4", containerWidthClass)} role="tablist">
           <button
-            type="button"
-            role="tab"
-            aria-selected={activeTab === "continue"}
-            onClick={() => onTabChange("continue")}
-            className={cn("relative px-4 py-2.5 text-sm font-medium transition-colors", activeTab === "continue" ? "text-x-text" : "text-x-text-secondary hover:text-x-text")}
-          >
-            Continue Reading
-            {inProgress.length > 0 && (
-              <span className="ml-1.5 text-xs text-x-text-secondary">
-                {inProgress.length}
-              </span>
-            )}
-            {activeTab === "continue" && (
-              <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-x-blue" />
-            )}
-          </button>
-          <button
+            ref={unreadTabRef}
             type="button"
             role="tab"
             aria-selected={activeTab === "unread"}
             onClick={() => onTabChange("unread")}
-            className={cn("relative px-4 py-2.5 text-sm font-medium transition-colors", activeTab === "unread" ? "text-x-text" : "text-x-text-secondary hover:text-x-text")}
+            className={cn("px-4 py-2.5 text-sm font-medium transition-colors", activeTab === "unread" ? "text-x-text" : "text-x-text-secondary hover:text-x-text")}
           >
             Unread
             {unreadBookmarks.length > 0 && (
-              <span className="ml-1.5 text-xs text-x-text-secondary">
+              <span className="ml-1.5 inline-flex size-5 items-center justify-center rounded-md bg-x-text-secondary/10 text-xs tabular-nums text-x-text-secondary">
                 {unreadBookmarks.length}
               </span>
             )}
-            {activeTab === "unread" && (
-              <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-x-blue" />
+          </button>
+          <button
+            ref={continueTabRef}
+            type="button"
+            role="tab"
+            aria-selected={activeTab === "continue"}
+            onClick={() => onTabChange("continue")}
+            className={cn("px-4 py-2.5 text-sm font-medium transition-colors", activeTab === "continue" ? "text-x-text" : "text-x-text-secondary hover:text-x-text")}
+          >
+            Reading
+            {inProgress.length > 0 && (
+              <span className="ml-1.5 inline-flex size-5 items-center justify-center rounded-md bg-accent/10 text-xs tabular-nums text-accent">
+                {inProgress.length}
+              </span>
             )}
           </button>
+          <button
+            ref={readTabRef}
+            type="button"
+            role="tab"
+            aria-selected={activeTab === "read"}
+            onClick={() => onTabChange("read")}
+            className={cn("px-4 py-2.5 text-sm font-medium transition-colors", activeTab === "read" ? "text-x-text" : "text-x-text-secondary hover:text-x-text")}
+          >
+            Read
+            {completed.length > 0 && (
+              <span className="ml-1.5 inline-flex size-5 items-center justify-center rounded-md bg-x-success/10 text-xs tabular-nums text-x-success">
+                {completed.length}
+              </span>
+            )}
+          </button>
+          <span
+            className="absolute bottom-0 h-0.5 rounded-full bg-accent transition-all duration-200 ease-[cubic-bezier(0.645,0.045,0.355,1)]"
+            style={{ left: indicator.left, width: indicator.width }}
+          />
         </div>
       </div>
 
-      <main className={cn(containerWidthClass, "mx-auto overflow-x-hidden px-4 pb-16 pt-6")}>
-        <div
-          className="flex transition-transform duration-200 ease-[cubic-bezier(0.645,0.045,0.355,1)] motion-reduce:transition-none"
-          style={{ transform: activeTab === "unread" ? "translateX(-100%)" : "translateX(0)" }}
-        >
-          <div
-            className={cn("w-full shrink-0", activeTab !== "continue" && "pointer-events-none")}
-            aria-hidden={activeTab !== "continue"}
-          >
-            {inProgress.length > 0 && (
-              <section className="mb-8">
-                <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-x-text-secondary">
-                  In Progress
-                </h2>
-                <div className="space-y-2">
-                  {inProgress.map(({ bookmark, progress }) => {
-                    const idx = continueIdx++;
-                    return (
-                    <button
-                      key={bookmark.tweetId}
-                      ref={(el) => { if (activeTab === "continue") itemRefs.current[idx] = el; }}
-                      type="button"
-                      onClick={() => onOpenBookmark(bookmark)}
-                      className={cn("flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-colors hover:bg-x-hover", focusedIndex === idx ? "border-x-blue ring-2 ring-x-blue/40 bg-x-hover" : "border-x-border bg-x-card")}
-                    >
-                      <img
-                        src={bookmark.author.profileImageUrl}
-                        alt=""
-                        className="size-10 shrink-0 rounded-full"
-                      />
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium text-x-text">
-                          {pickTitle(bookmark)}
-                        </p>
-                        <p className="mt-1 text-xs text-x-text-secondary">
-                          @{bookmark.author.screenName} &middot; Last read{" "}
-                          {timeAgo(progress.lastReadAt)}
-                        </p>
-                      </div>
-                    </button>
-                    );
-                  })}
-                </div>
-              </section>
-            )}
-
-            {completed.length > 0 && (
-              <section className="mb-8">
-                <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-x-text-secondary">
-                  Completed
-                </h2>
-                <div className="space-y-2">
-                  {completed.map(({ bookmark, progress }) => {
-                    const idx = continueIdx++;
-                    return (
-                    <button
-                      key={bookmark.tweetId}
-                      ref={(el) => { if (activeTab === "continue") itemRefs.current[idx] = el; }}
-                      type="button"
-                      onClick={() => onOpenBookmark(bookmark)}
-                      className={cn("flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-colors", focusedIndex === idx ? "border-x-blue ring-2 ring-x-blue/40 bg-x-hover opacity-100" : "border-x-border bg-x-card opacity-70 hover:bg-x-hover hover:opacity-100")}
-                    >
-                      <img
-                        src={bookmark.author.profileImageUrl}
-                        alt=""
-                        className="size-10 shrink-0 rounded-full"
-                      />
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium text-x-text">
-                          {pickTitle(bookmark)}
-                        </p>
-                        <p className="mt-1 text-xs text-x-text-secondary">
-                          <span className="text-x-success">Done</span> &middot; @
-                          {bookmark.author.screenName} &middot;{" "}
-                          {timeAgo(progress.lastReadAt)}
-                        </p>
-                      </div>
-                    </button>
-                    );
-                  })}
-                </div>
-              </section>
-            )}
-
-            {inProgress.length === 0 && completed.length === 0 && (
-              <div className="flex flex-col items-center justify-center py-20 text-center">
-                <p className="text-x-text-secondary text-lg">
-                  No reading progress yet. Open a bookmark to start tracking.
-                </p>
-              </div>
-            )}
-          </div>
-
-          <div
-            className={cn("w-full shrink-0", activeTab !== "unread" && "pointer-events-none")}
-            aria-hidden={activeTab !== "unread"}
-          >
+      <main className={cn(containerWidthClass, "mx-auto px-4 pb-16 pt-6")}>
+        {activeTab === "unread" && (
+          <>
             {unreadBookmarks.length > 0 ? (
               <div className="space-y-2">
                 {unreadBookmarks.map((bookmark, idx) => {
@@ -280,10 +230,10 @@ export function BookmarksList({
                   return (
                   <button
                     key={bookmark.tweetId}
-                    ref={(el) => { if (activeTab === "unread") itemRefs.current[idx] = el; }}
+                    ref={(el) => { itemRefs.current[idx] = el; }}
                     type="button"
                     onClick={() => onOpenBookmark(bookmark)}
-                    className={cn("flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-colors hover:bg-x-hover", focusedIndex === idx ? "border-x-blue ring-2 ring-x-blue/40 bg-x-hover" : "border-x-border bg-x-card")}
+                    className={cn("flex w-full items-center gap-3 rounded-lg border p-3 text-left transition-colors hover:bg-x-hover", focusedIndex === idx ? "border-accent ring-2 ring-accent/40 bg-x-hover" : "border-x-border bg-x-card")}
                   >
                     <img
                       src={bookmark.author.profileImageUrl}
@@ -296,7 +246,7 @@ export function BookmarksList({
                           {pickTitle(bookmark)}
                         </p>
                         {isNewest && (
-                          <span className="shrink-0 rounded-full bg-x-blue px-2 py-0.5 text-xs font-medium text-white">
+                          <span className="shrink-0 rounded-md bg-accent px-2 py-0.5 text-xs font-medium text-white">
                             New
                           </span>
                         )}
@@ -315,13 +265,118 @@ export function BookmarksList({
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-20 text-center">
-                <p className="text-x-text-secondary text-lg">
+                <p className="text-x-text-secondary text-lg text-pretty">
                   All caught up! No unread bookmarks.
                 </p>
+                <button
+                  type="button"
+                  onClick={onSync}
+                  className="mt-4 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90"
+                >
+                  Sync new bookmarks
+                </button>
               </div>
             )}
-          </div>
-        </div>
+          </>
+        )}
+
+        {activeTab === "continue" && (
+          <>
+            {inProgress.length > 0 ? (
+              <div className="space-y-2">
+                {inProgress.map(({ bookmark, progress }) => {
+                  const idx = continueIdx++;
+                  return (
+                  <button
+                    key={bookmark.tweetId}
+                    ref={(el) => { itemRefs.current[idx] = el; }}
+                    type="button"
+                    onClick={() => onOpenBookmark(bookmark)}
+                    className={cn("flex w-full items-center gap-3 rounded-lg border p-3 text-left transition-colors hover:bg-x-hover", focusedIndex === idx ? "border-accent ring-2 ring-accent/40 bg-x-hover" : "border-x-border bg-x-card")}
+                  >
+                    <img
+                      src={bookmark.author.profileImageUrl}
+                      alt=""
+                      className="size-10 shrink-0 rounded-full"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-x-text">
+                        {pickTitle(bookmark)}
+                      </p>
+                      <p className="mt-1 text-xs text-x-text-secondary">
+                        @{bookmark.author.screenName} &middot; Last read{" "}
+                        {timeAgo(progress.lastReadAt)}
+                      </p>
+                    </div>
+                  </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-20 text-center">
+                <p className="text-x-text-secondary text-lg text-pretty">
+                  No reading in progress. Open a bookmark to start tracking.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => onTabChange("unread")}
+                  className="mt-4 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90"
+                >
+                  Browse unread
+                </button>
+              </div>
+            )}
+          </>
+        )}
+
+        {activeTab === "read" && (
+          <>
+            {completed.length > 0 ? (
+              <div className="space-y-2">
+                {completed.map(({ bookmark, progress }) => {
+                  const idx = continueIdx++;
+                  return (
+                  <button
+                    key={bookmark.tweetId}
+                    ref={(el) => { itemRefs.current[idx] = el; }}
+                    type="button"
+                    onClick={() => onOpenBookmark(bookmark)}
+                    className={cn("flex w-full items-center gap-3 rounded-lg border p-3 text-left transition-colors hover:bg-x-hover", focusedIndex === idx ? "border-accent ring-2 ring-accent/40 bg-x-hover" : "border-x-border bg-x-card")}
+                  >
+                    <img
+                      src={bookmark.author.profileImageUrl}
+                      alt=""
+                      className="size-10 shrink-0 rounded-full"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-x-text">
+                        {pickTitle(bookmark)}
+                      </p>
+                      <p className="mt-1 text-xs text-x-text-secondary">
+                        @{bookmark.author.screenName} &middot; Finished{" "}
+                        {timeAgo(progress.lastReadAt)}
+                      </p>
+                    </div>
+                  </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-20 text-center">
+                <p className="text-x-text-secondary text-lg text-pretty">
+                  Nothing finished yet. Keep reading!
+                </p>
+                <button
+                  type="button"
+                  onClick={() => onTabChange("continue")}
+                  className="mt-4 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90"
+                >
+                  Continue reading
+                </button>
+              </div>
+            )}
+          </>
+        )}
       </main>
     </div>
   );

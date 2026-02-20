@@ -20,7 +20,7 @@ interface StatItemProps {
 function StatItem({ value, label }: StatItemProps) {
   return (
     <div className="flex flex-col items-center rounded-lg bg-x-hover/60 px-2 py-1.5">
-      <span className="text-sm font-bold text-x-text">{value}</span>
+      <span className="text-sm font-bold tabular-nums text-x-text">{value}</span>
       <span className="text-xs text-x-text-secondary">{label}</span>
     </div>
   );
@@ -32,7 +32,7 @@ export function PopupHeader({ stats, activeTab, onTabChange, syncing, onSync }: 
       <div className="flex items-center justify-between">
         <h1 className="text-base font-bold text-x-text">X Bookmarks</h1>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-x-text-secondary">
+          <span className="text-xs tabular-nums text-x-text-secondary">
             {stats.total} saved
           </span>
           <button
@@ -69,7 +69,7 @@ export function PopupHeader({ stats, activeTab, onTabChange, syncing, onSync }: 
         >
           Discover
           {activeTab === "discover" && (
-            <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-x-blue" />
+            <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-accent" />
           )}
         </button>
         <button
@@ -86,7 +86,7 @@ export function PopupHeader({ stats, activeTab, onTabChange, syncing, onSync }: 
         >
           All Bookmarks
           {activeTab === "all" && (
-            <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-x-blue" />
+            <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-accent" />
           )}
         </button>
       </div>

@@ -114,7 +114,6 @@ export default function DemoApp() {
         onUpdateSettings={updateSettings}
         themePreference={themePreference}
         onThemePreferenceChange={setThemePreference}
-        bookmarks={bookmarks}
         onResetLocalData={async () => {
           setBookmarks([]);
           await deleteBookmarksByTweetIds(MOCK_BOOKMARKS.map((bookmark) => bookmark.tweetId));

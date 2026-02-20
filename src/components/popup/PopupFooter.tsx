@@ -10,7 +10,7 @@ export function PopupFooter({ onOpenFullPage }: Props) {
       <button
         type="button"
         onClick={onOpenFullPage}
-        className="flex w-full items-center justify-center gap-1 text-sm font-medium text-x-blue transition-opacity hover:opacity-80"
+        className="flex w-full items-center justify-center gap-1 text-sm font-medium text-accent transition-opacity hover:opacity-80"
       >
         Open full bookmarks page
         <ArrowRight className="size-4" />

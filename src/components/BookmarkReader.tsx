@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
   BookmarkSimple,
@@ -8,7 +8,7 @@ import {
   Moon,
   Sun,
 } from "@phosphor-icons/react";
-import type { Bookmark, Highlight, ThreadTweet } from "../types";
+import type { Bookmark, ThreadTweet } from "../types";
 import type { ThemePreference } from "../hooks/useTheme";
 import { fetchTweetDetail } from "../api/core/posts";
 import { cn } from "../lib/cn";
@@ -16,10 +16,6 @@ import { cn } from "../lib/cn";
 import { resolveTweetKind } from "./reader/utils";
 import { TweetContent } from "./reader/TweetContent";
 import { useReadingProgress } from "../hooks/useReadingProgress";
-import { useHighlights } from "../hooks/useHighlights";
-import { useSelectionToolbar } from "../hooks/useSelectionToolbar";
-import { SelectionToolbar } from "./reader/SelectionToolbar";
-import { HighlightPopover } from "./reader/HighlightPopover";
 
 const THEME_CYCLE: ThemePreference[] = ["system", "light", "dark"];
 
@@ -65,90 +61,6 @@ export function BookmarkReader({
     contentReady: !detailLoading,
   });
   const effectiveMarkedRead = readOverride ?? isCompleted;
-
-  const {
-    addHighlight,
-    removeHighlight,
-    updateHighlightNote,
-    getHighlight,
-  } = useHighlights({
-    tweetId: bookmark.tweetId,
-    contentReady: !detailLoading,
-  });
-
-  const {
-    position: selectionPos,
-    visible: selectionVisible,
-    serializedRanges,
-    dismiss: dismissSelection,
-  } = useSelectionToolbar(articleRef);
-
-  const [activePopover, setActivePopover] = useState<{
-    highlight: Highlight;
-    x: number;
-    y: number;
-  } | null>(null);
-
-  const handleArticleClick = useCallback(
-    (e: React.MouseEvent) => {
-      const mark = (e.target as HTMLElement).closest?.(
-        "mark.xbt-highlight",
-      ) as HTMLElement | null;
-      if (!mark) return;
-
-      const highlightId = mark.dataset.highlightId;
-      if (!highlightId) return;
-
-      const highlight = getHighlight(highlightId);
-      if (!highlight) return;
-
-      const containerEl = articleRef.current;
-      if (!containerEl) return;
-      const containerRect = containerEl.getBoundingClientRect();
-      const rect = mark.getBoundingClientRect();
-
-      setActivePopover({
-        highlight,
-        x: rect.left + rect.width / 2 - containerRect.left,
-        y: rect.bottom - containerRect.top,
-      });
-    },
-    [getHighlight],
-  );
-
-  const handleHighlight = useCallback(() => {
-    if (serializedRanges.length === 0) return;
-    addHighlight(serializedRanges, null);
-    dismissSelection();
-  }, [addHighlight, serializedRanges, dismissSelection]);
-
-  const handleNote = useCallback(
-    (note: string) => {
-      if (serializedRanges.length === 0) return;
-      addHighlight(serializedRanges, note);
-      dismissSelection();
-    },
-    [addHighlight, serializedRanges, dismissSelection],
-  );
-
-  const handleRemoveHighlight = useCallback(
-    (id: string) => {
-      removeHighlight(id);
-      setActivePopover(null);
-    },
-    [removeHighlight],
-  );
-
-  const handleUpdateNote = useCallback(
-    (id: string, note: string | null) => {
-      updateHighlightNote(id, note);
-      setActivePopover((prev) => {
-        if (!prev || prev.highlight.id !== id) return prev;
-        return { ...prev, highlight: { ...prev.highlight, note } };
-      });
-    },
-    [updateHighlightNote],
-  );
 
   useEffect(() => {
     let cancelled = false;
@@ -224,7 +136,7 @@ export function BookmarkReader({
             onClick={onBack}
             aria-label="Back to bookmarks"
             title="Back"
-            className="rounded-full p-2 text-x-text transition-colors hover:bg-x-hover"
+            className="rounded-lg p-2 text-x-text transition-colors hover:bg-x-hover"
           >
             <ArrowLeft className="size-5" />
           </button>
@@ -236,7 +148,7 @@ export function BookmarkReader({
               onClick={cycleTheme}
               aria-label={`Theme: ${themePreference}`}
               title={`Theme: ${themePreference}`}
-              className="rounded-full p-2 text-x-text-secondary transition-colors hover:text-x-text hover:bg-x-hover"
+              className="rounded-lg p-2 text-x-text-secondary transition-colors hover:text-x-text hover:bg-x-hover"
             >
               {themePreference === "light" ? (
                 <Sun className="size-5" />
@@ -251,7 +163,7 @@ export function BookmarkReader({
               onClick={onUnbookmark}
               aria-label="Remove bookmark"
               title="Remove bookmark"
-              className="rounded-full p-2 text-x-text-secondary transition-colors hover:text-red-500 hover:bg-red-500/10"
+              className="rounded-lg p-2 text-x-text-secondary transition-colors hover:text-red-500 hover:bg-red-500/10"
             >
               <BookmarkSimple weight="fill" className="size-5" />
             </button>
@@ -264,7 +176,7 @@ export function BookmarkReader({
           onClick={onPrev}
           aria-label="Previous post"
           title="Previous"
-          className="fixed left-4 top-1/2 z-20 -translate-y-1/2 rounded-full bg-x-bg/80 p-3 text-x-text-secondary shadow-lg border border-x-border backdrop-blur-sm transition-all hover:bg-x-hover hover:text-x-text hover:scale-110"
+          className="fixed left-4 top-1/2 z-20 -translate-y-1/2 rounded-lg bg-x-bg/80 p-3 text-x-text-secondary shadow-md border border-x-border backdrop-blur-sm transition-colors hover:bg-x-hover hover:text-x-text"
         >
           <CaretLeft className="size-5" />
         </button>
@@ -275,7 +187,7 @@ export function BookmarkReader({
           onClick={onNext}
           aria-label="Next post"
           title="Next"
-          className="fixed right-4 top-1/2 z-20 -translate-y-1/2 rounded-full bg-x-bg/80 p-3 text-x-text-secondary shadow-lg border border-x-border backdrop-blur-sm transition-all hover:bg-x-hover hover:text-x-text hover:scale-110"
+          className="fixed right-4 top-1/2 z-20 -translate-y-1/2 rounded-lg bg-x-bg/80 p-3 text-x-text-secondary shadow-md border border-x-border backdrop-blur-sm transition-colors hover:bg-x-hover hover:text-x-text"
         >
           <CaretRight className="size-5" />
         </button>
@@ -284,7 +196,6 @@ export function BookmarkReader({
       <article
         ref={articleRef}
         className={cn(containerWidthClass, "relative mx-auto px-5 pb-16 pt-6")}
-        onClick={handleArticleClick}
       >
         <TweetContent
           displayBookmark={displayBookmark}
@@ -306,26 +217,6 @@ export function BookmarkReader({
           } : undefined}
           isMarkedRead={effectiveMarkedRead}
         />
-
-        {selectionVisible && selectionPos && (
-          <SelectionToolbar
-            x={selectionPos.x}
-            y={selectionPos.y}
-            onHighlight={handleHighlight}
-            onNote={handleNote}
-          />
-        )}
-
-        {activePopover && (
-          <HighlightPopover
-            highlight={activePopover.highlight}
-            x={activePopover.x}
-            y={activePopover.y}
-            onRemove={handleRemoveHighlight}
-            onUpdateNote={handleUpdateNote}
-            onDismiss={() => setActivePopover(null)}
-          />
-        )}
       </article>
     </div>
   );

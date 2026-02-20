@@ -46,7 +46,7 @@ function TweetBody({ tweet, compact = false, sectionIdPrefix }: TweetBodyProps) 
         {repostComment && (
           <RichTextBlock text={repostComment} compact={compact} style="tweet" />
         )}
-        <div className="mt-4 rounded-2xl border border-x-border p-4">
+        <div className="mt-4 rounded-xl border border-x-border p-4">
           <p className="text-xs uppercase text-x-text-secondary">
             Reposted content
           </p>
@@ -133,7 +133,7 @@ function ThreadTweets({ tweets }: ThreadTweetsProps) {
 
   return (
     <section className="mt-8">
-      <p className="mb-4 text-xs font-semibold uppercase tracking-wider text-x-text-secondary">
+      <p className="mb-4 text-xs font-semibold uppercase text-x-text-secondary">
         Thread
       </p>
       <div>
@@ -234,7 +234,7 @@ export function TweetContent({
 
       {detailLoading && (
         <div className="mt-6 flex items-center gap-3 px-6 py-4 text-sm text-x-text-secondary">
-          <div className="size-4 animate-spin rounded-full border-2 border-x-blue border-t-transparent" />
+          <div className="size-4 animate-spin rounded-full border-2 border-accent border-t-transparent" />
           Loading details...
         </div>
       )}

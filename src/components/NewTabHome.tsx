@@ -329,7 +329,7 @@ export function NewTabHome({
               <div className="mt-4 flex justify-center">
                 <svg
                   viewBox="0 0 24 24"
-                  className="size-6 animate-spin text-x-blue"
+                  className="size-6 animate-spin text-accent"
                   fill="none"
                   stroke="currentColor"
                   strokeWidth={2}

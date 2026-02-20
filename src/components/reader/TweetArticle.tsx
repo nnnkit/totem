@@ -37,7 +37,7 @@ function ArticleBlockRenderer({ blocks, entityMap }: ArticleBlockRendererProps) 
   const groups = useMemo(() => groupBlocks(blocks), [blocks]);
 
   return (
-    <div className="prose prose-lg prose-reader max-w-none font-[Charter,'Iowan_Old_Style','Palatino_Linotype','Book_Antiqua',Georgia,serif] [&_a]:text-x-blue [&_a:hover]:underline">
+    <div className="prose prose-lg prose-reader max-w-none font-[Charter,'Iowan_Old_Style','Palatino_Linotype','Book_Antiqua',Georgia,serif] [&_a]:text-accent [&_a:hover]:underline">
       {groups.map((group, groupIdx) => {
         if (group.type === "unordered-list") {
           return (
@@ -217,7 +217,7 @@ export function TweetArticle({ article, compact = false, authorProfileImageUrl }
 
   const serifFont = `font-[Charter,"Iowan Old Style","Palatino Linotype","Book Antiqua",Georgia,serif]`;
   const titleClass = cn(
-    "reader-heading mt-6 text-4xl font-bold tracking-tight text-balance text-x-text",
+    "reader-heading mt-6 text-4xl font-bold text-balance text-x-text",
     serifFont,
   );
 

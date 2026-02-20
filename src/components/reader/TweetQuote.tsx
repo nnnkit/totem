@@ -17,7 +17,7 @@ export function TweetQuote({ quotedTweet }: Props) {
     normalizeText(articleText) !== normalizeText(quotedTweet.text);
 
   return (
-    <div className="mt-5 rounded-2xl border border-x-border p-4">
+    <div className="mt-5 rounded-xl border border-x-border p-4">
       <div className="mb-3 flex items-center gap-2 text-sm">
         <img
           src={quotedTweet.author.profileImageUrl}
@@ -42,7 +42,7 @@ export function TweetQuote({ quotedTweet }: Props) {
       <TweetMedia items={quotedTweet.media} />
 
       {showArticle && (
-        <section className="mt-5 rounded-2xl border border-x-border bg-x-link-card px-4 py-3">
+        <section className="mt-5 rounded-xl border border-x-border bg-x-link-card px-4 py-3">
           {quotedTweet.article?.title && (
             <h3 className="text-base font-semibold text-balance text-x-text">
               {quotedTweet.article.title}

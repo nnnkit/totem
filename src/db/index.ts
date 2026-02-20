@@ -1,5 +1,10 @@
 import { openDB, type DBSchema, type IDBPDatabase } from "idb";
-import type { Bookmark, TweetDetailCache, ReadingProgress, Highlight } from "../types";
+import type {
+  Bookmark,
+  TweetDetailCache,
+  ReadingProgress,
+  Highlight,
+} from "../types";
 
 const DB_NAME = "xbt";
 const DB_VERSION = 6;
@@ -82,10 +87,14 @@ function createDb() {
         : db.createObjectStore(PROGRESS_STORE_NAME, { keyPath: "tweetId" });
 
       if (!progressStore.indexNames.contains("lastReadAt")) {
-        progressStore.createIndex("lastReadAt", "lastReadAt", { unique: false });
+        progressStore.createIndex("lastReadAt", "lastReadAt", {
+          unique: false,
+        });
       }
 
-      const highlightsStore = db.objectStoreNames.contains(HIGHLIGHTS_STORE_NAME)
+      const highlightsStore = db.objectStoreNames.contains(
+        HIGHLIGHTS_STORE_NAME,
+      )
         ? tx.objectStore(HIGHLIGHTS_STORE_NAME)
         : db.createObjectStore(HIGHLIGHTS_STORE_NAME, { keyPath: "id" });
 
@@ -93,7 +102,9 @@ function createDb() {
         highlightsStore.createIndex("tweetId", "tweetId", { unique: false });
       }
       if (!highlightsStore.indexNames.contains("createdAt")) {
-        highlightsStore.createIndex("createdAt", "createdAt", { unique: false });
+        highlightsStore.createIndex("createdAt", "createdAt", {
+          unique: false,
+        });
       }
     },
     blocked() {
@@ -170,14 +181,19 @@ export async function clearAllLocalData(): Promise<void> {
   await tx.done;
 }
 
-export async function deleteBookmarksByTweetIds(tweetIds: string[]): Promise<void> {
+export async function deleteBookmarksByTweetIds(
+  tweetIds: string[],
+): Promise<void> {
   if (tweetIds.length === 0) return;
 
   const uniqueIds = Array.from(new Set(tweetIds.filter(Boolean)));
   if (uniqueIds.length === 0) return;
 
   const db = await getDb();
-  const tx = db.transaction([STORE_NAME, DETAIL_STORE_NAME, PROGRESS_STORE_NAME, HIGHLIGHTS_STORE_NAME], "readwrite");
+  const tx = db.transaction(
+    [STORE_NAME, DETAIL_STORE_NAME, PROGRESS_STORE_NAME, HIGHLIGHTS_STORE_NAME],
+    "readwrite",
+  );
   const bookmarkStore = tx.objectStore(STORE_NAME);
   const detailStore = tx.objectStore(DETAIL_STORE_NAME);
   const progressStore = tx.objectStore(PROGRESS_STORE_NAME);
@@ -190,7 +206,9 @@ export async function deleteBookmarksByTweetIds(tweetIds: string[]): Promise<voi
     for (const bookmarkId of bookmarkIds) {
       await bookmarkStore.delete(bookmarkId as string);
     }
-    const highlightIds = await highlightTweetIndex.getAllKeys(IDBKeyRange.only(tweetId));
+    const highlightIds = await highlightTweetIndex.getAllKeys(
+      IDBKeyRange.only(tweetId),
+    );
     for (const hId of highlightIds) {
       await highlightsStore.delete(hId as string);
     }
@@ -246,26 +264,43 @@ export async function ensureReadingProgressExists(
   }
 }
 
-export async function markReadingProgressCompleted(tweetId: string): Promise<void> {
+export async function markReadingProgressCompleted(
+  tweetId: string,
+): Promise<void> {
   if (!tweetId) return;
   const db = await getDb();
   const existing = await db.get(PROGRESS_STORE_NAME, tweetId);
   const now = Date.now();
   if (existing) {
-    await db.put(PROGRESS_STORE_NAME, { ...existing, lastReadAt: now, completed: true });
+    await db.put(PROGRESS_STORE_NAME, {
+      ...existing,
+      lastReadAt: now,
+      completed: true,
+    });
   } else {
     await db.put(PROGRESS_STORE_NAME, {
-      tweetId, openedAt: now, lastReadAt: now, scrollY: 0, scrollHeight: 0, completed: true,
+      tweetId,
+      openedAt: now,
+      lastReadAt: now,
+      scrollY: 0,
+      scrollHeight: 0,
+      completed: true,
     });
   }
 }
 
-export async function markReadingProgressUncompleted(tweetId: string): Promise<void> {
+export async function markReadingProgressUncompleted(
+  tweetId: string,
+): Promise<void> {
   if (!tweetId) return;
   const db = await getDb();
   const existing = await db.get(PROGRESS_STORE_NAME, tweetId);
   if (existing) {
-    await db.put(PROGRESS_STORE_NAME, { ...existing, lastReadAt: Date.now(), completed: false });
+    await db.put(PROGRESS_STORE_NAME, {
+      ...existing,
+      lastReadAt: Date.now(),
+      completed: false,
+    });
   }
 }
 
@@ -317,7 +352,9 @@ export async function getDetailedTweetIds(): Promise<Set<string>> {
   return new Set(keys);
 }
 
-export async function getHighlightsForTweet(tweetId: string): Promise<Highlight[]> {
+export async function getHighlightsForTweet(
+  tweetId: string,
+): Promise<Highlight[]> {
   if (!tweetId) return [];
   const db = await getDb();
   return db.getAllFromIndex(HIGHLIGHTS_STORE_NAME, "tweetId", tweetId);
@@ -346,7 +383,9 @@ export async function deleteHighlightsForTweet(tweetId: string): Promise<void> {
   await tx.done;
 }
 
-export async function cleanupOldTweetDetails(maxAgeMs: number): Promise<number> {
+export async function cleanupOldTweetDetails(
+  maxAgeMs: number,
+): Promise<number> {
   if (!Number.isFinite(maxAgeMs) || maxAgeMs <= 0) return 0;
 
   const cutoff = Date.now() - maxAgeMs;

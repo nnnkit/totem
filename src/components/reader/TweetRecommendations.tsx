@@ -22,7 +22,7 @@ export function TweetRecommendations({ relatedBookmarks, onOpenBookmark, onShuff
             <button
               type="button"
               onClick={onShuffle}
-              className="inline-flex items-center gap-1.5 rounded-full border border-x-border bg-x-card px-2.5 py-1 text-xs font-medium text-x-text-secondary transition-colors hover:bg-x-hover hover:text-x-blue"
+              className="inline-flex items-center gap-1.5 rounded-md border border-x-border bg-x-card px-2.5 py-1 text-xs font-medium text-x-text-secondary transition-colors hover:bg-x-hover hover:text-accent"
               aria-label="Shuffle recommendations"
               title="Shuffle recommendations"
             >
@@ -40,7 +40,7 @@ export function TweetRecommendations({ relatedBookmarks, onOpenBookmark, onShuff
             key={related.tweetId}
             type="button"
             onClick={() => onOpenBookmark(related)}
-            className="w-full rounded-xl border border-x-border bg-x-card/60 p-2.5 text-left transition-colors hover:bg-x-hover"
+            className="w-full rounded-lg border border-x-border bg-x-card/60 p-2.5 text-left transition-colors hover:bg-x-hover"
           >
             <div className="flex items-center gap-1.5">
               <img

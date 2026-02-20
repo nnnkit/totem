@@ -19,7 +19,7 @@ export function PopupBookmarkList({ bookmarks, onOpen }: Props) {
   }
 
   return (
-    <div className="overflow-y-auto" style={{ maxHeight: 400 }}>
+    <div className="max-h-96 overflow-y-auto">
       <div className="space-y-1 p-2">
         {bookmarks.map((bookmark) => (
           <button

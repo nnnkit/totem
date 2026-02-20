@@ -25,9 +25,9 @@ export function PopupSuggestion({ bookmark, onOpen, onShuffle }: Props) {
 
   return (
     <div className="p-4">
-      <div className="rounded-xl border border-x-border bg-x-card p-4">
+      <div className="rounded-lg border border-x-border bg-x-card p-4">
         <div className="flex items-center justify-between">
-          <p className="text-xs font-semibold uppercase tracking-wider text-x-blue">
+          <p className="text-xs font-semibold uppercase text-accent">
             Pick for you
           </p>
           <button
@@ -35,7 +35,7 @@ export function PopupSuggestion({ bookmark, onOpen, onShuffle }: Props) {
             onClick={onShuffle}
             aria-label="Show different suggestion"
             title="Show another"
-            className="rounded-full p-1 text-x-text-secondary transition-colors hover:bg-x-hover hover:text-x-text"
+            className="rounded-lg p-1 text-x-text-secondary transition-colors hover:bg-x-hover hover:text-x-text"
           >
             <ArrowsClockwise className="size-4" />
           </button>
@@ -53,7 +53,7 @@ export function PopupSuggestion({ bookmark, onOpen, onShuffle }: Props) {
         <button
           type="button"
           onClick={() => onOpen(bookmark)}
-          className="mt-3 w-full rounded-lg bg-x-blue px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90"
+          className="mt-3 w-full rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90"
         >
           Read now &rarr;
         </button>

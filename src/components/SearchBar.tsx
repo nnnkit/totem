@@ -33,12 +33,12 @@ export function SearchBar({
             onClick={onBack}
             aria-label="Back to home"
             title="Back"
-            className="p-2 -ml-2 text-x-text-secondary hover:text-x-text hover:bg-x-hover rounded-full transition-colors"
+            className="p-2 -ml-2 text-x-text-secondary hover:text-x-text hover:bg-x-hover rounded-lg transition-colors"
           >
             <ArrowLeft className="size-5" />
           </button>
         )}
-        <svg viewBox="0 0 24 24" className="w-7 h-7 text-x-blue shrink-0" fill="currentColor">
+        <svg viewBox="0 0 24 24" className="size-7 text-accent shrink-0" fill="currentColor">
           <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
         </svg>
 
@@ -50,7 +50,7 @@ export function SearchBar({
             placeholder="Search bookmarks... (press /)"
             value={query}
             onChange={(e) => onQueryChange(e.target.value)}
-            className="w-full bg-x-card text-x-text placeholder-x-text-secondary rounded-full py-2.5 pl-11 pr-4 border border-x-border focus:border-x-blue focus:outline-none transition-colors"
+            className="w-full bg-x-card text-x-text placeholder-x-text-secondary rounded-lg py-2.5 pl-11 pr-4 border border-x-border focus:border-accent focus:outline-none transition-colors"
           />
         </div>
 
@@ -58,7 +58,7 @@ export function SearchBar({
           onClick={onRefresh}
           disabled={syncing}
           aria-label="Sync bookmarks"
-          className="p-2 text-x-text-secondary hover:text-x-blue hover:bg-x-blue/10 rounded-full transition-colors disabled:opacity-50"
+          className="p-2 text-x-text-secondary hover:text-accent hover:bg-accent/10 rounded-lg transition-colors disabled:opacity-50"
           title="Sync bookmarks (top page)"
         >
           <ArrowsClockwise className={cn("size-5", syncing && "animate-spin")} />
@@ -67,7 +67,7 @@ export function SearchBar({
         <button
           onClick={onOpenSettings}
           aria-label="Open settings"
-          className="p-2 text-x-text-secondary hover:text-x-blue hover:bg-x-blue/10 rounded-full transition-colors"
+          className="p-2 text-x-text-secondary hover:text-accent hover:bg-accent/10 rounded-lg transition-colors"
           title="Settings"
         >
           <GearSix className="size-5" />

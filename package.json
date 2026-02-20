@@ -25,7 +25,8 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-hotkeys-hook": "^5.2.4",
-    "sugar-high": "^0.9.5"
+    "sugar-high": "^0.9.5",
+    "tailwind-merge": "^3.5.0"
   },
   "devDependencies": {
     "@tailwindcss/typography": "^0.5.19",

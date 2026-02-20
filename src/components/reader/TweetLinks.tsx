@@ -67,7 +67,7 @@ function LinkCards({ urls }: LinkCardsProps) {
             rel="noopener noreferrer"
             className="block rounded-xl border border-x-border bg-x-link-card px-4 py-3 transition-colors hover:bg-x-hover"
           >
-            <span className="text-sm text-x-blue">{url.displayUrl}</span>
+            <span className="text-sm text-accent">{url.displayUrl}</span>
             {url.displayUrl !== url.href && (
               <span className="mt-1 block text-xs text-x-text-secondary">
                 {url.href}
@@ -92,8 +92,8 @@ function ReadStatusButton({ onToggle, isRead }: ReadStatusButtonProps) {
       onClick={onToggle}
       className={
         isRead
-          ? "inline-flex items-center gap-1.5 rounded-full border border-green-500/30 bg-green-500/10 px-3 py-1.5 text-xs font-medium text-green-600 transition-colors hover:border-green-500/50 hover:bg-green-500/20 dark:text-green-400"
-          : "inline-flex items-center gap-1.5 rounded-full border border-x-border bg-x-card px-3 py-1.5 text-xs font-medium text-x-text-secondary transition-colors hover:bg-x-hover hover:text-x-text"
+          ? "inline-flex items-center gap-1.5 rounded-md border border-green-500/30 bg-green-500/10 px-3 py-1.5 text-xs font-medium text-green-600 transition-colors hover:border-green-500/50 hover:bg-green-500/20 dark:text-green-400"
+          : "inline-flex items-center gap-1.5 rounded-md border border-x-border bg-x-card px-3 py-1.5 text-xs font-medium text-x-text-secondary transition-colors hover:bg-x-hover hover:text-x-text"
       }
     >
       <Check weight="bold" className="size-3.5" />

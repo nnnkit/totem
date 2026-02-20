@@ -1,6 +1,16 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
+/* Z-index scale: z-10 sticky | z-20 nav | z-30 popover | z-40 overlay | z-50 modal */
+
+/* Easing scale:
+   cubic-bezier(0.23, 1, 0.32, 1)                   — entrance animations
+   cubic-bezier(0.215, 0.61, 0.355, 1)               — overlay entrance
+   ease-in                                            — all exits
+   ease                                               — hover/color transitions
+   cubic-bezier(0.645, 0.045, 0.355, 1)              — on-screen movement (tabs)
+*/
+
 @theme {
     --color-stone-50: var(--stone-50);
     --color-stone-100: var(--stone-100);
@@ -17,7 +27,7 @@
     --color-orange-500: var(--orange-500);
     --color-orange-600: var(--orange-600);
 
-    --color-x-blue: var(--x-blue);
+    --color-accent: var(--accent);
     --color-x-bg: var(--x-bg);
     --color-x-card: var(--x-card);
     --color-x-border: var(--x-border);
@@ -48,6 +58,7 @@
     --animate-card-in: card-in 200ms cubic-bezier(0.23, 1, 0.32, 1) forwards;
     --animate-card-out: card-out 150ms ease-in forwards;
     --animate-toolbar-in: toolbar-in 150ms cubic-bezier(0.23, 1, 0.32, 1) forwards;
+    --animate-toolbar-out: toolbar-out 120ms ease-in forwards;
     @keyframes overlay-in {
         from { opacity: 0; }
         to { opacity: 1; }
@@ -76,6 +87,10 @@
         from { opacity: 0; transform: scale(0.92) translateY(4px); }
         to { opacity: 1; transform: scale(1) translateY(0); }
     }
+    @keyframes toolbar-out {
+        from { opacity: 1; transform: scale(1) translateY(0); }
+        to { opacity: 0; transform: scale(0.92) translateY(4px); }
+    }
 }
 
 @layer base {
@@ -96,7 +111,7 @@
         --orange-500: #f97316;
         --orange-600: #ea580c;
 
-        --x-blue: #c2410c;
+        --accent: #c2410c;
         --x-bg: var(--stone-50);
         --x-card: #ffffff;
         --x-border: var(--stone-200);
@@ -151,7 +166,7 @@
             --orange-500: #cd7057;
             --orange-600: #bc634b;
 
-            --x-blue: var(--orange-400);
+            --accent: var(--orange-400);
             --x-bg: var(--stone-950);
             --x-card: #191816;
             --x-border: #2a2927;
@@ -206,7 +221,7 @@
         --orange-500: #cd7057;
         --orange-600: #bc634b;
 
-        --x-blue: var(--orange-400);
+        --accent: var(--orange-400);
         --x-bg: var(--stone-950);
         --x-card: #191816;
         --x-border: #2a2927;
@@ -276,7 +291,7 @@
         font-size: 85%;
         white-space: break-spaces;
         background-color: var(--inline-code-bg);
-        border-radius: 6px;
+        border-radius: 2px;
     }
 
     :not(pre) > code::before,
@@ -304,7 +319,7 @@
     }
 
     ::selection {
-        background-color: color-mix(in srgb, var(--x-blue) 28%, transparent);
+        background-color: color-mix(in srgb, var(--accent) 28%, transparent);
     }
 
     /* Scroll offset for ToC anchor targets */
@@ -338,11 +353,18 @@
     mark.xbt-highlight-new {
         animation: highlight-flash 600ms ease-out forwards;
     }
+
+    button:active:not(:disabled):not([role="switch"]),
+    a[role="button"]:active:not(:disabled) {
+        transform: scale(0.97);
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {
-    mark.xbt-highlight-new {
-        animation: none;
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
     }
 }
 
@@ -350,7 +372,7 @@
     --tw-prose-body: var(--x-text);
     --tw-prose-headings: var(--x-text);
     --tw-prose-lead: var(--x-text-secondary);
-    --tw-prose-links: var(--x-blue);
+    --tw-prose-links: var(--accent);
     --tw-prose-bold: var(--x-text);
     --tw-prose-counters: var(--x-text-secondary);
     --tw-prose-bullets: var(--x-text-secondary);
@@ -395,9 +417,6 @@
     --breath-accent-bg: rgba(224, 122, 95, 0.12);
     background: var(--breath-bg);
     color: var(--breath-text-primary);
-    font-family:
-        "DM Sans", "Avenir Next", "Avenir", "Segoe UI", "Helvetica Neue",
-        Helvetica, sans-serif;
 }
 
 .breath-wallpaper {
@@ -453,7 +472,7 @@
     align-items: center;
     max-width: 36rem;
     margin-inline: auto;
-    border-radius: 9999px;
+    border-radius: 0.5rem;
     background: rgb(30, 27, 25);
     box-shadow:
         0 1px 6px rgba(0, 0, 0, 0.2),
@@ -494,8 +513,8 @@
 }
 
 .breath-icon-btn {
-    border: 1px solid var(--breath-border);
-    border-radius: 9999px;
+    border: 1px solid transparent;
+    border-radius: 0.5rem;
     color: var(--breath-text-muted);
     background: rgba(255, 255, 255, 0.02);
     padding: 0.46rem;
@@ -503,6 +522,10 @@
         border-color var(--motion-fast) var(--motion-ease-hover),
         color var(--motion-fast) var(--motion-ease-hover),
         background-color var(--motion-fast) var(--motion-ease-hover);
+}
+
+.breath-icon-btn:hover {
+    border-color: var(--breath-border);
 }
 
 .breath-card {
@@ -602,7 +625,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border-radius: 0.4rem;
+    border-radius: 0.375rem;
     font-size: 0.79rem;
     font-weight: 600;
     line-height: 1;
@@ -687,7 +710,7 @@
     justify-content: center;
     width: 1.5rem;
     height: 1.5rem;
-    border-radius: 9999px;
+    border-radius: 0.375rem;
     border: 1px solid rgba(255, 255, 255, 0.12);
     background: rgba(255, 255, 255, 0.04);
     color: rgba(255, 255, 255, 0.5);
@@ -725,11 +748,9 @@
     justify-content: center;
     width: 2.5rem;
     height: 2.5rem;
-    border-radius: 9999px;
+    border-radius: 0.5rem;
     background: rgba(255, 255, 255, 0.08);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
     transition:
         background var(--motion-fast) var(--motion-ease-hover),
         border-color var(--motion-fast) var(--motion-ease-hover);
@@ -848,7 +869,7 @@
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border: 1px solid rgba(224, 122, 95, 0.18) !important;
-    border-radius: 0.75rem !important;
+    border-radius: 0.5rem !important;
     color: rgba(255, 255, 255, 0.92) !important;
     box-shadow:
         0 4px 24px rgba(0, 0, 0, 0.4),
@@ -859,18 +880,12 @@
     color: rgba(255, 255, 255, 0.92) !important;
     font-size: 0.9rem !important;
     font-weight: 600 !important;
-    font-family:
-        "DM Sans", "Avenir Next", "Avenir", "Segoe UI", "Helvetica Neue",
-        Helvetica, sans-serif !important;
 }
 
 .xbt-tour-popover .driver-popover-description {
     color: rgba(255, 255, 255, 0.72) !important;
     font-size: 0.82rem !important;
     line-height: 1.5 !important;
-    font-family:
-        "DM Sans", "Avenir Next", "Avenir", "Segoe UI", "Helvetica Neue",
-        Helvetica, sans-serif !important;
 }
 
 .xbt-tour-popover .driver-popover-description kbd {
@@ -897,7 +912,7 @@
 
 .xbt-tour-popover .driver-popover-prev-btn,
 .xbt-tour-popover .driver-popover-next-btn {
-    border-radius: 0.4rem !important;
+    border-radius: 0.375rem !important;
     font-size: 0.79rem !important;
     font-weight: 600 !important;
     padding: 0.45rem 0.9rem !important;
