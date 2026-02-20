@@ -5,7 +5,7 @@ import { fetchTweetDetail } from "../api/core/posts";
 import { cn } from "../lib/cn";
 
 import { resolveTweetKind } from "./reader/utils";
-import { TweetRenderer } from "./reader/TweetRenderer";
+import { TweetContent } from "./reader/TweetContent";
 import { useReadingProgress } from "../hooks/useReadingProgress";
 
 const THEME_CYCLE: ThemePreference[] = ["system", "light", "dark"];
@@ -24,7 +24,7 @@ interface Props {
   onMarkAsRead?: (tweetId: string) => void;
 }
 
-export function ReaderView({
+export function BookmarkReader({
   bookmark,
   relatedBookmarks,
   onOpenBookmark,
@@ -195,7 +195,7 @@ export function ReaderView({
       )}
 
       <article className={cn(containerWidthClass, "mx-auto px-5 pb-16 pt-6")}>
-        <TweetRenderer
+        <TweetContent
           displayBookmark={displayBookmark}
           displayKind={displayKind}
           detailThread={detailThread}

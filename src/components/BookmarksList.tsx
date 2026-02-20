@@ -79,7 +79,7 @@ function formatTimeAgo(timestamp: number): string {
   });
 }
 
-export function ReadingView({
+export function BookmarksList({
   continueReadingItems,
   unreadBookmarks,
   syncing,

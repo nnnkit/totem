@@ -114,7 +114,7 @@ interface Props {
   isMarkedRead?: boolean;
 }
 
-export function TweetUrls({
+export function TweetLinks({
   urls,
   viewOnXUrl,
   onMarkAsRead,

@@ -10,8 +10,8 @@ import { pickRelatedBookmarks } from "./lib/related";
 import { resetLocalData } from "./lib/reset";
 import { Onboarding } from "./components/Onboarding";
 import { NewTabHome } from "./components/NewTabHome";
-import { ReaderView } from "./components/ReaderView";
-import { ReadingView, type ReadingTab } from "./components/ReadingView";
+import { BookmarkReader } from "./components/BookmarkReader";
+import { BookmarksList, type ReadingTab } from "./components/BookmarksList";
 import { SettingsModal } from "./components/SettingsModal";
 import { useContinueReading } from "./hooks/useContinueReading";
 import type { Bookmark } from "./types";
@@ -141,7 +141,7 @@ export default function App() {
   const mainContent = (() => {
     if (selectedBookmark) {
       return (
-        <ReaderView
+        <BookmarkReader
           bookmark={selectedBookmark}
           relatedBookmarks={relatedBookmarks}
           onOpenBookmark={openBookmark}
@@ -161,7 +161,7 @@ export default function App() {
     }
     if (view === "reading") {
       return (
-        <ReadingView
+        <BookmarksList
           continueReadingItems={continueReading}
           unreadBookmarks={allUnread}
           syncing={syncState.phase === "syncing"}

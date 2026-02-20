@@ -10,7 +10,7 @@ import { RichTextBlock } from "./TweetText";
 import { TweetMedia } from "./TweetMedia";
 import { TweetQuote } from "./TweetQuote";
 import { TweetArticle } from "./TweetArticle";
-import { TweetUrls } from "./TweetUrls";
+import { TweetLinks } from "./TweetLinks";
 
 import { TweetRecommendations } from "./TweetRecommendations";
 import type { ReaderTweet } from "./types";
@@ -101,7 +101,7 @@ function TweetBody({ tweet, compact = false, sectionIdPrefix, viewOnXUrl, onMark
         />
       )}
 
-      <TweetUrls
+      <TweetLinks
         urls={tweet.urls}
         viewOnXUrl={viewOnXUrl}
         onMarkAsRead={onMarkAsRead}
@@ -155,7 +155,7 @@ interface Props {
   isMarkedRead?: boolean;
 }
 
-export function TweetRenderer({
+export function TweetContent({
   displayBookmark,
   displayKind,
   detailThread,

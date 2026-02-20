@@ -10,7 +10,7 @@ export async function seedDatabase() {
   // Seed bookmarks into IndexedDB
   await upsertBookmarks(MOCK_BOOKMARKS);
 
-  // Seed tweet detail cache so ReaderView finds cached data
+  // Seed tweet detail cache so BookmarkReader finds cached data
   // (fetchTweetDetail checks IndexedDB before calling chrome.runtime.sendMessage)
   for (const bookmark of MOCK_BOOKMARKS) {
     const detail: TweetDetailCache = {

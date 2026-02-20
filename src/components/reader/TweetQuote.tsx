@@ -2,7 +2,7 @@ import type { Bookmark } from "../../types";
 import { normalizeText } from "./utils";
 import { RichTextBlock } from "./TweetText";
 import { TweetMedia } from "./TweetMedia";
-import { TweetUrls } from "./TweetUrls";
+import { TweetLinks } from "./TweetLinks";
 
 interface Props {
   quotedTweet: Bookmark["quotedTweet"];
@@ -59,7 +59,7 @@ export function TweetQuote({ quotedTweet }: Props) {
       )}
 
       {quotedTweet.urls && quotedTweet.urls.length > 0 && (
-        <TweetUrls urls={quotedTweet.urls} />
+        <TweetLinks urls={quotedTweet.urls} />
       )}
     </div>
   );
