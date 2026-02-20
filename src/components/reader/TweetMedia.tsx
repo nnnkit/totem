@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Media } from "../../types";
 import { cn } from "../../lib/cn";
 
@@ -15,22 +15,44 @@ interface ImagePreviewProps {
 }
 
 function ImagePreview({ src, alt, onClose }: ImagePreviewProps) {
+  const [isClosing, setIsClosing] = useState(false);
+  const closingRef = useRef(false);
+
+  const handleClose = useCallback(() => {
+    if (closingRef.current) return;
+    closingRef.current = true;
+    setIsClosing(true);
+  }, []);
+
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        e.stopImmediatePropagation();
+        handleClose();
+      }
     }
-    document.addEventListener("keydown", handleKey);
-    return () => document.removeEventListener("keydown", handleKey);
-  }, [onClose]);
+    document.addEventListener("keydown", handleKey, true);
+    return () => document.removeEventListener("keydown", handleKey, true);
+  }, [handleClose]);
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80"
-      onClick={onClose}
+      className={cn(
+        "fixed inset-0 z-50 flex items-center justify-center bg-black/80",
+        isClosing ? "animate-overlay-out" : "animate-overlay-in",
+      )}
+      onAnimationEnd={() => {
+        if (isClosing) onClose();
+      }}
+      onClick={handleClose}
     >
       <button
-        onClick={onClose}
-        className="absolute right-4 top-4 flex size-10 items-center justify-center rounded-full bg-black/60 text-white transition-colors hover:bg-black/80"
+        onClick={handleClose}
+        aria-label="Close preview"
+        className={cn(
+          "absolute right-4 top-4 z-10 flex size-10 cursor-pointer items-center justify-center rounded-full bg-black/60 text-white transition-colors hover:bg-black/80",
+          isClosing ? "animate-overlay-out" : "animate-overlay-in",
+        )}
       >
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <line x1="18" y1="6" x2="6" y2="18" />
@@ -40,7 +62,10 @@ function ImagePreview({ src, alt, onClose }: ImagePreviewProps) {
       <img
         src={src}
         alt={alt}
-        className="max-h-[90vh] max-w-[90vw] object-contain"
+        className={cn(
+          "max-h-[90vh] max-w-[90vw] object-contain",
+          isClosing ? "animate-preview-out" : "animate-preview-in",
+        )}
         onClick={(e) => e.stopPropagation()}
       />
     </div>

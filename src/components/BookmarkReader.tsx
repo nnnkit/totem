@@ -125,6 +125,7 @@ export function BookmarkReader({
           <button
             onClick={onBack}
             aria-label="Back to bookmarks"
+            title="Back"
             className="rounded-full p-2 text-x-text transition-colors hover:bg-x-hover"
           >
             <svg viewBox="0 0 24 24" className="size-5" fill="currentColor">
@@ -138,6 +139,7 @@ export function BookmarkReader({
             <button
               onClick={cycleTheme}
               aria-label={`Theme: ${themePreference}`}
+              title={`Theme: ${themePreference}`}
               className="rounded-full p-2 text-x-text-secondary transition-colors hover:text-x-text hover:bg-x-hover"
             >
               {themePreference === "light" ? (
@@ -158,6 +160,7 @@ export function BookmarkReader({
             <button
               onClick={onUnbookmark}
               aria-label="Remove bookmark"
+              title="Remove bookmark"
               className="rounded-full p-2 text-x-text-secondary transition-colors hover:text-red-500 hover:bg-red-500/10"
             >
               <svg viewBox="0 0 24 24" className="size-5" fill="currentColor">
@@ -172,6 +175,7 @@ export function BookmarkReader({
         <button
           onClick={onPrev}
           aria-label="Previous post"
+          title="Previous"
           className="fixed left-4 top-1/2 z-20 -translate-y-1/2 rounded-full bg-x-bg/80 p-3 text-x-text-secondary shadow-lg border border-x-border backdrop-blur-sm transition-all hover:bg-x-hover hover:text-x-text hover:scale-110"
         >
           <svg viewBox="0 0 24 24" className="size-5" fill="currentColor">
@@ -184,6 +188,7 @@ export function BookmarkReader({
         <button
           onClick={onNext}
           aria-label="Next post"
+          title="Next"
           className="fixed right-4 top-1/2 z-20 -translate-y-1/2 rounded-full bg-x-bg/80 p-3 text-x-text-secondary shadow-lg border border-x-border backdrop-blur-sm transition-all hover:bg-x-hover hover:text-x-text hover:scale-110"
         >
           <svg viewBox="0 0 24 24" className="size-5" fill="currentColor">

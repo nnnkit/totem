@@ -33,6 +33,7 @@ export function PopupSuggestion({ bookmark, onOpen, onShuffle }: Props) {
             type="button"
             onClick={onShuffle}
             aria-label="Show different suggestion"
+            title="Show another"
             className="rounded-full p-1 text-x-text-secondary transition-colors hover:bg-x-hover hover:text-x-text"
           >
             <svg viewBox="0 0 24 24" className="size-4" fill="currentColor">

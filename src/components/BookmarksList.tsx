@@ -118,6 +118,7 @@ export function BookmarksList({
           <button
             onClick={onBack}
             aria-label="Back to home"
+            title="Back"
             className="rounded-full p-2 text-x-text transition-colors hover:bg-x-hover"
           >
             <svg viewBox="0 0 24 24" className="size-5" fill="currentColor">

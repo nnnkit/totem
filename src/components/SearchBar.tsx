@@ -26,6 +26,7 @@ export function SearchBar({
           <button
             onClick={onBack}
             aria-label="Back to home"
+            title="Back"
             className="p-2 -ml-2 text-x-text-secondary hover:text-x-text hover:bg-x-hover rounded-full transition-colors"
           >
             <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor">
