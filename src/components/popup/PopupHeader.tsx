@@ -1,4 +1,4 @@
-import { ArrowsClockwise } from "@phosphor-icons/react";
+import { ArrowsClockwiseIcon } from "@phosphor-icons/react";
 import { cn } from "../../lib/cn";
 import type { Stats } from "../../hooks/usePopupBookmarks";
 
@@ -43,7 +43,7 @@ export function PopupHeader({ stats, activeTab, onTabChange, syncing, onSync }: 
           aria-label="Sync bookmarks"
           title="Sync bookmarks"
         >
-          <ArrowsClockwise className={cn("size-4", syncing && "animate-spin")} />
+          <ArrowsClockwiseIcon className={cn("size-4", syncing && "animate-spin")} />
         </button>
       </div>
 

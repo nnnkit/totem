@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  ArrowLeft,
-  BookmarkSimple,
-  CaretLeft,
-  CaretRight,
-  Monitor,
-  Moon,
-  Sun,
+  ArrowLeftIcon,
+  BookmarkSimpleIcon,
+  CaretLeftIcon,
+  CaretRightIcon,
+  MonitorIcon,
+  MoonIcon,
+  SunIcon,
 } from "@phosphor-icons/react";
 import type { Bookmark, Highlight, HighlightColor, SelectionRange, ThreadTweet } from "../types";
 import type { ThemePreference } from "../hooks/useTheme";
@@ -193,7 +193,7 @@ export function BookmarkReader({
             title="Back"
             className="rounded-lg p-2 text-x-text transition-colors hover:bg-x-hover"
           >
-            <ArrowLeft className="size-5" />
+            <ArrowLeftIcon className="size-5" />
           </button>
 
           <span className="text-lg font-semibold text-x-text">Post</span>
@@ -206,11 +206,11 @@ export function BookmarkReader({
               className="rounded-lg p-2 text-x-text-secondary transition-colors hover:text-x-text hover:bg-x-hover"
             >
               {themePreference === "light" ? (
-                <Sun className="size-5" />
+                <SunIcon className="size-5" />
               ) : themePreference === "dark" ? (
-                <Moon className="size-5" />
+                <MoonIcon className="size-5" />
               ) : (
-                <Monitor className="size-5" />
+                <MonitorIcon className="size-5" />
               )}
             </button>
 
@@ -220,7 +220,7 @@ export function BookmarkReader({
               title="Remove bookmark"
               className="rounded-lg p-2 text-x-text-secondary transition-colors hover:text-red-500 hover:bg-red-500/10"
             >
-              <BookmarkSimple weight="fill" className="size-5" />
+              <BookmarkSimpleIcon weight="fill" className="size-5" />
             </button>
           </div>
         </div>
@@ -233,7 +233,7 @@ export function BookmarkReader({
           title="Previous"
           className="fixed left-4 top-1/2 z-20 -translate-y-1/2 rounded-lg bg-x-bg/80 p-3 text-x-text-secondary shadow-md border border-x-border backdrop-blur-sm transition-colors hover:bg-x-hover hover:text-x-text"
         >
-          <CaretLeft className="size-5" />
+          <CaretLeftIcon className="size-5" />
         </button>
       )}
 
@@ -244,7 +244,7 @@ export function BookmarkReader({
           title="Next"
           className="fixed right-4 top-1/2 z-20 -translate-y-1/2 rounded-lg bg-x-bg/80 p-3 text-x-text-secondary shadow-md border border-x-border backdrop-blur-sm transition-colors hover:bg-x-hover hover:text-x-text"
         >
-          <CaretRight className="size-5" />
+          <CaretRightIcon className="size-5" />
         </button>
       )}
 

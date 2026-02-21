@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { MagnifyingGlass } from "@phosphor-icons/react";
+import { MagnifyingGlassIcon } from "@phosphor-icons/react";
 import type { Bookmark } from "../../types";
 import { pickTitle } from "../../lib/bookmark-utils";
 import { sortIndexToTimestamp } from "../../lib/time";
@@ -33,7 +33,7 @@ export function PopupBookmarkList({ bookmarks, onOpen, query, onQueryChange, isS
     <div className="p-2">
       <div className="sticky top-0 z-10 bg-x-bg pb-1">
         <div className="relative">
-          <MagnifyingGlass className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-x-text-secondary" />
+          <MagnifyingGlassIcon className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-x-text-secondary" />
           <input
             type="text"
             value={query}

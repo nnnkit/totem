@@ -1,8 +1,8 @@
 import {
-  ArrowLeft,
-  ArrowsClockwise,
-  GearSix,
-  MagnifyingGlass,
+  ArrowLeftIcon,
+  ArrowsClockwiseIcon,
+  GearSixIcon,
+  MagnifyingGlassIcon,
 } from "@phosphor-icons/react";
 import { cn } from "../lib/cn";
 
@@ -35,7 +35,7 @@ export function SearchBar({
             title="Back"
             className="p-2 -ml-2 text-x-text-secondary hover:text-x-text hover:bg-x-hover rounded-lg transition-colors"
           >
-            <ArrowLeft className="size-5" />
+            <ArrowLeftIcon className="size-5" />
           </button>
         )}
         <svg viewBox="0 0 24 24" className="size-7 text-accent shrink-0" fill="currentColor">
@@ -43,7 +43,7 @@ export function SearchBar({
         </svg>
 
         <div className="relative flex-1">
-          <MagnifyingGlass className="size-5 text-x-text-secondary absolute left-3 top-1/2 -translate-y-1/2" />
+          <MagnifyingGlassIcon className="size-5 text-x-text-secondary absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             id="search-input"
             type="text"
@@ -61,7 +61,7 @@ export function SearchBar({
           className="p-2 text-x-text-secondary hover:text-accent hover:bg-accent/10 rounded-lg transition-colors disabled:opacity-50"
           title="Sync bookmarks (top page)"
         >
-          <ArrowsClockwise className={cn("size-5", syncing && "animate-spin")} />
+          <ArrowsClockwiseIcon className={cn("size-5", syncing && "animate-spin")} />
         </button>
 
         <button
@@ -70,7 +70,7 @@ export function SearchBar({
           className="p-2 text-x-text-secondary hover:text-accent hover:bg-accent/10 rounded-lg transition-colors"
           title="Settings"
         >
-          <GearSix className="size-5" />
+          <GearSixIcon className="size-5" />
         </button>
 
         <span className="text-x-text-secondary text-sm shrink-0 tabular-nums">

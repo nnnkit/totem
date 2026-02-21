@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
-import { GearSix, MagnifyingGlass } from "@phosphor-icons/react";
+import { GearSixIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
 import type { BackgroundMode, Bookmark, SyncState } from "../types";
 import { formatClock } from "../lib/time";
 import {
@@ -37,9 +37,9 @@ interface DecoratedBookmark {
   isRead: boolean;
 }
 
-const SETTINGS_ICON = <GearSix className="size-5" />;
+const SETTINGS_ICON = <GearSixIcon className="size-5" />;
 
-const SEARCH_ICON = <MagnifyingGlass className="size-4 opacity-50" />;
+const SEARCH_ICON = <MagnifyingGlassIcon className="size-4 opacity-50" />;
 
 const GOOGLE_LOGO = (
   <svg

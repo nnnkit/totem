@@ -1,4 +1,4 @@
-import { Shuffle } from "@phosphor-icons/react";
+import { ShuffleIcon } from "@phosphor-icons/react";
 import type { Bookmark } from "../../types";
 import {
   pickTitle,
@@ -45,7 +45,7 @@ export function PopupSuggestion({ bookmark, onOpen, onShuffle }: Props) {
             title="Show another"
             className="rounded-md p-1.5 text-x-text-secondary transition-colors hover:bg-x-hover hover:text-x-text"
           >
-            <Shuffle className="size-4" />
+            <ShuffleIcon className="size-4" />
           </button>
         </div>
 

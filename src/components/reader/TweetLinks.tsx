@@ -1,4 +1,4 @@
-import { ArrowSquareOut, Check } from "@phosphor-icons/react";
+import { ArrowSquareOutIcon, CheckIcon } from "@phosphor-icons/react";
 import type { LinkCard, TweetUrl } from "../../types";
 import { sanitizeUrl } from "./utils";
 
@@ -97,7 +97,7 @@ function ReadStatusButton({ onToggle, isRead }: ReadStatusButtonProps) {
           : "inline-flex items-center gap-1.5 rounded-md border border-x-border bg-x-card px-3 py-1.5 text-xs font-medium text-x-text-secondary transition-colors hover:bg-x-hover hover:text-x-text"
       }
     >
-      <Check weight="bold" className="size-3.5" />
+      <CheckIcon weight="bold" className="size-3.5" />
       {isRead ? "Read" : "Mark as read"}
     </button>
   );
@@ -139,7 +139,7 @@ export function TweetLinks({
       className="inline-flex items-center gap-1.5 text-sm text-x-text-secondary transition-colors hover:text-x-text"
     >
       View on X
-      <ArrowSquareOut className="size-3.5" />
+      <ArrowSquareOutIcon className="size-3.5" />
     </a>
   ) : null;
 

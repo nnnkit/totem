@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Highlighter, NotePencil } from "@phosphor-icons/react";
+import { HighlighterIcon, NotePencilIcon } from "@phosphor-icons/react";
 import type { HighlightColor, SelectionRange } from "../../types";
 import { HIGHLIGHT_COLORS, COLOR_VALUES } from "../../lib/constants";
 import { LS_HIGHLIGHT_COLOR } from "../../lib/storage-keys";
@@ -214,7 +214,7 @@ export function SelectionToolbar({ containerRef, onHighlight, onAddNote }: Props
           onClick={() => handleHighlight(activeColor)}
           className="flex items-center gap-1.5 rounded-md px-2 py-1 text-sm text-neutral-200 transition-colors hover:bg-neutral-700/60"
         >
-          <Highlighter weight="bold" className="size-4" />
+          <HighlighterIcon weight="bold" className="size-4" />
           <span>Highlight</span>
         </button>
 
@@ -224,7 +224,7 @@ export function SelectionToolbar({ containerRef, onHighlight, onAddNote }: Props
           onClick={handleNote}
           className="flex items-center gap-1.5 rounded-md px-2 py-1 text-sm text-neutral-200 transition-colors hover:bg-neutral-700/60"
         >
-          <NotePencil weight="bold" className="size-4" />
+          <NotePencilIcon weight="bold" className="size-4" />
           <span>Note</span>
         </button>
 

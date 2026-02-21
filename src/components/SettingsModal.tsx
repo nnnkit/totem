@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Monitor, Moon, Sun, X } from "@phosphor-icons/react";
+import { MonitorIcon, MoonIcon, SunIcon, XIcon } from "@phosphor-icons/react";
 import type { UserSettings } from "../types";
 import type { ThemePreference } from "../hooks/useTheme";
 import { cn } from "../lib/cn";
@@ -66,7 +66,7 @@ export function SettingsModal({
             aria-label="Close settings"
             title="Close"
           >
-            <X className="size-5" />
+            <XIcon className="size-5" />
           </button>
         </div>
 
@@ -89,11 +89,11 @@ export function SettingsModal({
                   )}
                 >
                   {opt.icon === "monitor" ? (
-                    <Monitor className="size-4" />
+                    <MonitorIcon className="size-4" />
                   ) : opt.icon === "sun" ? (
-                    <Sun className="size-4" />
+                    <SunIcon className="size-4" />
                   ) : (
-                    <Moon className="size-4" />
+                    <MoonIcon className="size-4" />
                   )}
                   {opt.label}
                 </button>

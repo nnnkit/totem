@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from "react";
-import { X } from "@phosphor-icons/react";
+import { XIcon } from "@phosphor-icons/react";
 import type { Media } from "../../types";
 import { cn } from "../../lib/cn";
 import { Modal } from "../Modal";
@@ -92,7 +92,7 @@ export function TweetMedia({ items, bleed = false }: Props) {
                   closing ? "animate-overlay-out" : "animate-overlay-in",
                 )}
               >
-                <X size={20} />
+                <XIcon size={20} />
               </button>
               <img
                 src={img.src}

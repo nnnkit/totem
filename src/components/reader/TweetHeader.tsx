@@ -103,7 +103,7 @@ function AuthorCard({ author, closing, onClose }: AuthorCardProps) {
           </a>
         </div>
 
-        {author.bio && <p className="mt-2 text-sm text-x-text">{author.bio}</p>}
+        {author.bio && <p className="mt-2 truncate text-sm text-x-text">{author.bio}</p>}
 
         <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
           {author.followingCount != null && (
@@ -277,7 +277,7 @@ export function TweetHeader({ author, displayKind, readingMinutes }: Props) {
               )}
             </div>
             {author.bio && (
-              <p className="mt-0.5 line-clamp-1 text-xs text-x-text-secondary">
+              <p className="mt-0.5 max-w-xs truncate text-xs text-x-text-secondary">
                 {author.bio}
               </p>
             )}

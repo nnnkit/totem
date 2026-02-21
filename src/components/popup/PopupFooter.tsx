@@ -1,4 +1,4 @@
-import { ArrowRight } from "@phosphor-icons/react";
+import { ArrowRightIcon } from "@phosphor-icons/react";
 
 interface Props {
   onOpenFullPage: () => void;
@@ -13,7 +13,7 @@ export function PopupFooter({ onOpenFullPage }: Props) {
         className="flex w-full items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-medium text-accent transition-colors hover:bg-accent/5"
       >
         Open full page
-        <ArrowRight className="size-3.5" />
+        <ArrowRightIcon className="size-3.5" />
       </button>
     </div>
   );

@@ -1,4 +1,4 @@
-import { Shuffle } from "@phosphor-icons/react";
+import { ShuffleIcon } from "@phosphor-icons/react";
 import type { Bookmark } from "../../types";
 import { compactPreview } from "./utils";
 
@@ -30,7 +30,7 @@ export function TweetRecommendations({
               aria-label="Shuffle recommendations"
               title="Shuffle recommendations"
             >
-              <Shuffle className="size-4" />
+              <ShuffleIcon className="size-4" />
               Shuffle
             </button>
           )}
