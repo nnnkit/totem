@@ -81,7 +81,7 @@ function ArticleBlockRenderer({ blocks, entityMap }: ArticleBlockRendererProps) 
                 return (
                   <figure
                     key={`group-${groupIdx}`}
-                    className="-mx-6 my-6 break-inside-avoid"
+                    className="-mx-6 my-6"
                   >
                     <img
                       src={imageUrl}
@@ -123,7 +123,7 @@ function ArticleBlockRenderer({ blocks, entityMap }: ArticleBlockRendererProps) 
             <h2
               key={`group-${groupIdx}`}
               id={`section-block-${groupIdx}`}
-              className="scroll-mt-24 break-inside-avoid break-after-avoid"
+              className="scroll-mt-24"
               dangerouslySetInnerHTML={{ __html: html }}
             />
           );
@@ -134,7 +134,7 @@ function ArticleBlockRenderer({ blocks, entityMap }: ArticleBlockRendererProps) 
             <h3
               key={`group-${groupIdx}`}
               id={`section-block-${groupIdx}`}
-              className="scroll-mt-24 break-inside-avoid break-after-avoid"
+              className="scroll-mt-24"
               dangerouslySetInnerHTML={{ __html: html }}
             />
           );
@@ -145,7 +145,7 @@ function ArticleBlockRenderer({ blocks, entityMap }: ArticleBlockRendererProps) 
             <h4
               key={`group-${groupIdx}`}
               id={`section-block-${groupIdx}`}
-              className="scroll-mt-24 break-inside-avoid break-after-avoid"
+              className="scroll-mt-24"
               dangerouslySetInnerHTML={{ __html: html }}
             />
           );
@@ -229,7 +229,7 @@ export function TweetArticle({ article, compact = false, authorProfileImageUrl }
             <img
               src={coverImageUrl}
               alt=""
-              className="w-full object-cover break-inside-avoid"
+              className="w-full object-cover"
               loading="lazy"
             />
           </div>
@@ -238,14 +238,14 @@ export function TweetArticle({ article, compact = false, authorProfileImageUrl }
           <img
             src={coverImageUrl}
             alt=""
-            className="mb-5 w-full rounded-xl object-cover break-inside-avoid"
+            className="mb-5 w-full rounded-xl object-cover"
             loading="lazy"
           />
         )}
         {article.title && (
           <h1
             id="section-article-title"
-            className={cn(titleClass, "mb-5 break-inside-avoid")}
+            className={cn(titleClass, "mb-5")}
           >
             {article.title}
           </h1>
@@ -284,7 +284,7 @@ export function TweetArticle({ article, compact = false, authorProfileImageUrl }
             {article.title}
           </h1>
         )}
-        <div className="mt-2 md:columns-2 md:gap-8">
+        <div className="mt-2">
           <RichTextBlock text={plainText} compact={compact} style="article" />
         </div>
       </section>
@@ -328,7 +328,7 @@ export function TweetArticle({ article, compact = false, authorProfileImageUrl }
   }
 
   const headingClass =
-    "reader-heading text-base font-semibold mt-6 mb-2 text-x-text break-inside-avoid break-after-avoid";
+    "reader-heading text-base font-semibold mt-6 mb-2 text-x-text";
 
   return (
     <section>
@@ -355,7 +355,7 @@ export function TweetArticle({ article, compact = false, authorProfileImageUrl }
           {article.title}
         </h1>
       )}
-      <div className="md:columns-2 md:gap-8">
+      <div>
         {chunks.map((chunk, i) => (
           <div key={`chunk-${i}`}>
             {chunk.heading && (

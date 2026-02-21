@@ -1,3 +1,4 @@
+import { memo } from "react";
 import type { Bookmark, ThreadTweet, TweetKind } from "../../types";
 import {
   normalizeText,
@@ -195,7 +196,7 @@ interface Props {
   isMarkedRead?: boolean;
 }
 
-export function TweetContent({
+export const TweetContent = memo(function TweetContent({
   displayBookmark,
   displayKind,
   detailThread,
@@ -254,4 +255,4 @@ export function TweetContent({
       </div>
     </div>
   );
-}
+});

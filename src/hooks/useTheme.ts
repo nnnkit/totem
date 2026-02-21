@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { hasChromeStorageSync, hasChromeStorageOnChanged } from "../lib/chrome";
+import { SYNC_THEME } from "../lib/storage-keys";
 
 export type ThemePreference = "system" | "light" | "dark";
 export type ResolvedTheme = "light" | "dark";
-
-const THEME_PREFERENCE_KEY = "ui_theme_preference";
 
 function getSystemTheme(): ResolvedTheme {
   if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
@@ -52,10 +51,10 @@ export function useTheme() {
 
       try {
         const stored = await chrome.storage.sync.get({
-          [THEME_PREFERENCE_KEY]: "system",
+          [SYNC_THEME]: "system",
         });
         if (!cancelled) {
-          setThemePreference(normalizeThemePreference(stored[THEME_PREFERENCE_KEY]));
+          setThemePreference(normalizeThemePreference(stored[SYNC_THEME]));
         }
       } catch {
         // Use default system preference if sync storage is not available.
@@ -87,7 +86,7 @@ export function useTheme() {
       areaName: string,
     ) => {
       if (areaName !== "sync") return;
-      const change = changes[THEME_PREFERENCE_KEY];
+      const change = changes[SYNC_THEME];
       if (!change) return;
       setThemePreference(normalizeThemePreference(change.newValue));
     };
@@ -99,7 +98,7 @@ export function useTheme() {
   const updateThemePreference = useCallback((pref: ThemePreference) => {
     setThemePreference(pref);
     if (hasChromeStorageSync()) {
-      chrome.storage.sync.set({ [THEME_PREFERENCE_KEY]: pref }).catch(() => {});
+      chrome.storage.sync.set({ [SYNC_THEME]: pref }).catch(() => {});
     }
   }, []);
 

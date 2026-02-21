@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { Highlight } from "../types";
-import type { SelectionRange } from "./useSelectionToolbar";
+import type { Highlight, HighlightColor } from "../types";
+import type { SelectionRange } from "../types";
 import {
   upsertHighlight,
   deleteHighlight as dbDeleteHighlight,
   getHighlightsByTweetId,
 } from "../db";
+import { HIGHLIGHT_RETRY_MS } from "../lib/constants";
 
 interface Props {
   tweetId: string;
@@ -47,6 +48,7 @@ function wrapTextRange(
   endOffset: number,
   highlightId: string,
   flash: boolean,
+  color: string,
 ): Element[] {
   const textNodes = getTextNodesInSection(section);
   let charCount = 0;
@@ -83,6 +85,7 @@ function wrapTextRange(
     const mark = document.createElement("mark");
     mark.className = flash ? "xbt-highlight xbt-highlight-new" : "xbt-highlight";
     mark.dataset.highlightId = highlightId;
+    mark.dataset.color = color;
     mark.textContent = highlightText;
 
     if (beforeText) {
@@ -101,29 +104,44 @@ function wrapTextRange(
   return wrappedMarks;
 }
 
-const STAR_SVG = `<svg width="14" height="14" viewBox="0 0 256 256" fill="currentColor"><path d="M234.29,114.85l-45,38.83L203,211.75a16.4,16.4,0,0,1-24.5,17.82L128,198.49,77.47,229.57A16.4,16.4,0,0,1,53,211.75l13.76-58.07-45-38.83A16.46,16.46,0,0,1,31.08,91l59.46-5.15,23.21-55.36a16.4,16.4,0,0,1,30.5,0l23.21,55.36L226.92,91a16.46,16.46,0,0,1,7.37,23.85Z"/></svg>`;
-
-function injectNoteStar(lastMark: Element, highlightId: string) {
+function injectNoteStar(
+  section: Element,
+  firstMark: Element,
+  highlightId: string,
+  note: string,
+) {
   const star = document.createElement("span");
   star.className = "xbt-note-star";
   star.dataset.highlightId = highlightId;
   star.setAttribute("role", "button");
   star.setAttribute("aria-label", "View note");
 
-  const svg = new DOMParser().parseFromString(STAR_SVG, "image/svg+xml").documentElement;
-  star.appendChild(document.importNode(svg, true));
+  star.appendChild(document.createTextNode("\u2605"));
 
-  const section = lastMark.closest("[id^='section-']");
-  if (section) {
-    const sectionEl = section as HTMLElement;
-    if (!sectionEl.style.position) {
-      sectionEl.classList.add("relative");
-    }
-    const markRect = lastMark.getBoundingClientRect();
-    const sectionRect = sectionEl.getBoundingClientRect();
-    star.style.top = `${markRect.top - sectionRect.top}px`;
-    sectionEl.appendChild(star);
-  }
+  const tooltip = document.createElement("span");
+  tooltip.className = "xbt-note-tooltip";
+  tooltip.textContent = note;
+  star.appendChild(tooltip);
+
+  const sectionRect = section.getBoundingClientRect();
+  const markRect = firstMark.getBoundingClientRect();
+  star.style.top = `${markRect.top - sectionRect.top + markRect.height / 2}px`;
+
+  const article = section.closest("article") || section;
+  star.addEventListener("mouseenter", () => {
+    const marks = article.querySelectorAll(
+      `mark.xbt-highlight[data-highlight-id="${highlightId}"]`,
+    );
+    marks.forEach((m) => m.classList.add("xbt-highlight-hover"));
+  });
+  star.addEventListener("mouseleave", () => {
+    const marks = article.querySelectorAll(
+      `mark.xbt-highlight[data-highlight-id="${highlightId}"]`,
+    );
+    marks.forEach((m) => m.classList.remove("xbt-highlight-hover"));
+  });
+
+  section.appendChild(star);
 }
 
 export function useHighlights({ tweetId, contentReady, containerRef }: Props) {
@@ -150,15 +168,18 @@ export function useHighlights({ tweetId, contentReady, containerRef }: Props) {
       const actualText = sectionText.slice(h.startOffset, h.endOffset);
       if (actualText !== h.selectedText) continue;
 
-      const shouldFlash = flashIdsRef.current.has(h.id);
-      const marks = wrapTextRange(section, h.startOffset, h.endOffset, h.id, shouldFlash);
+      const shouldFlash = flashIdsRef.current.has(h.id) && !h.note;
+      const marks = wrapTextRange(section, h.startOffset, h.endOffset, h.id, shouldFlash, h.color || "green");
 
       if (shouldFlash) {
         flashIdsRef.current.delete(h.id);
       }
 
       if (h.note && marks.length > 0) {
-        injectNoteStar(marks[marks.length - 1], h.id);
+        for (const mark of marks) {
+          (mark as HTMLElement).dataset.hasNote = "true";
+        }
+        injectNoteStar(section, marks[0], h.id, h.note);
       }
     }
   }, [containerRef]);
@@ -171,7 +192,13 @@ export function useHighlights({ tweetId, contentReady, containerRef }: Props) {
       for (const h of stored) {
         highlightsRef.current.set(h.id, h);
       }
-      applyHighlightsToDOM();
+      requestAnimationFrame(() => {
+        applyHighlightsToDOM();
+        const container = containerRef.current;
+        if (container && !container.querySelector("mark.xbt-highlight") && highlightsRef.current.size > 0) {
+          setTimeout(() => applyHighlightsToDOM(), HIGHLIGHT_RETRY_MS);
+        }
+      });
     });
   }, [tweetId, contentReady, applyHighlightsToDOM]);
 
@@ -182,7 +209,7 @@ export function useHighlights({ tweetId, contentReady, containerRef }: Props) {
   }, [revision, applyHighlightsToDOM]);
 
   const addHighlight = useCallback(
-    async (ranges: SelectionRange[], note: string | null = null) => {
+    async (ranges: SelectionRange[], note: string | null = null, color: HighlightColor = "green") => {
       const created: Highlight[] = [];
 
       for (const range of ranges) {
@@ -194,6 +221,7 @@ export function useHighlights({ tweetId, contentReady, containerRef }: Props) {
           endOffset: range.endOffset,
           selectedText: range.selectedText,
           note,
+          color,
           createdAt: Date.now(),
         };
 

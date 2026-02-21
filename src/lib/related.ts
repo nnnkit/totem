@@ -1,4 +1,5 @@
 import type { Bookmark } from "../types";
+import { RELATED_WEIGHTS } from "./constants";
 
 function shuffle<T>(items: T[]): T[] {
   const next = items.slice();
@@ -18,7 +19,7 @@ function tokenize(value: string): Set<string> {
       .replace(/https?:\/\/\S+/g, " ")
       .replace(/[^a-z0-9\s]/g, " ")
       .split(/\s+/)
-      .filter((token) => token.length >= 4),
+      .filter((token) => token.length >= RELATED_WEIGHTS.minTokenLength),
   );
 }
 
@@ -39,12 +40,12 @@ export function pickRelatedBookmarks(
     .map((candidate) => {
       let score = 0;
 
-      if (candidate.author.screenName === selected.author.screenName) score += 4;
+      if (candidate.author.screenName === selected.author.screenName) score += RELATED_WEIGHTS.sameAuthor;
       if (candidate.tweetKind && selected.tweetKind && candidate.tweetKind === selected.tweetKind) {
-        score += 2;
+        score += RELATED_WEIGHTS.sameKind;
       }
-      if (candidate.article?.plainText && selected.article?.plainText) score += 1;
-      if (candidate.media.length > 0 && selected.media.length > 0) score += 1;
+      if (candidate.article?.plainText && selected.article?.plainText) score += RELATED_WEIGHTS.bothArticle;
+      if (candidate.media.length > 0 && selected.media.length > 0) score += RELATED_WEIGHTS.bothMedia;
 
       if (selectedTokens.size > 0) {
         const candidateTokens = tokenize(candidate.text);
@@ -52,11 +53,11 @@ export function pickRelatedBookmarks(
         for (const token of candidateTokens) {
           if (selectedTokens.has(token)) overlap += 1;
         }
-        score += Math.min(3, overlap);
+        score += Math.min(RELATED_WEIGHTS.tokenOverlapCap, overlap);
       }
 
       if (randomize) {
-        score += Math.random() * 2;
+        score += Math.random() * RELATED_WEIGHTS.randomBoost;
       }
 
       return { candidate, score };

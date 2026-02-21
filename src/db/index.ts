@@ -5,13 +5,14 @@ import type {
   ReadingProgress,
   Highlight,
 } from "../types";
-
-const DB_NAME = "xbt";
-const DB_VERSION = 6;
-const STORE_NAME = "bookmarks";
-const DETAIL_STORE_NAME = "tweet_details";
-const PROGRESS_STORE_NAME = "reading_progress";
-const HIGHLIGHTS_STORE_NAME = "highlights";
+import {
+  DB_NAME,
+  DB_VERSION,
+  STORE_BOOKMARKS as STORE_NAME,
+  STORE_TWEET_DETAILS as DETAIL_STORE_NAME,
+  STORE_READING_PROGRESS as PROGRESS_STORE_NAME,
+  STORE_HIGHLIGHTS as HIGHLIGHTS_STORE_NAME,
+} from "../lib/constants";
 
 interface XBookmarksDbSchema extends DBSchema {
   bookmarks: {
@@ -127,6 +128,13 @@ async function getDb(): Promise<IDBPDatabase<XBookmarksDbSchema>> {
     });
   }
   return dbPromise;
+}
+
+export function closeDb(): void {
+  if (dbPromise) {
+    dbPromise.then((db) => db.close()).catch(() => {});
+    dbPromise = null;
+  }
 }
 
 export async function upsertBookmarks(bookmarks: Bookmark[]): Promise<void> {

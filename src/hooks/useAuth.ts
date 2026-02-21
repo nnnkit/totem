@@ -1,6 +1,14 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { checkAuth, startAuthCapture, closeAuthTab } from "../api/core/auth";
 import { MANUAL_LOGIN_REQUIRED_KEY } from "../lib/reset";
+import { CS_USER_ID, CS_AUTH_HEADERS, CS_QUERY_ID } from "../lib/storage-keys";
+import {
+  AUTH_TIMEOUT_MS,
+  AUTH_RECHECK_MS,
+  AUTH_QUICK_CHECK_MS,
+  AUTH_RETRY_MS,
+  AUTH_POLL_MS,
+} from "../lib/constants";
 
 type AuthPhase = "loading" | "need_login" | "connecting" | "ready";
 
@@ -38,7 +46,7 @@ export function useAuth(): UseAuthReturn {
           checkAuth(),
           chrome.storage.local.get([MANUAL_LOGIN_REQUIRED_KEY]),
         ]),
-        8000,
+        AUTH_TIMEOUT_MS,
       );
 
       const requiresManualLogin = Boolean(resetGuard[MANUAL_LOGIN_REQUIRED_KEY]);
@@ -49,7 +57,7 @@ export function useAuth(): UseAuthReturn {
           captureStarted.current = true;
           setPhase("connecting");
           startAuthCapture().catch(() => {});
-          recheckTimer.current = setTimeout(doCheck, 1200);
+          recheckTimer.current = setTimeout(doCheck, AUTH_RECHECK_MS);
           return;
         }
         captureStarted.current = false;
@@ -78,14 +86,14 @@ export function useAuth(): UseAuthReturn {
         captureStarted.current = true;
         startAuthCapture();
         // Quick 500ms check after starting capture
-        recheckTimer.current = setTimeout(doCheck, 500);
+        recheckTimer.current = setTimeout(doCheck, AUTH_QUICK_CHECK_MS);
       }
     } catch {
       captureStarted.current = false;
       // Runtime/service-worker checks can fail transiently. Keep retrying instead
       // of forcing the user into manual login immediately.
       setPhase("connecting");
-      recheckTimer.current = setTimeout(doCheck, 1000);
+      recheckTimer.current = setTimeout(doCheck, AUTH_RETRY_MS);
     }
   }, []);
 
@@ -103,9 +111,9 @@ export function useAuth(): UseAuthReturn {
   useEffect(() => {
     const listener = (changes: Record<string, chrome.storage.StorageChange>) => {
       if (
-        changes.current_user_id ||
-        changes.tw_auth_headers ||
-        changes.tw_query_id ||
+        changes[CS_USER_ID] ||
+        changes[CS_AUTH_HEADERS] ||
+        changes[CS_QUERY_ID] ||
         changes[MANUAL_LOGIN_REQUIRED_KEY]
       ) {
         doCheck();
@@ -118,7 +126,7 @@ export function useAuth(): UseAuthReturn {
   // Fallback polling while in "connecting" phase (1s for faster first-time UX)
   useEffect(() => {
     if (phase !== "connecting") return;
-    const interval = setInterval(doCheck, 1000);
+    const interval = setInterval(doCheck, AUTH_POLL_MS);
     return () => clearInterval(interval);
   }, [phase, doCheck]);
 

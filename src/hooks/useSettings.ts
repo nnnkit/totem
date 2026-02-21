@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import type { BackgroundMode, UserSettings } from "../types";
 import { hasChromeStorageSync, hasChromeStorageOnChanged } from "../lib/chrome";
-
-const SETTINGS_KEY = "ui_settings";
+import { SYNC_SETTINGS } from "../lib/storage-keys";
 
 const VALID_BACKGROUND_MODES: BackgroundMode[] = ["gradient", "images"];
 
@@ -49,10 +48,10 @@ export function useSettings() {
 
       try {
         const stored = await chrome.storage.sync.get({
-          [SETTINGS_KEY]: DEFAULT_SETTINGS,
+          [SYNC_SETTINGS]: DEFAULT_SETTINGS,
         });
         if (!cancelled) {
-          setSettings(normalizeSettings(stored[SETTINGS_KEY]));
+          setSettings(normalizeSettings(stored[SYNC_SETTINGS]));
         }
       } catch {
         // fallback to defaults
@@ -73,7 +72,7 @@ export function useSettings() {
       areaName: string,
     ) => {
       if (areaName !== "sync") return;
-      const change = changes[SETTINGS_KEY];
+      const change = changes[SYNC_SETTINGS];
       if (!change) return;
       setSettings(normalizeSettings(change.newValue));
     };
@@ -86,7 +85,7 @@ export function useSettings() {
     setSettings((prev) => {
       const next = { ...prev, ...patch };
       if (hasChromeStorageSync()) {
-        chrome.storage.sync.set({ [SETTINGS_KEY]: next }).catch(() => {});
+        chrome.storage.sync.set({ [SYNC_SETTINGS]: next }).catch(() => {});
       }
       return next;
     });

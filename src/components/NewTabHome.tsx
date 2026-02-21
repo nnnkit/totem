@@ -12,6 +12,7 @@ import { cn } from "../lib/cn";
 import { useWallpaper } from "../hooks/useWallpaper";
 import { useTopSites } from "../hooks/useTopSites";
 import { useProductTour } from "../hooks/useProductTour";
+import { CLOCK_UPDATE_MS } from "../lib/constants";
 
 interface Props {
   bookmarks: Bookmark[];
@@ -124,7 +125,7 @@ export function NewTabHome({
   const showWallpaper = Boolean(wallpaperUrl && !imgError);
 
   useEffect(() => {
-    const timer = window.setInterval(() => setNow(new Date()), 30_000);
+    const timer = window.setInterval(() => setNow(new Date()), CLOCK_UPDATE_MS);
     return () => window.clearInterval(timer);
   }, []);
 

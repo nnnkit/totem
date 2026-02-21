@@ -1,8 +1,8 @@
 import { useEffect, useRef } from "react";
 import { driver, type DriveStep } from "driver.js";
 import "driver.js/dist/driver.css";
-
-const TOUR_KEY = "xbt_tour_completed";
+import { LS_TOUR_COMPLETED } from "../lib/storage-keys";
+import { TOUR_DELAY_MS } from "../lib/constants";
 
 interface Props {
   enabled: boolean;
@@ -14,7 +14,7 @@ export function useProductTour({ enabled, hasBookmarks }: Props) {
 
   useEffect(() => {
     if (!enabled || !hasBookmarks || startedRef.current) return;
-    if (localStorage.getItem(TOUR_KEY) === "1") return;
+    if (localStorage.getItem(LS_TOUR_COMPLETED) === "1") return;
 
     startedRef.current = true;
 
@@ -60,12 +60,12 @@ export function useProductTour({ enabled, hasBookmarks }: Props) {
         overlayColor: "rgba(0, 0, 0, 0.6)",
         steps,
         onDestroyed: () => {
-          localStorage.setItem(TOUR_KEY, "1");
+          localStorage.setItem(LS_TOUR_COMPLETED, "1");
         },
       });
 
       tour.drive();
-    }, 800);
+    }, TOUR_DELAY_MS);
 
     return () => window.clearTimeout(timeout);
   }, [enabled, hasBookmarks]);

@@ -1,5 +1,7 @@
 // ═══════════════════════════════════════════════════════════
 // CONSTANTS & CONFIGURATION
+// @sync-with src/lib/constants/timing.ts — shared timing values
+// @sync-with src/lib/storage-keys.ts    — storage key strings
 // ═══════════════════════════════════════════════════════════
 
 const CAPTURED_HEADERS = new Set([
@@ -13,19 +15,21 @@ const CAPTURED_HEADERS = new Set([
   "x-twitter-client-language",
 ]);
 
-const GRAPHQL_CATALOG_STORAGE_KEY = "tw_graphql_catalog";
+// Key convention: xbt_ prefix + snake_case.
+// Keep in sync with src/lib/storage-keys.ts.
+const GRAPHQL_CATALOG_STORAGE_KEY = "xbt_graphql_catalog";
 const GRAPHQL_CATALOG_VERSION = 1;
 const MAX_GRAPHQL_ENDPOINTS = 300;
 const MAX_CAPTURED_PARAM_LENGTH = 12000;
 const CATALOG_FLUSH_DELAY_MS = 600;
-const BOOKMARK_EVENTS_STORAGE_KEY = "tw_bookmark_events";
+const BOOKMARK_EVENTS_STORAGE_KEY = "xbt_bookmark_events";
 const MAX_BOOKMARK_EVENTS = 400;
 const AUTH_STATE_STORAGE_KEYS = [
-  "current_user_id",
-  "tw_auth_headers",
-  "tw_auth_time",
+  "xbt_user_id",
+  "xbt_auth_headers",
+  "xbt_auth_time",
 ];
-const WEEKLY_SW_CLEANUP_KEY = "tw_weekly_cleanup_at";
+const WEEKLY_SW_CLEANUP_KEY = "xbt_sw_cleanup_at";
 const WEEKLY_SW_CLEANUP_INTERVAL_MS = 1000 * 60 * 60 * 24 * 7;
 const BOOKMARK_EVENT_RETENTION_MS = 1000 * 60 * 60 * 24 * 14;
 const GRAPHQL_ENDPOINT_RETENTION_MS = 1000 * 60 * 60 * 24 * 30;
@@ -118,8 +122,8 @@ async function clearAuthSessionState() {
 async function syncAuthSessionFromCookie(storedState = null) {
   const userId = await readUserIdFromTwidCookie();
   if (userId) {
-    if (storedState?.current_user_id !== userId) {
-      await chrome.storage.local.set({ current_user_id: userId });
+    if (storedState?.xbt_user_id !== userId) {
+      await chrome.storage.local.set({ xbt_user_id: userId });
     }
     return userId;
   }
@@ -127,9 +131,9 @@ async function syncAuthSessionFromCookie(storedState = null) {
   // Avoid clearing stored auth state here: cookie reads can be unavailable
   // transiently in service worker context even when the user is signed in.
   const storedUserId =
-    typeof storedState?.current_user_id === "string" &&
-    storedState.current_user_id
-      ? storedState.current_user_id
+    typeof storedState?.xbt_user_id === "string" &&
+    storedState.xbt_user_id
+      ? storedState.xbt_user_id
       : null;
   return storedUserId;
 }
@@ -168,7 +172,7 @@ function reAuthSilently() {
     };
 
     const onChange = (changes) => {
-      if (changes.tw_auth_headers && !resolved) {
+      if (changes.xbt_auth_headers && !resolved) {
         resolved = true;
         cleanup();
         resolve(true);
@@ -193,8 +197,8 @@ function reAuthSilently() {
 }
 
 async function buildHeaders() {
-  const stored = await chrome.storage.local.get(["tw_auth_headers"]);
-  const auth = stored.tw_auth_headers;
+  const stored = await chrome.storage.local.get(["xbt_auth_headers"]);
+  const auth = stored.xbt_auth_headers;
   if (!auth?.authorization) throw new Error("NO_AUTH");
 
   const headers = {
@@ -586,12 +590,12 @@ async function captureBookmarkMutation(details) {
   const tweetId = extractTweetIdFromRequestBody(details.requestBody) || "";
 
   if (mutation.operation === "DeleteBookmark") {
-    await chrome.storage.local.set({ tw_delete_query_id: mutation.queryId });
+    await chrome.storage.local.set({ xbt_delete_query_id: mutation.queryId });
     await pushBookmarkEvent("DeleteBookmark", tweetId, "x.com");
   }
 
   if (mutation.operation === "CreateBookmark") {
-    await chrome.storage.local.set({ tw_create_query_id: mutation.queryId });
+    await chrome.storage.local.set({ xbt_create_query_id: mutation.queryId });
     await pushBookmarkEvent("CreateBookmark", tweetId, "x.com");
   }
 }
@@ -675,45 +679,45 @@ async function runWeeklyServiceWorkerCleanup() {
 
 async function handleCheckAuth() {
   const stored = await chrome.storage.local.get([
-    "current_user_id",
-    "tw_auth_headers",
-    "tw_auth_time",
-    "tw_query_id",
+    "xbt_user_id",
+    "xbt_auth_headers",
+    "xbt_auth_time",
+    "xbt_query_id",
   ]);
 
   const userId = await syncAuthSessionFromCookie(stored);
-  const hasAuthHeader = !!stored.tw_auth_headers?.authorization;
+  const hasAuthHeader = !!stored.xbt_auth_headers?.authorization;
   const hasUser = Boolean(userId || hasAuthHeader);
 
   return {
     hasUser,
     hasAuth: hasAuthHeader,
-    hasQueryId: !!stored.tw_query_id,
+    hasQueryId: !!stored.xbt_query_id,
     userId,
   };
 }
 
 async function handleFetchBookmarks(cursor, _retried = false) {
   const stored = await chrome.storage.local.get([
-    "tw_auth_headers",
-    "tw_query_id",
-    "tw_features",
+    "xbt_auth_headers",
+    "xbt_query_id",
+    "xbt_features",
   ]);
 
-  if (!stored.tw_auth_headers?.authorization) throw new Error("NO_AUTH");
-  if (!stored.tw_query_id) throw new Error("NO_QUERY_ID");
+  if (!stored.xbt_auth_headers?.authorization) throw new Error("NO_AUTH");
+  if (!stored.xbt_query_id) throw new Error("NO_QUERY_ID");
 
   const variables = { count: 100, includePromotedContent: true };
   if (cursor) variables.cursor = cursor;
 
-  const features = stored.tw_features || JSON.stringify(DEFAULT_FEATURES);
+  const features = stored.xbt_features || JSON.stringify(DEFAULT_FEATURES);
 
   const params = new URLSearchParams({
     variables: JSON.stringify(variables),
     features: features,
   });
 
-  const url = `https://x.com/i/api/graphql/${stored.tw_query_id}/Bookmarks?${params}`;
+  const url = `https://x.com/i/api/graphql/${stored.xbt_query_id}/Bookmarks?${params}`;
   const requestHeaders = await buildHeaders();
 
   const response = await fetch(url, {
@@ -724,7 +728,7 @@ async function handleFetchBookmarks(cursor, _retried = false) {
 
   if (response.status === 401 || response.status === 403) {
     if (!_retried) {
-      await chrome.storage.local.remove(["tw_auth_headers", "tw_auth_time"]);
+      await chrome.storage.local.remove(["xbt_auth_headers", "xbt_auth_time"]);
       const success = await reAuthSilently();
       if (success) return handleFetchBookmarks(cursor, true);
     }
@@ -743,12 +747,12 @@ async function handleDeleteBookmark(tweetId, _retried = false) {
   if (!tweetId) throw new Error("MISSING_TWEET_ID");
 
   const stored = await chrome.storage.local.get([
-    "tw_auth_headers",
-    "tw_delete_query_id",
+    "xbt_auth_headers",
+    "xbt_delete_query_id",
   ]);
-  if (!stored.tw_auth_headers?.authorization) throw new Error("NO_AUTH");
+  if (!stored.xbt_auth_headers?.authorization) throw new Error("NO_AUTH");
 
-  let queryId = stored.tw_delete_query_id;
+  let queryId = stored.xbt_delete_query_id;
 
   // Fallback: look up from GraphQL catalog
   if (!queryId) {
@@ -756,7 +760,7 @@ async function handleDeleteBookmark(tweetId, _retried = false) {
     for (const entry of Object.values(catalog.endpoints || {})) {
       if (entry && entry.operation === "DeleteBookmark" && entry.queryId) {
         queryId = entry.queryId;
-        chrome.storage.local.set({ tw_delete_query_id: queryId });
+        chrome.storage.local.set({ xbt_delete_query_id: queryId });
         break;
       }
     }
@@ -778,7 +782,7 @@ async function handleDeleteBookmark(tweetId, _retried = false) {
 
   if (response.status === 401 || response.status === 403) {
     if (!_retried) {
-      await chrome.storage.local.remove(["tw_auth_headers", "tw_auth_time"]);
+      await chrome.storage.local.remove(["xbt_auth_headers", "xbt_auth_time"]);
       const success = await reAuthSilently();
       if (success) return handleDeleteBookmark(tweetId, true);
     }
@@ -838,9 +842,9 @@ async function persistSeenTweetDisplayTypes(payload) {
   const incoming = collectTweetDisplayTypes(payload);
   if (incoming.length === 0) return;
 
-  const stored = await chrome.storage.local.get(["tw_seen_tweet_display_types"]);
-  const existing = Array.isArray(stored.tw_seen_tweet_display_types)
-    ? stored.tw_seen_tweet_display_types.filter((item) => typeof item === "string")
+  const stored = await chrome.storage.local.get(["xbt_seen_display_types"]);
+  const existing = Array.isArray(stored.xbt_seen_display_types)
+    ? stored.xbt_seen_display_types.filter((item) => typeof item === "string")
     : [];
 
   const merged = Array.from(new Set([...existing, ...incoming])).sort();
@@ -848,21 +852,21 @@ async function persistSeenTweetDisplayTypes(payload) {
     return;
   }
 
-  await chrome.storage.local.set({ tw_seen_tweet_display_types: merged });
+  await chrome.storage.local.set({ xbt_seen_display_types: merged });
 }
 
 async function handleFetchTweetDetail(tweetId, _retried = false) {
   const stored = await chrome.storage.local.get([
-    "tw_auth_headers",
-    "tw_detail_query_id",
-    "tw_features",
+    "xbt_auth_headers",
+    "xbt_detail_query_id",
+    "xbt_features",
   ]);
 
-  if (!stored.tw_auth_headers?.authorization) throw new Error("NO_AUTH");
-  if (!stored.tw_detail_query_id) throw new Error("NO_QUERY_ID");
+  if (!stored.xbt_auth_headers?.authorization) throw new Error("NO_AUTH");
+  if (!stored.xbt_detail_query_id) throw new Error("NO_QUERY_ID");
   const featureSet = {
     ...DEFAULT_FEATURES,
-    ...parseFeatureSet(stored.tw_features),
+    ...parseFeatureSet(stored.xbt_features),
     ...DETAIL_FEATURE_OVERRIDES,
   };
 
@@ -876,7 +880,7 @@ async function handleFetchTweetDetail(tweetId, _retried = false) {
     withVoice: true,
     withV2Timeline: true,
   };
-  const queryId = stored.tw_detail_query_id;
+  const queryId = stored.xbt_detail_query_id;
   const requestHeaders = await buildHeaders();
   const fieldToggles = {
     withArticleRichContentState: true,
@@ -899,7 +903,7 @@ async function handleFetchTweetDetail(tweetId, _retried = false) {
 
   if (response.status === 401 || response.status === 403) {
     if (!_retried) {
-      await chrome.storage.local.remove(["tw_auth_headers", "tw_auth_time"]);
+      await chrome.storage.local.remove(["xbt_auth_headers", "xbt_auth_time"]);
       const success = await reAuthSilently();
       if (success) return handleFetchTweetDetail(tweetId, true);
     }
@@ -934,8 +938,8 @@ chrome.webRequest.onSendHeaders.addListener(
 
     if (headers["authorization"] && headers["cookie"] && headers["x-csrf-token"]) {
       chrome.storage.local.set({
-        tw_auth_headers: headers,
-        tw_auth_time: Date.now(),
+        xbt_auth_headers: headers,
+        xbt_auth_time: Date.now(),
       });
     }
 
@@ -947,33 +951,33 @@ chrome.webRequest.onSendHeaders.addListener(
       const queryId = match[1];
       try {
         const params = new URLSearchParams(match[2]);
-        const toStore = { tw_query_id: queryId };
+        const toStore = { xbt_query_id: queryId };
         const features = params.get("features");
-        if (features) toStore.tw_features = features;
+        if (features) toStore.xbt_features = features;
         chrome.storage.local.set(toStore);
       } catch {
-        chrome.storage.local.set({ tw_query_id: queryId });
+        chrome.storage.local.set({ xbt_query_id: queryId });
       }
     }
 
     // Capture TweetDetail query ID
     const detailMatch = details.url.match(/\/i\/api\/graphql\/([^/]+)\/TweetDetail/);
     if (detailMatch) {
-      chrome.storage.local.set({ tw_detail_query_id: detailMatch[1] });
+      chrome.storage.local.set({ xbt_detail_query_id: detailMatch[1] });
     }
 
     const deleteMatch = details.url.match(
       /\/i\/api\/graphql\/([^/]+)\/DeleteBookmark(?:\?|$)/,
     );
     if (deleteMatch) {
-      chrome.storage.local.set({ tw_delete_query_id: deleteMatch[1] });
+      chrome.storage.local.set({ xbt_delete_query_id: deleteMatch[1] });
     }
 
     const createMatch = details.url.match(
       /\/i\/api\/graphql\/([^/]+)\/CreateBookmark(?:\?|$)/,
     );
     if (createMatch) {
-      chrome.storage.local.set({ tw_create_query_id: createMatch[1] });
+      chrome.storage.local.set({ xbt_create_query_id: createMatch[1] });
     }
 
     const mutation = parseBookmarkMutation(details.url);
@@ -982,7 +986,7 @@ chrome.webRequest.onSendHeaders.addListener(
       const tweetId = extractTweetIdFromReferer(referer) || "";
       chrome.storage.local
         .set({
-          tw_last_bookmark_mutation: {
+          xbt_last_mutation: {
             at: Date.now(),
             operation: mutation.operation,
             url: details.url,
@@ -1023,7 +1027,7 @@ chrome.webRequest.onCompleted.addListener(
 
     chrome.storage.local
       .set({
-        tw_last_bookmark_mutation_completed: {
+        xbt_last_mutation_done: {
           at: Date.now(),
           operation: mutation.operation,
           url: details.url,
@@ -1113,10 +1117,10 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message.type === "STORE_QUERY_IDS") {
     const updates = {};
     if (typeof message.ids?.DeleteBookmark === "string" && message.ids.DeleteBookmark) {
-      updates.tw_delete_query_id = message.ids.DeleteBookmark;
+      updates.xbt_delete_query_id = message.ids.DeleteBookmark;
     }
     if (typeof message.ids?.CreateBookmark === "string" && message.ids.CreateBookmark) {
-      updates.tw_create_query_id = message.ids.CreateBookmark;
+      updates.xbt_create_query_id = message.ids.CreateBookmark;
     }
     if (Object.keys(updates).length > 0) {
       chrome.storage.local.set(updates).then(() => sendResponse({ ok: true })).catch(() => sendResponse({ ok: false }));

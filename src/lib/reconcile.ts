@@ -11,7 +11,7 @@ interface ReconcileOptions {
   localIds: Set<string>;
   fetchPage: (cursor?: string) => Promise<BookmarkPageResult>;
   fullReconcile: boolean;
-  onPage?: (newBookmarks: Bookmark[]) => void;
+  onPage?: (newBookmarks: Bookmark[]) => void | Promise<void>;
 }
 
 export async function reconcileBookmarks(
@@ -50,7 +50,7 @@ export async function reconcileBookmarks(
         seen.add(b.tweetId);
       }
       allNew.push(...pageNew);
-      onPage?.(pageNew);
+      await onPage?.(pageNew);
     }
 
     const nextCursor = result.cursor || undefined;

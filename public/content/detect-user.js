@@ -38,10 +38,10 @@
   const currentUserId = parseTwidUserId(twidRawValue);
 
   if (currentUserId) {
-    chrome.storage.local.set({ current_user_id: currentUserId });
+    chrome.storage.local.set({ xbt_user_id: currentUserId });
   } else {
     // Keep IndexedDB bookmarks, but drop stale auth identity on logout.
-    chrome.storage.local.remove(["current_user_id"]);
+    chrome.storage.local.remove(["xbt_user_id"]);
   }
 
   function handleBookmarkMutationMessage(event) {

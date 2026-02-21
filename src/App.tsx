@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useAuth } from "./hooks/useAuth";
 import { useBookmarks, useDetailedTweetIds } from "./hooks/useBookmarks";
 import { useTheme } from "./hooks/useTheme";
@@ -7,6 +7,7 @@ import { useKeyboardNavigation } from "./hooks/useKeyboard";
 import { ensureReadingProgressExists, markReadingProgressCompleted, markReadingProgressUncompleted } from "./db";
 import { pickRelatedBookmarks } from "./lib/related";
 import { resetLocalData } from "./lib/reset";
+import { LS_READING_TAB } from "./lib/storage-keys";
 import { Onboarding } from "./components/Onboarding";
 import { NewTabHome } from "./components/NewTabHome";
 import { BookmarkReader } from "./components/BookmarkReader";
@@ -35,13 +36,13 @@ export default function App() {
   );
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [readingTab, setReadingTab] = useState<ReadingTab>(() => {
-    const stored = localStorage.getItem("readingTab");
+    const stored = localStorage.getItem(LS_READING_TAB);
     if (stored === "unread" || stored === "continue" || stored === "read") return stored;
     return "unread";
   });
   const handleReadingTabChange = useCallback((tab: ReadingTab) => {
     setReadingTab(tab);
-    localStorage.setItem("readingTab", tab);
+    localStorage.setItem(LS_READING_TAB, tab);
   }, []);
   const [shuffleSeed, setShuffleSeed] = useState(0);
 
@@ -78,16 +79,24 @@ export default function App() {
   const hasPrev = selectedIndex > 0;
   const hasNext = selectedIndex >= 0 && selectedIndex < bookmarks.length - 1;
 
+  const bookmarksRef = useRef(bookmarks);
+  bookmarksRef.current = bookmarks;
+  const selectedBookmarkRef = useRef(selectedBookmark);
+  selectedBookmarkRef.current = selectedBookmark;
+
   const goToPrev = useCallback(() => {
-    const idx = bookmarks.findIndex((b) => b.id === selectedBookmark?.id);
-    if (idx > 0) setSelectedBookmark(bookmarks[idx - 1]);
-  }, [bookmarks, selectedBookmark]);
+    const bk = bookmarksRef.current;
+    const sel = selectedBookmarkRef.current;
+    const idx = bk.findIndex((b) => b.id === sel?.id);
+    if (idx > 0) setSelectedBookmark(bk[idx - 1]);
+  }, []);
 
   const goToNext = useCallback(() => {
-    const idx = bookmarks.findIndex((b) => b.id === selectedBookmark?.id);
-    if (idx >= 0 && idx < bookmarks.length - 1)
-      setSelectedBookmark(bookmarks[idx + 1]);
-  }, [bookmarks, selectedBookmark]);
+    const bk = bookmarksRef.current;
+    const sel = selectedBookmarkRef.current;
+    const idx = bk.findIndex((b) => b.id === sel?.id);
+    if (idx >= 0 && idx < bk.length - 1) setSelectedBookmark(bk[idx + 1]);
+  }, []);
 
   const closeReader = useCallback(() => {
     setSelectedBookmark(null);

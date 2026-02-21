@@ -4,6 +4,7 @@ import { KIND_LABEL } from "./types";
 import { kindPillClass, sanitizeUrl } from "./utils";
 import { cn } from "../../lib/cn";
 import { formatCompactNumber } from "../../lib/text";
+import { CARD_CLOSE_MS } from "../../lib/constants";
 
 interface TweetKindPillProps {
   kind: TweetKind;
@@ -214,7 +215,7 @@ export function TweetHeader({ author, displayKind, readingMinutes }: Props) {
     setTimeout(() => {
       setCardOpen(false);
       setCardClosing(false);
-    }, 150);
+    }, CARD_CLOSE_MS);
   }, []);
 
   const toggleCard = useCallback(() => {

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getAllBookmarks, upsertBookmarks } from "../db";
 import { fetchBookmarkPage } from "../api/core";
+import { CS_LAST_SYNC } from "../lib/storage-keys";
 import type { Bookmark } from "../types";
 
 export interface Stats {
@@ -51,7 +52,7 @@ export function usePopupBookmarks(): PopupBookmarksResult {
           const fresh = await getAllBookmarks();
           setBookmarks(fresh);
         }
-        await chrome.storage.local.set({ last_sync: Date.now() });
+        await chrome.storage.local.set({ [CS_LAST_SYNC]: Date.now() });
       }
     } catch {}
     syncingRef.current = false;

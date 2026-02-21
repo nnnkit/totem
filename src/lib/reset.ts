@@ -1,18 +1,42 @@
-import { clearAllLocalData } from "../db";
+import { clearAllLocalData, closeDb } from "../db";
+import {
+  IDB_DATABASE_NAME,
+  LOCAL_STORAGE_KEYS,
+  CHROME_SYNC_KEYS,
+  CS_MANUAL_LOGIN,
+} from "./storage-keys";
 
-export const MANUAL_LOGIN_REQUIRED_KEY = "xbt_manual_login_required";
+export const MANUAL_LOGIN_REQUIRED_KEY = CS_MANUAL_LOGIN;
 
 export async function resetLocalData(): Promise<void> {
-  await clearAllLocalData();
+  // 1. Clear all IndexedDB object stores, then delete the database entirely
+  try {
+    await clearAllLocalData();
+    closeDb();
+    indexedDB.deleteDatabase(IDB_DATABASE_NAME);
+  } catch {
+    try {
+      indexedDB.deleteDatabase(IDB_DATABASE_NAME);
+    } catch {
+      // best-effort
+    }
+  }
 
+  // 2. Remove all known localStorage keys
   if (typeof localStorage !== "undefined") {
-    localStorage.removeItem("xbt_tour_completed");
+    for (const key of LOCAL_STORAGE_KEYS) {
+      localStorage.removeItem(key);
+    }
   }
 
-  if (typeof chrome === "undefined" || !chrome.storage?.local) {
-    return;
+  // 3. Clear chrome.storage.local (all keys)
+  if (typeof chrome !== "undefined" && chrome.storage?.local) {
+    await chrome.storage.local.clear();
+    await chrome.storage.local.set({ [CS_MANUAL_LOGIN]: true });
   }
 
-  await chrome.storage.local.clear();
-  await chrome.storage.local.set({ [MANUAL_LOGIN_REQUIRED_KEY]: true });
+  // 4. Clear chrome.storage.sync (theme, settings)
+  if (typeof chrome !== "undefined" && chrome.storage?.sync) {
+    await chrome.storage.sync.remove([...CHROME_SYNC_KEYS]);
+  }
 }

@@ -3,6 +3,7 @@ import { MagnifyingGlass } from "@phosphor-icons/react";
 import type { Bookmark } from "../../types";
 import { pickTitle } from "../../lib/bookmark-utils";
 import { sortIndexToTimestamp } from "../../lib/time";
+import { NEW_BADGE_CUTOFF_MS } from "../../lib/constants";
 
 interface Props {
   bookmarks: Bookmark[];
@@ -20,7 +21,7 @@ function getKindLabel(bookmark: Bookmark): string {
 
 export function PopupBookmarkList({ bookmarks, onOpen, query, onQueryChange, isSearching }: Props) {
   const newBookmarkIds = useMemo(() => {
-    const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+    const cutoff = Date.now() - NEW_BADGE_CUTOFF_MS;
     const ids = new Set<string>();
     for (const b of bookmarks) {
       if (sortIndexToTimestamp(b.sortIndex) >= cutoff) ids.add(b.tweetId);

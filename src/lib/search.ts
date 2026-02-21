@@ -1,4 +1,5 @@
 import type { Bookmark } from "../types";
+import { SEARCH_WEIGHTS } from "./constants";
 
 interface SearchableFields {
   screenName: string;
@@ -36,19 +37,19 @@ function scoreBookmark(
   let score = 0;
 
   for (const term of terms) {
-    if (fields.screenName === term) score += 10;
-    if (fields.authorName.includes(term)) score += 8;
+    if (fields.screenName === term) score += SEARCH_WEIGHTS.exactScreenName;
+    if (fields.authorName.includes(term)) score += SEARCH_WEIGHTS.authorName;
     if (fields.screenName.includes(term) && fields.screenName !== term)
-      score += 8;
-    if (fields.title.includes(term)) score += 6;
-    if (fields.text.includes(term)) score += 3;
-    if (fields.articleText.includes(term)) score += 2;
-    if (fields.cardTexts.includes(term)) score += 1;
+      score += SEARCH_WEIGHTS.screenName;
+    if (fields.title.includes(term)) score += SEARCH_WEIGHTS.title;
+    if (fields.text.includes(term)) score += SEARCH_WEIGHTS.text;
+    if (fields.articleText.includes(term)) score += SEARCH_WEIGHTS.articleText;
+    if (fields.cardTexts.includes(term)) score += SEARCH_WEIGHTS.cardTexts;
   }
 
   if (terms.length > 1) {
-    if (fields.title.includes(phrase)) score += 5;
-    if (fields.text.includes(phrase)) score += 3;
+    if (fields.title.includes(phrase)) score += SEARCH_WEIGHTS.titlePhrase;
+    if (fields.text.includes(phrase)) score += SEARCH_WEIGHTS.textPhrase;
   }
 
   return score;

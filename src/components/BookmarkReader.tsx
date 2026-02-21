@@ -8,7 +8,7 @@ import {
   Moon,
   Sun,
 } from "@phosphor-icons/react";
-import type { Bookmark, Highlight, ThreadTweet } from "../types";
+import type { Bookmark, Highlight, HighlightColor, SelectionRange, ThreadTweet } from "../types";
 import type { ThemePreference } from "../hooks/useTheme";
 import { fetchTweetDetail } from "../api/core/posts";
 import { cn } from "../lib/cn";
@@ -17,9 +17,10 @@ import { resolveTweetKind } from "./reader/utils";
 import { TweetContent } from "./reader/TweetContent";
 import { SelectionToolbar } from "./reader/SelectionToolbar";
 import { HighlightPopover } from "./reader/HighlightPopover";
+import { NotePanel } from "./reader/NotePanel";
 import { useReadingProgress } from "../hooks/useReadingProgress";
-import { useSelectionToolbar } from "../hooks/useSelectionToolbar";
 import { useHighlights } from "../hooks/useHighlights";
+import { LS_HIGHLIGHT_COLOR } from "../lib/storage-keys";
 
 const THEME_CYCLE: ThemePreference[] = ["system", "light", "dark"];
 
@@ -36,6 +37,11 @@ interface Props {
   onThemeChange: (pref: ThemePreference) => void;
   onMarkAsRead?: (tweetId: string) => void;
   onMarkAsUnread?: (tweetId: string) => void;
+}
+
+interface NotePanelState {
+  highlight: Highlight | null;
+  ranges: SelectionRange[] | null;
 }
 
 export function BookmarkReader({
@@ -113,41 +119,43 @@ export function BookmarkReader({
       containerRef: articleRef,
     });
 
-  const { toolbarState, dismiss: dismissToolbar } =
-    useSelectionToolbar(articleRef);
+  const [notePanelState, setNotePanelState] = useState<NotePanelState | null>(null);
 
-  const [popoverState, setPopoverState] = useState<{
-    highlight: Highlight;
-    position: { x: number; y: number };
-  } | null>(null);
-
-  const handleArticleClick = useCallback(
-    (e: React.MouseEvent) => {
-      const target = e.target as HTMLElement;
-
-      const mark = target.closest("mark.xbt-highlight") as HTMLElement | null;
-      const star = target.closest(".xbt-note-star") as HTMLElement | null;
-
-      const el = star || mark;
-      if (!el) return;
-
-      const highlightId = el.dataset.highlightId;
-      if (!highlightId) return;
-
-      const highlight = getHighlight(highlightId);
-      if (!highlight) return;
-
-      const rect = el.getBoundingClientRect();
-      setPopoverState({
-        highlight,
-        position: {
-          x: rect.left + rect.width / 2,
-          y: rect.bottom,
-        },
-      });
+  const handleAddNoteFromToolbar = useCallback(
+    (ranges: SelectionRange[]) => {
+      setNotePanelState({ highlight: null, ranges });
     },
-    [getHighlight],
+    [],
   );
+
+  const handleSaveNote = useCallback(
+    async (note: string, highlightId?: string, ranges?: SelectionRange[]) => {
+      if (highlightId) {
+        await updateHighlightNote(highlightId, note);
+      } else if (ranges) {
+        const color = (localStorage.getItem(LS_HIGHLIGHT_COLOR) || "green") as HighlightColor;
+        await addHighlight(ranges, note, color);
+      }
+    },
+    [updateHighlightNote, addHighlight],
+  );
+
+  const handleDeleteNote = useCallback(
+    async (highlightId: string) => {
+      await updateHighlightNote(highlightId, null);
+    },
+    [updateHighlightNote],
+  );
+
+  const handleToggleRead = useCallback(() => {
+    if (effectiveMarkedRead) {
+      onMarkAsUnread?.(bookmark.tweetId);
+      setReadOverride(false);
+    } else {
+      onMarkAsRead?.(bookmark.tweetId);
+      setReadOverride(true);
+    }
+  }, [effectiveMarkedRead, onMarkAsRead, onMarkAsUnread, bookmark.tweetId]);
 
   const displayBookmark = resolvedBookmark || bookmark;
   const displayKind = useMemo(
@@ -243,7 +251,6 @@ export function BookmarkReader({
       <article
         ref={articleRef}
         className={cn(containerWidthClass, "relative mx-auto px-5 pb-16 pt-6")}
-        onClick={handleArticleClick}
       >
         <TweetContent
           displayBookmark={displayBookmark}
@@ -255,44 +262,32 @@ export function BookmarkReader({
           onOpenBookmark={onOpenBookmark}
           onShuffle={onShuffle}
           tweetSectionIdPrefix="section-tweet"
-          onToggleRead={onMarkAsRead ? () => {
-            if (effectiveMarkedRead) {
-              onMarkAsUnread?.(bookmark.tweetId);
-              setReadOverride(false);
-            } else {
-              onMarkAsRead(bookmark.tweetId);
-              setReadOverride(true);
-            }
-          } : undefined}
+          onToggleRead={onMarkAsRead ? handleToggleRead : undefined}
           isMarkedRead={effectiveMarkedRead}
         />
       </article>
 
-      {toolbarState && (
-        <SelectionToolbar
-          position={toolbarState.position}
-          ranges={toolbarState.ranges}
-          onHighlight={(ranges, note) => {
-            addHighlight(ranges, note);
-            dismissToolbar();
-          }}
-          onDismiss={dismissToolbar}
-        />
-      )}
+      <SelectionToolbar
+        containerRef={articleRef}
+        onHighlight={(ranges, color) => addHighlight(ranges, null, color)}
+        onAddNote={handleAddNoteFromToolbar}
+      />
 
-      {popoverState && (
-        <HighlightPopover
-          highlight={popoverState.highlight}
-          position={popoverState.position}
-          onDelete={(id) => {
-            removeHighlight(id);
-            setPopoverState(null);
-          }}
-          onUpdateNote={(id, note) => {
-            updateHighlightNote(id, note);
-            setPopoverState(null);
-          }}
-          onDismiss={() => setPopoverState(null)}
+      <HighlightPopover
+        containerRef={articleRef}
+        getHighlight={getHighlight}
+        onDelete={removeHighlight}
+        onAddNote={(hl) => setNotePanelState({ highlight: hl, ranges: null })}
+        onOpenNote={(hl) => setNotePanelState({ highlight: hl, ranges: null })}
+      />
+
+      {notePanelState && (
+        <NotePanel
+          highlight={notePanelState.highlight}
+          ranges={notePanelState.ranges}
+          onSaveNote={handleSaveNote}
+          onDeleteNote={handleDeleteNote}
+          onClose={() => setNotePanelState(null)}
         />
       )}
     </div>

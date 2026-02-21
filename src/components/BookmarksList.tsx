@@ -7,6 +7,7 @@ import { useBookmarkSearch } from "../hooks/useBookmarkSearch";
 import { pickTitle, estimateReadingMinutes } from "../lib/bookmark-utils";
 import { timeAgo, sortIndexToTimestamp } from "../lib/time";
 import { cn } from "../lib/cn";
+import { NEW_BADGE_CUTOFF_MS } from "../lib/constants";
 
 export type ReadingTab = "continue" | "read" | "unread";
 
@@ -118,7 +119,7 @@ export function BookmarksList({
   }, [continueReadingItems]);
 
   const newBookmarkIds = useMemo(() => {
-    const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+    const cutoff = Date.now() - NEW_BADGE_CUTOFF_MS;
     const ids = new Set<string>();
     const all = [
       ...unreadBookmarks,
@@ -298,7 +299,7 @@ export function BookmarksList({
                     ref={(el) => { itemRefs.current[idx] = el; }}
                     type="button"
                     onClick={() => onOpenBookmark(bookmark)}
-                    className={cn("flex w-full items-center gap-3 rounded-lg border p-3 text-left transition-colors hover:bg-x-hover", focusedIndex === idx ? "border-accent ring-2 ring-accent/40 bg-x-hover" : "border-x-border bg-x-card")}
+                    className={cn("bookmark-list-item flex w-full items-center gap-3 rounded-lg border p-3 text-left transition-colors hover:bg-x-hover", focusedIndex === idx ? "border-accent ring-2 ring-accent/40 bg-x-hover" : "border-x-border bg-x-card")}
                   >
                     <img
                       src={bookmark.author.profileImageUrl}
@@ -356,7 +357,7 @@ export function BookmarksList({
                     ref={(el) => { itemRefs.current[idx] = el; }}
                     type="button"
                     onClick={() => onOpenBookmark(bookmark)}
-                    className={cn("flex w-full items-center gap-3 rounded-lg border p-3 text-left transition-colors hover:bg-x-hover", focusedIndex === idx ? "border-accent ring-2 ring-accent/40 bg-x-hover" : "border-x-border bg-x-card")}
+                    className={cn("bookmark-list-item flex w-full items-center gap-3 rounded-lg border p-3 text-left transition-colors hover:bg-x-hover", focusedIndex === idx ? "border-accent ring-2 ring-accent/40 bg-x-hover" : "border-x-border bg-x-card")}
                   >
                     <img
                       src={bookmark.author.profileImageUrl}
@@ -412,7 +413,7 @@ export function BookmarksList({
                     ref={(el) => { itemRefs.current[idx] = el; }}
                     type="button"
                     onClick={() => onOpenBookmark(bookmark)}
-                    className={cn("flex w-full items-center gap-3 rounded-lg border p-3 text-left transition-colors hover:bg-x-hover", focusedIndex === idx ? "border-accent ring-2 ring-accent/40 bg-x-hover" : "border-x-border bg-x-card")}
+                    className={cn("bookmark-list-item flex w-full items-center gap-3 rounded-lg border p-3 text-left transition-colors hover:bg-x-hover", focusedIndex === idx ? "border-accent ring-2 ring-accent/40 bg-x-hover" : "border-x-border bg-x-card")}
                   >
                     <img
                       src={bookmark.author.profileImageUrl}

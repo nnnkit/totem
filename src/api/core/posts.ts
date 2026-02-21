@@ -1,8 +1,7 @@
 import { getTweetDetailCache, upsertTweetDetailCache } from "../../db";
 import type { ThreadTweet } from "../../types";
 import { parseTweetDetailPayload, type TweetDetailContent } from "../parsers";
-
-const DETAIL_CACHE_TTL_MS = 1000 * 60 * 60 * 6;
+import { DETAIL_CACHE_TTL_MS } from "../../lib/constants";
 
 interface RuntimeResponse {
   error?: string;

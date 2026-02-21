@@ -25,13 +25,15 @@ export function normalizeText(value: string): string {
   return value.replace(/\s+/g, " ").trim();
 }
 
-export function compactPreview(text: string, maxChars = 130): string {
+import { COMPACT_PREVIEW_MAX, TRUNCATE_LABEL_MAX } from "./constants";
+
+export function compactPreview(text: string, maxChars = COMPACT_PREVIEW_MAX): string {
   const value = text.replace(/\s+/g, " ").trim();
   if (value.length <= maxChars) return value;
   return `${value.slice(0, maxChars).trimEnd()}...`;
 }
 
-export function truncateLabel(text: string, maxLen = 48): string {
+export function truncateLabel(text: string, maxLen = TRUNCATE_LABEL_MAX): string {
   const clean = text.replace(/\s+/g, " ").trim();
   if (clean.length <= maxLen) return clean;
   return `${clean.slice(0, maxLen).trimEnd()}\u2026`;

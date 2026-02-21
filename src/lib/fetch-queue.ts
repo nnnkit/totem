@@ -1,3 +1,11 @@
+import {
+  FETCH_BASE_DELAY_MS,
+  FETCH_JITTER_MS,
+  FETCH_READ_PAUSE_CHANCE,
+  FETCH_READ_PAUSE_MIN_MS,
+  FETCH_READ_PAUSE_JITTER_MS,
+} from "./constants";
+
 type QueueTask<T> = {
   execute: () => Promise<T>;
   resolve: (value: T) => void;
@@ -5,10 +13,8 @@ type QueueTask<T> = {
 };
 
 function humanDelay(): Promise<void> {
-  // Base delay with jitter to mimic natural browsing rhythm.
-  // Occasionally adds a longer pause like a user pausing to read.
-  const base = 1200 + Math.random() * 1300;
-  const readPause = Math.random() < 0.15 ? 1000 + Math.random() * 2000 : 0;
+  const base = FETCH_BASE_DELAY_MS + Math.random() * FETCH_JITTER_MS;
+  const readPause = Math.random() < FETCH_READ_PAUSE_CHANCE ? FETCH_READ_PAUSE_MIN_MS + Math.random() * FETCH_READ_PAUSE_JITTER_MS : 0;
   return new Promise((resolve) => setTimeout(resolve, base + readPause));
 }
 

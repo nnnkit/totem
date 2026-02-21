@@ -1,6 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { upsertReadingProgress, getReadingProgress } from "../db";
 import type { ReadingProgress } from "../types";
+import {
+  READING_SAVE_DEBOUNCE_MS,
+  READING_SCROLL_THRESHOLD_PX,
+  READING_MIN_SCROLL_HEIGHT_PX,
+  READING_HEIGHT_CHANGE_RATIO,
+} from "../lib/constants";
 
 interface UseReadingProgressOptions {
   tweetId: string;
@@ -65,7 +71,7 @@ export function useReadingProgress({
         progress.scrollHeight > 0 &&
         Math.abs(currentHeight - progress.scrollHeight) /
           progress.scrollHeight >
-          0.15;
+          READING_HEIGHT_CHANGE_RATIO;
 
       if (heightChanged) {
         const ratio =
@@ -87,7 +93,7 @@ export function useReadingProgress({
       const scrollHeight = document.documentElement.scrollHeight;
       const clientHeight = document.documentElement.clientHeight;
       const maxScroll = scrollHeight - clientHeight;
-      const completed = maxScroll > 10 && scrollY + clientHeight >= scrollHeight - 50;
+      const completed = maxScroll > READING_MIN_SCROLL_HEIGHT_PX && scrollY + clientHeight >= scrollHeight - READING_SCROLL_THRESHOLD_PX;
 
       const existing = savedProgress.current;
       const progress: ReadingProgress = {
@@ -108,7 +114,7 @@ export function useReadingProgress({
       const clientHeight = document.documentElement.clientHeight;
       const maxScroll = scrollHeight - clientHeight;
 
-      if (maxScroll <= 10) {
+      if (maxScroll <= READING_MIN_SCROLL_HEIGHT_PX) {
         shortContentTimer.current = window.setTimeout(() => {
           const existing = savedProgress.current;
           const progress: ReadingProgress = {
@@ -121,7 +127,7 @@ export function useReadingProgress({
           };
           savedProgress.current = progress;
           upsertReadingProgress(progress);
-        }, 3000);
+        }, READING_SAVE_DEBOUNCE_MS);
       }
     };
 
@@ -137,7 +143,7 @@ export function useReadingProgress({
       if (debounceTimer.current !== null) {
         window.clearTimeout(debounceTimer.current);
       }
-      debounceTimer.current = window.setTimeout(saveProgress, 3000);
+      debounceTimer.current = window.setTimeout(saveProgress, READING_SAVE_DEBOUNCE_MS);
     };
 
     window.addEventListener("scroll", onScroll, { passive: true });
