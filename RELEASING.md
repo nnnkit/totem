@@ -2,6 +2,37 @@
 
 This repo publishes an installable extension ZIP to GitHub Releases.
 
+## Fast path (recommended)
+
+Use one command:
+
+```bash
+pnpm release
+```
+
+This command will:
+- run release preparation (version bump + changelog update + ZIP build validation)
+- commit `CHANGELOG.md`, `package.json`, and `public/manifest.json`
+- push `main`
+- create `v<version>` tag
+- push the tag (which triggers GitHub release workflow)
+
+Requirements:
+- run from `main`
+- clean working tree
+
+Preview without writing/committing/tagging:
+
+```bash
+pnpm release --dry-run --allow-dirty
+```
+
+Version bump options:
+- default (`pnpm release`) = `patch`
+- `pnpm release minor`
+- `pnpm release major`
+- `pnpm release 1.2.3` (explicit version)
+
 ## Versioning model
 
 - `patch` for bug fixes (`1.0.0 -> 1.0.1`)
@@ -42,6 +73,8 @@ git push origin main
 git tag v1.0.1
 git push origin v1.0.1
 ```
+
+You can use this manual flow if you do not want the all-in-one `pnpm release ...` command.
 
 Tag push triggers `.github/workflows/release-extension.yml`, which:
 - installs dependencies

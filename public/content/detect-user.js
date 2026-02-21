@@ -50,6 +50,14 @@
     if (!data || typeof data !== "object") return;
     if (data.__source !== MESSAGE_SOURCE) return;
 
+    if (data.type === "query_ids" && data.ids && typeof data.ids === "object") {
+      chrome.runtime.sendMessage({
+        type: "STORE_QUERY_IDS",
+        ids: data.ids,
+      });
+      return;
+    }
+
     const operation =
       data.operation === "CreateBookmark" || data.operation === "DeleteBookmark"
         ? data.operation
@@ -199,6 +207,61 @@
         } catch {}
         return originalFetch.apply(this, arguments);
       };
+
+      // Discover GraphQL query IDs from loaded JS bundles
+      function discoverQueryIds() {
+        if (window.__xbtQidsScanned) return;
+        window.__xbtQidsScanned = true;
+
+        var targets = ["DeleteBookmark", "CreateBookmark"];
+        var found = {};
+        var scripts = document.querySelectorAll("script[src]");
+        var queue = [];
+        for (var i = 0; i < scripts.length && i < 20; i++) {
+          if (scripts[i].src) queue.push(scripts[i].src);
+        }
+
+        var idx = 0;
+        function next() {
+          if (idx >= queue.length) {
+            if (Object.keys(found).length > 0) {
+              window.postMessage({ __source: SOURCE, type: "query_ids", ids: found }, "*");
+            }
+            return;
+          }
+          var src = queue[idx++];
+          fetch(src)
+            .then(function (r) { return r.text(); })
+            .then(function (text) {
+              for (var t = 0; t < targets.length; t++) {
+                var name = targets[t];
+                if (found[name]) continue;
+                var pos = text.indexOf('"' + name + '"');
+                if (pos === -1) pos = text.indexOf("'" + name + "'");
+                if (pos === -1) continue;
+                var region = text.substring(Math.max(0, pos - 300), pos + 300);
+                var m = region.match(/queryId\\s*:\\s*["']([A-Za-z0-9_\\-]{10,50})["']/);
+                if (m) found[name] = m[1];
+              }
+              var allFound = targets.every(function (n) { return !!found[n]; });
+              if (allFound) {
+                window.postMessage({ __source: SOURCE, type: "query_ids", ids: found }, "*");
+              } else {
+                next();
+              }
+            })
+            .catch(function () { next(); });
+        }
+        next();
+      }
+
+      if (document.readyState === "complete") {
+        setTimeout(discoverQueryIds, 2000);
+      } else {
+        window.addEventListener("load", function () {
+          setTimeout(discoverQueryIds, 2000);
+        });
+      }
     })();`;
     (document.documentElement || document.head || document.body).appendChild(
       script,

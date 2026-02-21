@@ -43,7 +43,6 @@ function makeBookmark(
     hasImage: partial.hasImage || false,
     hasVideo: partial.hasVideo || false,
     hasLink: partial.hasLink || false,
-    isLongText: partial.isLongText || false,
     quotedTweet: partial.quotedTweet || null,
     retweetedTweet: partial.retweetedTweet || null,
     article: partial.article || null,
@@ -93,7 +92,7 @@ export const MOCK_BOOKMARKS: Bookmark[] = [
       bookmarks: 9200,
     },
     isThread: true,
-    isLongText: true,
+
     tweetKind: "thread",
   }),
 
@@ -215,7 +214,7 @@ export const MOCK_BOOKMARKS: Bookmark[] = [
       views: 4800000,
       bookmarks: 22400,
     },
-    isLongText: true,
+
   }),
 
   // 7. Link sharing
@@ -265,7 +264,7 @@ export const MOCK_BOOKMARKS: Bookmark[] = [
       views: 340000,
       bookmarks: 2400,
     },
-    isLongText: true,
+
   }),
 
   // 9. Design wisdom
@@ -307,7 +306,7 @@ export const MOCK_BOOKMARKS: Bookmark[] = [
       bookmarks: 11800,
     },
     isThread: true,
-    isLongText: true,
+
     tweetKind: "thread",
   }),
 

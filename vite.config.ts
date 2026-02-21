@@ -7,10 +7,12 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   base: "./",
   build: {
+    modulePreload: { polyfill: false },
     outDir: "dist",
     rollupOptions: {
       input: {
         newtab: resolve(__dirname, "newtab.html"),
+        popup: resolve(__dirname, "popup.html"),
       },
       output: {
         entryFileNames: "assets/[name].js",

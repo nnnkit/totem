@@ -17,7 +17,6 @@ export type ReaderTweet = {
   inReplyToTweetId?: string;
   inReplyToScreenName?: string;
   isThread?: boolean;
-  isLongText?: boolean;
   tweetKind?: TweetKind;
   tweetDisplayType?: string;
 };

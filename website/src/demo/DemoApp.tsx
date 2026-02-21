@@ -5,8 +5,8 @@ import { useKeyboardNavigation } from "@ext/hooks/useKeyboard";
 import { useContinueReading } from "@ext/hooks/useContinueReading";
 import { pickRelatedBookmarks } from "@ext/lib/related";
 import { NewTabHome } from "@ext/components/NewTabHome";
-import { ReaderView } from "@ext/components/ReaderView";
-import { ReadingView } from "@ext/components/ReadingView";
+import { BookmarkReader } from "@ext/components/BookmarkReader";
+import { BookmarksList } from "@ext/components/BookmarksList";
 import { SettingsModal } from "@ext/components/SettingsModal";
 import { DemoBanner } from "./DemoBanner";
 import { MOCK_BOOKMARKS } from "../mock/bookmarks";
@@ -69,7 +69,7 @@ export default function DemoApp() {
   const mainContent = (() => {
     if (selectedBookmark) {
       return (
-        <ReaderView
+        <BookmarkReader
           bookmark={selectedBookmark}
           relatedBookmarks={relatedBookmarks}
           onOpenBookmark={openBookmark}
@@ -80,7 +80,7 @@ export default function DemoApp() {
     }
     if (view === "reading") {
       return (
-        <ReadingView
+        <BookmarksList
           continueReadingItems={continueReading}
           unreadBookmarks={allUnread}
           onOpenBookmark={openBookmark}
@@ -114,7 +114,6 @@ export default function DemoApp() {
         onUpdateSettings={updateSettings}
         themePreference={themePreference}
         onThemePreferenceChange={setThemePreference}
-        bookmarks={bookmarks}
         onResetLocalData={async () => {
           setBookmarks([]);
           await deleteBookmarksByTweetIds(MOCK_BOOKMARKS.map((bookmark) => bookmark.tweetId));

@@ -1,22 +1,28 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { Bookmark } from "../types";
+import { useHotkeys } from "react-hotkeys-hook";
+import { GearSix, MagnifyingGlass } from "@phosphor-icons/react";
+import type { BackgroundMode, Bookmark, SyncState } from "../types";
 import { formatClock } from "../lib/time";
 import {
   pickTitle,
   pickExcerpt,
   estimateReadingMinutes,
 } from "../lib/bookmark-utils";
+import { cn } from "../lib/cn";
 import { useWallpaper } from "../hooks/useWallpaper";
 import { useTopSites } from "../hooks/useTopSites";
+import { useProductTour } from "../hooks/useProductTour";
 
 interface Props {
   bookmarks: Bookmark[];
+  syncState: SyncState;
+  onSync: () => void;
   detailedTweetIds: Set<string>;
-  syncing: boolean;
   showTopSites: boolean;
   showSearchBar: boolean;
   topSitesLimit: number;
-  onSync: () => void;
+  backgroundMode: BackgroundMode;
+  openedTweetIds: Set<string>;
   onOpenBookmark: (bookmark: Bookmark) => void;
   onOpenSettings: () => void;
   onOpenReading: () => void;
@@ -30,62 +36,9 @@ interface DecoratedBookmark {
   isRead: boolean;
 }
 
-const READ_IDS_KEY = "tw_breath_read_ids";
+const SETTINGS_ICON = <GearSix className="size-5" />;
 
-function loadReadIds(): Set<string> {
-  if (typeof localStorage === "undefined") return new Set<string>();
-  const raw = localStorage.getItem(READ_IDS_KEY);
-  if (!raw) return new Set<string>();
-
-  try {
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return new Set<string>();
-    return new Set(parsed.filter((value) => typeof value === "string"));
-  } catch {
-    return new Set<string>();
-  }
-}
-
-function persistReadIds(value: Set<string>) {
-  if (typeof localStorage === "undefined") return;
-  localStorage.setItem(READ_IDS_KEY, JSON.stringify(Array.from(value)));
-}
-
-const SETTINGS_ICON = (
-  <svg viewBox="0 0 24 24" className="size-5" fill="currentColor">
-    <path d="M12 15.5A3.5 3.5 0 018.5 12 3.5 3.5 0 0112 8.5a3.5 3.5 0 013.5 3.5 3.5 3.5 0 01-3.5 3.5m7.43-2.53c.04-.32.07-.64.07-.97s-.03-.66-.07-1l2.11-1.63c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64L4.57 11c-.04.34-.07.67-.07 1s.03.65.07.97l-2.11 1.66c-.19.15-.25.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1.01c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.58 1.69-.98l2.49 1.01c.22.08.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.66z" />
-  </svg>
-);
-
-const CHEVRON_LEFT_ICON = (
-  <svg viewBox="0 0 20 20" fill="currentColor" className="size-3.5">
-    <path
-      fillRule="evenodd"
-      d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z"
-      clipRule="evenodd"
-    />
-  </svg>
-);
-
-const CHEVRON_RIGHT_ICON = (
-  <svg viewBox="0 0 20 20" fill="currentColor" className="size-3.5">
-    <path
-      fillRule="evenodd"
-      d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z"
-      clipRule="evenodd"
-    />
-  </svg>
-);
-
-const SEARCH_ICON = (
-  <svg viewBox="0 0 20 20" fill="currentColor" className="size-4 opacity-50">
-    <path
-      fillRule="evenodd"
-      d="M9 3.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11ZM2 9a7 7 0 1 1 12.452 4.391l3.328 3.329a.75.75 0 1 1-1.06 1.06l-3.329-3.328A7 7 0 0 1 2 9Z"
-      clipRule="evenodd"
-    />
-  </svg>
-);
+const SEARCH_ICON = <MagnifyingGlass className="size-4 opacity-50" />;
 
 const GOOGLE_LOGO = (
   <svg
@@ -114,12 +67,14 @@ const GOOGLE_LOGO = (
 
 export function NewTabHome({
   bookmarks,
+  syncState,
+  onSync,
   detailedTweetIds,
-  syncing,
   showTopSites,
   showSearchBar,
   topSitesLimit,
-  onSync,
+  backgroundMode,
+  openedTweetIds,
   onOpenBookmark,
   onOpenSettings,
   onOpenReading,
@@ -127,21 +82,11 @@ export function NewTabHome({
   const [now, setNow] = useState(() => new Date());
   const [imgLoaded, setImgLoaded] = useState(false);
   const [imgError, setImgError] = useState(false);
-  const [readIds, setReadIds] = useState<Set<string>>(() => loadReadIds());
   const [cardEngaged, setCardEngaged] = useState(false);
   const [mountSeed] = useState(() => Math.random());
   const searchRef = useRef<HTMLInputElement>(null);
-  const {
-    wallpaperUrl,
-    wallpaperTitle,
-    hasNext,
-    hasPrev,
-    next: nextWallpaper,
-    prev: prevWallpaper,
-  } = useWallpaper();
-  const { sites: topSites } = useTopSites(topSitesLimit);
-
-  const nowMinute = useMemo(() => Math.floor(now.getTime() / 60000), [now]);
+  const { wallpaperUrl, wallpaperTitle, gradientCss } = useWallpaper(backgroundMode);
+  const { sites: topSites } = useTopSites(topSitesLimit, showTopSites);
 
   const { items, unreadItems } = useMemo(() => {
     const allItems: DecoratedBookmark[] = bookmarks.map((bookmark) => ({
@@ -151,11 +96,11 @@ export function NewTabHome({
       minutes: detailedTweetIds.has(bookmark.tweetId)
         ? estimateReadingMinutes(bookmark)
         : null,
-      isRead: readIds.has(bookmark.tweetId),
+      isRead: openedTweetIds.has(bookmark.tweetId),
     }));
     const unread = allItems.filter((item) => !item.isRead);
     return { items: allItems, unreadItems: unread };
-  }, [bookmarks, detailedTweetIds, nowMinute, readIds]);
+  }, [bookmarks, detailedTweetIds, openedTweetIds]);
 
   const currentItem = useMemo(() => {
     const pool = unreadItems.length > 0 ? unreadItems : items;
@@ -163,6 +108,11 @@ export function NewTabHome({
     const index = Math.floor(mountSeed * pool.length);
     return pool[index];
   }, [items, unreadItems, mountSeed]);
+
+  useProductTour({
+    enabled: true,
+    hasBookmarks: currentItem !== null,
+  });
 
   const [prevWallpaperUrl, setPrevWallpaperUrl] = useState(wallpaperUrl);
   if (wallpaperUrl !== prevWallpaperUrl) {
@@ -178,80 +128,45 @@ export function NewTabHome({
     return () => window.clearInterval(timer);
   }, []);
 
-  useEffect(() => {
-    if (bookmarks.length === 0) return;
-
-    setReadIds((previous) => {
-      if (previous.size === 0) return previous;
-
-      const liveIds = new Set(bookmarks.map((bookmark) => bookmark.tweetId));
-      let changed = false;
-      const next = new Set<string>();
-
-      for (const id of previous) {
-        if (liveIds.has(id)) {
-          next.add(id);
-        } else {
-          changed = true;
-        }
-      }
-
-      if (!changed) return previous;
-
-      persistReadIds(next);
-      return next;
-    });
-  }, [bookmarks]);
-
-  const markAsRead = useCallback((tweetId: string) => {
-    setReadIds((previous) => {
-      if (previous.has(tweetId)) return previous;
-      const next = new Set(previous);
-      next.add(tweetId);
-      persistReadIds(next);
-      return next;
-    });
-  }, []);
-
-  const openForReading = useCallback(
+  const openItem = useCallback(
     (item: DecoratedBookmark | null) => {
       if (!item) return;
-      markAsRead(item.bookmark.tweetId);
       onOpenBookmark(item.bookmark);
     },
-    [markAsRead, onOpenBookmark],
+    [onOpenBookmark],
   );
 
   const surpriseMe = useCallback(() => {
     if (items.length === 0) return;
     const pool = unreadItems.length > 0 ? unreadItems : items;
     const pick = pool[Math.floor(Math.random() * pool.length)];
-    openForReading(pick);
-  }, [items, unreadItems, openForReading]);
+    openItem(pick);
+  }, [items, unreadItems, openItem]);
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const tag = (e.target as HTMLElement).tagName;
-      if (tag === "INPUT" || tag === "TEXTAREA") return;
+  useHotkeys("/", () => searchRef.current?.focus(), {
+    preventDefault: true,
+  });
 
-      if (e.key === "/") {
-        e.preventDefault();
-        searchRef.current?.focus();
-      } else if (e.key === "Enter" || e.key === "o") {
-        openForReading(currentItem);
-      } else if (e.key === "l") {
-        onOpenReading();
-      } else if (e.key === "s") {
-        surpriseMe();
-      }
-    };
+  useHotkeys("enter, o", () => openItem(currentItem), {
+    preventDefault: true,
+  }, [currentItem, openItem]);
 
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [currentItem, openForReading, onOpenReading, surpriseMe]);
+  useHotkeys("l", () => onOpenReading(), {
+    preventDefault: true,
+  }, [onOpenReading]);
+
+  useHotkeys("s", () => surpriseMe(), {
+    preventDefault: true,
+  }, [surpriseMe]);
 
   return (
     <div className="breath-home relative min-h-dvh overflow-hidden">
+      {!showWallpaper && gradientCss && (
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{ background: gradientCss }}
+        />
+      )}
       {showWallpaper && (
         <img
           src={wallpaperUrl ?? ""}
@@ -332,9 +247,8 @@ export function NewTabHome({
           {currentItem ? (
             <div className="space-y-4">
               <article
-                className={`breath-card breath-card--zen ${
-                  cardEngaged ? "is-engaged" : ""
-                }`}
+                data-tour="bookmark-card"
+                className={cn("breath-card breath-card--zen", cardEngaged && "is-engaged")}
                 onMouseEnter={() => setCardEngaged(true)}
                 onMouseLeave={() => setCardEngaged(false)}
                 onFocusCapture={() => setCardEngaged(true)}
@@ -350,12 +264,12 @@ export function NewTabHome({
                     setCardEngaged(false);
                   }
                 }}
-                onClick={() => openForReading(currentItem)}
+                onClick={() => openItem(currentItem)}
                 onKeyDown={(event) => {
                   if (event.key === "Enter" || event.key === " ") {
                     event.preventDefault();
                     event.stopPropagation();
-                    openForReading(currentItem);
+                    openItem(currentItem);
                   }
                 }}
                 tabIndex={0}
@@ -390,6 +304,7 @@ export function NewTabHome({
 
               <div className="breath-actions">
                 <button
+                  data-tour="open-all-btn"
                   type="button"
                   className="breath-btn breath-btn--secondary"
                   onClick={onOpenReading}
@@ -398,6 +313,7 @@ export function NewTabHome({
                   <kbd className="breath-kbd">L</kbd>
                 </button>
                 <button
+                  data-tour="surprise-btn"
                   type="button"
                   className="breath-btn breath-btn--secondary"
                   onClick={surpriseMe}
@@ -407,62 +323,79 @@ export function NewTabHome({
                 </button>
               </div>
             </div>
+          ) : syncState.phase === "syncing" ? (
+            <article className="breath-card text-center">
+              <p className="breath-eyebrow">Syncing your bookmarks&hellip;</p>
+              <div className="mt-4 flex justify-center">
+                <svg
+                  viewBox="0 0 24 24"
+                  className="size-6 animate-spin text-accent"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path
+                    d="M12 2a10 10 0 0 1 10 10"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </div>
+              <p className="breath-empty mt-4 text-pretty">
+                Fetching bookmarks from your account. This may take a moment.
+              </p>
+            </article>
+          ) : syncState.phase === "error" ? (
+            <article className="breath-card text-center">
+              <p className="breath-eyebrow">Something went wrong</p>
+              <p className="breath-empty mt-4 text-pretty">
+                {syncState.error === "reconnecting"
+                  ? "Reconnecting to your account\u2026"
+                  : "Could not sync your bookmarks. Check your connection and try again."}
+              </p>
+              {syncState.error !== "reconnecting" && (
+                <button
+                  type="button"
+                  onClick={onSync}
+                  className="breath-btn breath-btn--primary mt-6"
+                >
+                  Try again
+                </button>
+              )}
+            </article>
           ) : (
             <article className="breath-card text-center">
               <p className="breath-eyebrow">Your reading list is quiet</p>
               <p className="breath-empty mt-4 text-pretty">
-                Sync your bookmarks once, and this tab will gently surface what
-                to read next.
+                No bookmarks found. Bookmark some posts on X, then sync to see
+                them here.
               </p>
               <button
                 type="button"
                 onClick={onSync}
-                disabled={syncing}
                 className="breath-btn breath-btn--primary mt-6"
               >
-                {syncing ? "Syncing..." : "Sync bookmarks"}
+                Sync bookmarks
               </button>
             </article>
           )}
         </footer>
 
-        <button
-          type="button"
-          onClick={onOpenSettings}
-          className="breath-icon-btn breath-settings-btn"
-          aria-label="Open settings"
-          title="Settings"
-        >
-          {SETTINGS_ICON}
-        </button>
+        <div className="breath-settings-btn">
+          <button
+            data-tour="settings-btn"
+            type="button"
+            onClick={onOpenSettings}
+            className="breath-icon-btn"
+            aria-label="Open settings"
+            title="Settings"
+          >
+            {SETTINGS_ICON}
+          </button>
+        </div>
 
-        {showWallpaper && (
+        {showWallpaper && wallpaperTitle && (
           <div className="breath-wallpaper-nav">
-            {(hasPrev || hasNext) && (
-              <div className="breath-wallpaper-arrows">
-                <button
-                  type="button"
-                  className="breath-wallpaper-arrow"
-                  onClick={prevWallpaper}
-                  disabled={!hasPrev}
-                  aria-label="Previous wallpaper"
-                >
-                  {CHEVRON_LEFT_ICON}
-                </button>
-                <button
-                  type="button"
-                  className="breath-wallpaper-arrow"
-                  onClick={nextWallpaper}
-                  disabled={!hasNext}
-                  aria-label="Next wallpaper"
-                >
-                  {CHEVRON_RIGHT_ICON}
-                </button>
-              </div>
-            )}
-            {wallpaperTitle && (
-              <p className="breath-wallpaper-label">{wallpaperTitle}</p>
-            )}
+            <p className="breath-wallpaper-label">{wallpaperTitle}</p>
           </div>
         )}
       </div>

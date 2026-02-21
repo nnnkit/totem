@@ -10,15 +10,26 @@ import { RichTextBlock } from "./TweetText";
 import { TweetMedia } from "./TweetMedia";
 import { TweetQuote } from "./TweetQuote";
 import { TweetArticle } from "./TweetArticle";
-import { TweetUrls } from "./TweetUrls";
-import { TweetMetrics } from "./TweetMetrics";
+import { TweetLinks } from "./TweetLinks";
+
 import { TweetRecommendations } from "./TweetRecommendations";
 import type { ReaderTweet } from "./types";
+import { cn } from "../../lib/cn";
 
 interface TweetBodyProps {
   tweet: ReaderTweet;
   compact?: boolean;
   sectionIdPrefix?: string;
+}
+
+function stripCardUrls(text: string, urls: { url: string; expandedUrl: string }[]): string {
+  if (urls.length === 0) return text;
+  let result = text;
+  for (const u of urls) {
+    if (u.url) result = result.replaceAll(u.url, "");
+    if (u.expandedUrl) result = result.replaceAll(u.expandedUrl, "");
+  }
+  return result.replace(/\n+$/, "").trimEnd();
 }
 
 function TweetBody({ tweet, compact = false, sectionIdPrefix }: TweetBodyProps) {
@@ -35,7 +46,7 @@ function TweetBody({ tweet, compact = false, sectionIdPrefix }: TweetBodyProps) 
         {repostComment && (
           <RichTextBlock text={repostComment} compact={compact} style="tweet" />
         )}
-        <div className="mt-4 rounded-2xl border border-x-border p-4">
+        <div className="mt-4 rounded-xl border border-x-border p-4">
           <p className="text-xs uppercase text-x-text-secondary">
             Reposted content
           </p>
@@ -76,11 +87,13 @@ function TweetBody({ tweet, compact = false, sectionIdPrefix }: TweetBodyProps) 
     hasArticle && (isArticleKind || !textMatchesArticle || hasArticleBlocks);
   const showText = !((isArticleKind || hasArticleBlocks) && textMatchesArticle);
 
+  const displayText = stripCardUrls(tweet.text, tweet.urls);
+
   return (
     <>
       {showText && (
         <RichTextBlock
-          text={tweet.text}
+          text={displayText}
           compact={compact}
           style="tweet"
           sectionIdPrefix={sectionIdPrefix}
@@ -98,9 +111,17 @@ function TweetBody({ tweet, compact = false, sectionIdPrefix }: TweetBodyProps) 
         />
       )}
 
-      <TweetUrls urls={tweet.urls} preferArticleButton={Boolean(showArticle)} />
+      <TweetLinks urls={tweet.urls} />
     </>
   );
+}
+
+function formatThreadDate(timestamp: number): string {
+  return new Date(timestamp).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
 interface ThreadTweetsProps {
@@ -111,24 +132,51 @@ function ThreadTweets({ tweets }: ThreadTweetsProps) {
   if (tweets.length === 0) return null;
 
   return (
-    <section className="mt-8 space-y-4">
-      <p className="text-xs font-semibold uppercase tracking-wider text-x-text-secondary">
+    <section className="mt-8">
+      <p className="mb-4 text-xs font-semibold uppercase text-x-text-secondary">
         Thread
       </p>
-      {tweets.map((tweet, index) => (
-        <article
-          key={tweet.tweetId}
-          id={`section-thread-${index + 1}`}
-          className="rounded-2xl border border-x-border p-4"
-        >
-          <div className="mb-3 flex items-center gap-2 text-xs text-x-text-secondary">
-            <span className="font-medium text-x-text">#{index + 1}</span>
-            <span>•</span>
-            <span>@{tweet.author.screenName}</span>
-          </div>
-          <TweetBody tweet={tweet} compact />
-        </article>
-      ))}
+      <div>
+        {tweets.map((tweet, index) => {
+          const isLast = index === tweets.length - 1;
+          return (
+            <article
+              key={tweet.tweetId}
+              id={`section-thread-${index + 1}`}
+              className="relative flex gap-3"
+            >
+              <div className="flex flex-col items-center">
+                <img
+                  src={tweet.author.profileImageUrl}
+                  alt=""
+                  className="size-10 shrink-0 rounded-full"
+                  loading="lazy"
+                />
+                {!isLast && (
+                  <div className="mt-1 w-0.5 flex-1 bg-x-border" />
+                )}
+              </div>
+              <div className={cn("min-w-0 flex-1", !isLast && "pb-5")}>
+                <div className="flex items-center gap-1.5 text-sm">
+                  <span className="truncate font-bold text-x-text">
+                    {tweet.author.name}
+                  </span>
+                  <span className="truncate text-x-text-secondary">
+                    @{tweet.author.screenName}
+                  </span>
+                  <span className="text-x-text-secondary">&middot;</span>
+                  <span className="shrink-0 text-x-text-secondary">
+                    {formatThreadDate(tweet.createdAt)}
+                  </span>
+                </div>
+                <div className="mt-1">
+                  <TweetBody tweet={tweet} compact />
+                </div>
+              </div>
+            </article>
+          );
+        })}
+      </div>
     </section>
   );
 }
@@ -143,9 +191,11 @@ interface Props {
   onOpenBookmark: (bookmark: Bookmark) => void;
   onShuffle?: () => void;
   tweetSectionIdPrefix?: string;
+  onToggleRead?: () => void;
+  isMarkedRead?: boolean;
 }
 
-export function TweetRenderer({
+export function TweetContent({
   displayBookmark,
   displayKind,
   detailThread,
@@ -155,13 +205,16 @@ export function TweetRenderer({
   onOpenBookmark,
   onShuffle,
   tweetSectionIdPrefix,
+  onToggleRead,
+  isMarkedRead,
 }: Props) {
+  const viewOnXUrl = `https://x.com/${displayBookmark.author.screenName}/status/${displayBookmark.tweetId}`;
+
   return (
     <div>
       <TweetHeader
         author={displayBookmark.author}
         displayKind={displayKind}
-        isLongText={displayBookmark.isLongText}
         readingMinutes={estimateReadingMinutes(displayBookmark)}
       />
 
@@ -171,11 +224,17 @@ export function TweetRenderer({
           sectionIdPrefix={tweetSectionIdPrefix}
         />
         <ThreadTweets tweets={detailThread} />
+        <TweetLinks
+          urls={[]}
+          viewOnXUrl={viewOnXUrl}
+          onToggleRead={onToggleRead}
+          isMarkedRead={isMarkedRead}
+        />
       </div>
 
       {detailLoading && (
         <div className="mt-6 flex items-center gap-3 px-6 py-4 text-sm text-x-text-secondary">
-          <div className="size-4 animate-spin rounded-full border-2 border-x-blue border-t-transparent" />
+          <div className="size-4 animate-spin rounded-full border-2 border-accent border-t-transparent" />
           Loading details...
         </div>
       )}
@@ -187,8 +246,6 @@ export function TweetRenderer({
       )}
 
       <div className="px-6">
-        <TweetMetrics bookmark={displayBookmark} />
-
         <TweetRecommendations
           relatedBookmarks={relatedBookmarks}
           onOpenBookmark={onOpenBookmark}

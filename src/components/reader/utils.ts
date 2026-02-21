@@ -1,13 +1,13 @@
 import type { ArticleContentBlock } from "../../types";
 import type { ReaderTweet } from "./types";
 import type { TweetKind } from "../../types";
-export { formatNumber } from "../../lib/format";
+import { cn } from "../../lib/cn";
 export { compactPreview, normalizeText, truncateLabel } from "../../lib/text";
 
 export const baseTweetTextClass =
-  "break-words [&_a]:text-x-blue [&_a:hover]:underline";
+  "break-words [&_a]:text-accent [&_a:hover]:underline";
 
-function sanitizeUrl(url: string): string {
+export function sanitizeUrl(url: string): string {
   if (/^https?:\/\//i.test(url)) return url;
   return "";
 }
@@ -41,13 +41,13 @@ export function escapeHtml(text: string): string {
 export function textClassForMode(
   compact = false,
 ): string {
-  return `${baseTweetTextClass} text-x-text ${compact ? "text-[0.99rem] leading-7" : "text-lg leading-[1.75]"}`;
+  return cn(baseTweetTextClass, "text-x-text", compact ? "text-base leading-7" : "text-lg leading-relaxed");
 }
 
 export function kindPillClass(kind: TweetKind): string {
   if (kind === "repost")
     return "bg-pill-green-bg text-pill-green-text border-pill-green-border";
-  if (kind === "reply") return "bg-x-blue/12 text-x-blue border-x-blue/40";
+  if (kind === "reply") return "bg-accent/12 text-accent border-accent/40";
   if (kind === "thread")
     return "bg-pill-amber-bg text-pill-amber-text border-pill-amber-border";
   if (kind === "quote")
@@ -133,6 +133,7 @@ export function renderBlockInlineContent(
   const length = text.length;
   const bold = new Uint8Array(length);
   const italic = new Uint8Array(length);
+  const code = new Uint8Array(length);
   const entityKey: (number | -1)[] = new Array(length).fill(-1);
 
   for (const range of inlineStyleRanges) {
@@ -141,6 +142,7 @@ export function renderBlockInlineContent(
     for (let i = range.offset; i < end; i++) {
       if (style === "BOLD") bold[i] = 1;
       if (style === "ITALIC") italic[i] = 1;
+      if (style === "CODE") code[i] = 1;
     }
   }
 
@@ -155,6 +157,7 @@ export function renderBlockInlineContent(
     text: string;
     bold: boolean;
     italic: boolean;
+    code: boolean;
     entityKey: number;
   };
   const segments: Segment[] = [];
@@ -164,6 +167,7 @@ export function renderBlockInlineContent(
       text: text[i],
       bold: bold[i] === 1,
       italic: italic[i] === 1,
+      code: code[i] === 1,
       entityKey: entityKey[i],
     };
     const last = segments[segments.length - 1];
@@ -171,6 +175,7 @@ export function renderBlockInlineContent(
       last &&
       last.bold === seg.bold &&
       last.italic === seg.italic &&
+      last.code === seg.code &&
       last.entityKey === seg.entityKey
     ) {
       last.text += seg.text;
@@ -185,6 +190,7 @@ export function renderBlockInlineContent(
       if (seg.entityKey < 0) {
         html = linkifyMentionsAndTags(html);
       }
+      if (seg.code) html = `<code>${html}</code>`;
       if (seg.bold) html = `<strong>${html}</strong>`;
       if (seg.italic) html = `<em>${html}</em>`;
       if (seg.entityKey >= 0) {

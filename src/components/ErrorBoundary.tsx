@@ -28,14 +28,14 @@ export class ErrorBoundary extends Component<Props, State> {
       return (
         <div className="flex min-h-dvh items-center justify-center bg-x-bg p-8">
           <div className="max-w-sm text-center">
-            <h1 className="text-lg font-semibold text-x-text">Something went wrong</h1>
-            <p className="mt-2 text-sm text-x-text-secondary">
+            <h1 className="text-lg font-semibold text-x-text text-balance">Something went wrong</h1>
+            <p className="mt-2 text-sm text-x-text-secondary text-pretty">
               Try reloading the page.
             </p>
             <button
               type="button"
               onClick={() => window.location.reload()}
-              className="mt-4 rounded-lg bg-x-blue px-4 py-2 text-sm font-medium text-white"
+              className="mt-4 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white"
             >
               Reload
             </button>

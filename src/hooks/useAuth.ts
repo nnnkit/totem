@@ -9,29 +9,58 @@ interface UseAuthReturn {
   startLogin: () => Promise<void>;
 }
 
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error("AUTH_TIMEOUT")), timeoutMs);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
+}
+
 export function useAuth(): UseAuthReturn {
   const [phase, setPhase] = useState<AuthPhase>("loading");
   const captureStarted = useRef(false);
+  const attemptedNoUserCapture = useRef(false);
   const recheckTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const doCheck = useCallback(async () => {
     try {
-      const [status, resetGuard] = await Promise.all([
-        checkAuth(),
-        chrome.storage.local.get([MANUAL_LOGIN_REQUIRED_KEY]),
-      ]);
+      const [status, resetGuard] = await withTimeout(
+        Promise.all([
+          checkAuth(),
+          chrome.storage.local.get([MANUAL_LOGIN_REQUIRED_KEY]),
+        ]),
+        8000,
+      );
 
       const requiresManualLogin = Boolean(resetGuard[MANUAL_LOGIN_REQUIRED_KEY]);
-      if (requiresManualLogin) {
+
+      if (!status.hasUser) {
+        if (!attemptedNoUserCapture.current) {
+          attemptedNoUserCapture.current = true;
+          captureStarted.current = true;
+          setPhase("connecting");
+          startAuthCapture().catch(() => {});
+          recheckTimer.current = setTimeout(doCheck, 1200);
+          return;
+        }
         captureStarted.current = false;
         setPhase("need_login");
         return;
       }
 
-      if (!status.hasUser) {
-        captureStarted.current = false;
-        setPhase("need_login");
-        return;
+      attemptedNoUserCapture.current = false;
+
+      if (requiresManualLogin) {
+        chrome.storage.local.remove([MANUAL_LOGIN_REQUIRED_KEY]).catch(() => {});
       }
 
       if (status.hasAuth && status.hasQueryId) {
@@ -53,7 +82,10 @@ export function useAuth(): UseAuthReturn {
       }
     } catch {
       captureStarted.current = false;
-      setPhase("need_login");
+      // Runtime/service-worker checks can fail transiently. Keep retrying instead
+      // of forcing the user into manual login immediately.
+      setPhase("connecting");
+      recheckTimer.current = setTimeout(doCheck, 1000);
     }
   }, []);
 
@@ -97,6 +129,7 @@ export function useAuth(): UseAuthReturn {
       // Ignore storage failures and continue with auth check fallback.
     }
     captureStarted.current = false;
+    attemptedNoUserCapture.current = false;
     await doCheck();
   }, [doCheck]);
 

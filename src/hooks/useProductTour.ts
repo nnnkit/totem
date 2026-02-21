@@ -7,14 +7,9 @@ const TOUR_KEY = "xbt_tour_completed";
 interface Props {
   enabled: boolean;
   hasBookmarks: boolean;
-  showSearchBar: boolean;
 }
 
-export function useProductTour({
-  enabled,
-  hasBookmarks,
-  showSearchBar,
-}: Props) {
+export function useProductTour({ enabled, hasBookmarks }: Props) {
   const startedRef = useRef(false);
 
   useEffect(() => {
@@ -23,54 +18,39 @@ export function useProductTour({
 
     startedRef.current = true;
 
-    const timeout = window.setTimeout(() => {
-      const steps: DriveStep[] = [
-        {
-          element: '[data-tour="bookmark-card"]',
-          popover: {
-            title: "Browse bookmarks",
-            description:
-              "Use <kbd>←</kbd> <kbd>→</kbd> to browse through your saved posts",
-          },
+    const steps: DriveStep[] = [
+      {
+        element: '[data-tour="bookmark-card"]',
+        popover: {
+          title: "Your bookmarks",
+          description:
+            "Click or press <kbd>O</kbd> to open this bookmark. Once inside, use <kbd>←</kbd> <kbd>→</kbd> to navigate between posts and <kbd>Esc</kbd> to come back",
         },
-        {
-          element: '[data-tour="bookmark-card"]',
-          popover: {
-            title: "Open to read",
-            description:
-              "Press <kbd>Enter</kbd> or <kbd>O</kbd> to open any bookmark in the reader",
-          },
+      },
+      {
+        element: '[data-tour="open-all-btn"]',
+        popover: {
+          title: "All bookmarks",
+          description: "Press <kbd>L</kbd> to see all your saved bookmarks",
         },
-        {
-          element: '[data-tour="reading-btn"]',
-          popover: {
-            title: "Reading list",
-            description:
-              "Press <kbd>L</kbd> to see all bookmarks organized by reading progress",
-          },
+      },
+      {
+        element: '[data-tour="surprise-btn"]',
+        popover: {
+          title: "Surprise me",
+          description: "Press <kbd>S</kbd> to open a random bookmark",
         },
-      ];
-
-      if (showSearchBar) {
-        steps.push({
-          element: '[data-tour="search-bar"]',
-          popover: {
-            title: "Search",
-            description:
-              "Press <kbd>/</kbd> to search through your bookmarks",
-          },
-        });
-      }
-
-      steps.push({
+      },
+      {
         element: '[data-tour="settings-btn"]',
         popover: {
           title: "Settings",
-          description:
-            "Customize your theme, search bar, and quick links",
+          description: "Customize your theme, search bar, and quick links",
         },
-      });
+      },
+    ];
 
+    const timeout = window.setTimeout(() => {
       const tour = driver({
         popoverClass: "xbt-tour-popover",
         stagePadding: 6,
@@ -88,5 +68,5 @@ export function useProductTour({
     }, 800);
 
     return () => window.clearTimeout(timeout);
-  }, [enabled, hasBookmarks, showSearchBar]);
+  }, [enabled, hasBookmarks]);
 }

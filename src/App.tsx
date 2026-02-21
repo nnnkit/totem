@@ -1,15 +1,16 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { useAuth } from "./hooks/useAuth";
 import { useBookmarks, useDetailedTweetIds } from "./hooks/useBookmarks";
 import { useTheme } from "./hooks/useTheme";
 import { useSettings } from "./hooks/useSettings";
 import { useKeyboardNavigation } from "./hooks/useKeyboard";
+import { ensureReadingProgressExists, markReadingProgressCompleted, markReadingProgressUncompleted } from "./db";
 import { pickRelatedBookmarks } from "./lib/related";
 import { resetLocalData } from "./lib/reset";
 import { Onboarding } from "./components/Onboarding";
 import { NewTabHome } from "./components/NewTabHome";
-import { ReaderView } from "./components/ReaderView";
-import { ReadingView } from "./components/ReadingView";
+import { BookmarkReader } from "./components/BookmarkReader";
+import { BookmarksList, type ReadingTab } from "./components/BookmarksList";
 import { SettingsModal } from "./components/SettingsModal";
 import { useContinueReading } from "./hooks/useContinueReading";
 import type { Bookmark } from "./types";
@@ -33,6 +34,15 @@ export default function App() {
     null,
   );
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [readingTab, setReadingTab] = useState<ReadingTab>(() => {
+    const stored = localStorage.getItem("readingTab");
+    if (stored === "unread" || stored === "continue" || stored === "read") return stored;
+    return "unread";
+  });
+  const handleReadingTabChange = useCallback((tab: ReadingTab) => {
+    setReadingTab(tab);
+    localStorage.setItem("readingTab", tab);
+  }, []);
   const [shuffleSeed, setShuffleSeed] = useState(0);
 
   if (
@@ -49,11 +59,17 @@ export default function App() {
     [selectedBookmark, bookmarks, shuffleSeed],
   );
 
+  const openedTweetIds = useMemo(
+    () => new Set(continueReading.map((item) => item.progress.tweetId)),
+    [continueReading],
+  );
+
   const openBookmark = useCallback(
     (bookmark: Bookmark) => {
+      ensureReadingProgressExists(bookmark.tweetId).then(refreshContinueReading);
       setSelectedBookmark(bookmark);
     },
-    [],
+    [refreshContinueReading],
   );
 
   const selectedIndex = selectedBookmark
@@ -90,13 +106,24 @@ export default function App() {
     setSelectedBookmark,
   });
 
-  if (phase === "loading") {
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const readTweetId = params.get("read");
+    if (!readTweetId || bookmarks.length === 0) return;
+    const target = bookmarks.find((b) => b.tweetId === readTweetId);
+    if (target) {
+      openBookmark(target);
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, [bookmarks, openBookmark]);
+
+  if (phase === "loading" || (isReady && syncState.phase === "idle")) {
     return (
       <div className="flex items-center justify-center min-h-dvh bg-x-bg">
         <div className="animate-pulse">
           <svg
             viewBox="0 0 24 24"
-            className="w-12 h-12 text-x-blue"
+            className="size-12 text-accent"
             fill="currentColor"
           >
             <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
@@ -113,7 +140,8 @@ export default function App() {
   const mainContent = (() => {
     if (selectedBookmark) {
       return (
-        <ReaderView
+        <BookmarkReader
+          key={selectedBookmark.tweetId}
           bookmark={selectedBookmark}
           relatedBookmarks={relatedBookmarks}
           onOpenBookmark={openBookmark}
@@ -127,15 +155,21 @@ export default function App() {
           }}
           themePreference={themePreference}
           onThemeChange={setThemePreference}
+          onMarkAsRead={markReadingProgressCompleted}
+          onMarkAsUnread={markReadingProgressUncompleted}
         />
       );
     }
     if (view === "reading") {
       return (
-        <ReadingView
+        <BookmarksList
           continueReadingItems={continueReading}
           unreadBookmarks={allUnread}
+          syncing={syncState.phase === "syncing"}
+          activeTab={readingTab}
+          onTabChange={handleReadingTabChange}
           onOpenBookmark={openBookmark}
+          onSync={refresh}
           onBack={() => setView("home")}
         />
       );
@@ -143,12 +177,14 @@ export default function App() {
     return (
       <NewTabHome
         bookmarks={bookmarks}
+        syncState={syncState}
+        onSync={refresh}
         detailedTweetIds={detailedTweetIds}
-        syncing={syncState.phase === "syncing"}
         showTopSites={settings.showTopSites}
         showSearchBar={settings.showSearchBar}
         topSitesLimit={settings.topSitesLimit}
-        onSync={refresh}
+        backgroundMode={settings.backgroundMode}
+        openedTweetIds={openedTweetIds}
         onOpenBookmark={openBookmark}
         onOpenSettings={() => setSettingsOpen(true)}
         onOpenReading={() => setView("reading")}
@@ -166,7 +202,6 @@ export default function App() {
         onUpdateSettings={updateSettings}
         themePreference={themePreference}
         onThemePreferenceChange={setThemePreference}
-        bookmarks={bookmarks}
         onResetLocalData={handleResetLocalData}
       />
     </>

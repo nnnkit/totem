@@ -1,3 +1,4 @@
+import { Shuffle } from "@phosphor-icons/react";
 import type { Bookmark } from "../../types";
 import { compactPreview } from "./utils";
 
@@ -25,27 +26,11 @@ export function TweetRecommendations({
             <button
               type="button"
               onClick={onShuffle}
-              className="inline-flex items-center gap-1.5 rounded-full border border-x-border bg-x-card px-2.5 py-1 text-xs font-medium text-x-text-secondary transition-colors hover:bg-x-hover hover:text-x-blue"
+              className="inline-flex items-center gap-1.5 rounded-md border border-x-border bg-x-card px-2.5 py-1 text-xs font-medium text-x-text-secondary transition-colors hover:bg-x-hover hover:text-accent"
               aria-label="Shuffle recommendations"
               title="Shuffle recommendations"
             >
-              <svg
-                viewBox="0 0 24 24"
-                className="size-4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.9"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <path d="M18 4l3 3-3 3" />
-                <path d="M18 17l3 3-3 3" />
-                <path d="M3 7h6a4 4 0 0 1 4 4" />
-                <path d="M3 20h6a4 4 0 0 0 4-4" />
-                <path d="M14 11h7" />
-                <path d="M14 20h7" />
-              </svg>
+              <Shuffle className="size-4" />
               Shuffle
             </button>
           )}
@@ -58,7 +43,7 @@ export function TweetRecommendations({
             key={related.tweetId}
             type="button"
             onClick={() => onOpenBookmark(related)}
-            className="w-full rounded-xl border border-x-border bg-x-card/60 p-2.5 text-left transition-colors hover:bg-x-hover"
+            className="w-full rounded-lg border border-x-border bg-x-card/60 p-2.5 text-left transition-colors hover:bg-x-hover"
           >
             <div className="flex items-center gap-1.5">
               <img
@@ -71,7 +56,7 @@ export function TweetRecommendations({
                 <p className="truncate text-xs font-semibold text-x-text">
                   {related.author.name}
                 </p>
-                <p className="truncate text-[11px] text-x-text-secondary">
+                <p className="truncate text-xs text-x-text-secondary">
                   @{related.author.screenName}
                 </p>
               </div>

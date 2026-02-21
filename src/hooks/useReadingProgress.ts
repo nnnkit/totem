@@ -7,33 +7,39 @@ interface UseReadingProgressOptions {
   contentReady: boolean;
 }
 
+interface UseReadingProgressResult {
+  isCompleted: boolean;
+}
+
 export function useReadingProgress({
   tweetId,
   contentReady,
-}: UseReadingProgressOptions): void {
+}: UseReadingProgressOptions): UseReadingProgressResult {
   const savedProgress = useRef<ReadingProgress | null>(null);
   const restoredRef = useRef(false);
-  const tweetIdRef = useRef(tweetId);
   const debounceTimer = useRef<number | null>(null);
+  const shortContentTimer = useRef<number | null>(null);
   const [progressLoaded, setProgressLoaded] = useState(false);
+  const [isCompleted, setIsCompleted] = useState(false);
 
-  // Reset on tweet change
   useEffect(() => {
     let cancelled = false;
+    const currentTweetId = tweetId;
 
-    tweetIdRef.current = tweetId;
     restoredRef.current = false;
     savedProgress.current = null;
     setProgressLoaded(false);
+    setIsCompleted(false);
 
-    getReadingProgress(tweetId)
+    getReadingProgress(currentTweetId)
       .then((progress) => {
-        if (cancelled || tweetIdRef.current !== tweetId) return;
+        if (cancelled) return;
         savedProgress.current = progress;
+        if (progress?.completed) setIsCompleted(true);
       })
       .catch(() => {})
       .finally(() => {
-        if (!cancelled && tweetIdRef.current === tweetId) {
+        if (!cancelled) {
           setProgressLoaded(true);
         }
       });
@@ -43,7 +49,6 @@ export function useReadingProgress({
     };
   }, [tweetId]);
 
-  // Scroll restoration
   useEffect(() => {
     if (!contentReady || !progressLoaded || restoredRef.current) return;
     restoredRef.current = true;
@@ -55,72 +60,80 @@ export function useReadingProgress({
     }
 
     requestAnimationFrame(() => {
-      const contentEl = document.getElementById("section-main-tweet");
+      const currentHeight = document.documentElement.scrollHeight;
+      const heightChanged =
+        progress.scrollHeight > 0 &&
+        Math.abs(currentHeight - progress.scrollHeight) /
+          progress.scrollHeight >
+          0.15;
 
-      if (progress.contentBased && contentEl && contentEl.offsetHeight > 0) {
-        // Content-relative restoration
-        const contentTop = contentEl.getBoundingClientRect().top + window.scrollY;
-        const readPixels = (progress.scrollPercent / 100) * contentEl.offsetHeight;
-        const targetScrollY = contentTop - window.innerHeight + readPixels;
-        window.scrollTo(0, Math.max(0, targetScrollY));
+      if (heightChanged) {
+        const ratio =
+          progress.scrollHeight > 0
+            ? progress.scrollY / progress.scrollHeight
+            : 0;
+        window.scrollTo(0, ratio * currentHeight);
       } else {
-        // Legacy restoration
-        const currentHeight = document.documentElement.scrollHeight;
-        const heightChanged =
-          progress.scrollHeight > 0 &&
-          Math.abs(currentHeight - progress.scrollHeight) / progress.scrollHeight > 0.15;
-
-        if (heightChanged) {
-          const targetY = (progress.scrollPercent / 100) * currentHeight;
-          window.scrollTo(0, targetY);
-        } else {
-          window.scrollTo(0, progress.scrollY);
-        }
+        window.scrollTo(0, progress.scrollY);
       }
     });
   }, [contentReady, progressLoaded, tweetId]);
 
-  // Scroll tracking
   useEffect(() => {
+    const currentTweetId = tweetId;
+
     const saveProgress = () => {
       const scrollY = window.scrollY;
       const scrollHeight = document.documentElement.scrollHeight;
+      const clientHeight = document.documentElement.clientHeight;
+      const maxScroll = scrollHeight - clientHeight;
+      const completed = maxScroll > 10 && scrollY + clientHeight >= scrollHeight - 50;
 
-      let scrollPercent: number;
-      let contentBased = false;
-
-      const contentEl = document.getElementById("section-main-tweet");
-      if (contentEl && contentEl.offsetHeight > 0) {
-        const rect = contentEl.getBoundingClientRect();
-        const readPixels = window.innerHeight - rect.top;
-        scrollPercent = Math.round(
-          Math.min(100, Math.max(0, (readPixels / rect.height) * 100))
-        );
-        contentBased = true;
-      } else {
-        const clientHeight = document.documentElement.clientHeight;
-        const maxScroll = scrollHeight - clientHeight;
-        scrollPercent =
-          maxScroll > 0 ? Math.round((scrollY / maxScroll) * 100) : 0;
-      }
-
-      const completed = scrollPercent >= 90;
-
+      const existing = savedProgress.current;
       const progress: ReadingProgress = {
-        tweetId: tweetIdRef.current,
-        scrollPercent,
+        tweetId: currentTweetId,
+        openedAt: existing?.openedAt ?? Date.now(),
+        lastReadAt: Date.now(),
         scrollY,
         scrollHeight,
-        lastReadAt: Date.now(),
-        completed,
-        contentBased,
+        completed: existing?.completed || completed,
       };
 
       savedProgress.current = progress;
       upsertReadingProgress(progress);
     };
 
+    const checkShortContent = () => {
+      const scrollHeight = document.documentElement.scrollHeight;
+      const clientHeight = document.documentElement.clientHeight;
+      const maxScroll = scrollHeight - clientHeight;
+
+      if (maxScroll <= 10) {
+        shortContentTimer.current = window.setTimeout(() => {
+          const existing = savedProgress.current;
+          const progress: ReadingProgress = {
+            tweetId: currentTweetId,
+            openedAt: existing?.openedAt ?? Date.now(),
+            lastReadAt: Date.now(),
+            scrollY: 0,
+            scrollHeight: document.documentElement.scrollHeight,
+            completed: true,
+          };
+          savedProgress.current = progress;
+          upsertReadingProgress(progress);
+        }, 3000);
+      }
+    };
+
+    if (contentReady) {
+      checkShortContent();
+    }
+
     const onScroll = () => {
+      if (shortContentTimer.current !== null) {
+        window.clearTimeout(shortContentTimer.current);
+        shortContentTimer.current = null;
+      }
       if (debounceTimer.current !== null) {
         window.clearTimeout(debounceTimer.current);
       }
@@ -135,8 +148,13 @@ export function useReadingProgress({
         window.clearTimeout(debounceTimer.current);
         debounceTimer.current = null;
       }
-      // Final save on unmount
+      if (shortContentTimer.current !== null) {
+        window.clearTimeout(shortContentTimer.current);
+        shortContentTimer.current = null;
+      }
       saveProgress();
     };
-  }, [tweetId]);
+  }, [tweetId, contentReady]);
+
+  return { isCompleted };
 }
