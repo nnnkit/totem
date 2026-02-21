@@ -747,9 +747,22 @@ async function handleDeleteBookmark(tweetId, _retried = false) {
     "tw_delete_query_id",
   ]);
   if (!stored.tw_auth_headers?.authorization) throw new Error("NO_AUTH");
-  if (!stored.tw_delete_query_id) throw new Error("NO_QUERY_ID");
 
-  const queryId = stored.tw_delete_query_id;
+  let queryId = stored.tw_delete_query_id;
+
+  // Fallback: look up from GraphQL catalog
+  if (!queryId) {
+    const catalog = await loadGraphqlCatalog();
+    for (const entry of Object.values(catalog.endpoints || {})) {
+      if (entry && entry.operation === "DeleteBookmark" && entry.queryId) {
+        queryId = entry.queryId;
+        chrome.storage.local.set({ tw_delete_query_id: queryId });
+        break;
+      }
+    }
+  }
+
+  if (!queryId) throw new Error("NO_QUERY_ID");
   const requestHeaders = await buildHeaders();
 
   const url = `https://x.com/i/api/graphql/${queryId}/DeleteBookmark`;
@@ -1095,6 +1108,21 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     handleAckBookmarkEvents(message.ids)
       .then(sendResponse)
       .catch((err) => sendResponse({ error: err.message }));
+    return true;
+  }
+  if (message.type === "STORE_QUERY_IDS") {
+    const updates = {};
+    if (typeof message.ids?.DeleteBookmark === "string" && message.ids.DeleteBookmark) {
+      updates.tw_delete_query_id = message.ids.DeleteBookmark;
+    }
+    if (typeof message.ids?.CreateBookmark === "string" && message.ids.CreateBookmark) {
+      updates.tw_create_query_id = message.ids.CreateBookmark;
+    }
+    if (Object.keys(updates).length > 0) {
+      chrome.storage.local.set(updates).then(() => sendResponse({ ok: true })).catch(() => sendResponse({ ok: false }));
+    } else {
+      sendResponse({ ok: true });
+    }
     return true;
   }
   if (message.type === "REAUTH_STATUS") {

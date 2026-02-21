@@ -1,3 +1,9 @@
+const SNOWFLAKE_EPOCH = 1288834974657n;
+
+export function sortIndexToTimestamp(sortIndex: string): number {
+  return Number((BigInt(sortIndex) >> 22n) + SNOWFLAKE_EPOCH);
+}
+
 export function timeAgo(ts: number): string {
   const diffMs = Date.now() - ts;
   if (!Number.isFinite(diffMs) || diffMs < 0) return "just now";

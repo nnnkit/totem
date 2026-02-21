@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { usePopupBookmarks } from "./hooks/usePopupBookmarks";
+import { useBookmarkSearch } from "./hooks/useBookmarkSearch";
 import { useTheme } from "./hooks/useTheme";
 import { PopupHeader } from "./components/popup/PopupHeader";
 import { PopupSuggestion } from "./components/popup/PopupSuggestion";
@@ -13,6 +14,7 @@ export function PopupApp() {
   useTheme();
   const { bookmarks, stats, randomBookmark, shuffleSuggestion, syncing, sync, isLoading } =
     usePopupBookmarks();
+  const { query, setQuery, results, isSearching } = useBookmarkSearch(bookmarks);
   const [activeTab, setActiveTab] = useState<Tab>("discover");
 
   const openBookmark = (bookmark: Bookmark) => {
@@ -28,22 +30,42 @@ export function PopupApp() {
 
   if (isLoading) {
     return (
-      <div className="flex h-48 items-center justify-center bg-x-bg">
-        <div className="animate-pulse">
-          <svg
-            viewBox="0 0 24 24"
-            className="size-8 text-accent"
-            fill="currentColor"
-          >
-            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-          </svg>
+      <div className="bg-x-bg">
+        <div className="animate-pulse px-4 pt-3 pb-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="h-4 w-20 rounded-md bg-x-border/50" />
+              <div className="h-5 w-8 rounded-md bg-x-border/40" />
+            </div>
+            <div className="size-7 rounded-md bg-x-border/30" />
+          </div>
+          <div className="mt-2.5 h-8 rounded-lg bg-x-border/30" />
+        </div>
+        <div className="px-3 pb-3">
+          <div className="rounded-xl border border-x-border/30 p-4">
+            <div className="h-5 w-20 rounded-md bg-x-border/40" />
+            <div className="mt-3 flex items-center gap-2.5">
+              <div className="size-8 rounded-full bg-x-border/40" />
+              <div className="flex-1 space-y-1.5">
+                <div className="h-3.5 w-24 rounded bg-x-border/40" />
+                <div className="h-3 w-16 rounded bg-x-border/30" />
+              </div>
+            </div>
+            <div className="mt-3 h-4 w-full rounded bg-x-border/40" />
+            <div className="mt-1.5 h-3 w-3/4 rounded bg-x-border/30" />
+            <div className="mt-3 flex items-center gap-2">
+              <div className="h-5 w-12 rounded-md bg-x-border/30" />
+              <div className="h-3 w-16 rounded bg-x-border/30" />
+            </div>
+            <div className="mt-4 h-10 w-full rounded-lg bg-x-border/30" />
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col bg-x-bg" style={{ maxHeight: 500 }}>
+    <div className="flex max-h-[500px] flex-col bg-x-bg">
       <PopupHeader
         stats={stats}
         activeTab={activeTab}
@@ -59,7 +81,13 @@ export function PopupApp() {
             onShuffle={shuffleSuggestion}
           />
         ) : (
-          <PopupBookmarkList bookmarks={bookmarks} onOpen={openBookmark} />
+          <PopupBookmarkList
+            bookmarks={results}
+            onOpen={openBookmark}
+            query={query}
+            onQueryChange={setQuery}
+            isSearching={isSearching}
+          />
         )}
       </div>
       <PopupFooter onOpenFullPage={openFullPage} />

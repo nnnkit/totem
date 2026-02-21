@@ -7,7 +7,7 @@ export { compactPreview, normalizeText, truncateLabel } from "../../lib/text";
 export const baseTweetTextClass =
   "break-words [&_a]:text-accent [&_a:hover]:underline";
 
-function sanitizeUrl(url: string): string {
+export function sanitizeUrl(url: string): string {
   if (/^https?:\/\//i.test(url)) return url;
   return "";
 }

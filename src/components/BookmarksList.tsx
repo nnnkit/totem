@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
-import { ArrowLeft, ArrowsClockwise } from "@phosphor-icons/react";
+import { ArrowLeft, ArrowsClockwise, MagnifyingGlass } from "@phosphor-icons/react";
 import type { Bookmark } from "../types";
 import type { ContinueReadingItem } from "../hooks/useContinueReading";
+import { useBookmarkSearch } from "../hooks/useBookmarkSearch";
 import { pickTitle, estimateReadingMinutes } from "../lib/bookmark-utils";
-import { timeAgo } from "../lib/time";
+import { timeAgo, sortIndexToTimestamp } from "../lib/time";
 import { cn } from "../lib/cn";
 
 export type ReadingTab = "continue" | "read" | "unread";
@@ -46,10 +47,40 @@ export function BookmarksList({
   }
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const tabListRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const continueTabRef = useRef<HTMLButtonElement>(null);
   const readTabRef = useRef<HTMLButtonElement>(null);
   const unreadTabRef = useRef<HTMLButtonElement>(null);
   const [indicator, setIndicator] = useState({ left: 0, width: 0 });
+
+  const allBookmarks = useMemo(() => {
+    const seen = new Set<string>();
+    const merged: Bookmark[] = [];
+    for (const item of continueReadingItems) {
+      if (!seen.has(item.bookmark.tweetId)) {
+        seen.add(item.bookmark.tweetId);
+        merged.push(item.bookmark);
+      }
+    }
+    for (const b of unreadBookmarks) {
+      if (!seen.has(b.tweetId)) {
+        seen.add(b.tweetId);
+        merged.push(b);
+      }
+    }
+    return merged;
+  }, [continueReadingItems, unreadBookmarks]);
+
+  const { query, setQuery, results, isSearching } = useBookmarkSearch(allBookmarks);
+
+  const matchingIds = useMemo(() => {
+    if (!isSearching) return null;
+    return new Set(results.map((b) => b.tweetId));
+  }, [isSearching, results]);
+
+  useHotkeys("/", () => {
+    searchInputRef.current?.focus();
+  }, { preventDefault: true });
 
   const tabRefs: Record<ReadingTab, React.RefObject<HTMLButtonElement | null>> = {
     continue: continueTabRef,
@@ -86,24 +117,43 @@ export function BookmarksList({
     return { inProgress: ip, completed: cp };
   }, [continueReadingItems]);
 
-  const newestUnreadId = useMemo(() => {
-    if (unreadBookmarks.length === 0) return null;
-    let newest = unreadBookmarks[0];
-    for (const b of unreadBookmarks) {
-      if (b.createdAt > newest.createdAt) newest = b;
+  const newBookmarkIds = useMemo(() => {
+    const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+    const ids = new Set<string>();
+    const all = [
+      ...unreadBookmarks,
+      ...continueReadingItems.map((item) => item.bookmark),
+    ];
+    for (const b of all) {
+      if (sortIndexToTimestamp(b.sortIndex) >= cutoff) ids.add(b.tweetId);
     }
-    return newest.tweetId;
-  }, [unreadBookmarks]);
+    return ids;
+  }, [unreadBookmarks, continueReadingItems]);
+
+  const filteredUnread = useMemo(
+    () => matchingIds ? unreadBookmarks.filter((b) => matchingIds.has(b.tweetId)) : unreadBookmarks,
+    [unreadBookmarks, matchingIds],
+  );
+
+  const filteredInProgress = useMemo(
+    () => matchingIds ? inProgress.filter((item) => matchingIds.has(item.bookmark.tweetId)) : inProgress,
+    [inProgress, matchingIds],
+  );
+
+  const filteredCompleted = useMemo(
+    () => matchingIds ? completed.filter((item) => matchingIds.has(item.bookmark.tweetId)) : completed,
+    [completed, matchingIds],
+  );
 
   const visibleBookmarks = useMemo(() => {
     if (activeTab === "continue") {
-      return inProgress.map((item) => item.bookmark);
+      return filteredInProgress.map((item) => item.bookmark);
     }
     if (activeTab === "read") {
-      return completed.map((item) => item.bookmark);
+      return filteredCompleted.map((item) => item.bookmark);
     }
-    return unreadBookmarks;
-  }, [activeTab, inProgress, completed, unreadBookmarks]);
+    return filteredUnread;
+  }, [activeTab, filteredInProgress, filteredCompleted, filteredUnread]);
 
   useEffect(() => {
     if (focusedIndex >= 0 && focusedIndex < itemRefs.current.length) {
@@ -154,7 +204,24 @@ export function BookmarksList({
             <ArrowLeft className="size-5" />
           </button>
           <span className="text-lg font-semibold text-x-text">Reading</span>
-          <div className="ml-auto">
+          <div className="relative ml-auto mr-2 max-w-xs flex-1">
+            <MagnifyingGlass className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-x-text-secondary" />
+            <input
+              ref={searchInputRef}
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") {
+                  setQuery("");
+                  searchInputRef.current?.blur();
+                }
+              }}
+              placeholder="Search bookmarks..."
+              className="w-full rounded-lg border border-x-border bg-x-card py-1.5 pl-9 pr-3 text-sm text-x-text placeholder:text-x-text-secondary/60 focus:border-accent focus:outline-none"
+            />
+          </div>
+          <div>
             <button
               type="button"
               onClick={onSync}
@@ -177,9 +244,9 @@ export function BookmarksList({
             className={cn("px-4 py-2.5 text-sm font-medium transition-colors", activeTab === "unread" ? "text-x-text" : "text-x-text-secondary hover:text-x-text")}
           >
             Unread
-            {unreadBookmarks.length > 0 && (
+            {filteredUnread.length > 0 && (
               <span className="ml-1.5 inline-flex size-5 items-center justify-center rounded-md bg-x-text-secondary/10 text-xs tabular-nums text-x-text-secondary">
-                {unreadBookmarks.length}
+                {filteredUnread.length}
               </span>
             )}
           </button>
@@ -192,9 +259,9 @@ export function BookmarksList({
             className={cn("px-4 py-2.5 text-sm font-medium transition-colors", activeTab === "continue" ? "text-x-text" : "text-x-text-secondary hover:text-x-text")}
           >
             Reading
-            {inProgress.length > 0 && (
+            {filteredInProgress.length > 0 && (
               <span className="ml-1.5 inline-flex size-5 items-center justify-center rounded-md bg-accent/10 text-xs tabular-nums text-accent">
-                {inProgress.length}
+                {filteredInProgress.length}
               </span>
             )}
           </button>
@@ -207,9 +274,9 @@ export function BookmarksList({
             className={cn("px-4 py-2.5 text-sm font-medium transition-colors", activeTab === "read" ? "text-x-text" : "text-x-text-secondary hover:text-x-text")}
           >
             Read
-            {completed.length > 0 && (
+            {filteredCompleted.length > 0 && (
               <span className="ml-1.5 inline-flex size-5 items-center justify-center rounded-md bg-x-success/10 text-xs tabular-nums text-x-success">
-                {completed.length}
+                {filteredCompleted.length}
               </span>
             )}
           </button>
@@ -223,11 +290,9 @@ export function BookmarksList({
       <main className={cn(containerWidthClass, "mx-auto px-4 pb-16 pt-6")}>
         {activeTab === "unread" && (
           <>
-            {unreadBookmarks.length > 0 ? (
+            {filteredUnread.length > 0 ? (
               <div className="space-y-2">
-                {unreadBookmarks.map((bookmark, idx) => {
-                  const isNewest = bookmark.tweetId === newestUnreadId;
-                  return (
+                {filteredUnread.map((bookmark, idx) => (
                   <button
                     key={bookmark.tweetId}
                     ref={(el) => { itemRefs.current[idx] = el; }}
@@ -245,7 +310,7 @@ export function BookmarksList({
                         <p className="truncate text-sm font-medium text-x-text">
                           {pickTitle(bookmark)}
                         </p>
-                        {isNewest && (
+                        {newBookmarkIds.has(bookmark.tweetId) && (
                           <span className="shrink-0 rounded-md bg-accent px-2 py-0.5 text-xs font-medium text-white">
                             New
                           </span>
@@ -260,8 +325,7 @@ export function BookmarksList({
                       </p>
                     </div>
                   </button>
-                  );
-                })}
+                ))}
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -282,9 +346,9 @@ export function BookmarksList({
 
         {activeTab === "continue" && (
           <>
-            {inProgress.length > 0 ? (
+            {filteredInProgress.length > 0 ? (
               <div className="space-y-2">
-                {inProgress.map(({ bookmark, progress }) => {
+                {filteredInProgress.map(({ bookmark, progress }) => {
                   const idx = continueIdx++;
                   return (
                   <button
@@ -300,9 +364,16 @@ export function BookmarksList({
                       className="size-10 shrink-0 rounded-full"
                     />
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-x-text">
-                        {pickTitle(bookmark)}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className="truncate text-sm font-medium text-x-text">
+                          {pickTitle(bookmark)}
+                        </p>
+                        {newBookmarkIds.has(bookmark.tweetId) && (
+                          <span className="shrink-0 rounded-md bg-accent px-2 py-0.5 text-xs font-medium text-white">
+                            New
+                          </span>
+                        )}
+                      </div>
                       <p className="mt-1 text-xs text-x-text-secondary">
                         @{bookmark.author.screenName} &middot; Last read{" "}
                         {timeAgo(progress.lastReadAt)}
@@ -331,9 +402,9 @@ export function BookmarksList({
 
         {activeTab === "read" && (
           <>
-            {completed.length > 0 ? (
+            {filteredCompleted.length > 0 ? (
               <div className="space-y-2">
-                {completed.map(({ bookmark, progress }) => {
+                {filteredCompleted.map(({ bookmark, progress }) => {
                   const idx = continueIdx++;
                   return (
                   <button
@@ -349,9 +420,16 @@ export function BookmarksList({
                       className="size-10 shrink-0 rounded-full"
                     />
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-x-text">
-                        {pickTitle(bookmark)}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className="truncate text-sm font-medium text-x-text">
+                          {pickTitle(bookmark)}
+                        </p>
+                        {newBookmarkIds.has(bookmark.tweetId) && (
+                          <span className="shrink-0 rounded-md bg-accent px-2 py-0.5 text-xs font-medium text-white">
+                            New
+                          </span>
+                        )}
+                      </div>
                       <p className="mt-1 text-xs text-x-text-secondary">
                         @{bookmark.author.screenName} &middot; Finished{" "}
                         {timeAgo(progress.lastReadAt)}

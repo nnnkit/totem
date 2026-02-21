@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import type { Bookmark, TweetKind } from "../../types";
 import { KIND_LABEL } from "./types";
-import { kindPillClass } from "./utils";
+import { kindPillClass, sanitizeUrl } from "./utils";
 import { cn } from "../../lib/cn";
 import { formatCompactNumber } from "../../lib/text";
 
@@ -12,7 +12,10 @@ interface TweetKindPillProps {
 function TweetKindPill({ kind }: TweetKindPillProps) {
   return (
     <span
-      className={cn("inline-flex items-center rounded-md border px-2.5 py-1 text-xs font-medium", kindPillClass(kind))}
+      className={cn(
+        "inline-flex items-center rounded-md border px-2.5 py-1 text-xs font-medium",
+        kindPillClass(kind),
+      )}
     >
       {KIND_LABEL[kind]}
     </span>
@@ -99,9 +102,7 @@ function AuthorCard({ author, closing, onClose }: AuthorCardProps) {
           </a>
         </div>
 
-        {author.bio && (
-          <p className="mt-2 text-sm text-x-text">{author.bio}</p>
-        )}
+        {author.bio && <p className="mt-2 text-sm text-x-text">{author.bio}</p>}
 
         <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
           {author.followingCount != null && (
@@ -123,9 +124,9 @@ function AuthorCard({ author, closing, onClose }: AuthorCardProps) {
         </div>
 
         <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-x-text-secondary">
-          {author.website && (
+          {author.website && sanitizeUrl(author.website) && (
             <a
-              href={author.website}
+              href={sanitizeUrl(author.website)}
               target="_blank"
               rel="noopener noreferrer"
               className="truncate text-accent hover:underline"
@@ -182,10 +183,10 @@ function AffiliateBadge({ affiliate }: AffiliateBadgeProps) {
     </span>
   );
 
-  if (affiliate.url) {
+  if (affiliate.url && sanitizeUrl(affiliate.url)) {
     return (
       <a
-        href={affiliate.url}
+        href={sanitizeUrl(affiliate.url)}
         target="_blank"
         rel="noopener noreferrer"
         className="inline-flex hover:underline"
@@ -226,23 +227,23 @@ export function TweetHeader({ author, displayKind, readingMinutes }: Props) {
 
   return (
     <>
-      <div className="mb-5 flex items-start gap-3">
-        <button
-          type="button"
-          onClick={toggleCard}
-          className="shrink-0 cursor-pointer"
-          title={`View ${author.name}'s profile`}
-        >
-          <img
-            src={author.profileImageUrl}
-            alt=""
-            className="size-12 rounded-full transition-opacity hover:opacity-80"
-            loading="lazy"
-          />
-        </button>
-        <div className="min-h-12 min-w-0 flex-1">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex min-w-0 items-center gap-1.5">
+      <div className="mb-5 flex items-center gap-3">
+        <div className="flex min-w-0 flex-1 items-center gap-3">
+          <button
+            type="button"
+            onClick={toggleCard}
+            className="shrink-0 cursor-pointer"
+            title={`View ${author.name}'s profile`}
+          >
+            <img
+              src={author.profileImageUrl}
+              alt=""
+              className="size-12 rounded-full transition-opacity hover:opacity-80"
+              loading="lazy"
+            />
+          </button>
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5">
               <a
                 href={authorUrl}
                 target="_blank"
@@ -256,36 +257,37 @@ export function TweetHeader({ author, displayKind, readingMinutes }: Props) {
                 <AffiliateBadge affiliate={author.affiliate} />
               )}
             </div>
-            {readingMinutes != null && (
-              <span className="shrink-0 tabular-nums text-xs text-x-text-secondary">
-                {readingMinutes} min read
-              </span>
+            <div className="flex items-center gap-1 text-xs text-x-text-secondary">
+              <a
+                href={authorUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:underline"
+              >
+                @{author.screenName}
+              </a>
+              {author.followersCount != null && (
+                <>
+                  <span>&middot;</span>
+                  <span>
+                    {formatCompactNumber(author.followersCount)} followers
+                  </span>
+                </>
+              )}
+            </div>
+            {author.bio && (
+              <p className="mt-0.5 line-clamp-1 text-xs text-x-text-secondary">
+                {author.bio}
+              </p>
             )}
           </div>
-          <div className="flex items-center gap-1 text-xs text-x-text-secondary">
-            <a
-              href={authorUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:underline"
-            >
-              @{author.screenName}
-            </a>
-            {author.followersCount != null && (
-              <>
-                <span>&middot;</span>
-                <span>
-                  {formatCompactNumber(author.followersCount)} followers
-                </span>
-              </>
-            )}
-          </div>
-          {author.bio && (
-            <p className="mt-0.5 line-clamp-1 text-xs text-x-text-secondary">
-              {author.bio}
-            </p>
-          )}
         </div>
+
+        {readingMinutes != null && (
+          <span className="shrink-0 tabular-nums text-xs text-x-text-secondary">
+            {readingMinutes} min read
+          </span>
+        )}
       </div>
 
       {cardOpen && (

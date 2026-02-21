@@ -5,6 +5,7 @@ import type { Bookmark } from "../types";
 
 export interface Stats {
   total: number;
+  authors: number;
   articles: number;
   threads: number;
   posts: number;
@@ -58,11 +59,13 @@ export function usePopupBookmarks(): PopupBookmarksResult {
   }, [bookmarks]);
 
   const stats = useMemo<Stats>(() => {
+    const uniqueAuthors = new Set<string>();
     let articles = 0;
     let threads = 0;
     let posts = 0;
 
     for (const b of bookmarks) {
+      uniqueAuthors.add(b.author.screenName);
       if (b.tweetKind === "article") {
         articles++;
       } else if (b.tweetKind === "thread" || b.isThread) {
@@ -72,7 +75,7 @@ export function usePopupBookmarks(): PopupBookmarksResult {
       }
     }
 
-    return { total: bookmarks.length, articles, threads, posts };
+    return { total: bookmarks.length, authors: uniqueAuthors.size, articles, threads, posts };
   }, [bookmarks]);
 
   const randomBookmark = useMemo<Bookmark | null>(() => {

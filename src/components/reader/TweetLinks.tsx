@@ -1,5 +1,6 @@
 import { ArrowSquareOut, Check } from "@phosphor-icons/react";
 import type { LinkCard, TweetUrl } from "../../types";
+import { sanitizeUrl } from "./utils";
 
 type ResolvedUrl = {
   href: string;
@@ -116,7 +117,7 @@ export function TweetLinks({
   isMarkedRead,
 }: Props) {
   const resolvedUrls: ResolvedUrl[] = urls.flatMap((url) => {
-    const href = (url.expandedUrl || url.url || "").trim();
+    const href = sanitizeUrl((url.expandedUrl || url.url || "").trim());
     if (!href) return [];
     return [
       { href, displayUrl: (url.displayUrl || href).trim(), card: url.card },

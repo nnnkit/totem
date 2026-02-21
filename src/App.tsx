@@ -202,7 +202,6 @@ export default function App() {
         onUpdateSettings={updateSettings}
         themePreference={themePreference}
         onThemePreferenceChange={setThemePreference}
-        bookmarks={bookmarks}
         onResetLocalData={handleResetLocalData}
       />
     </>

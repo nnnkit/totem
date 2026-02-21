@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Monitor, Moon, Sun, X } from "@phosphor-icons/react";
-import type { Bookmark, UserSettings } from "../types";
+import type { UserSettings } from "../types";
 import type { ThemePreference } from "../hooks/useTheme";
 import { cn } from "../lib/cn";
 import { Modal } from "./Modal";
@@ -12,7 +12,6 @@ interface Props {
   onUpdateSettings: (patch: Partial<UserSettings>) => void;
   themePreference: ThemePreference;
   onThemePreferenceChange: (value: ThemePreference) => void;
-  bookmarks: Bookmark[];
   onResetLocalData: () => Promise<void>;
 }
 
@@ -29,29 +28,11 @@ export function SettingsModal({
   onUpdateSettings,
   themePreference,
   onThemePreferenceChange,
-  bookmarks,
   onResetLocalData,
 }: Props) {
   const [resetting, setResetting] = useState(false);
   const [resetError, setResetError] = useState<string | null>(null);
   const [confirmingReset, setConfirmingReset] = useState(false);
-
-  const stats = useMemo(() => {
-    const uniqueAuthors = new Set<string>();
-    let withMedia = 0;
-    let articles = 0;
-    for (const b of bookmarks) {
-      uniqueAuthors.add(b.author.screenName);
-      if (b.media.length > 0) withMedia++;
-      if (b.tweetKind === "article" || b.isThread) articles++;
-    }
-    return {
-      total: bookmarks.length,
-      uniqueAuthors: uniqueAuthors.size,
-      withMedia,
-      articles,
-    };
-  }, [bookmarks]);
 
   const handleResetLocalData = async () => {
     if (resetting) return;
@@ -223,46 +204,6 @@ export function SettingsModal({
 
           <section>
             <h3 className="text-xs font-medium text-x-text-secondary mb-2.5">
-              Stats
-            </h3>
-            <div className="grid grid-cols-4 gap-2">
-              <div className="rounded-lg bg-x-bg p-2.5">
-                <p className="text-lg font-semibold text-x-text tabular-nums">
-                  {stats.total}
-                </p>
-                <p className="text-xs text-x-text-secondary">
-                  Bookmarks
-                </p>
-              </div>
-              <div className="rounded-lg bg-x-bg p-2.5">
-                <p className="text-lg font-semibold text-x-text tabular-nums">
-                  {stats.uniqueAuthors}
-                </p>
-                <p className="text-xs text-x-text-secondary">
-                  Authors
-                </p>
-              </div>
-              <div className="rounded-lg bg-x-bg p-2.5">
-                <p className="text-lg font-semibold text-x-text tabular-nums">
-                  {stats.withMedia}
-                </p>
-                <p className="text-xs text-x-text-secondary">
-                  Media
-                </p>
-              </div>
-              <div className="rounded-lg bg-x-bg p-2.5">
-                <p className="text-lg font-semibold text-x-text tabular-nums">
-                  {stats.articles}
-                </p>
-                <p className="text-xs text-x-text-secondary">
-                  Articles
-                </p>
-              </div>
-            </div>
-          </section>
-
-          <section>
-            <h3 className="text-xs font-medium text-x-text-secondary mb-2.5">
               Data
             </h3>
             {confirmingReset ? (
@@ -299,12 +240,6 @@ export function SettingsModal({
               </p>
             ) : null}
           </section>
-        </div>
-
-        <div className="shrink-0 border-t border-x-border px-6 py-3">
-          <p className="text-xs text-x-text-secondary/60 text-center text-pretty">
-            Settings sync across your devices
-          </p>
         </div>
       </div>
       )}

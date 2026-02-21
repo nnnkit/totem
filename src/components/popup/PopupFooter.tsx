@@ -6,14 +6,14 @@ interface Props {
 
 export function PopupFooter({ onOpenFullPage }: Props) {
   return (
-    <div className="border-t border-x-border px-4 py-3">
+    <div className="shrink-0 border-t border-x-border px-3 py-2.5">
       <button
         type="button"
         onClick={onOpenFullPage}
-        className="flex w-full items-center justify-center gap-1 text-sm font-medium text-accent transition-opacity hover:opacity-80"
+        className="flex w-full items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-medium text-accent transition-colors hover:bg-accent/5"
       >
-        Open full bookmarks page
-        <ArrowRight className="size-4" />
+        Open full page
+        <ArrowRight className="size-3.5" />
       </button>
     </div>
   );
