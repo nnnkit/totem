@@ -9,6 +9,7 @@
 
 ## Styling
 
+- Always use Tailwind CSS classes for styling. Only write custom CSS in `index.css` when Tailwind cannot express the style (e.g. complex animations, pseudo-element content, global resets).
 - Do not hardcode widths, font sizes, or other sizing values with arbitrary pixel values (e.g. `w-[347px]`, `text-[13px]`). Use Tailwind's built-in scale tokens instead (e.g. `w-80`, `text-sm`).
 - Use `size-N` instead of `w-N h-N` for square elements.
 - Use Tailwind classes instead of inline `style` attributes where possible (e.g. `max-h-96` not `style={{ maxHeight: 400 }}`).

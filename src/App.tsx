@@ -160,6 +160,7 @@ export default function App() {
           onNext={hasNext ? goToNext : undefined}
           onUnbookmark={() => {
             unbookmark(selectedBookmark.tweetId);
+            setView("reading");
             closeReader();
           }}
           themePreference={themePreference}

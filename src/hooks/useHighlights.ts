@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { Highlight, HighlightColor } from "../types";
+import type { Highlight } from "../types";
 import type { SelectionRange } from "../types";
 import {
   upsertHighlight,
   deleteHighlight as dbDeleteHighlight,
   getHighlightsByTweetId,
 } from "../db";
-import { HIGHLIGHT_RETRY_MS } from "../lib/constants";
+
 
 interface Props {
   tweetId: string;
@@ -48,7 +48,6 @@ function wrapTextRange(
   endOffset: number,
   highlightId: string,
   flash: boolean,
-  color: string,
 ): Element[] {
   const textNodes = getTextNodesInSection(section);
   let charCount = 0;
@@ -85,7 +84,6 @@ function wrapTextRange(
     const mark = document.createElement("mark");
     mark.className = flash ? "xbt-highlight xbt-highlight-new" : "xbt-highlight";
     mark.dataset.highlightId = highlightId;
-    mark.dataset.color = color;
     mark.textContent = highlightText;
 
     if (beforeText) {
@@ -169,7 +167,7 @@ export function useHighlights({ tweetId, contentReady, containerRef }: Props) {
       if (actualText !== h.selectedText) continue;
 
       const shouldFlash = flashIdsRef.current.has(h.id) && !h.note;
-      const marks = wrapTextRange(section, h.startOffset, h.endOffset, h.id, shouldFlash, h.color || "green");
+      const marks = wrapTextRange(section, h.startOffset, h.endOffset, h.id, shouldFlash);
 
       if (shouldFlash) {
         flashIdsRef.current.delete(h.id);
@@ -187,29 +185,28 @@ export function useHighlights({ tweetId, contentReady, containerRef }: Props) {
   useEffect(() => {
     if (!contentReady || !tweetId) return;
 
+    let cancelled = false;
+
     getHighlightsByTweetId(tweetId).then((stored) => {
+      if (cancelled) return;
       highlightsRef.current.clear();
       for (const h of stored) {
         highlightsRef.current.set(h.id, h);
       }
-      requestAnimationFrame(() => {
+      if (stored.length > 0) {
         applyHighlightsToDOM();
-        const container = containerRef.current;
-        if (container && !container.querySelector("mark.xbt-highlight") && highlightsRef.current.size > 0) {
-          setTimeout(() => applyHighlightsToDOM(), HIGHLIGHT_RETRY_MS);
-        }
-      });
+      }
     });
+
+    return () => { cancelled = true; };
   }, [tweetId, contentReady, applyHighlightsToDOM]);
 
   useEffect(() => {
-    if (revision > 0) {
-      applyHighlightsToDOM();
-    }
+    applyHighlightsToDOM();
   }, [revision, applyHighlightsToDOM]);
 
   const addHighlight = useCallback(
-    async (ranges: SelectionRange[], note: string | null = null, color: HighlightColor = "green") => {
+    async (ranges: SelectionRange[], note: string | null = null) => {
       const created: Highlight[] = [];
 
       for (const range of ranges) {
@@ -221,7 +218,7 @@ export function useHighlights({ tweetId, contentReady, containerRef }: Props) {
           endOffset: range.endOffset,
           selectedText: range.selectedText,
           note,
-          color,
+          color: "green",
           createdAt: Date.now(),
         };
 

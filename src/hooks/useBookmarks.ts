@@ -17,8 +17,10 @@ import {
 } from "../db";
 import { FetchQueue } from "../lib/fetch-queue";
 import { reconcileBookmarks } from "../lib/reconcile";
+import { resolveBookmarkEventPlan } from "../lib/bookmark-event-plan";
 import { CS_DB_CLEANUP_AT, CS_LAST_RECONCILE, CS_LAST_SYNC, CS_BOOKMARK_EVENTS } from "../lib/storage-keys";
 import {
+  CREATE_EVENT_DELAY_MS,
   WEEK_MS,
   DETAIL_CACHE_RETENTION_MS,
   RECONCILE_THROTTLE_MS,
@@ -289,48 +291,87 @@ export function useBookmarks(isReady: boolean): UseBookmarksReturn {
       const events = await getBookmarkEvents();
       if (events.length === 0) return;
 
-      const ackIds: string[] = [];
-      const deleteEvents = events.filter((event) => event.type === "DeleteBookmark");
-      const createEvents = events.filter((event) => event.type === "CreateBookmark");
+      const plan = resolveBookmarkEventPlan(events);
+      const deleteEventIds = events
+        .filter((e) => e.type === "DeleteBookmark")
+        .map((e) => e.id);
+      const createEventIds = events
+        .filter((e) => e.type === "CreateBookmark")
+        .map((e) => e.id);
 
-      const deletedIds = Array.from(
-        new Set(deleteEvents.map((event) => event.tweetId).filter(Boolean)),
-      );
-
-      if (deletedIds.length > 0) {
-        const toDelete = new Set(deletedIds);
+      // ── Execute deletes ──
+      if (plan.idsToDelete.length > 0) {
+        const toDelete = new Set(plan.idsToDelete);
         const current = bookmarksRef.current;
-        const filtered = current.filter((bookmark) => !toDelete.has(bookmark.tweetId));
+        const filtered = current.filter((b) => !toDelete.has(b.tweetId));
 
         if (filtered.length !== current.length) {
           bookmarksRef.current = filtered;
           setBookmarks(filtered);
         }
 
-        await deleteBookmarksByTweetIds(deletedIds);
+        await deleteBookmarksByTweetIds(plan.idsToDelete);
         setSyncState((prev) => ({
           ...prev,
           phase: prev.phase === "idle" ? "done" : prev.phase,
           total: filtered.length,
         }));
-        ackIds.push(...deleteEvents.map((event) => event.id));
-      } else if (deleteEvents.length > 0) {
-        await syncNewBookmarks();
-        ackIds.push(...deleteEvents.map((event) => event.id));
       }
 
-      if (createEvents.length > 0) {
-        await syncNewBookmarks();
-        ackIds.push(...createEvents.map((event) => event.id));
+      // Ack delete events immediately — they don't depend on a page fetch.
+      if (deleteEventIds.length > 0) {
+        await ackBookmarkEvents(deleteEventIds);
       }
 
-      if (ackIds.length > 0) {
-        await ackBookmarkEvents(Array.from(new Set(ackIds)));
+      // ── Execute creates: fetch 1 small page and add what's missing ──
+      if (plan.needsPageFetch) {
+        // Wait for x.com's backend to replicate the write before reading.
+        // onCompleted fires as soon as the CreateBookmark response arrives,
+        // but the Bookmarks list endpoint may read from a different replica.
+        await new Promise((r) => setTimeout(r, CREATE_EVENT_DELAY_MS));
+
+        try {
+          const page = await fetchBookmarkPage(undefined, 20);
+          const currentIds = new Set(bookmarksRef.current.map((b) => b.tweetId));
+          const newBookmarks = page.bookmarks.filter(
+            (b) => !currentIds.has(b.tweetId),
+          );
+
+          if (newBookmarks.length > 0) {
+            const updated = [...newBookmarks, ...bookmarksRef.current].toSorted(
+              compareSortIndexDesc,
+            );
+            bookmarksRef.current = updated;
+            setBookmarks(updated);
+            setSyncState((prev) => ({
+              ...prev,
+              phase: prev.phase === "idle" ? "done" : prev.phase,
+              total: updated.length,
+            }));
+            try {
+              await upsertBookmarks(newBookmarks);
+            } catch {
+              // DB write failed — state is already updated for this session
+            }
+          }
+
+          // Ack create events only after a successful page fetch.
+          if (createEventIds.length > 0) {
+            await ackBookmarkEvents(createEventIds);
+          }
+        } catch {
+          // Page fetch failed — don't ack create events so they're retried
+          // on the next storage change or manual sync.
+        }
+      } else if (createEventIds.length > 0) {
+        // No page fetch needed but create events exist (shouldn't happen
+        // with current logic) — ack to prevent pileup.
+        await ackBookmarkEvents(createEventIds);
       }
     } finally {
       processingBookmarkEventsRef.current = false;
     }
-  }, [syncNewBookmarks]);
+  }, []);
 
   const unbookmark = useCallback(async (tweetId: string) => {
     if (!tweetId) return;

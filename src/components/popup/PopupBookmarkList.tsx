@@ -24,7 +24,11 @@ export function PopupBookmarkList({ bookmarks, onOpen, query, onQueryChange, isS
     const cutoff = Date.now() - NEW_BADGE_CUTOFF_MS;
     const ids = new Set<string>();
     for (const b of bookmarks) {
-      if (sortIndexToTimestamp(b.sortIndex) >= cutoff) ids.add(b.tweetId);
+      if (
+        b.sortIndex !== b.tweetId &&
+        sortIndexToTimestamp(b.sortIndex) >= cutoff
+      )
+        ids.add(b.tweetId);
     }
     return ids;
   }, [bookmarks]);

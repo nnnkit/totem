@@ -44,17 +44,8 @@ export function textClassForMode(
   return cn(baseTweetTextClass, "text-x-text", compact ? "text-base leading-7" : "text-lg leading-relaxed");
 }
 
-export function kindPillClass(kind: TweetKind): string {
-  if (kind === "repost")
-    return "bg-pill-green-bg text-pill-green-text border-pill-green-border";
-  if (kind === "reply") return "bg-accent/12 text-accent border-accent/40";
-  if (kind === "thread")
-    return "bg-pill-amber-bg text-pill-amber-text border-pill-amber-border";
-  if (kind === "quote")
-    return "bg-pill-cyan-bg text-pill-cyan-text border-pill-cyan-border";
-  if (kind === "article")
-    return "bg-pill-orange-bg text-pill-orange-text border-pill-orange-border";
-  return "bg-x-link-card text-x-text-secondary border-x-border";
+export function kindPillClass(_kind: TweetKind): string {
+  return "text-x-text-secondary";
 }
 
 export function resolveTweetKind(tweet: ReaderTweet): TweetKind {

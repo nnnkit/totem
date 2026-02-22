@@ -40,6 +40,10 @@ Use one entry per date in `YYYY-MM-DD` format:
 - `What we explicitly avoid`
 - `How we know it is working`
 
+## One-Liner
+
+Substack for your Twitter bookmarks — a distraction-free reading experience for the content you already saved.
+
 ---
 
 ## Soul Register
@@ -50,3 +54,10 @@ Use one entry per date in `YYYY-MM-DD` format:
 - `Decision / direction`: Build the product as a persistent reminder surface for bookmarked content, so saved items stay visible in everyday browsing workflows.
 - `What we explicitly avoid`: Flows that require users to visit X first just to see what they intended to read.
 - `How we know it is working`: Users regularly revisit and complete saved reading from the reminder surface, with less dependence on opening X directly.
+
+### 2026-02-21
+- `Context`: Sharpening the product identity.
+- `What user pain we are solving`: Twitter bookmarks are trapped inside a noisy, addictive feed app. There is no calm, long-form way to sit down and actually read through what you saved — the way you would read a Substack newsletter or a Pocket queue.
+- `Decision / direction`: The extension is a distraction-free reading experience for Twitter bookmarks. Think "Substack for bookmarks" — clean typography, focused layout, one piece at a time. The new tab becomes a reading surface, not a feed.
+- `What we explicitly avoid`: Recreating the Twitter timeline. No infinite scroll of tiny cards. No engagement metrics front-and-center. No "you might also like" suggestions that pull attention away from what the user intentionally saved.
+- `How we know it is working`: Users describe the experience as "reading" their bookmarks rather than "checking" them. Time-on-bookmark goes up, bounce-back-to-X goes down.

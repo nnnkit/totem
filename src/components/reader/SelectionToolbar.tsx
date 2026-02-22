@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Popover } from "@base-ui/react/popover";
 import { HighlighterIcon, NotePencilIcon } from "@phosphor-icons/react";
-import type { HighlightColor, SelectionRange } from "../../types";
-import { HIGHLIGHT_COLORS, COLOR_VALUES } from "../../lib/constants";
-import { LS_HIGHLIGHT_COLOR } from "../../lib/storage-keys";
+import type { SelectionRange } from "../../types";
 
 // --- Selection detection utilities ---
 
@@ -82,31 +81,21 @@ function serializeSelection(selection: Selection, container: HTMLElement): Selec
   }));
 }
 
-// --- Color utilities ---
-
-function getStoredColor(): HighlightColor {
-  const stored = localStorage.getItem(LS_HIGHLIGHT_COLOR);
-  if (stored && HIGHLIGHT_COLORS.includes(stored as HighlightColor)) return stored as HighlightColor;
-  return "green";
-}
-
 // --- Component ---
 
 interface ToolbarState {
   ranges: SelectionRange[];
-  position: { x: number; y: number };
+  anchorRect: DOMRect;
 }
 
 interface Props {
   containerRef: React.RefObject<HTMLElement | null>;
-  onHighlight: (ranges: SelectionRange[], color: HighlightColor) => void;
+  onHighlight: (ranges: SelectionRange[]) => void;
   onAddNote: (ranges: SelectionRange[]) => void;
 }
 
 export function SelectionToolbar({ containerRef, onHighlight, onAddNote }: Props) {
   const [state, setState] = useState<ToolbarState | null>(null);
-  const [activeColor, setActiveColor] = useState<HighlightColor>(getStoredColor);
-  const toolbarRef = useRef<HTMLDivElement>(null);
   const dismissTimeoutRef = useRef<number>(0);
 
   const dismiss = useCallback(() => setState(null), []);
@@ -142,13 +131,9 @@ export function SelectionToolbar({ containerRef, onHighlight, onAddNote }: Props
           return;
         }
 
-        const rect = range.getBoundingClientRect();
         setState({
           ranges,
-          position: {
-            x: rect.left + rect.width / 2,
-            y: rect.top,
-          },
+          anchorRect: range.getBoundingClientRect(),
         });
       }, 10);
     };
@@ -162,94 +147,62 @@ export function SelectionToolbar({ containerRef, onHighlight, onAddNote }: Props
 
   useEffect(() => {
     if (!state) return;
-
-    const handleMouseDown = (e: MouseEvent) => {
-      if (toolbarRef.current?.contains(e.target as Node)) return;
-      dismiss();
-    };
-
     const handleScroll = () => dismiss();
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") dismiss();
-    };
-
-    document.addEventListener("mousedown", handleMouseDown);
     window.addEventListener("scroll", handleScroll, { passive: true });
-    document.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.removeEventListener("mousedown", handleMouseDown);
-      window.removeEventListener("scroll", handleScroll);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
+    return () => window.removeEventListener("scroll", handleScroll);
   }, [state, dismiss]);
 
-  if (!state) return null;
+  const virtualAnchor = state
+    ? { getBoundingClientRect: () => state.anchorRect }
+    : undefined;
 
-  const handleHighlight = (color: HighlightColor) => {
-    localStorage.setItem(LS_HIGHLIGHT_COLOR, color);
-    onHighlight(state.ranges, color);
+  const handleHighlight = () => {
+    if (!state) return;
+    onHighlight(state.ranges);
     dismiss();
   };
 
   const handleNote = () => {
+    if (!state) return;
     onAddNote(state.ranges);
     dismiss();
   };
 
   return (
-    <div
-      ref={toolbarRef}
-      style={{
-        position: "fixed",
-        left: state.position.x,
-        top: state.position.y - 8,
-        transform: "translate(-50%, -100%)",
-        zIndex: 30,
-      }}
-      onMouseDown={(e) => e.preventDefault()}
-    >
-      <div className="flex animate-toolbar-in items-center gap-1 rounded-lg bg-neutral-900/95 px-2 py-1.5 shadow-lg backdrop-blur-sm">
-        <button
-          onClick={() => handleHighlight(activeColor)}
-          className="flex items-center gap-1.5 rounded-md px-2 py-1 text-sm text-neutral-200 transition-colors hover:bg-neutral-700/60"
+    <Popover.Root open={!!state} onOpenChange={(open) => { if (!open) dismiss(); }}>
+      <Popover.Portal>
+        <Popover.Positioner
+          anchor={virtualAnchor}
+          side="top"
+          sideOffset={8}
+          positionMethod="fixed"
         >
-          <HighlighterIcon weight="bold" className="size-4" />
-          <span>Highlight</span>
-        </button>
+          <Popover.Popup
+            className="xbt-popover z-30 rounded-lg bg-neutral-900/95 shadow-lg backdrop-blur-sm"
+            onMouseDown={(e) => e.preventDefault()}
+          >
+            <div className="flex items-center gap-1 px-2 py-1.5">
+              <button
+                onClick={handleHighlight}
+                className="flex items-center gap-1.5 rounded-md px-2 py-1 text-sm text-neutral-200 transition-colors hover:bg-neutral-700/60"
+              >
+                <HighlighterIcon weight="bold" className="size-4" />
+                <span>Highlight</span>
+              </button>
 
-        <div className="mx-0.5 h-5 w-px bg-neutral-700" />
+              <div className="mx-0.5 h-5 w-px bg-neutral-700" />
 
-        <button
-          onClick={handleNote}
-          className="flex items-center gap-1.5 rounded-md px-2 py-1 text-sm text-neutral-200 transition-colors hover:bg-neutral-700/60"
-        >
-          <NotePencilIcon weight="bold" className="size-4" />
-          <span>Note</span>
-        </button>
-
-        <div className="mx-0.5 h-5 w-px bg-neutral-700" />
-
-        <div className="flex items-center gap-1.5 px-1">
-          {HIGHLIGHT_COLORS.map((color) => (
-            <button
-              key={color}
-              aria-label={`Highlight ${color}`}
-              onClick={() => {
-                setActiveColor(color);
-                localStorage.setItem(LS_HIGHLIGHT_COLOR, color);
-                handleHighlight(color);
-              }}
-              className={`size-4 rounded-full transition-opacity hover:opacity-80 ${
-                color === activeColor
-                  ? "ring-2 ring-white ring-offset-1 ring-offset-neutral-900"
-                  : ""
-              }`}
-              style={{ backgroundColor: COLOR_VALUES[color] }}
-            />
-          ))}
-        </div>
-      </div>
-    </div>
+              <button
+                onClick={handleNote}
+                className="flex items-center gap-1.5 rounded-md px-2 py-1 text-sm text-neutral-200 transition-colors hover:bg-neutral-700/60"
+              >
+                <NotePencilIcon weight="bold" className="size-4" />
+                <span>Note</span>
+              </button>
+            </div>
+          </Popover.Popup>
+        </Popover.Positioner>
+      </Popover.Portal>
+    </Popover.Root>
   );
 }

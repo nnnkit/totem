@@ -10,7 +10,7 @@ if (
 }
 
 // Pre-seed wallpaper cache so useWallpaper doesn't try to fetch from Bing (CORS)
-const WALLPAPER_KEY = "tw_wallpaper_cache_v5";
+const WALLPAPER_KEY = "xbt_wallpaper_cache_v5";
 const LS_PREFIX = "__xbt_local_";
 const existing = localStorage.getItem(LS_PREFIX + WALLPAPER_KEY);
 

@@ -15,6 +15,11 @@ interface Props {
   onResetLocalData: () => Promise<void>;
 }
 
+const BACKGROUND_OPTIONS: { value: UserSettings["backgroundMode"]; label: string }[] = [
+  { value: "gradient", label: "Gradient" },
+  { value: "images", label: "Images" },
+];
+
 const THEME_OPTIONS: { value: ThemePreference; label: string; icon: "monitor" | "sun" | "moon" }[] = [
   { value: "system", label: "Auto", icon: "monitor" },
   { value: "light", label: "Light", icon: "sun" },
@@ -101,10 +106,28 @@ export function SettingsModal({
             </div>
           </section>
 
-          <BackgroundSettings
-            settings={settings}
-            onUpdateSettings={onUpdateSettings}
-          />
+          <section>
+            <h3 className="text-xs font-medium text-x-text-secondary mb-2.5">
+              Background
+            </h3>
+            <div className="flex gap-1 rounded-lg bg-x-bg p-1">
+              {BACKGROUND_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => onUpdateSettings({ backgroundMode: opt.value })}
+                  className={cn(
+                    "flex-1 py-2 text-sm font-medium rounded-md transition-colors",
+                    settings.backgroundMode === opt.value
+                      ? "bg-accent/15 text-accent"
+                      : "text-x-text-secondary hover:text-x-text",
+                  )}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </section>
 
           <section>
             <h3 className="text-xs font-medium text-x-text-secondary mb-2.5">
@@ -247,39 +270,3 @@ export function SettingsModal({
   );
 }
 
-interface BackgroundSettingsProps {
-  settings: UserSettings;
-  onUpdateSettings: (patch: Partial<UserSettings>) => void;
-}
-
-const BACKGROUND_OPTIONS: { value: UserSettings["backgroundMode"]; label: string }[] = [
-  { value: "gradient", label: "Gradient" },
-  { value: "images", label: "Images" },
-];
-
-function BackgroundSettings({ settings, onUpdateSettings }: BackgroundSettingsProps) {
-  return (
-    <section>
-      <h3 className="text-xs font-medium text-x-text-secondary mb-2.5">
-        Background
-      </h3>
-      <div className="flex gap-1 rounded-lg bg-x-bg p-1">
-        {BACKGROUND_OPTIONS.map((opt) => (
-          <button
-            key={opt.value}
-            type="button"
-            onClick={() => onUpdateSettings({ backgroundMode: opt.value })}
-            className={cn(
-              "flex-1 py-2 text-sm font-medium rounded-md transition-colors",
-              settings.backgroundMode === opt.value
-                ? "bg-accent/15 text-accent"
-                : "text-x-text-secondary hover:text-x-text",
-            )}
-          >
-            {opt.label}
-          </button>
-        ))}
-      </div>
-    </section>
-  );
-}

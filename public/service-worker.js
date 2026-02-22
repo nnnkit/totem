@@ -65,8 +65,21 @@ const DEFAULT_FEATURES = {
 const DETAIL_FEATURE_OVERRIDES = {
   graphql_is_translatable_rweb_tweet_is_translatable_enabled: true,
   view_counts_everywhere_api_enabled: true,
-  creator_subscriptions_quote_tweet_preview_enabled: false,
-  responsive_web_twitter_article_data_v2_enabled: true,
+  rweb_video_screen_enabled: false,
+  profile_label_improvements_pcf_label_in_post_enabled: true,
+  responsive_web_profile_redirect_enabled: false,
+  premium_content_api_read_enabled: false,
+  responsive_web_grok_analyze_button_fetch_trends_enabled: false,
+  responsive_web_grok_analyze_post_followups_enabled: true,
+  responsive_web_jetfuel_frame: true,
+  responsive_web_grok_share_attachment_enabled: true,
+  responsive_web_grok_annotations_enabled: true,
+  responsive_web_grok_show_grok_translated_post: false,
+  responsive_web_grok_analysis_button_from_backend: true,
+  post_ctas_fetch_enabled: true,
+  responsive_web_grok_image_annotation_enabled: true,
+  responsive_web_grok_imagine_annotation_enabled: true,
+  responsive_web_grok_community_note_auto_translation_is_enabled: false,
 };
 
 
@@ -219,6 +232,40 @@ async function buildHeaders() {
   }
 
   return headers;
+}
+
+// ═══════════════════════════════════════════════════════════
+// QUERY ID DISCOVERY — fetch x.com JS bundles to extract query IDs
+// ═══════════════════════════════════════════════════════════
+
+async function discoverQueryIdFromBundles(operationName) {
+  const resp = await fetch("https://x.com", { credentials: "include" });
+  if (!resp.ok) return null;
+  const html = await resp.text();
+
+  const scriptUrls = [];
+  const scriptRegex = /src="(https:\/\/abs\.twimg\.com\/responsive-web\/client-web[^"]+\.js)"/g;
+  let m;
+  while ((m = scriptRegex.exec(html)) !== null && scriptUrls.length < 15) {
+    scriptUrls.push(m[1]);
+  }
+
+  for (const url of scriptUrls) {
+    try {
+      const jsResp = await fetch(url);
+      if (!jsResp.ok) continue;
+      const text = await jsResp.text();
+      const needle = '"' + operationName + '"';
+      const pos = text.indexOf(needle);
+      if (pos === -1) continue;
+      const region = text.substring(Math.max(0, pos - 300), pos + 300);
+      const qm = region.match(/queryId\s*:\s*["']([A-Za-z0-9_\-]{10,50})["']/);
+      if (qm) return qm[1];
+    } catch {
+      continue;
+    }
+  }
+  return null;
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -474,6 +521,11 @@ async function handleBookmarkMutationMessage(message) {
       : null;
   if (!operation) return { ok: false };
 
+  // CreateBookmark events are only pushed from onCompleted (after x.com
+  // confirms success). Pushing here would trigger a page fetch before
+  // x.com has processed the bookmark, finding nothing new.
+  if (operation === "CreateBookmark") return { ok: true };
+
   const tweetId = typeof message?.tweetId === "string" ? message.tweetId : "";
   const source = typeof message?.source === "string" ? message.source : "content-script";
   await pushBookmarkEvent(operation, tweetId, source);
@@ -596,7 +648,9 @@ async function captureBookmarkMutation(details) {
 
   if (mutation.operation === "CreateBookmark") {
     await chrome.storage.local.set({ xbt_create_query_id: mutation.queryId });
-    await pushBookmarkEvent("CreateBookmark", tweetId, "x.com");
+    // Don't push the event here — onBeforeRequest fires BEFORE x.com
+    // processes the request. The page fetch would find nothing new.
+    // CreateBookmark events are pushed from onCompleted instead.
   }
 }
 
@@ -674,6 +728,52 @@ async function runWeeklyServiceWorkerCleanup() {
 }
 
 // ═══════════════════════════════════════════════════════════
+// ONE-TIME MIGRATION: tw_ → xbt_ storage keys
+// ═══════════════════════════════════════════════════════════
+
+const TW_TO_XBT_KEY_MAP = {
+  tw_graphql_catalog: "xbt_graphql_catalog",
+  tw_auth_headers: "xbt_auth_headers",
+  tw_auth_time: "xbt_auth_time",
+  tw_query_id: "xbt_query_id",
+  tw_features: "xbt_features",
+  tw_detail_query_id: "xbt_detail_query_id",
+  tw_delete_query_id: "xbt_delete_query_id",
+  tw_create_query_id: "xbt_create_query_id",
+  tw_bookmark_events: "xbt_bookmark_events",
+  current_user_id: "xbt_user_id",
+  tw_weekly_cleanup_at: "xbt_sw_cleanup_at",
+  tw_seen_tweet_display_types: "xbt_seen_display_types",
+};
+
+async function migrateOldStorageKeys() {
+  const oldKeys = Object.keys(TW_TO_XBT_KEY_MAP);
+  const newKeys = Object.values(TW_TO_XBT_KEY_MAP);
+  const stored = await chrome.storage.local.get([...oldKeys, ...newKeys]);
+  const updates = {};
+  const toRemove = [];
+
+  for (const [oldKey, newKey] of Object.entries(TW_TO_XBT_KEY_MAP)) {
+    if (stored[oldKey] !== undefined) {
+      // Only migrate if the new key doesn't already have data
+      if (stored[newKey] === undefined) {
+        updates[newKey] = stored[oldKey];
+      }
+      toRemove.push(oldKey);
+    }
+  }
+
+  if (toRemove.length > 0) {
+    if (Object.keys(updates).length > 0) {
+      await chrome.storage.local.set(updates);
+    }
+    await chrome.storage.local.remove(toRemove);
+  }
+}
+
+migrateOldStorageKeys().catch(() => {});
+
+// ═══════════════════════════════════════════════════════════
 // API REQUEST HANDLERS
 // ═══════════════════════════════════════════════════════════
 
@@ -697,7 +797,7 @@ async function handleCheckAuth() {
   };
 }
 
-async function handleFetchBookmarks(cursor, _retried = false) {
+async function handleFetchBookmarks(cursor, count, _retried = false) {
   const stored = await chrome.storage.local.get([
     "xbt_auth_headers",
     "xbt_query_id",
@@ -707,7 +807,8 @@ async function handleFetchBookmarks(cursor, _retried = false) {
   if (!stored.xbt_auth_headers?.authorization) throw new Error("NO_AUTH");
   if (!stored.xbt_query_id) throw new Error("NO_QUERY_ID");
 
-  const variables = { count: 100, includePromotedContent: true };
+  const pageCount = typeof count === "number" && count > 0 ? count : 100;
+  const variables = { count: pageCount, includePromotedContent: true };
   if (cursor) variables.cursor = cursor;
 
   const features = stored.xbt_features || JSON.stringify(DEFAULT_FEATURES);
@@ -730,7 +831,7 @@ async function handleFetchBookmarks(cursor, _retried = false) {
     if (!_retried) {
       await chrome.storage.local.remove(["xbt_auth_headers", "xbt_auth_time"]);
       const success = await reAuthSilently();
-      if (success) return handleFetchBookmarks(cursor, true);
+      if (success) return handleFetchBookmarks(cursor, count, true);
     }
     throw new Error("AUTH_EXPIRED");
   }
@@ -794,7 +895,6 @@ async function handleDeleteBookmark(tweetId, _retried = false) {
     throw new Error(`DELETE_BOOKMARK_${response.status}: ${body.slice(0, 200)}`);
   }
 
-  await pushBookmarkEvent("DeleteBookmark", tweetId, "extension");
   return { ok: true, queryId, data: await response.json().catch(() => null) };
 }
 
@@ -863,7 +963,31 @@ async function handleFetchTweetDetail(tweetId, _retried = false) {
   ]);
 
   if (!stored.xbt_auth_headers?.authorization) throw new Error("NO_AUTH");
-  if (!stored.xbt_detail_query_id) throw new Error("NO_QUERY_ID");
+
+  let queryId = stored.xbt_detail_query_id;
+
+  // Fallback 1: look up from GraphQL catalog
+  if (!queryId) {
+    const catalog = await loadGraphqlCatalog();
+    for (const entry of Object.values(catalog.endpoints || {})) {
+      if (entry && entry.operation === "TweetDetail" && entry.queryId) {
+        queryId = entry.queryId;
+        break;
+      }
+    }
+  }
+
+  // Fallback 2: discover from x.com JS bundles
+  if (!queryId) {
+    queryId = await discoverQueryIdFromBundles("TweetDetail").catch(() => null);
+  }
+
+  if (queryId && !stored.xbt_detail_query_id) {
+    chrome.storage.local.set({ xbt_detail_query_id: queryId });
+  }
+
+  if (!queryId) throw new Error("NO_QUERY_ID");
+
   const featureSet = {
     ...DEFAULT_FEATURES,
     ...parseFeatureSet(stored.xbt_features),
@@ -872,20 +996,21 @@ async function handleFetchTweetDetail(tweetId, _retried = false) {
 
   const variables = {
     focalTweetId: tweetId,
+    referrer: "bookmarks",
     with_rux_injections: false,
+    rankingMode: "Relevance",
     includePromotedContent: true,
     withCommunity: true,
     withQuickPromoteEligibilityTweetFields: true,
     withBirdwatchNotes: true,
     withVoice: true,
-    withV2Timeline: true,
   };
-  const queryId = stored.xbt_detail_query_id;
   const requestHeaders = await buildHeaders();
   const fieldToggles = {
     withArticleRichContentState: true,
-    withArticlePlainText: true,
+    withArticlePlainText: false,
     withGrokAnalyze: false,
+    withDisallowedReplyControls: false,
   };
 
   const params = new URLSearchParams({
@@ -981,7 +1106,7 @@ chrome.webRequest.onSendHeaders.addListener(
     }
 
     const mutation = parseBookmarkMutation(details.url);
-    if (mutation) {
+    if (mutation && !isExtensionInitiated(details)) {
       const referer = getHeaderValue(details.requestHeaders, "referer");
       const tweetId = extractTweetIdFromReferer(referer) || "";
       chrome.storage.local
@@ -996,9 +1121,14 @@ chrome.webRequest.onSendHeaders.addListener(
           },
         })
         .catch(() => {});
-      pushBookmarkEvent(mutation.operation, tweetId, "x.com-headers").catch(
-        () => {},
-      );
+      // Only push delete events here — they just need the tweetId for
+      // local removal. Create events are pushed from onCompleted after
+      // x.com confirms success so the page fetch finds the new bookmark.
+      if (mutation.operation === "DeleteBookmark") {
+        pushBookmarkEvent("DeleteBookmark", tweetId, "x.com-headers").catch(
+          () => {},
+        );
+      }
     }
   },
   { urls: ["https://x.com/i/api/graphql/*"] },
@@ -1037,8 +1167,13 @@ chrome.webRequest.onCompleted.addListener(
       })
       .catch(() => {});
 
-    // Fallback path: enqueue event even when request body/referer tweet id is unavailable.
-    pushBookmarkEvent(mutation.operation, "", "x.com-completed").catch(() => {});
+    // For creates, this is the right time to push the event — x.com has
+    // confirmed the bookmark was created, so a page fetch will find it.
+    // For deletes, onBeforeRequest already pushed the event with the
+    // tweetId (targeted local removal, no API call needed).
+    if (mutation.operation === "CreateBookmark") {
+      pushBookmarkEvent("CreateBookmark", "", "x.com-completed").catch(() => {});
+    }
   },
   {
     urls: [
@@ -1073,7 +1208,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     return false;
   }
   if (message.type === "FETCH_BOOKMARKS") {
-    handleFetchBookmarks(message.cursor)
+    handleFetchBookmarks(message.cursor, message.count)
       .then(sendResponse)
       .catch((err) => sendResponse({ error: err.message }));
     return true;
@@ -1121,6 +1256,9 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     }
     if (typeof message.ids?.CreateBookmark === "string" && message.ids.CreateBookmark) {
       updates.xbt_create_query_id = message.ids.CreateBookmark;
+    }
+    if (typeof message.ids?.TweetDetail === "string" && message.ids.TweetDetail) {
+      updates.xbt_detail_query_id = message.ids.TweetDetail;
     }
     if (Object.keys(updates).length > 0) {
       chrome.storage.local.set(updates).then(() => sendResponse({ ok: true })).catch(() => sendResponse({ ok: false }));

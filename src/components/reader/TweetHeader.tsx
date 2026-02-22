@@ -14,7 +14,7 @@ function TweetKindPill({ kind }: TweetKindPillProps) {
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-md border px-2.5 py-1 text-xs font-medium",
+        "inline-block rounded-md bg-x-hover px-2 py-0.5 text-xs font-medium",
         kindPillClass(kind),
       )}
     >
@@ -103,7 +103,9 @@ function AuthorCard({ author, closing, onClose }: AuthorCardProps) {
           </a>
         </div>
 
-        {author.bio && <p className="mt-2 truncate text-sm text-x-text">{author.bio}</p>}
+        {author.bio && (
+          <p className="mt-2 truncate text-sm text-x-text">{author.bio}</p>
+        )}
 
         <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
           {author.followingCount != null && (
@@ -228,7 +230,7 @@ export function TweetHeader({ author, displayKind, readingMinutes }: Props) {
 
   return (
     <>
-      <div className="mb-5 flex items-center gap-3">
+      <div className="mb-4 flex items-center gap-3">
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <button
             type="button"
@@ -284,11 +286,6 @@ export function TweetHeader({ author, displayKind, readingMinutes }: Props) {
           </div>
         </div>
 
-        {readingMinutes != null && (
-          <span className="shrink-0 tabular-nums text-xs text-x-text-secondary">
-            {readingMinutes} min read
-          </span>
-        )}
       </div>
 
       {cardOpen && (
@@ -299,8 +296,16 @@ export function TweetHeader({ author, displayKind, readingMinutes }: Props) {
         />
       )}
 
-      <div className="mb-4 flex flex-wrap items-center gap-2">
+      <div className="mb-6 flex flex-wrap items-center gap-2">
         <TweetKindPill kind={displayKind} />
+        {readingMinutes != null && (
+          <>
+            <span className="text-xs text-x-text-secondary">&middot;</span>
+            <span className="text-xs tabular-nums text-x-text-secondary">
+              {readingMinutes} min read
+            </span>
+          </>
+        )}
       </div>
     </>
   );

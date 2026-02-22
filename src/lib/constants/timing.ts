@@ -4,8 +4,10 @@ export const AUTH_RECHECK_MS = 1200;
 export const AUTH_QUICK_CHECK_MS = 500;
 export const AUTH_RETRY_MS = 1000;
 export const AUTH_POLL_MS = 1000;
+export const AUTH_CONNECTING_TIMEOUT_MS = 15_000;
 
 // ── Bookmarks sync ──────────────────────────────────────────
+export const CREATE_EVENT_DELAY_MS = 1500;
 export const WEEK_MS = 1000 * 60 * 60 * 24 * 7;
 export const DETAIL_CACHE_RETENTION_MS = 1000 * 60 * 60 * 24 * 30;
 export const RECONCILE_THROTTLE_MS = 1000 * 60 * 60 * 4;
@@ -27,7 +29,6 @@ export const TOUR_DELAY_MS = 800;
 
 // ── UI transitions ──────────────────────────────────────────
 export const CARD_CLOSE_MS = 150;
-export const NOTE_PANEL_EXIT_MS = 150;
 
 // ── Clock ───────────────────────────────────────────────────
 export const CLOCK_UPDATE_MS = 30_000;

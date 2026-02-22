@@ -213,7 +213,7 @@
         if (window.__xbtQidsScanned) return;
         window.__xbtQidsScanned = true;
 
-        var targets = ["DeleteBookmark", "CreateBookmark"];
+        var targets = ["DeleteBookmark", "CreateBookmark", "TweetDetail"];
         var found = {};
         var scripts = document.querySelectorAll("script[src]");
         var queue = [];

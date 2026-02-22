@@ -15,10 +15,14 @@ import {
 import type { Bookmark } from "../types";
 import type { ContinueReadingItem } from "../hooks/useContinueReading";
 import { useBookmarkSearch } from "../hooks/useBookmarkSearch";
-import { pickTitle, estimateReadingMinutes } from "../lib/bookmark-utils";
+import { pickTitle } from "../lib/bookmark-utils";
 import { timeAgo, sortIndexToTimestamp } from "../lib/time";
 import { cn } from "../lib/cn";
 import { NEW_BADGE_CUTOFF_MS } from "../lib/constants";
+import {
+  getHighlightCountsByTweetIds,
+  type HighlightCounts,
+} from "../db";
 
 export type ReadingTab = "continue" | "read" | "unread";
 
@@ -145,10 +149,24 @@ export function BookmarksList({
       ...continueReadingItems.map((item) => item.bookmark),
     ];
     for (const b of all) {
-      if (sortIndexToTimestamp(b.sortIndex) >= cutoff) ids.add(b.tweetId);
+      if (
+        b.sortIndex !== b.tweetId &&
+        sortIndexToTimestamp(b.sortIndex) >= cutoff
+      )
+        ids.add(b.tweetId);
     }
     return ids;
   }, [unreadBookmarks, continueReadingItems]);
+
+  const [highlightCounts, setHighlightCounts] = useState<
+    Map<string, HighlightCounts>
+  >(new Map());
+
+  useEffect(() => {
+    const tweetIds = continueReadingItems.map((item) => item.bookmark.tweetId);
+    if (tweetIds.length === 0) return;
+    getHighlightCountsByTweetIds(tweetIds).then(setHighlightCounts);
+  }, [continueReadingItems]);
 
   const filteredUnread = useMemo(
     () =>
@@ -378,7 +396,7 @@ export function BookmarksList({
                     type="button"
                     onClick={() => onOpenBookmark(bookmark)}
                     className={cn(
-                      "bookmark-list-item flex w-full items-center gap-3 rounded-lg border p-3 text-left transition-colors hover:bg-x-hover",
+                      "bookmark-list-item flex w-full cursor-pointer items-center gap-3 rounded-lg border p-3 text-left transition-colors hover:bg-x-hover",
                       focusedIndex === idx
                         ? "border-accent ring-2 ring-accent/40 bg-x-hover"
                         : "border-x-border bg-x-card",
@@ -402,7 +420,6 @@ export function BookmarksList({
                       </div>
                       <p className="mt-1 text-xs text-x-text-secondary">
                         @{bookmark.author.screenName} &middot;{" "}
-                        {estimateReadingMinutes(bookmark)} min read &middot;{" "}
                         <span className="rounded bg-x-border/50 px-1.5 py-0.5 text-xs uppercase">
                           {inferKindBadge(bookmark)}
                         </span>
@@ -434,6 +451,7 @@ export function BookmarksList({
               <div className="space-y-2">
                 {filteredInProgress.map(({ bookmark, progress }) => {
                   const idx = continueIdx++;
+                  const counts = highlightCounts.get(bookmark.tweetId);
                   return (
                     <button
                       key={bookmark.tweetId}
@@ -443,7 +461,7 @@ export function BookmarksList({
                       type="button"
                       onClick={() => onOpenBookmark(bookmark)}
                       className={cn(
-                        "bookmark-list-item flex w-full items-center gap-3 rounded-lg border p-3 text-left transition-colors hover:bg-x-hover",
+                        "bookmark-list-item flex w-full cursor-pointer items-center gap-3 rounded-lg border p-3 text-left transition-colors hover:bg-x-hover",
                         focusedIndex === idx
                           ? "border-accent ring-2 ring-accent/40 bg-x-hover"
                           : "border-x-border bg-x-card",
@@ -468,6 +486,18 @@ export function BookmarksList({
                         <p className="mt-1 text-xs text-x-text-secondary">
                           @{bookmark.author.screenName} &middot; Last read{" "}
                           {timeAgo(progress.lastReadAt)}
+                          {counts && counts.highlights > 0 && (
+                            <>
+                              {" "}&middot; {counts.highlights}{" "}
+                              {counts.highlights === 1 ? "Highlight" : "Highlights"}
+                            </>
+                          )}
+                          {counts && counts.notes > 0 && (
+                            <>
+                              {" "}&middot; {counts.notes}{" "}
+                              {counts.notes === 1 ? "Note" : "Notes"}
+                            </>
+                          )}
                         </p>
                       </div>
                     </button>
@@ -497,6 +527,7 @@ export function BookmarksList({
               <div className="space-y-2">
                 {filteredCompleted.map(({ bookmark, progress }) => {
                   const idx = continueIdx++;
+                  const counts = highlightCounts.get(bookmark.tweetId);
                   return (
                     <button
                       key={bookmark.tweetId}
@@ -506,7 +537,7 @@ export function BookmarksList({
                       type="button"
                       onClick={() => onOpenBookmark(bookmark)}
                       className={cn(
-                        "bookmark-list-item flex w-full items-center gap-3 rounded-lg border p-3 text-left transition-colors hover:bg-x-hover",
+                        "bookmark-list-item flex w-full cursor-pointer items-center gap-3 rounded-lg border p-3 text-left transition-colors hover:bg-x-hover",
                         focusedIndex === idx
                           ? "border-accent ring-2 ring-accent/40 bg-x-hover"
                           : "border-x-border bg-x-card",
@@ -531,6 +562,18 @@ export function BookmarksList({
                         <p className="mt-1 text-xs text-x-text-secondary">
                           @{bookmark.author.screenName} &middot; Finished{" "}
                           {timeAgo(progress.lastReadAt)}
+                          {counts && counts.highlights > 0 && (
+                            <>
+                              {" "}&middot; {counts.highlights}{" "}
+                              {counts.highlights === 1 ? "Highlight" : "Highlights"}
+                            </>
+                          )}
+                          {counts && counts.notes > 0 && (
+                            <>
+                              {" "}&middot; {counts.notes}{" "}
+                              {counts.notes === 1 ? "Note" : "Notes"}
+                            </>
+                          )}
                         </p>
                       </div>
                     </button>

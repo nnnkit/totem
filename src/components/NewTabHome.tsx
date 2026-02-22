@@ -86,7 +86,8 @@ export function NewTabHome({
   const [cardEngaged, setCardEngaged] = useState(false);
   const [mountSeed] = useState(() => Math.random());
   const searchRef = useRef<HTMLInputElement>(null);
-  const { wallpaperUrl, wallpaperTitle, gradientCss } = useWallpaper(backgroundMode);
+  const { wallpaperUrl, wallpaperCredit, gradientCss } =
+    useWallpaper(backgroundMode);
   const { sites: topSites } = useTopSites(topSitesLimit, showTopSites);
 
   const { items, unreadItems } = useMemo(() => {
@@ -148,17 +149,32 @@ export function NewTabHome({
     preventDefault: true,
   });
 
-  useHotkeys("enter, o", () => openItem(currentItem), {
-    preventDefault: true,
-  }, [currentItem, openItem]);
+  useHotkeys(
+    "enter, o",
+    () => openItem(currentItem),
+    {
+      preventDefault: true,
+    },
+    [currentItem, openItem],
+  );
 
-  useHotkeys("l", () => onOpenReading(), {
-    preventDefault: true,
-  }, [onOpenReading]);
+  useHotkeys(
+    "l",
+    () => onOpenReading(),
+    {
+      preventDefault: true,
+    },
+    [onOpenReading],
+  );
 
-  useHotkeys("s", () => surpriseMe(), {
-    preventDefault: true,
-  }, [surpriseMe]);
+  useHotkeys(
+    "s",
+    () => surpriseMe(),
+    {
+      preventDefault: true,
+    },
+    [surpriseMe],
+  );
 
   return (
     <div className="breath-home relative min-h-dvh overflow-hidden">
@@ -249,7 +265,10 @@ export function NewTabHome({
             <div className="space-y-4">
               <article
                 data-tour="bookmark-card"
-                className={cn("breath-card breath-card--zen", cardEngaged && "is-engaged")}
+                className={cn(
+                  "breath-card breath-card--zen",
+                  cardEngaged && "is-engaged",
+                )}
                 onMouseEnter={() => setCardEngaged(true)}
                 onMouseLeave={() => setCardEngaged(false)}
                 onFocusCapture={() => setCardEngaged(true)}
@@ -335,10 +354,7 @@ export function NewTabHome({
                   stroke="currentColor"
                   strokeWidth={2}
                 >
-                  <path
-                    d="M12 2a10 10 0 0 1 10 10"
-                    strokeLinecap="round"
-                  />
+                  <path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round" />
                 </svg>
               </div>
               <p className="breath-empty mt-4 text-pretty">
@@ -394,10 +410,18 @@ export function NewTabHome({
           </button>
         </div>
 
-        {showWallpaper && wallpaperTitle && (
-          <div className="breath-wallpaper-nav">
-            <p className="breath-wallpaper-label">{wallpaperTitle}</p>
-          </div>
+        {showWallpaper && wallpaperCredit && (
+          <p className="fixed bottom-6 left-6 z-20 text-xs text-gray-500">
+            Photo by{" "}
+            <a
+              href={wallpaperCredit.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="transition-colors hover:text-gray-400"
+            >
+              {wallpaperCredit.name}
+            </a>
+          </p>
         )}
       </div>
     </div>

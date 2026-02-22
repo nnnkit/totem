@@ -8,7 +8,7 @@ import {
   MoonIcon,
   SunIcon,
 } from "@phosphor-icons/react";
-import type { Bookmark, Highlight, HighlightColor, SelectionRange, ThreadTweet } from "../types";
+import type { Bookmark, Highlight, SelectionRange, ThreadTweet } from "../types";
 import type { ThemePreference } from "../hooks/useTheme";
 import { fetchTweetDetail } from "../api/core/posts";
 import { cn } from "../lib/cn";
@@ -17,10 +17,9 @@ import { resolveTweetKind } from "./reader/utils";
 import { TweetContent } from "./reader/TweetContent";
 import { SelectionToolbar } from "./reader/SelectionToolbar";
 import { HighlightPopover } from "./reader/HighlightPopover";
-import { NotePanel } from "./reader/NotePanel";
+import { NotePopover } from "./reader/NotePopover";
 import { useReadingProgress } from "../hooks/useReadingProgress";
 import { useHighlights } from "../hooks/useHighlights";
-import { LS_HIGHLIGHT_COLOR } from "../lib/storage-keys";
 
 const THEME_CYCLE: ThemePreference[] = ["system", "light", "dark"];
 
@@ -40,8 +39,8 @@ interface Props {
 }
 
 interface NotePanelState {
-  highlight: Highlight | null;
-  ranges: SelectionRange[] | null;
+  highlight: Highlight;
+  anchorEl: HTMLElement;
 }
 
 export function BookmarkReader({
@@ -64,7 +63,7 @@ export function BookmarkReader({
     null,
   );
   const [detailThread, setDetailThread] = useState<ThreadTweet[]>([]);
-  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(true);
   const [detailError, setDetailError] = useState<string | null>(null);
   const { isCompleted } = useReadingProgress({
     tweetId: bookmark.tweetId,
@@ -122,22 +121,27 @@ export function BookmarkReader({
   const [notePanelState, setNotePanelState] = useState<NotePanelState | null>(null);
 
   const handleAddNoteFromToolbar = useCallback(
-    (ranges: SelectionRange[]) => {
-      setNotePanelState({ highlight: null, ranges });
+    async (ranges: SelectionRange[]) => {
+      const created = await addHighlight(ranges);
+      if (created.length === 0) return;
+      const highlight = created[0];
+      requestAnimationFrame(() => {
+        const mark = document.querySelector(
+          `mark[data-highlight-id="${highlight.id}"]`,
+        ) as HTMLElement | null;
+        if (mark) {
+          setNotePanelState({ highlight, anchorEl: mark });
+        }
+      });
     },
-    [],
+    [addHighlight],
   );
 
   const handleSaveNote = useCallback(
-    async (note: string, highlightId?: string, ranges?: SelectionRange[]) => {
-      if (highlightId) {
-        await updateHighlightNote(highlightId, note);
-      } else if (ranges) {
-        const color = (localStorage.getItem(LS_HIGHLIGHT_COLOR) || "green") as HighlightColor;
-        await addHighlight(ranges, note, color);
-      }
+    async (note: string, highlightId: string) => {
+      await updateHighlightNote(highlightId, note);
     },
-    [updateHighlightNote, addHighlight],
+    [updateHighlightNote],
   );
 
   const handleDeleteNote = useCallback(
@@ -269,7 +273,7 @@ export function BookmarkReader({
 
       <SelectionToolbar
         containerRef={articleRef}
-        onHighlight={(ranges, color) => addHighlight(ranges, null, color)}
+        onHighlight={(ranges) => addHighlight(ranges)}
         onAddNote={handleAddNoteFromToolbar}
       />
 
@@ -277,17 +281,23 @@ export function BookmarkReader({
         containerRef={articleRef}
         getHighlight={getHighlight}
         onDelete={removeHighlight}
-        onAddNote={(hl) => setNotePanelState({ highlight: hl, ranges: null })}
-        onOpenNote={(hl) => setNotePanelState({ highlight: hl, ranges: null })}
+        onAddNote={(hl, anchorEl) => setNotePanelState({ highlight: hl, anchorEl })}
+        onOpenNote={(hl, anchorEl) => setNotePanelState({ highlight: hl, anchorEl })}
       />
 
       {notePanelState && (
-        <NotePanel
+        <NotePopover
           highlight={notePanelState.highlight}
-          ranges={notePanelState.ranges}
+          anchorEl={notePanelState.anchorEl}
           onSaveNote={handleSaveNote}
           onDeleteNote={handleDeleteNote}
-          onClose={() => setNotePanelState(null)}
+          onClose={() => {
+            const latest = getHighlight(notePanelState.highlight.id);
+            if (latest && !latest.note) {
+              removeHighlight(latest.id);
+            }
+            setNotePanelState(null);
+          }}
         />
       )}
     </div>

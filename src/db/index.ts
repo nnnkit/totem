@@ -378,6 +378,28 @@ export async function getHighlightsByTweetId(tweetId: string): Promise<Highlight
   return db.getAllFromIndex(HIGHLIGHTS_STORE_NAME, "tweetId", tweetId);
 }
 
+export interface HighlightCounts {
+  highlights: number;
+  notes: number;
+}
+
+export async function getHighlightCountsByTweetIds(
+  tweetIds: string[],
+): Promise<Map<string, HighlightCounts>> {
+  const result = new Map<string, HighlightCounts>();
+  if (tweetIds.length === 0) return result;
+  const db = await getDb();
+  const index = db.transaction(HIGHLIGHTS_STORE_NAME, "readonly").store.index("tweetId");
+  for (const tweetId of tweetIds) {
+    const highlights = await index.getAll(IDBKeyRange.only(tweetId));
+    if (highlights.length > 0) {
+      const notes = highlights.filter((h) => h.note).length;
+      result.set(tweetId, { highlights: highlights.length, notes });
+    }
+  }
+  return result;
+}
+
 export async function deleteHighlightsForTweet(tweetId: string): Promise<void> {
   if (!tweetId) return;
   const db = await getDb();

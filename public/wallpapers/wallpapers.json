@@ -38,136 +38,79 @@
     "license": "Unsplash License (free for commercial and non-commercial use)"
   },
   {
-    "id": "u4u8yUXkcyE",
-    "filename": "03-night-sky.webp",
-    "category": "night-sky",
-    "mood": "wonder",
-    "description": "the night sky is filled with stars above a mountain",
-    "color": "#0c2640",
-    "blurHash": "L32sLoV@VWo#kYfiadaxMHo#o~V?",
+    "id": "1PCJywjRHAk",
+    "filename": "03-soft-clouds.webp",
+    "category": "soft-clouds",
+    "mood": "calm",
+    "description": "a single fluffy cloud floats in a clear blue sky",
+    "color": "#598c8c",
+    "blurHash": "LQEDq@RkE2j]pKj=NGj[8^bIs.ay",
+    "width": 4911,
+    "height": 3683,
+    "photographer": {
+      "name": "Evgeniy Beloshytskiy",
+      "username": "eugeniqa",
+      "profileUrl": "https://unsplash.com/@eugeniqa",
+      "portfolioUrl": "https://beloshytskiy.photography"
+    },
+    "unsplashUrl": "https://unsplash.com/photos/a-single-fluffy-cloud-floats-in-a-clear-blue-sky-1PCJywjRHAk",
+    "license": "Unsplash License (free for commercial and non-commercial use)"
+  },
+  {
+    "id": "IP820hInRas",
+    "filename": "05-autumn-trees.webp",
+    "category": "autumn-trees",
+    "mood": "warm",
+    "description": "tall trees with golden autumn leaves",
+    "color": "#40260c",
+    "blurHash": "LrHcb~-6S5Rl}=w]bIR+%1WBofaf",
+    "width": 5760,
+    "height": 3840,
+    "photographer": {
+      "name": "Diana Parkhouse",
+      "username": "ditakesphotos",
+      "profileUrl": "https://unsplash.com/@ditakesphotos",
+      "portfolioUrl": null
+    },
+    "unsplashUrl": "https://unsplash.com/photos/tall-trees-IP820hInRas",
+    "license": "Unsplash License (free for commercial and non-commercial use)"
+  },
+  {
+    "id": "uFsgMsx26nM",
+    "filename": "06-rice-terraces.webp",
+    "category": "rice-terraces",
+    "mood": "nature",
+    "description": "lush green rice terraces on a hillside with trees",
+    "color": "#595926",
+    "blurHash": "LNCQ6xt7RQoz?ds;R%t7_3t7WBof",
+    "width": 5994,
+    "height": 3996,
+    "photographer": {
+      "name": "Nicole Arango Lang",
+      "username": "nicolearangolang",
+      "profileUrl": "https://unsplash.com/@nicolearangolang",
+      "portfolioUrl": null
+    },
+    "unsplashUrl": "https://unsplash.com/photos/lush-green-rice-terraces-on-a-hillside-with-trees-uFsgMsx26nM",
+    "license": "Unsplash License (free for commercial and non-commercial use)"
+  },
+  {
+    "id": "ROPA05jCgnU",
+    "filename": "09-tropical-beach.webp",
+    "category": "tropical-beach",
+    "mood": "serene",
+    "description": "an aerial view of a tropical beach with palm trees",
+    "color": "#8cc0c0",
+    "blurHash": "LCI=.B2^3Es:AXNGniwJj^n$jYW;",
     "width": 4000,
     "height": 3000,
     "photographer": {
-      "name": "Calwaen Liew",
-      "username": "calwa3nli3w",
-      "profileUrl": "https://unsplash.com/@calwa3nli3w",
+      "name": "Aina Antal",
+      "username": "ainaantal",
+      "profileUrl": "https://unsplash.com/@ainaantal",
       "portfolioUrl": null
     },
-    "unsplashUrl": "https://unsplash.com/photos/the-night-sky-is-filled-with-stars-above-a-mountain-u4u8yUXkcyE",
-    "license": "Unsplash License (free for commercial and non-commercial use)"
-  },
-  {
-    "id": "L95xDkSSuWw",
-    "filename": "04-milky-way.webp",
-    "category": "milky-way",
-    "mood": "wonder",
-    "description": "mountains with trees under white star at night",
-    "color": "#0c2640",
-    "blurHash": "L74VRcv^t9ofE0NfWBayiYo%awWV",
-    "width": 5751,
-    "height": 3871,
-    "photographer": {
-      "name": "Nathan Anderson",
-      "username": "nathananderson",
-      "profileUrl": "https://unsplash.com/@nathananderson",
-      "portfolioUrl": "https://kunack.us/follow?source=unsplash"
-    },
-    "unsplashUrl": "https://unsplash.com/photos/mountains-with-trees-under-white-star-at-night-L95xDkSSuWw",
-    "license": "Unsplash License (free for commercial and non-commercial use)"
-  },
-  {
-    "id": "5IynMUOOpLE",
-    "filename": "05-golden-hour-mountains.webp",
-    "category": "golden-hour-mountains",
-    "mood": "warm",
-    "description": "silhouette of mountains during golden hour",
-    "color": "#262640",
-    "blurHash": "LL9Zo[M|xZWCR.oLR+oL0extWCoL",
-    "width": 6016,
-    "height": 4016,
-    "photographer": {
-      "name": "Alessio Soggetti",
-      "username": "asoggetti",
-      "profileUrl": "https://unsplash.com/@asoggetti",
-      "portfolioUrl": "https://asoggetti.it"
-    },
-    "unsplashUrl": "https://unsplash.com/photos/silhouette-of-mountains-during-golden-hour-5IynMUOOpLE",
-    "license": "Unsplash License (free for commercial and non-commercial use)"
-  },
-  {
-    "id": "9V-HYRrdvF4",
-    "filename": "06-sunset-water.webp",
-    "category": "sunset-water",
-    "mood": "warm",
-    "description": "body of water during sunset",
-    "color": "#262626",
-    "blurHash": "L97wNew{J8S4}ssoS3a|-9jtjuso",
-    "width": 3936,
-    "height": 2624,
-    "photographer": {
-      "name": "Tolga Ahmetler",
-      "username": "t_ahmetler",
-      "profileUrl": "https://unsplash.com/@t_ahmetler",
-      "portfolioUrl": null
-    },
-    "unsplashUrl": "https://unsplash.com/photos/body-of-water-during-sunset-9V-HYRrdvF4",
-    "license": "Unsplash License (free for commercial and non-commercial use)"
-  },
-  {
-    "id": "UScmZa9AWyc",
-    "filename": "07-calm-ocean.webp",
-    "category": "calm-ocean",
-    "mood": "serene",
-    "description": "a small boat floating on top of a large body of water",
-    "color": "#404040",
-    "blurHash": "L8ATcoIUIUj[~qRjWBay57R+s.az",
-    "width": 6000,
-    "height": 3861,
-    "photographer": {
-      "name": "Shivya Kumar",
-      "username": "purplelune9",
-      "profileUrl": "https://unsplash.com/@purplelune9",
-      "portfolioUrl": null
-    },
-    "unsplashUrl": "https://unsplash.com/photos/a-small-boat-floating-on-top-of-a-large-body-of-water-UScmZa9AWyc",
-    "license": "Unsplash License (free for commercial and non-commercial use)"
-  },
-  {
-    "id": "KzHXFbpofgg",
-    "filename": "08-tranquil-water.webp",
-    "category": "tranquil-water",
-    "mood": "serene",
-    "description": "a body of water with ripples",
-    "color": "#0c2626",
-    "blurHash": "Li7{]ta~kCf6*0fkjZfkxZj?f6fk",
-    "width": 6000,
-    "height": 3375,
-    "photographer": {
-      "name": "Esteban Bonilla",
-      "username": "estejpg",
-      "profileUrl": "https://unsplash.com/@estejpg",
-      "portfolioUrl": "https://bento.me/estejpg"
-    },
-    "unsplashUrl": "https://unsplash.com/photos/a-body-of-water-with-ripples-KzHXFbpofgg",
-    "license": "Unsplash License (free for commercial and non-commercial use)"
-  },
-  {
-    "id": "70OXvxIusn0",
-    "filename": "09-forest-path.webp",
-    "category": "forest-path",
-    "mood": "exploration",
-    "description": "green trees on brown soil",
-    "color": "#26260c",
-    "blurHash": "L02r$}-oM{xstQj?xZxs~UxZE1ax",
-    "width": 6324,
-    "height": 4743,
-    "photographer": {
-      "name": "David Gabri\u0107",
-      "username": "daconja",
-      "profileUrl": "https://unsplash.com/@daconja",
-      "portfolioUrl": null
-    },
-    "unsplashUrl": "https://unsplash.com/photos/green-trees-on-brown-soil-70OXvxIusn0",
+    "unsplashUrl": "https://unsplash.com/photos/an-aerial-view-of-a-beach-with-a-palm-tree-ROPA05jCgnU",
     "license": "Unsplash License (free for commercial and non-commercial use)"
   },
   {
@@ -209,22 +152,22 @@
     "license": "Unsplash License (free for commercial and non-commercial use)"
   },
   {
-    "id": "Rv1LJjUFvE0",
-    "filename": "12-sand-dunes-sky.webp",
-    "category": "sand-dunes-sky",
-    "mood": "warmth",
-    "description": "Sand dunes stretch out under a clear blue sky.",
-    "color": "#a6c0d9",
-    "blurHash": "L,HCo|W;R+j[yZoeaya|bHayWBay",
-    "width": 6360,
-    "height": 4242,
+    "id": "TltDI-rsHtc",
+    "filename": "12-volcanic-hills.webp",
+    "category": "volcanic-hills",
+    "mood": "dramatic",
+    "description": "colorful volcanic hills with red and purple hues",
+    "color": "#595959",
+    "blurHash": "LGGkj{}?wbxZ~VRj%1R*9v9bt7R*",
+    "width": 6000,
+    "height": 4000,
     "photographer": {
-      "name": "Carlos",
-      "username": "folkcarlos",
-      "profileUrl": "https://unsplash.com/@folkcarlos",
-      "portfolioUrl": "https://instagram.com/folkcarlos"
+      "name": "Denise Jans",
+      "username": "dmjdenise",
+      "profileUrl": "https://unsplash.com/@dmjdenise",
+      "portfolioUrl": "http://dmjproduction.nl"
     },
-    "unsplashUrl": "https://unsplash.com/photos/sand-dunes-stretch-out-under-a-clear-blue-sky-Rv1LJjUFvE0",
+    "unsplashUrl": "https://unsplash.com/photos/a-lone-hiker-walks-on-a-path-through-colorful-mountains-TltDI-rsHtc",
     "license": "Unsplash License (free for commercial and non-commercial use)"
   },
   {
@@ -247,41 +190,41 @@
     "license": "Unsplash License (free for commercial and non-commercial use)"
   },
   {
-    "id": "wFU3hun3Jc0",
-    "filename": "14-city-bokeh.webp",
-    "category": "city-bokeh",
-    "mood": "cozy",
-    "description": "Blurred city skyline at night with illuminated buildings.",
-    "color": "#262626",
-    "blurHash": "LH9jlt?vR*IA00Diaexu?b-;ozM{",
-    "width": 6000,
-    "height": 3146,
+    "id": "CtRABqwL_jU",
+    "filename": "14-aerial-ocean.webp",
+    "category": "aerial-ocean",
+    "mood": "powerful",
+    "description": "aerial view of ocean waves and foam from above",
+    "color": "#a6c0c0",
+    "blurHash": "LcEDM5bIIAae4mM_ofofMd%No#of",
+    "width": 4944,
+    "height": 3098,
     "photographer": {
-      "name": "Sam Tsonis",
-      "username": "philcat",
-      "profileUrl": "https://unsplash.com/@philcat",
+      "name": "Srijan Mohan",
+      "username": "srijancm",
+      "profileUrl": "https://unsplash.com/@srijancm",
       "portfolioUrl": null
     },
-    "unsplashUrl": "https://unsplash.com/photos/blurred-city-skyline-at-night-with-illuminated-buildings-wFU3hun3Jc0",
+    "unsplashUrl": "https://unsplash.com/photos/a-large-body-of-water-that-is-blue-and-white-CtRABqwL_jU",
     "license": "Unsplash License (free for commercial and non-commercial use)"
   },
   {
-    "id": "IxUxsQbNc40",
-    "filename": "15-sunrise-silhouette.webp",
-    "category": "sunrise-silhouette",
-    "mood": "hope",
-    "description": "silhouette of trees during sunset",
-    "color": "#732626",
-    "blurHash": "LbFxuP1ww_S3|_JRa|a|AX,?WWjt",
-    "width": 3714,
-    "height": 2476,
+    "id": "QbWCItZGraY",
+    "filename": "15-lone-tree.webp",
+    "category": "lone-tree",
+    "mood": "minimal",
+    "description": "a lone tree standing in a plowed field",
+    "color": "#c0d9d9",
+    "blurHash": "L$I~iEj[fRt7.TofayayIUkCayRj",
+    "width": 5184,
+    "height": 3456,
     "photographer": {
-      "name": "Hikarinoshita Hikari",
-      "username": "hikarinoshita",
-      "profileUrl": "https://unsplash.com/@hikarinoshita",
+      "name": "Ja Kubislav",
+      "username": "jakubislav",
+      "profileUrl": "https://unsplash.com/@jakubislav",
       "portfolioUrl": null
     },
-    "unsplashUrl": "https://unsplash.com/photos/silhouette-of-trees-during-sunset-IxUxsQbNc40",
+    "unsplashUrl": "https://unsplash.com/photos/green-grass-field-with-leafless-tree-during-daytime-QbWCItZGraY",
     "license": "Unsplash License (free for commercial and non-commercial use)"
   }
 ]

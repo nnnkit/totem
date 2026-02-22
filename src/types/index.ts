@@ -159,10 +159,6 @@ export interface ReadingProgress {
   completed: boolean;
 }
 
-export type HighlightColor = "yellow" | "green" | "blue" | "pink" | "purple";
-
-export { HIGHLIGHT_COLORS } from "../lib/constants";
-
 export interface Highlight {
   id: string;
   tweetId: string;
@@ -171,7 +167,7 @@ export interface Highlight {
   endOffset: number;
   selectedText: string;
   note: string | null;
-  color: HighlightColor;
+  color: string;
   createdAt: number;
 }
 

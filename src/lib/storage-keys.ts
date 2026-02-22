@@ -11,13 +11,13 @@ export const IDB_DATABASE_NAME = "xbt";
 
 // ── localStorage ───────────────────────────────────────────────────
 export const LS_TOUR_COMPLETED = "xbt_tour_completed";
-export const LS_HIGHLIGHT_COLOR = "xbt_highlight_color";
 export const LS_READING_TAB = "xbt_reading_tab";
+export const LS_WALLPAPER_INDEX = "xbt_wallpaper_index";
 
 export const LOCAL_STORAGE_KEYS = [
   LS_TOUR_COMPLETED,
-  LS_HIGHLIGHT_COLOR,
   LS_READING_TAB,
+  LS_WALLPAPER_INDEX,
 ] as const;
 
 // ── chrome.storage.local (shared between app + service worker) ─────

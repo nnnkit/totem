@@ -49,11 +49,11 @@ function normalizeBookmarkChangeEvents(value: unknown): BookmarkChangeEvent[] {
 
 export async function fetchBookmarkPage(
   cursor?: string,
+  count?: number,
 ): Promise<BookmarkPageResult> {
-  const response = (await chrome.runtime.sendMessage({
-    type: "FETCH_BOOKMARKS",
-    cursor,
-  })) as RuntimeResponse;
+  const message: Record<string, unknown> = { type: "FETCH_BOOKMARKS", cursor };
+  if (typeof count === "number" && count > 0) message.count = count;
+  const response = (await chrome.runtime.sendMessage(message)) as RuntimeResponse;
 
   if (response?.error) throw new Error(runtimeError(response));
   return parseBookmarkPagePayload(response?.data);

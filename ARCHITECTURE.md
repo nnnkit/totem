@@ -30,7 +30,7 @@ We didn't have the `declarativeNetRequest` rule. Without `Origin: https://x.com`
 #### 1. Content Script (`public/content/detect-user.js`)
 - Runs at `document_start` on `https://x.com/*`
 - Reads `twid` cookie → extracts user ID
-- Stores `current_user_id` in `chrome.storage.local`
+- Stores `xbt_user_id` in `chrome.storage.local`
 
 #### 2. Background Service Worker (`public/service-worker.js`)
 - `chrome.webRequest.onSendHeaders` — captures auth headers from x.com GraphQL requests

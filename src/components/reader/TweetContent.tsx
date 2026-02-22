@@ -216,7 +216,7 @@ export const TweetContent = memo(function TweetContent({
       <TweetHeader
         author={displayBookmark.author}
         displayKind={displayKind}
-        readingMinutes={estimateReadingMinutes(displayBookmark)}
+        readingMinutes={detailLoading ? null : estimateReadingMinutes(displayBookmark)}
       />
 
       <div id="section-main-tweet" className="px-6">
