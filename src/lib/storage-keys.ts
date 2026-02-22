@@ -21,7 +21,6 @@ export const LOCAL_STORAGE_KEYS = [
 ] as const;
 
 // ── chrome.storage.local (shared between app + service worker) ─────
-export const CS_MANUAL_LOGIN = "xbt_manual_login_required";
 export const CS_DB_CLEANUP_AT = "xbt_db_cleanup_at";
 export const CS_LAST_RECONCILE = "xbt_last_reconcile";
 export const CS_LAST_SYNC = "xbt_last_sync";
@@ -30,6 +29,8 @@ export const CS_AUTH_HEADERS = "xbt_auth_headers";
 export const CS_AUTH_TIME = "xbt_auth_time";
 export const CS_QUERY_ID = "xbt_query_id";
 export const CS_USER_ID = "xbt_user_id";
+export const CS_LAST_LIGHT_SYNC = "xbt_last_light_sync";
+export const CS_LIGHT_SYNC_NEEDED = "xbt_light_sync_needed";
 
 // ── chrome.storage.local (service-worker only) ─────────────────────
 // These are written/read exclusively by public/service-worker.js.
@@ -45,7 +46,6 @@ export const CS_USER_ID = "xbt_user_id";
 //   xbt_seen_display_types – seen tweetDisplayType values
 
 export const CHROME_LOCAL_KEYS = [
-  CS_MANUAL_LOGIN,
   CS_DB_CLEANUP_AT,
   CS_LAST_RECONCILE,
   CS_LAST_SYNC,
@@ -54,6 +54,8 @@ export const CHROME_LOCAL_KEYS = [
   CS_AUTH_TIME,
   CS_QUERY_ID,
   CS_USER_ID,
+  CS_LAST_LIGHT_SYNC,
+  CS_LIGHT_SYNC_NEEDED,
 ] as const;
 
 // ── chrome.storage.sync ────────────────────────────────────────────

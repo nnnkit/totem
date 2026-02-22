@@ -7,6 +7,11 @@ import {
   getHighlightsByTweetId,
 } from "../db";
 
+const DOM_MUTATION_OBSERVER_OPTIONS: MutationObserverInit = {
+  childList: true,
+  subtree: true,
+  characterData: true,
+};
 
 interface Props {
   tweetId: string;
@@ -142,10 +147,32 @@ function injectNoteStar(
   section.appendChild(star);
 }
 
+function findMatchingSection(container: Element, highlight: Highlight): Element | null {
+  const selector = `#${CSS.escape(highlight.sectionId)}`;
+  const sections = Array.from(container.querySelectorAll(selector));
+  if (sections.length === 0) return null;
+
+  if (sections.length === 1) {
+    return sections[0];
+  }
+
+  for (const section of sections) {
+    const text = section.textContent || "";
+    const actualText = text.slice(highlight.startOffset, highlight.endOffset);
+    if (actualText === highlight.selectedText) {
+      return section;
+    }
+  }
+
+  return sections[0];
+}
+
 export function useHighlights({ tweetId, contentReady, containerRef }: Props) {
   const highlightsRef = useRef<Map<string, Highlight>>(new Map());
   const [revision, setRevision] = useState(0);
   const flashIdsRef = useRef<Set<string>>(new Set());
+  const observerRef = useRef<MutationObserver | null>(null);
+  const applyFrameRef = useRef(0);
 
   const applyHighlightsToDOM = useCallback(() => {
     const container = containerRef.current;
@@ -159,7 +186,7 @@ export function useHighlights({ tweetId, contentReady, containerRef }: Props) {
     });
 
     for (const h of highlights) {
-      const section = container.querySelector(`#${CSS.escape(h.sectionId)}`);
+      const section = findMatchingSection(container, h);
       if (!section) continue;
 
       const sectionText = section.textContent || "";
@@ -182,10 +209,80 @@ export function useHighlights({ tweetId, contentReady, containerRef }: Props) {
     }
   }, [containerRef]);
 
+  const stopObservingContainer = useCallback(() => {
+    observerRef.current?.disconnect();
+  }, []);
+
+  const observeContainer = useCallback(() => {
+    const observer = observerRef.current;
+    const container = containerRef.current;
+    if (!observer || !container) return;
+    observer.observe(container, DOM_MUTATION_OBSERVER_OPTIONS);
+  }, [containerRef]);
+
+  const runApplyNow = useCallback(() => {
+    stopObservingContainer();
+    applyHighlightsToDOM();
+    observeContainer();
+  }, [applyHighlightsToDOM, observeContainer, stopObservingContainer]);
+
+  const scheduleApply = useCallback(() => {
+    if (applyFrameRef.current) return;
+    applyFrameRef.current = requestAnimationFrame(() => {
+      applyFrameRef.current = 0;
+      runApplyNow();
+    });
+  }, [runApplyNow]);
+
+  useEffect(() => {
+    if (!contentReady) return;
+
+    const container = containerRef.current;
+    if (!container) return;
+
+    const observer = new MutationObserver((mutations) => {
+      if (highlightsRef.current.size === 0) return;
+
+      const hasContentMutation = mutations.some((mutation) => {
+        if (mutation.type === "characterData") return true;
+        if (mutation.type !== "childList") return false;
+
+        const changedNodes = [...mutation.addedNodes, ...mutation.removedNodes];
+        return changedNodes.some((node) => {
+          if (!(node instanceof Element)) {
+            return true;
+          }
+          return !node.matches("mark.xbt-highlight, .xbt-note-star");
+        });
+      });
+
+      if (hasContentMutation) {
+        scheduleApply();
+      }
+    });
+
+    observerRef.current = observer;
+    observeContainer();
+
+    return () => {
+      stopObservingContainer();
+      observerRef.current = null;
+    };
+  }, [
+    contentReady,
+    containerRef,
+    observeContainer,
+    scheduleApply,
+    stopObservingContainer,
+    tweetId,
+  ]);
+
   useEffect(() => {
     if (!contentReady || !tweetId) return;
 
     let cancelled = false;
+    let retryTimer = 0;
+    flashIdsRef.current.clear();
 
     getHighlightsByTweetId(tweetId).then((stored) => {
       if (cancelled) return;
@@ -193,17 +290,52 @@ export function useHighlights({ tweetId, contentReady, containerRef }: Props) {
       for (const h of stored) {
         highlightsRef.current.set(h.id, h);
       }
-      if (stored.length > 0) {
-        applyHighlightsToDOM();
-      }
+      if (stored.length === 0) return;
+
+      let attempts = 0;
+      const tryApply = () => {
+        if (cancelled) return;
+        runApplyNow();
+        const container = containerRef.current;
+        if (
+          container &&
+          !container.querySelector("mark.xbt-highlight") &&
+          attempts < 10
+        ) {
+          attempts++;
+          retryTimer = window.setTimeout(tryApply, 60);
+        }
+      };
+
+      requestAnimationFrame(() => {
+        if (!cancelled) tryApply();
+      });
     });
 
-    return () => { cancelled = true; };
-  }, [tweetId, contentReady, applyHighlightsToDOM]);
+    return () => {
+      cancelled = true;
+      clearTimeout(retryTimer);
+      if (applyFrameRef.current) {
+        cancelAnimationFrame(applyFrameRef.current);
+        applyFrameRef.current = 0;
+      }
+    };
+  }, [tweetId, contentReady, runApplyNow, containerRef]);
 
   useEffect(() => {
-    applyHighlightsToDOM();
-  }, [revision, applyHighlightsToDOM]);
+    scheduleApply();
+  }, [revision, scheduleApply]);
+
+  useEffect(
+    () => () => {
+      stopObservingContainer();
+      if (applyFrameRef.current) {
+        cancelAnimationFrame(applyFrameRef.current);
+        applyFrameRef.current = 0;
+      }
+    },
+    [stopObservingContainer],
+  );
 
   const addHighlight = useCallback(
     async (ranges: SelectionRange[], note: string | null = null) => {

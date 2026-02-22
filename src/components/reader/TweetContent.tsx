@@ -23,7 +23,10 @@ interface TweetBodyProps {
   sectionIdPrefix?: string;
 }
 
-function stripCardUrls(text: string, urls: { url: string; expandedUrl: string }[]): string {
+function stripCardUrls(
+  text: string,
+  urls: { url: string; expandedUrl: string }[],
+): string {
   if (urls.length === 0) return text;
   let result = text;
   for (const u of urls) {
@@ -33,7 +36,11 @@ function stripCardUrls(text: string, urls: { url: string; expandedUrl: string }[
   return result.replace(/\n+$/, "").trimEnd();
 }
 
-function TweetBody({ tweet, compact = false, sectionIdPrefix }: TweetBodyProps) {
+function TweetBody({
+  tweet,
+  compact = false,
+  sectionIdPrefix,
+}: TweetBodyProps) {
   const kind = resolveTweetKind(tweet);
 
   if (kind === "repost" && tweet.retweetedTweet) {
@@ -153,9 +160,7 @@ function ThreadTweets({ tweets }: ThreadTweetsProps) {
                   className="size-10 shrink-0 rounded-full"
                   loading="lazy"
                 />
-                {!isLast && (
-                  <div className="mt-1 w-0.5 flex-1 bg-x-border" />
-                )}
+                {!isLast && <div className="mt-1 w-0.5 flex-1 bg-x-border" />}
               </div>
               <div className={cn("min-w-0 flex-1", !isLast && "pb-5")}>
                 <div className="flex items-center gap-1.5 text-sm">
@@ -216,7 +221,9 @@ export const TweetContent = memo(function TweetContent({
       <TweetHeader
         author={displayBookmark.author}
         displayKind={displayKind}
-        readingMinutes={detailLoading ? null : estimateReadingMinutes(displayBookmark)}
+        readingMinutes={
+          detailLoading ? null : estimateReadingMinutes(displayBookmark)
+        }
       />
 
       <div id="section-main-tweet" className="px-6">
@@ -246,7 +253,7 @@ export const TweetContent = memo(function TweetContent({
         </p>
       )}
 
-      <div className="px-6">
+      <div className="px-6 py-4">
         <TweetRecommendations
           relatedBookmarks={relatedBookmarks}
           onOpenBookmark={onOpenBookmark}

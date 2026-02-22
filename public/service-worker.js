@@ -255,17 +255,139 @@ async function discoverQueryIdFromBundles(operationName) {
       const jsResp = await fetch(url);
       if (!jsResp.ok) continue;
       const text = await jsResp.text();
-      const needle = '"' + operationName + '"';
-      const pos = text.indexOf(needle);
-      if (pos === -1) continue;
-      const region = text.substring(Math.max(0, pos - 300), pos + 300);
-      const qm = region.match(/queryId\s*:\s*["']([A-Za-z0-9_\-]{10,50})["']/);
-      if (qm) return qm[1];
+      const qid = extractQueryIdForOperation(text, operationName);
+      if (qid) return qid;
     } catch {
       continue;
     }
   }
   return null;
+}
+
+function extractQueryIdForOperation(text, operationName) {
+  // Match queryId immediately paired with the operationName in the same export
+  const pattern = new RegExp(
+    'queryId\\s*:\\s*["\']([A-Za-z0-9_\\-]{10,50})["\']\\s*,\\s*operationName\\s*:\\s*["\']' +
+      operationName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") +
+      '["\']',
+  );
+  const match = text.match(pattern);
+  return match ? match[1] : null;
+}
+
+// ═══════════════════════════════════════════════════════════
+// QUERY ID RESOLUTION — unified fallback chain
+// ═══════════════════════════════════════════════════════════
+
+async function resolveQueryId(operationName, storageKey) {
+  // 1. Check chrome.storage.local
+  const stored = await chrome.storage.local.get([storageKey]);
+  if (stored[storageKey]) return stored[storageKey];
+
+  // 2. Check GraphQL catalog
+  const catalog = await loadGraphqlCatalog();
+  for (const entry of Object.values(catalog.endpoints || {})) {
+    if (entry && entry.operation === operationName && entry.queryId) {
+      chrome.storage.local.set({ [storageKey]: entry.queryId });
+      return entry.queryId;
+    }
+  }
+
+  // 3. Discover from x.com JS bundles
+  const discovered = await discoverQueryIdFromBundles(operationName).catch(() => null);
+  if (discovered) {
+    chrome.storage.local.set({ [storageKey]: discovered });
+    return discovered;
+  }
+
+  return null;
+}
+
+// ═══════════════════════════════════════════════════════════
+// PROACTIVE BATCH DISCOVERY — find all missing query IDs
+// ═══════════════════════════════════════════════════════════
+
+let discoveryInProgress = false;
+
+const QUERY_ID_OPS = [
+  { operation: "DeleteBookmark", storageKey: "xbt_delete_query_id" },
+  { operation: "CreateBookmark", storageKey: "xbt_create_query_id" },
+  { operation: "TweetDetail", storageKey: "xbt_detail_query_id" },
+];
+
+async function discoverAllMissingQueryIds() {
+  if (discoveryInProgress) return;
+  discoveryInProgress = true;
+
+  try {
+    const keys = QUERY_ID_OPS.map((op) => op.storageKey);
+    const stored = await chrome.storage.local.get(keys);
+    const missing = QUERY_ID_OPS.filter((op) => !stored[op.storageKey]);
+    if (missing.length === 0) return;
+
+    // Check catalog before hitting the network
+    const catalog = await loadGraphqlCatalog();
+    const updates = {};
+    const stillMissing = [];
+
+    for (const op of missing) {
+      let found = false;
+      for (const entry of Object.values(catalog.endpoints || {})) {
+        if (entry && entry.operation === op.operation && entry.queryId) {
+          updates[op.storageKey] = entry.queryId;
+          found = true;
+          break;
+        }
+      }
+      if (!found) stillMissing.push(op);
+    }
+
+    if (Object.keys(updates).length > 0) {
+      await chrome.storage.local.set(updates);
+    }
+
+    if (stillMissing.length === 0) return;
+
+    // Batch fetch bundles — one fetch per bundle, search all missing ops
+    const resp = await fetch("https://x.com", { credentials: "include" });
+    if (!resp.ok) return;
+    const html = await resp.text();
+
+    const scriptUrls = [];
+    const scriptRegex = /src="(https:\/\/abs\.twimg\.com\/responsive-web\/client-web[^"]+\.js)"/g;
+    let m;
+    while ((m = scriptRegex.exec(html)) !== null && scriptUrls.length < 15) {
+      scriptUrls.push(m[1]);
+    }
+
+    const remaining = new Map(stillMissing.map((op) => [op.operation, op]));
+    const bundleUpdates = {};
+
+    for (const url of scriptUrls) {
+      if (remaining.size === 0) break;
+      try {
+        const jsResp = await fetch(url);
+        if (!jsResp.ok) continue;
+        const text = await jsResp.text();
+
+        for (const [opName, op] of remaining) {
+          const qid = extractQueryIdForOperation(text, opName);
+          if (qid) {
+            bundleUpdates[op.storageKey] = qid;
+            remaining.delete(opName);
+          }
+        }
+      } catch {
+        continue;
+      }
+    }
+
+    if (Object.keys(bundleUpdates).length > 0) {
+      await chrome.storage.local.set(bundleUpdates);
+    }
+  } finally {
+    discoveryInProgress = false;
+  }
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -805,7 +927,12 @@ async function handleFetchBookmarks(cursor, count, _retried = false) {
   ]);
 
   if (!stored.xbt_auth_headers?.authorization) throw new Error("NO_AUTH");
-  if (!stored.xbt_query_id) throw new Error("NO_QUERY_ID");
+
+  let queryId = stored.xbt_query_id;
+  if (!queryId) {
+    queryId = await resolveQueryId("Bookmarks", "xbt_query_id");
+  }
+  if (!queryId) throw new Error("NO_QUERY_ID");
 
   const pageCount = typeof count === "number" && count > 0 ? count : 100;
   const variables = { count: pageCount, includePromotedContent: true };
@@ -818,7 +945,7 @@ async function handleFetchBookmarks(cursor, count, _retried = false) {
     features: features,
   });
 
-  const url = `https://x.com/i/api/graphql/${stored.xbt_query_id}/Bookmarks?${params}`;
+  const url = `https://x.com/i/api/graphql/${queryId}/Bookmarks?${params}`;
   const requestHeaders = await buildHeaders();
 
   const response = await fetch(url, {
@@ -847,26 +974,10 @@ async function handleFetchBookmarks(cursor, count, _retried = false) {
 async function handleDeleteBookmark(tweetId, _retried = false) {
   if (!tweetId) throw new Error("MISSING_TWEET_ID");
 
-  const stored = await chrome.storage.local.get([
-    "xbt_auth_headers",
-    "xbt_delete_query_id",
-  ]);
+  const stored = await chrome.storage.local.get(["xbt_auth_headers"]);
   if (!stored.xbt_auth_headers?.authorization) throw new Error("NO_AUTH");
 
-  let queryId = stored.xbt_delete_query_id;
-
-  // Fallback: look up from GraphQL catalog
-  if (!queryId) {
-    const catalog = await loadGraphqlCatalog();
-    for (const entry of Object.values(catalog.endpoints || {})) {
-      if (entry && entry.operation === "DeleteBookmark" && entry.queryId) {
-        queryId = entry.queryId;
-        chrome.storage.local.set({ xbt_delete_query_id: queryId });
-        break;
-      }
-    }
-  }
-
+  const queryId = await resolveQueryId("DeleteBookmark", "xbt_delete_query_id");
   if (!queryId) throw new Error("NO_QUERY_ID");
   const requestHeaders = await buildHeaders();
 
@@ -958,34 +1069,12 @@ async function persistSeenTweetDisplayTypes(payload) {
 async function handleFetchTweetDetail(tweetId, _retried = false) {
   const stored = await chrome.storage.local.get([
     "xbt_auth_headers",
-    "xbt_detail_query_id",
     "xbt_features",
   ]);
 
   if (!stored.xbt_auth_headers?.authorization) throw new Error("NO_AUTH");
 
-  let queryId = stored.xbt_detail_query_id;
-
-  // Fallback 1: look up from GraphQL catalog
-  if (!queryId) {
-    const catalog = await loadGraphqlCatalog();
-    for (const entry of Object.values(catalog.endpoints || {})) {
-      if (entry && entry.operation === "TweetDetail" && entry.queryId) {
-        queryId = entry.queryId;
-        break;
-      }
-    }
-  }
-
-  // Fallback 2: discover from x.com JS bundles
-  if (!queryId) {
-    queryId = await discoverQueryIdFromBundles("TweetDetail").catch(() => null);
-  }
-
-  if (queryId && !stored.xbt_detail_query_id) {
-    chrome.storage.local.set({ xbt_detail_query_id: queryId });
-  }
-
+  const queryId = await resolveQueryId("TweetDetail", "xbt_detail_query_id");
   if (!queryId) throw new Error("NO_QUERY_ID");
 
   const featureSet = {
@@ -1046,6 +1135,26 @@ async function handleFetchTweetDetail(tweetId, _retried = false) {
 }
 
 // ═══════════════════════════════════════════════════════════
+// LIGHT SYNC SIGNAL
+// ═══════════════════════════════════════════════════════════
+
+const LIGHT_SYNC_DEBOUNCE_MS = 60_000;
+const LIGHT_SYNC_THROTTLE_MS = 1000 * 60 * 30;
+let lastLightSyncSignalAt = 0;
+
+function maybeSignalLightSync() {
+  const now = Date.now();
+  if (now - lastLightSyncSignalAt < LIGHT_SYNC_DEBOUNCE_MS) return;
+  lastLightSyncSignalAt = now;
+
+  chrome.storage.local.get(["xbt_last_light_sync"], (stored) => {
+    const lastSync = Number(stored.xbt_last_light_sync || 0);
+    if (now - lastSync < LIGHT_SYNC_THROTTLE_MS) return;
+    chrome.storage.local.set({ xbt_light_sync_needed: now });
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
 // WEB REQUEST LISTENERS
 // ═══════════════════════════════════════════════════════════
 
@@ -1066,6 +1175,7 @@ chrome.webRequest.onSendHeaders.addListener(
         xbt_auth_headers: headers,
         xbt_auth_time: Date.now(),
       });
+      discoverAllMissingQueryIds().catch(() => {});
     }
 
     captureGraphqlEndpoint(details);
@@ -1129,6 +1239,10 @@ chrome.webRequest.onSendHeaders.addListener(
           () => {},
         );
       }
+    }
+
+    if (!isExtensionInitiated(details)) {
+      maybeSignalLightSync();
     }
   },
   { urls: ["https://x.com/i/api/graphql/*"] },
@@ -1271,6 +1385,21 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     sendResponse({ inProgress: reauthInProgress });
     return false;
   }
+  if (message.type === "RESET_SW_STATE") {
+    graphqlCatalogCache = null;
+    graphqlCatalogLoadPromise = null;
+    catalogDirty = false;
+    if (catalogFlushTimer) {
+      clearTimeout(catalogFlushTimer);
+      catalogFlushTimer = null;
+    }
+    authTabId = null;
+    reauthInProgress = false;
+    lastLightSyncSignalAt = 0;
+    discoveryInProgress = false;
+    sendResponse({ ok: true });
+    return false;
+  }
   return false;
 });
 
@@ -1294,3 +1423,10 @@ chrome.cookies.onChanged.addListener((changeInfo) => {
 });
 
 runWeeklyServiceWorkerCleanup().catch(() => {});
+
+// On startup, proactively discover missing query IDs if auth headers exist
+chrome.storage.local.get(["xbt_auth_headers"], (stored) => {
+  if (stored.xbt_auth_headers?.authorization) {
+    discoverAllMissingQueryIds().catch(() => {});
+  }
+});

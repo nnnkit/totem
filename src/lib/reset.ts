@@ -3,10 +3,7 @@ import {
   IDB_DATABASE_NAME,
   LOCAL_STORAGE_KEYS,
   CHROME_SYNC_KEYS,
-  CS_MANUAL_LOGIN,
 } from "./storage-keys";
-
-export const MANUAL_LOGIN_REQUIRED_KEY = CS_MANUAL_LOGIN;
 
 export async function resetLocalData(): Promise<void> {
   // 1. Clear all IndexedDB object stores, then delete the database entirely
@@ -32,10 +29,18 @@ export async function resetLocalData(): Promise<void> {
   // 3. Clear chrome.storage.local (all keys)
   if (typeof chrome !== "undefined" && chrome.storage?.local) {
     await chrome.storage.local.clear();
-    await chrome.storage.local.set({ [CS_MANUAL_LOGIN]: true });
   }
 
-  // 4. Clear chrome.storage.sync (theme, settings)
+  // 4. Reset service worker in-memory state
+  if (typeof chrome !== "undefined" && chrome.runtime?.sendMessage) {
+    try {
+      await chrome.runtime.sendMessage({ type: "RESET_SW_STATE" });
+    } catch {
+      // Service worker may not be running
+    }
+  }
+
+  // 5. Clear chrome.storage.sync (theme, settings)
   if (typeof chrome !== "undefined" && chrome.storage?.sync) {
     await chrome.storage.sync.remove([...CHROME_SYNC_KEYS]);
   }

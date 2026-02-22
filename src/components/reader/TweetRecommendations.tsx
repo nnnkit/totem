@@ -31,7 +31,6 @@ export function TweetRecommendations({
               title="Shuffle recommendations"
             >
               <ShuffleIcon className="size-4" />
-              Shuffle
             </button>
           )}
         </div>

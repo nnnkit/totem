@@ -1,6 +1,5 @@
 import { useReducer, useEffect, useCallback } from "react";
 import { checkAuth, startAuthCapture, closeAuthTab } from "../api/core/auth";
-import { MANUAL_LOGIN_REQUIRED_KEY } from "../lib/reset";
 import { CS_USER_ID, CS_AUTH_HEADERS, CS_QUERY_ID } from "../lib/storage-keys";
 import {
   AUTH_TIMEOUT_MS,
@@ -175,18 +174,7 @@ export function useAuth(): UseAuthReturn {
 
   const performCheck = useCallback(async () => {
     try {
-      const [status, resetGuard] = await withTimeout(
-        Promise.all([
-          checkAuth(),
-          chrome.storage.local.get([MANUAL_LOGIN_REQUIRED_KEY]),
-        ]),
-        AUTH_TIMEOUT_MS,
-      );
-
-      const requiresManualLogin = Boolean(resetGuard[MANUAL_LOGIN_REQUIRED_KEY]);
-      if (requiresManualLogin) {
-        chrome.storage.local.remove([MANUAL_LOGIN_REQUIRED_KEY]).catch(() => {});
-      }
+      const status = await withTimeout(checkAuth(), AUTH_TIMEOUT_MS);
 
       dispatch({
         type: "CHECK_RESULT",
@@ -255,8 +243,7 @@ export function useAuth(): UseAuthReturn {
       const hasAuthData = Boolean(changes[CS_AUTH_HEADERS] || changes[CS_QUERY_ID]);
       const isRelevant =
         hasAuthData ||
-        Boolean(changes[CS_USER_ID]) ||
-        Boolean(changes[MANUAL_LOGIN_REQUIRED_KEY]);
+        Boolean(changes[CS_USER_ID]);
 
       if (!isRelevant) return;
 
@@ -268,11 +255,6 @@ export function useAuth(): UseAuthReturn {
   }, [performCheck]);
 
   const startLogin = useCallback(async () => {
-    try {
-      await chrome.storage.local.remove([MANUAL_LOGIN_REQUIRED_KEY]);
-    } catch {
-      // Ignore storage failures
-    }
     dispatch({ type: "USER_LOGIN" });
     await performCheck();
   }, [performCheck]);

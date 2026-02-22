@@ -1,4 +1,8 @@
-import { ArrowSquareOutIcon, CheckIcon } from "@phosphor-icons/react";
+import {
+  ArrowSquareOutIcon,
+  CheckIcon,
+  LightningIcon,
+} from "@phosphor-icons/react";
 import type { LinkCard, TweetUrl } from "../../types";
 import { sanitizeUrl } from "./utils";
 
@@ -143,7 +147,19 @@ export function TweetLinks({
     </a>
   ) : null;
 
-  const hasActions = readStatusBtn || viewOnXLink;
+  const askGrokLink = viewOnXUrl ? (
+    <a
+      href={`https://x.com/i/grok?text=${encodeURIComponent(viewOnXUrl)}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-flex items-center gap-1.5 rounded-md border border-x-border bg-x-card px-3 py-1.5 text-xs font-medium text-x-text-secondary transition-colors hover:bg-x-hover hover:text-x-text"
+    >
+      <LightningIcon weight="bold" className="size-3.5" />
+      Ask Grok
+    </a>
+  ) : null;
+
+  const hasActions = readStatusBtn || viewOnXLink || askGrokLink;
 
   return (
     <>
@@ -151,6 +167,7 @@ export function TweetLinks({
       {hasActions && (
         <div className="mt-5 flex items-center justify-end gap-3">
           {viewOnXLink}
+          {askGrokLink}
           {readStatusBtn}
         </div>
       )}

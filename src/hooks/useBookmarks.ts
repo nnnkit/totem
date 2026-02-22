@@ -18,12 +18,20 @@ import {
 import { FetchQueue } from "../lib/fetch-queue";
 import { reconcileBookmarks } from "../lib/reconcile";
 import { resolveBookmarkEventPlan } from "../lib/bookmark-event-plan";
-import { CS_DB_CLEANUP_AT, CS_LAST_RECONCILE, CS_LAST_SYNC, CS_BOOKMARK_EVENTS } from "../lib/storage-keys";
+import {
+  CS_DB_CLEANUP_AT,
+  CS_LAST_RECONCILE,
+  CS_LAST_SYNC,
+  CS_BOOKMARK_EVENTS,
+  CS_LAST_LIGHT_SYNC,
+  CS_LIGHT_SYNC_NEEDED,
+} from "../lib/storage-keys";
 import {
   CREATE_EVENT_DELAY_MS,
   WEEK_MS,
   DETAIL_CACHE_RETENTION_MS,
   RECONCILE_THROTTLE_MS,
+  LIGHT_SYNC_THROTTLE_MS,
   DB_INIT_TIMEOUT_MS,
   REAUTH_MAX_ATTEMPTS,
   REAUTH_POLL_MS,
@@ -50,6 +58,7 @@ export function useBookmarks(isReady: boolean): UseBookmarksReturn {
     total: 0,
   });
   const syncingRef = useRef(false);
+  const lightSyncingRef = useRef(false);
   const processingBookmarkEventsRef = useRef(false);
   const bookmarksRef = useRef<Bookmark[]>([]);
   const reauthPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -107,6 +116,7 @@ export function useBookmarks(isReady: boolean): UseBookmarksReturn {
         if (stored.length > 0) {
           setBookmarks(stored);
           setSyncState({ phase: "done", total: stored.length });
+          runLightSync().catch(() => {});
         } else {
           syncNewBookmarks({ fullReconcile: true });
           // If sync didn't start (another already in progress), exit "idle"
@@ -373,6 +383,48 @@ export function useBookmarks(isReady: boolean): UseBookmarksReturn {
     }
   }, []);
 
+  const runLightSync = useCallback(async () => {
+    if (syncingRef.current || lightSyncingRef.current) return;
+    if (bookmarksRef.current.length === 0) return;
+
+    const stored = await chrome.storage.local.get([CS_LAST_LIGHT_SYNC]);
+    const lastSync = Number(stored[CS_LAST_LIGHT_SYNC] || 0);
+    if (Date.now() - lastSync < LIGHT_SYNC_THROTTLE_MS) return;
+
+    lightSyncingRef.current = true;
+
+    try {
+      const existingIds = new Set(
+        bookmarksRef.current.map((b) => b.tweetId),
+      );
+
+      await reconcileBookmarks({
+        localIds: existingIds,
+        fetchPage: (cursor) => fetchBookmarkPage(cursor, 20),
+        fullReconcile: false,
+        onPage: async (pageNew) => {
+          const updated = [...bookmarksRef.current, ...pageNew].toSorted(
+            compareSortIndexDesc,
+          );
+          bookmarksRef.current = updated;
+          setBookmarks(updated);
+          setSyncState((prev) => ({ ...prev, total: updated.length }));
+
+          try {
+            await upsertBookmarks(pageNew);
+          } catch {}
+        },
+      });
+
+      await chrome.storage.local.set({ [CS_LAST_LIGHT_SYNC]: Date.now() });
+      await chrome.storage.local.remove(CS_LIGHT_SYNC_NEEDED);
+    } catch {
+      // Swallow errors — full sync catches up later
+    } finally {
+      lightSyncingRef.current = false;
+    }
+  }, []);
+
   const unbookmark = useCallback(async (tweetId: string) => {
     if (!tweetId) return;
 
@@ -385,9 +437,8 @@ export function useBookmarks(isReady: boolean): UseBookmarksReturn {
       setBookmarks(filtered);
     }
 
-    await deleteBookmarksByTweetIds([tweetId]);
-
     try {
+      await deleteBookmarksByTweetIds([tweetId]);
       await deleteBookmark(tweetId);
       setSyncState((prev) => ({
         ...prev,
@@ -422,6 +473,9 @@ export function useBookmarks(isReady: boolean): UseBookmarksReturn {
       if (changes[CS_BOOKMARK_EVENTS]) {
         applyBookmarkEvents().catch(() => {});
       }
+      if (changes[CS_LIGHT_SYNC_NEEDED]?.newValue) {
+        runLightSync().catch(() => {});
+      }
     };
 
     chrome.storage.onChanged.addListener(onStorageChange);
@@ -430,7 +484,7 @@ export function useBookmarks(isReady: boolean): UseBookmarksReturn {
     return () => {
       chrome.storage.onChanged.removeListener(onStorageChange);
     };
-  }, [isReady, applyBookmarkEvents]);
+  }, [isReady, applyBookmarkEvents, runLightSync]);
 
   useEffect(() => {
     return () => {

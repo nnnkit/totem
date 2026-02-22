@@ -45,6 +45,9 @@ export default function App() {
     localStorage.setItem(LS_READING_TAB, tab);
   }, []);
   const [shuffleSeed, setShuffleSeed] = useState(0);
+  const handleShuffle = useCallback(() => {
+    setShuffleSeed((s) => s + 1);
+  }, []);
 
   if (
     selectedBookmark &&
@@ -155,7 +158,7 @@ export default function App() {
           relatedBookmarks={relatedBookmarks}
           onOpenBookmark={openBookmark}
           onBack={closeReader}
-          onShuffle={() => setShuffleSeed((s) => s + 1)}
+          onShuffle={handleShuffle}
           onPrev={hasPrev ? goToPrev : undefined}
           onNext={hasNext ? goToNext : undefined}
           onUnbookmark={() => {

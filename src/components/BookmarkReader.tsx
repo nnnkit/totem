@@ -95,15 +95,13 @@ export function BookmarkReader({
             detail.thread.toSorted((a, b) => a.createdAt - b.createdAt),
           );
         }
+
+        setDetailLoading(false);
       })
       .catch((error) => {
         if (cancelled) return;
         setDetailError(error instanceof Error ? error.message : "DETAIL_ERROR");
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setDetailLoading(false);
-        }
+        setDetailLoading(false);
       });
 
     return () => {
