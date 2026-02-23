@@ -88,22 +88,22 @@ export function NotePopover({ highlight, anchorEl, onSaveNote, onDeleteNote, onC
           positionMethod="fixed"
         >
         <Popover.Popup className="xbt-popover z-30 w-80 rounded-lg border border-x-border bg-x-card shadow-xl">
-          <div className="flex items-center justify-between border-b border-x-border px-4 py-2.5">
-            <span className="text-xs font-medium uppercase text-x-text-secondary">
+          <div className="flex items-center justify-between px-4 pt-3">
+            <span className="text-[11px] font-medium uppercase tracking-wide text-x-text-secondary/50">
               Note
             </span>
             <button
               onClick={onClose}
               aria-label="Close notes panel"
-              className="rounded-md p-1 text-x-text-secondary transition-colors hover:bg-x-hover hover:text-x-text"
+              className="-mr-1 rounded-md p-1 text-x-text-secondary/40 transition-colors hover:bg-x-hover hover:text-x-text"
             >
-              <svg width="14" height="14" viewBox="0 0 256 256" fill="currentColor">
+              <svg width="12" height="12" viewBox="0 0 256 256" fill="currentColor">
                 <path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z" />
               </svg>
             </button>
           </div>
 
-          <div className="p-4">
+          <div className="px-4 pb-3">
             {editing ? (
               <>
                 <textarea
@@ -112,10 +112,10 @@ export function NotePopover({ highlight, anchorEl, onSaveNote, onDeleteNote, onC
                   onChange={(e) => setNoteText(e.target.value)}
                   onKeyDown={handleTextareaKeyDown}
                   placeholder="Write a note..."
-                  rows={4}
-                  className="w-full resize-none rounded-lg border border-x-border bg-transparent px-3 py-2.5 text-sm text-x-text placeholder:text-x-text-secondary/50 focus:border-accent focus:outline-none"
+                  rows={3}
+                  className="mt-2 w-full resize-none rounded-lg border border-x-border bg-transparent px-3 py-2 text-sm leading-relaxed text-x-text placeholder:text-x-text-secondary/40 focus:border-accent focus:outline-none"
                 />
-                <div className="mt-3 flex justify-end gap-2">
+                <div className="mt-2.5 flex justify-end gap-2">
                   <button
                     onClick={handleCancel}
                     className="rounded-md px-3 py-1.5 text-xs text-x-text-secondary transition-colors hover:bg-x-hover"
@@ -133,35 +133,35 @@ export function NotePopover({ highlight, anchorEl, onSaveNote, onDeleteNote, onC
               </>
             ) : (
               <>
-                <p className="whitespace-pre-wrap text-sm text-x-text text-pretty">
+                <p className="mt-1.5 whitespace-pre-wrap text-sm leading-relaxed text-x-text text-pretty">
                   {highlight.note}
                 </p>
                 {highlight.createdAt && (
-                  <p className="mt-2 text-xs tabular-nums text-x-text-secondary">
+                  <p className="mt-1.5 text-[11px] tabular-nums text-x-text-secondary/50">
                     {formatRelativeTime(highlight.createdAt)}
                   </p>
                 )}
-                <div className="mt-3 flex items-center justify-between border-t border-x-border pt-3">
+                <div className="mt-3 flex items-center justify-end gap-1">
                   <button
                     onClick={() => {
                       setEditing(true);
                       setNoteText(highlight.note || "");
                     }}
-                    className="rounded-md px-3 py-1.5 text-xs text-x-text-secondary transition-colors hover:bg-x-hover hover:text-x-text"
+                    className="rounded-md px-2.5 py-1 text-xs text-x-text-secondary transition-colors hover:bg-x-hover hover:text-x-text"
                   >
                     Edit
                   </button>
                   {confirmingDelete ? (
-                    <div className="flex gap-2">
+                    <div className="flex gap-1">
                       <button
                         onClick={() => setConfirmingDelete(false)}
-                        className="rounded-md px-3 py-1.5 text-xs text-x-text-secondary transition-colors hover:bg-x-hover"
+                        className="rounded-md px-2.5 py-1 text-xs text-x-text-secondary transition-colors hover:bg-x-hover"
                       >
                         Cancel
                       </button>
                       <button
                         onClick={handleDelete}
-                        className="rounded-md bg-red-500/15 px-3 py-1.5 text-xs font-medium text-red-500 transition-colors hover:bg-red-500/25"
+                        className="rounded-md bg-red-500/15 px-2.5 py-1 text-xs font-medium text-red-500 transition-colors hover:bg-red-500/25"
                       >
                         Delete
                       </button>
@@ -169,7 +169,7 @@ export function NotePopover({ highlight, anchorEl, onSaveNote, onDeleteNote, onC
                   ) : (
                     <button
                       onClick={() => setConfirmingDelete(true)}
-                      className="rounded-md px-3 py-1.5 text-xs text-red-500 transition-colors hover:bg-red-500/10"
+                      className="rounded-md px-2.5 py-1 text-xs text-red-400/80 transition-colors hover:bg-red-500/10 hover:text-red-400"
                     >
                       Delete
                     </button>
