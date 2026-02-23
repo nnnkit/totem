@@ -1,0 +1,68 @@
+---
+import ContentLayout from "../layouts/ContentLayout.astro";
+
+const releases = [
+  {
+    version: "v1.0.2",
+    date: "February 23, 2026",
+    items: [
+      "Rebrand to Totem with origami logo",
+      "Add glass shine loading animation",
+      "Update header layout and logo sizing",
+    ],
+    latest: true,
+  },
+  {
+    version: "v1.0.1",
+    date: "February 22, 2026",
+    items: [
+      "Reader view for threads and articles",
+      "Reading progress tracking with auto-save",
+      "Keyboard navigation (j/k, Enter, Escape)",
+      "Daily wallpaper gallery",
+      "Dark and light themes",
+      "Search across all bookmarks",
+    ],
+  },
+  {
+    version: "v1.0.0",
+    date: "February 20, 2026",
+    items: [
+      "Initial release",
+      "New tab replacement with bookmark display",
+      "Bookmark sync from X.com",
+    ],
+  },
+];
+---
+
+<ContentLayout
+  title="Totem — Changelog"
+  description="What's new in Totem."
+  ogUrl="https://usetotem.app/changelog"
+  pageTitle="Changelog"
+  pageSubtitle="What's new in Totem."
+>
+  <div class="mt-10 space-y-8">
+    {
+      releases.map((release) => (
+        <div
+          class:list={[
+            "border-l-2 pl-4",
+            release.latest ? "border-accent" : "border-x-border",
+          ]}
+        >
+          <h2 class="text-lg font-semibold text-x-text">
+            {release.version}{" "}
+            <span class="text-sm font-normal text-x-text-secondary">— {release.date}</span>
+          </h2>
+          <ul class="mt-2 list-disc space-y-1 pl-5 text-pretty leading-relaxed text-x-text-secondary">
+            {release.items.map((item) => (
+              <li>{item}</li>
+            ))}
+          </ul>
+        </div>
+      ))
+    }
+  </div>
+</ContentLayout>

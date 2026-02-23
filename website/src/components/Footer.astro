@@ -1,0 +1,78 @@
+---
+import TotemLogo from "./TotemLogo.astro";
+
+const productLinks = [
+  { label: "Features", href: "#features" },
+  { label: "Demo", href: "/demo" },
+  { label: "Privacy", href: "/privacy" },
+  { label: "Changelog", href: "/changelog" },
+];
+
+const communityLinks = [
+  { label: "GitHub", href: "https://github.com/nnnkit/totem/" },
+  { label: "Chrome Web Store", href: "https://chromewebstore.google.com" },
+];
+---
+
+<footer class="border-t border-x-border">
+  <div class="mx-auto grid max-w-6xl gap-10 px-6 py-12 md:grid-cols-3">
+    <div class="flex flex-col gap-3">
+      <div class="flex items-center gap-2">
+        <TotemLogo id="totem-shine-footer" />
+        <span
+          class="text-lg font-medium text-x-text"
+          style="font-family: 'Spectral', Georgia, serif"
+        >
+          Totem
+        </span>
+      </div>
+      <p class="text-pretty text-sm text-x-text-secondary">
+        Actually read what you saved on X.
+      </p>
+    </div>
+
+    <div class="flex flex-col gap-3">
+      <h3 class="text-sm font-semibold text-x-text">Product</h3>
+      <ul class="flex flex-col gap-2">
+        {
+          productLinks.map((link) => (
+            <li>
+              <a
+                href={link.href}
+                class="text-sm text-x-text-secondary transition-colors hover:text-x-text"
+              >
+                {link.label}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+
+    <div class="flex flex-col gap-3">
+      <h3 class="text-sm font-semibold text-x-text">Community</h3>
+      <ul class="flex flex-col gap-2">
+        {
+          communityLinks.map((link) => (
+            <li>
+              <a
+                href={link.href}
+                class="text-sm text-x-text-secondary transition-colors hover:text-x-text"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {link.label}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </div>
+
+  <div class="border-t border-x-border">
+    <div class="mx-auto max-w-6xl px-6 py-4">
+      <p class="text-xs text-x-text-secondary tabular-nums">&copy; 2026 Totem</p>
+    </div>
+  </div>
+</footer>

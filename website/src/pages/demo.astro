@@ -1,0 +1,12 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import DemoIsland from "../components/demo/DemoIsland";
+---
+
+<BaseLayout
+  title="Totem — Demo"
+  description="Try Totem — actually read what you saved on X."
+  ogUrl="https://usetotem.app/demo"
+>
+  <DemoIsland client:only="react" />
+</BaseLayout>

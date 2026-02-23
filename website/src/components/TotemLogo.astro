@@ -1,0 +1,22 @@
+---
+interface Props {
+  size?: string;
+  id?: string;
+}
+
+const { size = "size-7", id = "totem-shine" } = Astro.props;
+---
+
+<svg viewBox="0 0 100 100" class={size} fill="none">
+  <defs>
+    <linearGradient id={id} x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0%" stop-color="white" stop-opacity="0.45" />
+      <stop offset="50%" stop-color="white" stop-opacity="0.1" />
+      <stop offset="100%" stop-color="white" stop-opacity="0" />
+    </linearGradient>
+  </defs>
+  <path d="M10 90L90 90L90 10Z" fill="#e07a5f" />
+  <path d="M90 10L55 45L90 90Z" fill="#c96b50" />
+  <path d="M55 45L90 10" stroke="rgba(255,255,255,0.2)" stroke-width="1.5" />
+  <path d="M10 90L90 90L90 10Z" fill={`url(#${id})`} />
+</svg>

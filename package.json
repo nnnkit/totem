@@ -15,7 +15,9 @@
     "release:version:check": "node scripts/check-version-sync.mjs",
     "release:check": "pnpm release:version:check && pnpm package:extension",
     "release:prepare": "node scripts/prepare-release.mjs",
-    "test": "vitest run"
+    "test": "vitest run",
+    "curate:download": "node scripts/curate-wallpapers.mjs",
+    "build:curate": "VITE_CURATOR=1 vite build"
   },
   "dependencies": {
     "@base-ui/react": "^1.2.0",

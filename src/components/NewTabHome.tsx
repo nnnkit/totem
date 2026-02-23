@@ -87,7 +87,7 @@ export function NewTabHome({
   const [cardEngaged, setCardEngaged] = useState(false);
   const [mountSeed] = useState(() => Math.random());
   const searchRef = useRef<HTMLInputElement>(null);
-  const { wallpaperUrl, wallpaperCredit, gradientCss } =
+  const { wallpaperUrl, wallpaperCredit, gradientCss, curatorHud } =
     useWallpaper(backgroundMode);
   const { sites: topSites } = useTopSites(topSitesLimit, showTopSites);
 
@@ -424,6 +424,25 @@ export function NewTabHome({
               {wallpaperCredit.name}
             </a>
           </p>
+        )}
+        {curatorHud && (
+          <div className="fixed bottom-6 right-6 z-20 flex items-center gap-2 rounded-xl bg-black/60 px-3 py-2 text-xs text-white backdrop-blur-xl">
+            {curatorHud.justSelected && <span className="font-medium text-green-400">Selected!</span>}
+            {curatorHud.loading && <span className="text-white/60">Loading…</span>}
+            <span className="tabular-nums font-medium">
+              {curatorHud.count}/{curatorHud.total}
+            </span>
+            {curatorHud.rateRemaining !== null && (
+              <span className="tabular-nums text-white/40">{curatorHud.rateRemaining} req</span>
+            )}
+            <span className="text-white/30">|</span>
+            <kbd className="rounded-md border border-white/20 bg-white/10 px-1 py-0.5 font-mono text-white/70">Space</kbd>
+            <span className="text-white/40">Next</span>
+            <kbd className="rounded-md border border-white/20 bg-white/10 px-1 py-0.5 font-mono text-white/70">Y</kbd>
+            <span className="text-white/40">Pick</span>
+            <kbd className="rounded-md border border-white/20 bg-white/10 px-1 py-0.5 font-mono text-white/70">E</kbd>
+            <span className="text-white/40">Export</span>
+          </div>
         )}
       </div>
     </div>

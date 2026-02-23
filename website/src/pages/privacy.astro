@@ -1,0 +1,150 @@
+---
+import ContentLayout from "../layouts/ContentLayout.astro";
+---
+
+<ContentLayout
+  title="Totem — Privacy Policy"
+  description="Privacy policy for the Totem Chrome extension."
+  ogUrl="https://usetotem.app/privacy"
+  pageTitle="Privacy Policy"
+  pageSubtitle="Last updated: February 23, 2026"
+>
+  <section class="mt-10">
+    <h2 class="text-xl font-semibold text-x-text">Overview</h2>
+    <div class="mt-3 space-y-3 text-pretty leading-relaxed text-x-text-secondary">
+      <p>
+        Totem is a Chrome extension that replaces your new tab page with a calm reader for your X
+        (formerly Twitter) bookmarks. Your privacy is fundamental to how Totem is built: all data
+        stays on your device, and no information is sent to any external server operated by Totem.
+      </p>
+    </div>
+  </section>
+
+  <section class="mt-10">
+    <h2 class="text-xl font-semibold text-x-text">Data collected</h2>
+    <div class="mt-3 space-y-3 text-pretty leading-relaxed text-x-text-secondary">
+      <p>
+        Totem accesses the following data to function. All data is stored locally on your device
+        using Chrome&apos;s built-in storage APIs and is never transmitted to any server controlled
+        by Totem.
+      </p>
+      <ul class="list-disc space-y-2 pl-5">
+        <li>
+          <strong class="text-x-text">X.com authentication tokens.</strong>{" "}
+          When you browse x.com, Totem captures your authentication headers (OAuth bearer token,
+          CSRF token, and session cookie) from requests to X&apos;s API. These tokens are stored
+          locally and used exclusively to fetch your bookmarks from X&apos;s API on your behalf.
+          They are never sent anywhere else.
+        </li>
+        <li>
+          <strong class="text-x-text">X.com user ID.</strong>{" "}
+          Totem reads the{" "}
+          <code class="rounded bg-x-card px-1 py-0.5 text-xs">twid</code>{" "}
+          cookie from x.com to identify which account is logged in. This is stored locally to
+          manage per-user bookmark data.
+        </li>
+        <li>
+          <strong class="text-x-text">Bookmark data.</strong>{" "}
+          Your bookmarked posts are fetched from X&apos;s API and cached locally in your
+          browser&apos;s IndexedDB storage for offline access and performance.
+        </li>
+        <li>
+          <strong class="text-x-text">Reading progress.</strong>{" "}
+          Scroll positions and read states are saved locally so you can pick up where you left off.
+        </li>
+        <li>
+          <strong class="text-x-text">Preferences.</strong>{" "}
+          Theme, layout, and display settings are stored in Chrome&apos;s local storage.
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="mt-10">
+    <h2 class="text-xl font-semibold text-x-text">Permissions explained</h2>
+    <div class="mt-3 space-y-3 text-pretty leading-relaxed text-x-text-secondary">
+      <ul class="list-disc space-y-2 pl-5">
+        <li>
+          <strong class="text-x-text">cookies</strong> &mdash; Read the{" "}
+          <code class="rounded bg-x-card px-1 py-0.5 text-xs">twid</code>{" "}
+          cookie from x.com to detect which account is signed in.
+        </li>
+        <li>
+          <strong class="text-x-text">storage</strong> &mdash; Save authentication tokens,
+          preferences, and cached data locally.
+        </li>
+        <li>
+          <strong class="text-x-text">webRequest</strong> &mdash; Observe outgoing requests to
+          X&apos;s GraphQL API to capture authentication headers and detect bookmark changes.
+        </li>
+        <li>
+          <strong class="text-x-text">declarativeNetRequest</strong> &mdash; Set the correct
+          Origin header on API requests made by the extension so X&apos;s servers accept them.
+        </li>
+        <li>
+          <strong class="text-x-text">tabs</strong> &mdash; Open a background tab to x.com when
+          re-authentication is needed (e.g. after token expiry). The tab is closed automatically.
+        </li>
+        <li>
+          <strong class="text-x-text">host_permissions (x.com)</strong> &mdash; Required to read
+          cookies, observe network requests, and make API calls to X.
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="mt-10">
+    <h2 class="text-xl font-semibold text-x-text">Data sharing</h2>
+    <div class="mt-3 space-y-3 text-pretty leading-relaxed text-x-text-secondary">
+      <p>
+        Totem does not transmit any data to servers owned or operated by Totem. The only network
+        requests made are directly to X.com&apos;s API to fetch and manage your bookmarks, using
+        your own authentication credentials. No analytics, telemetry, or tracking of any kind is
+        included.
+      </p>
+    </div>
+  </section>
+
+  <section class="mt-10">
+    <h2 class="text-xl font-semibold text-x-text">Data storage and security</h2>
+    <div class="mt-3 space-y-3 text-pretty leading-relaxed text-x-text-secondary">
+      <p>
+        All data is stored locally on your device using Chrome&apos;s extension storage APIs and
+        IndexedDB. Authentication tokens are stored in{" "}
+        <code class="rounded bg-x-card px-1 py-0.5 text-xs">chrome.storage.local</code>, which is
+        sandboxed to the extension and inaccessible to websites or other extensions. Uninstalling
+        the extension removes all stored data.
+      </p>
+    </div>
+  </section>
+
+  <section class="mt-10">
+    <h2 class="text-xl font-semibold text-x-text">Third-party services</h2>
+    <div class="mt-3 space-y-3 text-pretty leading-relaxed text-x-text-secondary">
+      <p>
+        Totem loads fonts from Google Fonts. No other third-party services are used. Wallpaper
+        images are bundled with the extension and served locally.
+      </p>
+    </div>
+  </section>
+
+  <section class="mt-10">
+    <h2 class="text-xl font-semibold text-x-text">Changes to this policy</h2>
+    <div class="mt-3 space-y-3 text-pretty leading-relaxed text-x-text-secondary">
+      <p>
+        If this policy is updated, the changes will be posted on this page with a revised date.
+        Continued use of the extension after changes constitutes acceptance.
+      </p>
+    </div>
+  </section>
+
+  <section class="mt-10">
+    <h2 class="text-xl font-semibold text-x-text">Contact</h2>
+    <div class="mt-3 space-y-3 text-pretty leading-relaxed text-x-text-secondary">
+      <p>
+        If you have questions about this privacy policy, open an issue on the project&apos;s GitHub
+        repository.
+      </p>
+    </div>
+  </section>
+</ContentLayout>

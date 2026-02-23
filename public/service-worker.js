@@ -238,6 +238,20 @@ async function buildHeaders() {
 // QUERY ID DISCOVERY — fetch x.com JS bundles to extract query IDs
 // ═══════════════════════════════════════════════════════════
 
+const queryIdMemCache = new Map(); // operationName → { id, ts }
+const QUERY_ID_TTL_MS = 10 * 60 * 1000; // 10 minutes
+
+function isQueryIdStale(json) {
+  if (!json?.errors) return false;
+  return json.errors.some(
+    (e) => e?.extensions?.code === "GRAPHQL_VALIDATION_FAILED",
+  );
+}
+
+function invalidateQueryIdCache(operationName) {
+  queryIdMemCache.delete(operationName);
+}
+
 async function discoverQueryIdFromBundles(operationName) {
   const resp = await fetch("https://x.com", { credentials: "include" });
   if (!resp.ok) return null;
@@ -280,27 +294,52 @@ function extractQueryIdForOperation(text, operationName) {
 // ═══════════════════════════════════════════════════════════
 
 async function resolveQueryId(operationName, storageKey) {
-  // 1. Check chrome.storage.local
-  const stored = await chrome.storage.local.get([storageKey]);
-  if (stored[storageKey]) return stored[storageKey];
+  // 1. Check short-lived in-memory cache
+  const cached = queryIdMemCache.get(operationName);
+  if (cached && Date.now() - cached.ts < QUERY_ID_TTL_MS) {
+    return cached.id;
+  }
 
-  // 2. Check GraphQL catalog
+  // 2. Check chrome.storage.local (populated by passive capture)
+  const stored = await chrome.storage.local.get([storageKey]);
+  if (stored[storageKey]) {
+    queryIdMemCache.set(operationName, { id: stored[storageKey], ts: Date.now() });
+    return stored[storageKey];
+  }
+
+  // 3. Check GraphQL catalog
   const catalog = await loadGraphqlCatalog();
   for (const entry of Object.values(catalog.endpoints || {})) {
     if (entry && entry.operation === operationName && entry.queryId) {
+      queryIdMemCache.set(operationName, { id: entry.queryId, ts: Date.now() });
       chrome.storage.local.set({ [storageKey]: entry.queryId });
       return entry.queryId;
     }
   }
 
-  // 3. Discover from x.com JS bundles
+  // 4. Discover from x.com JS bundles
   const discovered = await discoverQueryIdFromBundles(operationName).catch(() => null);
   if (discovered) {
+    queryIdMemCache.set(operationName, { id: discovered, ts: Date.now() });
     chrome.storage.local.set({ [storageKey]: discovered });
     return discovered;
   }
 
   return null;
+}
+
+async function forceRediscoverQueryId(operationName, storageKey) {
+  invalidateQueryIdCache(operationName);
+  await chrome.storage.local.remove([storageKey]);
+
+  const freshId = await discoverQueryIdFromBundles(operationName).catch(
+    () => null,
+  );
+  if (freshId) {
+    queryIdMemCache.set(operationName, { id: freshId, ts: Date.now() });
+    await chrome.storage.local.set({ [storageKey]: freshId });
+  }
+  return freshId;
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -919,19 +958,15 @@ async function handleCheckAuth() {
   };
 }
 
-async function handleFetchBookmarks(cursor, count, _retried = false) {
+async function handleFetchBookmarks(cursor, count, _retried = false, _queryIdRetried = false) {
   const stored = await chrome.storage.local.get([
     "xbt_auth_headers",
-    "xbt_query_id",
     "xbt_features",
   ]);
 
   if (!stored.xbt_auth_headers?.authorization) throw new Error("NO_AUTH");
 
-  let queryId = stored.xbt_query_id;
-  if (!queryId) {
-    queryId = await resolveQueryId("Bookmarks", "xbt_query_id");
-  }
+  const queryId = await resolveQueryId("Bookmarks", "xbt_query_id");
   if (!queryId) throw new Error("NO_QUERY_ID");
 
   const pageCount = typeof count === "number" && count > 0 ? count : 100;
@@ -958,7 +993,7 @@ async function handleFetchBookmarks(cursor, count, _retried = false) {
     if (!_retried) {
       await chrome.storage.local.remove(["xbt_auth_headers", "xbt_auth_time"]);
       const success = await reAuthSilently();
-      if (success) return handleFetchBookmarks(cursor, count, true);
+      if (success) return handleFetchBookmarks(cursor, count, true, _queryIdRetried);
     }
     throw new Error("AUTH_EXPIRED");
   }
@@ -968,10 +1003,17 @@ async function handleFetchBookmarks(cursor, count, _retried = false) {
     throw new Error(`API_ERROR_${response.status}: ${body.slice(0, 200)}`);
   }
 
-  return { data: await response.json() };
+  const json = await response.json();
+
+  if (!_queryIdRetried && isQueryIdStale(json)) {
+    const freshId = await forceRediscoverQueryId("Bookmarks", "xbt_query_id");
+    if (freshId) return handleFetchBookmarks(cursor, count, _retried, true);
+  }
+
+  return { data: json };
 }
 
-async function handleDeleteBookmark(tweetId, _retried = false) {
+async function handleDeleteBookmark(tweetId, _retried = false, _queryIdRetried = false) {
   if (!tweetId) throw new Error("MISSING_TWEET_ID");
 
   const stored = await chrome.storage.local.get(["xbt_auth_headers"]);
@@ -996,7 +1038,7 @@ async function handleDeleteBookmark(tweetId, _retried = false) {
     if (!_retried) {
       await chrome.storage.local.remove(["xbt_auth_headers", "xbt_auth_time"]);
       const success = await reAuthSilently();
-      if (success) return handleDeleteBookmark(tweetId, true);
+      if (success) return handleDeleteBookmark(tweetId, true, _queryIdRetried);
     }
     throw new Error("AUTH_EXPIRED");
   }
@@ -1006,7 +1048,14 @@ async function handleDeleteBookmark(tweetId, _retried = false) {
     throw new Error(`DELETE_BOOKMARK_${response.status}: ${body.slice(0, 200)}`);
   }
 
-  return { ok: true, queryId, data: await response.json().catch(() => null) };
+  const json = await response.json().catch(() => null);
+
+  if (!_queryIdRetried && isQueryIdStale(json)) {
+    const freshId = await forceRediscoverQueryId("DeleteBookmark", "xbt_delete_query_id");
+    if (freshId) return handleDeleteBookmark(tweetId, _retried, true);
+  }
+
+  return { ok: true, queryId, data: json };
 }
 
 function parseFeatureSet(raw) {
@@ -1066,7 +1115,7 @@ async function persistSeenTweetDisplayTypes(payload) {
   await chrome.storage.local.set({ xbt_seen_display_types: merged });
 }
 
-async function handleFetchTweetDetail(tweetId, _retried = false) {
+async function handleFetchTweetDetail(tweetId, _retried = false, _queryIdRetried = false) {
   const stored = await chrome.storage.local.get([
     "xbt_auth_headers",
     "xbt_features",
@@ -1119,7 +1168,7 @@ async function handleFetchTweetDetail(tweetId, _retried = false) {
     if (!_retried) {
       await chrome.storage.local.remove(["xbt_auth_headers", "xbt_auth_time"]);
       const success = await reAuthSilently();
-      if (success) return handleFetchTweetDetail(tweetId, true);
+      if (success) return handleFetchTweetDetail(tweetId, true, _queryIdRetried);
     }
     throw new Error("AUTH_EXPIRED");
   }
@@ -1129,9 +1178,15 @@ async function handleFetchTweetDetail(tweetId, _retried = false) {
     throw new Error(`DETAIL_ERROR_${response.status}: ${body.slice(0, 200)}`);
   }
 
-  const detailData = await response.json();
-  persistSeenTweetDisplayTypes(detailData).catch(() => {});
-  return { data: detailData };
+  const json = await response.json();
+
+  if (!_queryIdRetried && isQueryIdStale(json)) {
+    const freshId = await forceRediscoverQueryId("TweetDetail", "xbt_detail_query_id");
+    if (freshId) return handleFetchTweetDetail(tweetId, _retried, true);
+  }
+
+  persistSeenTweetDisplayTypes(json).catch(() => {});
+  return { data: json };
 }
 
 // ═══════════════════════════════════════════════════════════

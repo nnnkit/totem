@@ -17,6 +17,9 @@ export default defineConfig({
       input: {
         main: resolve(__dirname, "index.html"),
         demo: resolve(__dirname, "demo.html"),
+        privacy: resolve(__dirname, "privacy.html"),
+        changelog: resolve(__dirname, "changelog.html"),
+        install: resolve(__dirname, "install.html"),
       },
     },
   },

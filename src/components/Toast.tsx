@@ -27,7 +27,7 @@ export function Toast({
 
   return (
     <div
-      className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2"
+      className="fixed bottom-6 right-6 z-50"
       style={{
         animation: exiting
           ? "toast-out 150ms ease-in forwards"

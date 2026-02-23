@@ -1,0 +1,36 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import TotemLogo from "../components/TotemLogo.astro";
+---
+
+<BaseLayout
+  title="Totem — Install"
+  description="Install Totem from the Chrome Web Store."
+  ogUrl="https://usetotem.app/install"
+>
+  <div class="flex min-h-dvh flex-col items-center justify-center bg-x-bg text-x-text">
+    <TotemLogo size="size-16" id="totem-shine-install" />
+
+    <div
+      class="mt-6 size-5 animate-spin rounded-full border-2 border-x-border border-t-accent"
+    >
+    </div>
+
+    <p class="mt-4 text-pretty text-x-text-secondary">
+      Taking you to the Chrome Web Store...
+    </p>
+
+    <a
+      href="https://chromewebstore.google.com"
+      class="mt-3 text-sm text-accent transition-colors hover:text-accent/80"
+    >
+      Click here if you&apos;re not redirected
+    </a>
+  </div>
+</BaseLayout>
+
+<script>
+  setTimeout(() => {
+    window.location.href = "https://chromewebstore.google.com";
+  }, 1500);
+</script>

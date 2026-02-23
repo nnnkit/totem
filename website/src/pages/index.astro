@@ -1,0 +1,462 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import Nav from "../components/Nav.astro";
+import Footer from "../components/Footer.astro";
+import BrowserFrame from "../components/BrowserFrame.astro";
+import FeatureShowcase from "../components/FeatureShowcase.astro";
+import TotemLogo from "../components/TotemLogo.astro";
+
+const SERIF = "'Spectral', Georgia, serif";
+
+const features = [
+  {
+    title: "Reader View",
+    description:
+      "Threads, articles, and long posts rendered beautifully with a clean reading layout. No distractions.",
+    icon: '<svg viewBox="0 0 24 24" class="size-5" fill="currentColor"><path d="M19 5v14H5V5h14m0-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-4.99 4H7V9h7.01V7zm3 4H7v2h10.01v-2zm-3 4H7v2h7.01v-2z" /></svg>',
+  },
+  {
+    title: "Reading Progress",
+    description:
+      "Pick up where you left off. Scroll position is saved automatically and restored when you return.",
+    icon: '<svg viewBox="0 0 24 24" class="size-5" fill="currentColor"><path d="M4 4.5C4 3.12 5.119 2 6.5 2h11C18.881 2 20 3.12 20 4.5v18.44l-8-5.71-8 5.71V4.5z" /></svg>',
+  },
+  {
+    title: "Themes",
+    description:
+      "Light, dark, or follow your system. Theme preference syncs across all your devices.",
+    icon: '<svg viewBox="0 0 24 24" class="size-5" fill="currentColor"><path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 9 6.5 9 8 9.67 8 10.5 7.33 12 6.5 12zm3-4C8.67 8 8 7.33 8 6.5S8.67 5 9.5 5s1.5.67 1.5 1.5S10.33 8 9.5 8zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 5 14.5 5s1.5.67 1.5 1.5S15.33 8 14.5 8zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 9 17.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z" /></svg>',
+  },
+  {
+    title: "Keyboard Navigation",
+    description:
+      "Navigate with j/k, open with Enter, go back with Escape. Designed for power users.",
+    icon: '<svg viewBox="0 0 24 24" class="size-5" fill="currentColor"><path d="M20 5H4c-1.1 0-1.99.9-1.99 2L2 17c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm-9 3h2v2h-2V8zm0 3h2v2h-2v-2zM8 8h2v2H8V8zm0 3h2v2H8v-2zm-1 2H5v-2h2v2zm0-3H5V8h2v2zm9 7H8v-2h8v2zm0-4h-2v-2h2v2zm0-3h-2V8h2v2zm3 3h-2v-2h2v2zm0-3h-2V8h2v2z" /></svg>',
+  },
+  {
+    title: "Daily Wallpapers",
+    description:
+      "Beautiful wallpapers refresh daily. Browse through the gallery or let it surprise you.",
+    icon: '<svg viewBox="0 0 24 24" class="size-5" fill="currentColor"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" /></svg>',
+  },
+  {
+    title: "Privacy First",
+    description:
+      "No tracking, no analytics, no server. Everything runs locally in your browser.",
+    icon: '<svg viewBox="0 0 24 24" class="size-5" fill="currentColor"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z" /></svg>',
+  },
+];
+
+const steps = [
+  {
+    title: "Install",
+    description: "Add the extension from the Chrome Web Store. One click.",
+  },
+  {
+    title: "Browse X",
+    description: "Visit x.com and bookmark posts you want to read later.",
+  },
+  {
+    title: "Open a new tab",
+    description: "Your bookmarks appear beautifully. Start reading.",
+  },
+];
+
+const shortcuts = [
+  { key: "/", label: "Focus search" },
+  { key: "j / k", label: "Navigate" },
+  { key: "Enter", label: "Open" },
+  { key: "Esc", label: "Back" },
+  { key: "l", label: "All bookmarks" },
+  { key: "s", label: "Surprise me" },
+];
+
+const bookmarkItems = [
+  {
+    author: "Paul Graham",
+    handle: "@paulg",
+    text: "5 things I wish I knew about building products...",
+  },
+  {
+    author: "Andrej Karpathy",
+    handle: "@karpathy",
+    text: "A practical guide to running LLMs in production",
+    progress: 62,
+  },
+  {
+    author: "James Clear",
+    handle: "@JamesClear",
+    text: "The difference between knowledge and execution...",
+  },
+];
+---
+
+<BaseLayout
+  title="Totem — Actually Read What You Saved on X"
+  description="Actually read what you saved on X. Reading progress, themes, keyboard navigation. Replace your new tab."
+  ogUrl="https://usetotem.app/"
+>
+  <div class="min-h-dvh bg-x-bg text-x-text">
+    <Nav currentPage="/" />
+
+    <header class="mx-auto max-w-4xl px-6 pt-20 pb-16 text-center">
+      <div
+        class="animate-[hero-fade-up_600ms_cubic-bezier(0.23,1,0.32,1)_forwards] opacity-0"
+      >
+        <div
+          class="mb-6 inline-flex items-center gap-2 rounded-full border border-x-border bg-x-card px-4 py-1.5 text-sm text-x-text-secondary"
+        >
+          <svg viewBox="0 0 100 100" class="size-4" fill="none">
+            <path d="M10 90L90 90L90 10Z" fill="#e07a5f"></path>
+            <path d="M90 10L55 45L90 90Z" fill="#c96b50"></path>
+            <path d="M55 45L90 10" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"></path>
+          </svg>
+          Chrome Extension
+        </div>
+      </div>
+
+      <div
+        class="animate-[hero-fade-up_600ms_cubic-bezier(0.23,1,0.32,1)_forwards] opacity-0"
+        style="animation-delay: 80ms"
+      >
+        <h1
+          class="text-balance text-5xl font-bold tracking-tight sm:text-6xl lg:text-7xl"
+          style={`font-family: ${SERIF}`}
+        >
+          Actually read what<br />
+          <span class="text-accent">you saved on X.</span>
+        </h1>
+      </div>
+
+      <div
+        class="animate-[hero-fade-up_600ms_cubic-bezier(0.23,1,0.32,1)_forwards] opacity-0"
+        style="animation-delay: 160ms"
+      >
+        <p class="mx-auto mt-6 max-w-xl text-pretty text-lg text-x-text-secondary">
+          Replace your new tab with a calm reading space. Totem surfaces your saved posts with
+          reading progress, themes, and keyboard navigation &mdash; all without leaving your
+          browser.
+        </p>
+      </div>
+
+      <div
+        class="animate-[hero-fade-up_600ms_cubic-bezier(0.23,1,0.32,1)_forwards] opacity-0"
+        style="animation-delay: 240ms"
+      >
+        <div class="mt-10 flex flex-wrap items-center justify-center gap-4">
+          <a
+            href="https://chromewebstore.google.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="rounded-lg bg-accent px-6 py-3 text-base font-semibold text-white transition-opacity hover:opacity-90"
+          >
+            Add to Chrome &mdash; Free
+          </a>
+          <a
+            href="/demo"
+            class="rounded-lg border border-x-border bg-x-card px-6 py-3 text-base font-semibold text-x-text transition-colors hover:bg-x-hover"
+          >
+            Try the Demo
+          </a>
+        </div>
+      </div>
+
+      <div
+        class="animate-[hero-fade-up_600ms_cubic-bezier(0.23,1,0.32,1)_forwards] opacity-0"
+        style="animation-delay: 320ms"
+      >
+        <p class="mt-6 text-sm text-x-text-secondary">
+          Free &amp; open source. No account needed. Your data stays local.
+        </p>
+      </div>
+    </header>
+
+    <!-- New Tab Mockup -->
+    <section data-reveal class="mx-auto max-w-5xl px-6 pb-24">
+      <BrowserFrame title="New Tab">
+        <div class="relative aspect-video bg-stone-950">
+          <img
+            src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=1200&q=80"
+            alt="Mountain landscape wallpaper"
+            class="h-full w-full object-cover opacity-50"
+          />
+          <div class="absolute inset-0 flex flex-col items-center justify-end pb-[15%]">
+            <p
+              class="text-4xl font-light text-white/90 sm:text-5xl"
+              style={`font-family: ${SERIF}`}
+            >
+              3:45 PM
+            </p>
+            <div
+              class="mt-6 w-full max-w-xs rounded-xl border border-white/10 bg-black/40 p-4 backdrop-blur-sm sm:max-w-sm"
+            >
+              <p class="text-xs font-semibold uppercase tracking-widest text-orange-400/70">
+                Pick up where you left off
+              </p>
+              <p class="mt-2 text-sm text-white/80" style={`font-family: ${SERIF}`}>
+                The Art of Simplicity in Software Design
+              </p>
+              <p class="mt-1 text-xs text-white/50">@antirez &middot; saved 6 hours ago</p>
+            </div>
+          </div>
+        </div>
+      </BrowserFrame>
+    </section>
+
+    <!-- Feature Showcases -->
+    <div class="space-y-24 pb-24">
+      <section class="px-6">
+        <FeatureShowcase
+          title="Read without distraction"
+          description="Threads, articles, and long posts rendered in a clean reader view. No sidebar, no trending topics, no algorithmic interruptions — just the words you saved."
+        >
+          <BrowserFrame title="Reader — Totem" slot="image">
+            <div class="bg-x-bg p-6 sm:p-8">
+              <div class="mx-auto max-w-lg">
+                <div class="flex items-center gap-3">
+                  <div class="size-10 rounded-full bg-stone-300 dark:bg-stone-700"></div>
+                  <div>
+                    <p class="text-sm font-semibold text-x-text">antirez</p>
+                    <p class="text-xs text-x-text-secondary">@antiabortml</p>
+                  </div>
+                </div>
+                <div class="mt-5 space-y-3">
+                  <div class="h-2.5 w-full rounded bg-x-border"></div>
+                  <div class="h-2.5 w-11/12 rounded bg-x-border"></div>
+                  <div class="h-2.5 w-full rounded bg-x-border"></div>
+                  <div class="h-2.5 w-9/12 rounded bg-x-border"></div>
+                  <div class="mt-4 h-2.5 w-full rounded bg-x-border"></div>
+                  <div class="h-2.5 w-10/12 rounded bg-x-border"></div>
+                  <div class="h-2.5 w-full rounded bg-x-border"></div>
+                  <div class="h-2.5 w-7/12 rounded bg-x-border"></div>
+                </div>
+                <div class="mt-6 rounded-xl border border-x-border bg-x-card p-4">
+                  <div class="h-2 w-3/4 rounded bg-x-border"></div>
+                  <div class="mt-2 h-2 w-1/2 rounded bg-x-border"></div>
+                </div>
+              </div>
+            </div>
+          </BrowserFrame>
+        </FeatureShowcase>
+      </section>
+
+      <section class="px-6">
+        <FeatureShowcase
+          title="Pick up where you left off"
+          description="Reading progress is saved automatically. Switch tabs, close the browser, come back days later — your scroll position is right where you left it."
+          reversed
+        >
+          <BrowserFrame title="Bookmarks — Totem" slot="image">
+            <div class="bg-x-bg p-4 sm:p-6">
+              <div class="mb-4 flex gap-1 rounded-lg bg-x-hover p-1">
+                <span
+                  class="flex-1 rounded-md bg-accent px-3 py-1.5 text-center text-xs font-medium text-white"
+                >
+                  Unread
+                </span>
+                <span
+                  class="flex-1 rounded-md px-3 py-1.5 text-center text-xs font-medium text-x-text-secondary"
+                >
+                  Reading
+                </span>
+                <span
+                  class="flex-1 rounded-md px-3 py-1.5 text-center text-xs font-medium text-x-text-secondary"
+                >
+                  Done
+                </span>
+              </div>
+              {
+                bookmarkItems.map((item) => (
+                  <div class="flex items-start gap-3 border-b border-x-border py-3 last:border-0">
+                    <div class="size-8 shrink-0 rounded-full bg-stone-300 dark:bg-stone-700" />
+                    <div class="min-w-0 flex-1">
+                      <div class="flex items-baseline gap-2">
+                        <span class="text-sm font-semibold text-x-text">{item.author}</span>
+                        <span class="text-xs text-x-text-secondary">{item.handle}</span>
+                      </div>
+                      <p class="mt-0.5 text-pretty text-sm text-x-text-secondary">{item.text}</p>
+                      {item.progress && (
+                        <div class="mt-2 flex items-center gap-2">
+                          <div class="h-1 flex-1 rounded-full bg-x-border">
+                            <div
+                              class="h-1 rounded-full bg-accent"
+                              style={`width: ${item.progress}%`}
+                            />
+                          </div>
+                          <span class="text-xs tabular-nums text-x-text-secondary">
+                            {item.progress}%
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))
+              }
+            </div>
+          </BrowserFrame>
+        </FeatureShowcase>
+      </section>
+
+      <section class="px-6">
+        <FeatureShowcase
+          title="Your calm new tab"
+          description="Every new tab opens to a beautiful wallpaper, a clock, and the bookmark you were reading. No feed, no notifications — a gentle reminder of what you intended to read."
+        >
+          <BrowserFrame title="New Tab" slot="image">
+            <div class="relative aspect-video bg-stone-950">
+              <img
+                src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=1200&q=80"
+                alt="Mountain landscape wallpaper"
+                class="h-full w-full object-cover opacity-50"
+              />
+              <div class="absolute inset-0 flex flex-col items-center justify-end pb-[15%]">
+                <p
+                  class="text-4xl font-light text-white/90 sm:text-5xl"
+                  style={`font-family: ${SERIF}`}
+                >
+                  3:45 PM
+                </p>
+                <div
+                  class="mt-6 w-full max-w-xs rounded-xl border border-white/10 bg-black/40 p-4 backdrop-blur-sm sm:max-w-sm"
+                >
+                  <p class="text-xs font-semibold uppercase tracking-widest text-orange-400/70">
+                    Pick up where you left off
+                  </p>
+                  <p class="mt-2 text-sm text-white/80" style={`font-family: ${SERIF}`}>
+                    The Art of Simplicity in Software Design
+                  </p>
+                  <p class="mt-1 text-xs text-white/50">@antirez &middot; saved 6 hours ago</p>
+                </div>
+              </div>
+            </div>
+          </BrowserFrame>
+        </FeatureShowcase>
+      </section>
+    </div>
+
+    <!-- Features Grid -->
+    <section data-reveal class="mx-auto max-w-5xl px-6 pb-24" id="features">
+      <h2
+        class="mb-12 text-balance text-center text-3xl font-bold"
+        style={`font-family: ${SERIF}`}
+      >
+        Everything you need to read more
+      </h2>
+      <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {
+          features.map((f) => (
+            <div class="rounded-xl border border-x-border bg-x-card p-6">
+              <span
+                class="mb-4 inline-flex size-10 items-center justify-center rounded-lg bg-accent/10 text-accent"
+                set:html={f.icon}
+              />
+              <h3 class="text-balance text-lg font-semibold text-x-text">{f.title}</h3>
+              <p class="mt-2 text-pretty text-sm leading-relaxed text-x-text-secondary">
+                {f.description}
+              </p>
+            </div>
+          ))
+        }
+      </div>
+    </section>
+
+    <!-- Keyboard Shortcuts -->
+    <section data-reveal class="mx-auto max-w-3xl px-6 pb-24">
+      <h2
+        class="mb-10 text-balance text-center text-3xl font-bold"
+        style={`font-family: ${SERIF}`}
+      >
+        Built for your keyboard
+      </h2>
+      <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        {
+          shortcuts.map((s) => (
+            <div class="flex items-center gap-3 rounded-xl border border-x-border bg-x-card p-4">
+              <kbd class="inline-flex min-w-8 items-center justify-center rounded-md border border-x-border bg-x-bg px-2 py-1 font-mono text-xs font-medium text-x-text">
+                {s.key}
+              </kbd>
+              <span class="text-sm text-x-text-secondary">{s.label}</span>
+            </div>
+          ))
+        }
+      </div>
+    </section>
+
+    <!-- Getting Started -->
+    <section data-reveal class="mx-auto max-w-4xl px-6 pb-24">
+      <h2
+        class="mb-12 text-balance text-center text-3xl font-bold"
+        style={`font-family: ${SERIF}`}
+      >
+        Up and running in seconds
+      </h2>
+      <div class="grid gap-8 sm:grid-cols-3">
+        {
+          steps.map((step, i) => (
+            <div class="text-center">
+              <span class="mx-auto mb-4 flex size-10 items-center justify-center rounded-full bg-accent text-lg font-bold tabular-nums text-white">
+                {i + 1}
+              </span>
+              <h3 class="text-lg font-semibold text-x-text">{step.title}</h3>
+              <p class="mt-2 text-pretty text-sm text-x-text-secondary">{step.description}</p>
+            </div>
+          ))
+        }
+      </div>
+    </section>
+
+    <!-- CTA -->
+    <section data-reveal class="mx-auto max-w-3xl px-6 pb-24 text-center">
+      <div class="rounded-xl border border-x-border bg-x-card p-10">
+        <h2
+          class="text-balance text-2xl font-bold"
+          style={`font-family: ${SERIF}`}
+        >
+          Ready to read better?
+        </h2>
+        <p class="mt-3 text-pretty text-x-text-secondary">
+          Free and open source. Your data stays in your browser.
+        </p>
+        <div class="mt-8 flex flex-wrap items-center justify-center gap-4">
+          <a
+            href="https://chromewebstore.google.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="rounded-lg bg-accent px-6 py-3 text-base font-semibold text-white transition-opacity hover:opacity-90"
+          >
+            Add to Chrome &mdash; Free
+          </a>
+          <a
+            href="/demo"
+            class="rounded-lg border border-x-border px-6 py-3 text-base font-semibold text-x-text transition-colors hover:bg-x-hover"
+          >
+            Try the Demo
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <Footer />
+  </div>
+</BaseLayout>
+
+<script>
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const els = document.querySelectorAll("[data-reveal]");
+  if (reduced) {
+    els.forEach((el) => el.classList.add("is-visible"));
+  } else {
+    const obs = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting) {
+            e.target.classList.add("is-visible");
+            obs.unobserve(e.target);
+          }
+        });
+      },
+      { threshold: 0.1 },
+    );
+    els.forEach((el) => obs.observe(el));
+  }
+</script>

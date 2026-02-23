@@ -1,0 +1,69 @@
+---
+import TotemLogo from "./TotemLogo.astro";
+
+interface Props {
+  currentPage?: string;
+}
+
+const { currentPage } = Astro.props;
+
+const navLinks = [
+  { label: "Features", href: "#features" },
+  { label: "Demo", href: "/demo" },
+  { label: "Privacy", href: "/privacy" },
+];
+---
+
+<nav
+  data-nav
+  class="sticky top-0 z-20 border-b border-transparent bg-x-bg/80 backdrop-blur-md transition-colors"
+>
+  <div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
+    <a href="/" class="flex items-center gap-2">
+      <TotemLogo />
+      <span
+        class="text-lg font-medium text-x-text"
+        style="font-family: 'Spectral', Georgia, serif"
+      >
+        Totem
+      </span>
+    </a>
+
+    <div class="hidden items-center gap-8 md:flex">
+      {
+        navLinks.map((link) => (
+          <a
+            href={link.href}
+            class:list={[
+              "text-sm transition-colors",
+              currentPage === link.href
+                ? "text-accent"
+                : "text-x-text-secondary hover:text-x-text",
+            ]}
+          >
+            {link.label}
+          </a>
+        ))
+      }
+    </div>
+
+    <a
+      href="https://chromewebstore.google.com"
+      class="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:opacity-90"
+    >
+      Add to Chrome
+    </a>
+  </div>
+</nav>
+
+<script>
+  const nav = document.querySelector("[data-nav]")!;
+  addEventListener(
+    "scroll",
+    () => {
+      nav.classList.toggle("border-x-border", scrollY > 50);
+      nav.classList.toggle("border-transparent", scrollY <= 50);
+    },
+    { passive: true },
+  );
+</script>

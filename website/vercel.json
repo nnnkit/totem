@@ -1,6 +1,9 @@
 {
   "rewrites": [
     { "source": "/demo", "destination": "/demo.html" },
+    { "source": "/privacy", "destination": "/privacy.html" },
+    { "source": "/changelog", "destination": "/changelog.html" },
+    { "source": "/install", "destination": "/install.html" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

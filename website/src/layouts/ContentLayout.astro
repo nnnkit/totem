@@ -1,0 +1,64 @@
+---
+import BaseLayout from "./BaseLayout.astro";
+
+interface Props {
+  title: string;
+  description: string;
+  ogUrl: string;
+  pageTitle: string;
+  pageSubtitle?: string;
+}
+
+const { title, description, ogUrl, pageTitle, pageSubtitle } = Astro.props;
+---
+
+<BaseLayout title={title} description={description} ogUrl={ogUrl}>
+  <div class="min-h-dvh bg-x-bg text-x-text">
+    <header class="mx-auto max-w-2xl px-6 pt-16 pb-4">
+      <a
+        href="/"
+        class="inline-flex items-center gap-2 text-sm text-x-text-secondary transition-colors hover:text-x-text"
+      >
+        <svg viewBox="0 0 20 20" class="size-4" fill="currentColor">
+          <path
+            fill-rule="evenodd"
+            d="M17 10a.75.75 0 01-.75.75H5.612l4.158 3.96a.75.75 0 11-1.04 1.08l-5.5-5.25a.75.75 0 010-1.08l5.5-5.25a.75.75 0 111.04 1.08L5.612 9.25H16.25A.75.75 0 0117 10z"
+            clip-rule="evenodd"
+          />
+        </svg>
+        Back to Totem
+      </a>
+    </header>
+
+    <main class="mx-auto max-w-2xl px-6 pb-20">
+      <h1
+        class="text-balance text-4xl font-bold tracking-tight"
+        style="font-family: 'Spectral', Georgia, serif"
+      >
+        {pageTitle}
+      </h1>
+      {pageSubtitle && <p class="mt-2 text-pretty text-x-text-secondary">{pageSubtitle}</p>}
+
+      <slot />
+    </main>
+
+    <footer class="border-t border-x-border px-6 py-8">
+      <div
+        class="mx-auto flex max-w-2xl flex-wrap items-center justify-between gap-4 text-sm text-x-text-secondary"
+      >
+        <a href="/" class="transition-colors hover:text-x-text">Totem</a>
+        <div class="flex gap-6">
+          <a
+            href="https://github.com/nnnkit/totem/"
+            class="transition-colors hover:text-x-text"
+          >
+            GitHub
+          </a>
+          <a href="/demo" class="transition-colors hover:text-x-text">Demo</a>
+          <a href="/privacy" class="transition-colors hover:text-x-text">Privacy</a>
+          <a href="/changelog" class="transition-colors hover:text-x-text">Changelog</a>
+        </div>
+      </div>
+    </footer>
+  </div>
+</BaseLayout>
