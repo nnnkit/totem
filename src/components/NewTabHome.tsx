@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { GearSixIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
+import { TotemLogo } from "./TotemLogo";
 import type { BackgroundMode, Bookmark, SyncState } from "../types";
 import { formatClock } from "../lib/time";
 import {
@@ -198,6 +199,20 @@ export function NewTabHome({
       <div className="breath-grain pointer-events-none absolute inset-0" />
 
       <div className="relative z-10 mx-auto flex min-h-dvh w-full max-w-4xl flex-col px-5 py-6 sm:px-8">
+        <header className="flex items-center justify-between">
+          <TotemLogo className="size-6" />
+          <button
+            data-tour="settings-btn"
+            type="button"
+            onClick={onOpenSettings}
+            className="breath-icon-btn"
+            aria-label="Open settings"
+            title="Settings"
+          >
+            {SETTINGS_ICON}
+          </button>
+        </header>
+
         <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col items-center justify-center">
           <section className="mx-auto w-full max-w-lg space-y-6">
             <div className="text-center">
@@ -396,19 +411,6 @@ export function NewTabHome({
             </article>
           )}
         </footer>
-
-        <div className="breath-settings-btn">
-          <button
-            data-tour="settings-btn"
-            type="button"
-            onClick={onOpenSettings}
-            className="breath-icon-btn"
-            aria-label="Open settings"
-            title="Settings"
-          >
-            {SETTINGS_ICON}
-          </button>
-        </div>
 
         {showWallpaper && wallpaperCredit && (
           <p className="fixed bottom-6 left-6 z-20 text-xs text-gray-500">

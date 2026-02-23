@@ -838,11 +838,32 @@
     font-size: 0.95rem;
 }
 
-.breath-settings-btn {
-    position: fixed;
-    right: max(1.5rem, env(safe-area-inset-right));
-    bottom: max(1.5rem, env(safe-area-inset-bottom));
-    z-index: 20;
+.animate-logo-shine {
+    position: relative;
+    overflow: hidden;
+    border-radius: 1rem;
+}
+
+.animate-logo-shine::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        120deg,
+        transparent 30%,
+        rgba(255, 255, 255, 0.12) 50%,
+        transparent 70%
+    );
+    animation: logo-shine 2s ease-in-out infinite;
+}
+
+@keyframes logo-shine {
+    0% {
+        transform: translateX(-100%);
+    }
+    100% {
+        transform: translateX(100%);
+    }
 }
 
 .breath-quick-link {

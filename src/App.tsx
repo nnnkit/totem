@@ -141,8 +141,8 @@ export default function App() {
   if (phase === "loading" || (isReady && syncState.phase === "idle")) {
     return (
       <div className="flex items-center justify-center min-h-dvh bg-x-bg">
-        <div className="animate-pulse">
-          <TotemLogo className="size-12" />
+        <div className="animate-logo-shine">
+          <TotemLogo className="size-16" />
         </div>
       </div>
     );
