@@ -1307,6 +1307,9 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     return true;
   }
   if (message.type === "START_AUTH_CAPTURE") {
+    if (authTabId) {
+      chrome.tabs.remove(authTabId).catch(() => {});
+    }
     chrome.tabs.create({ url: "https://x.com/i/bookmarks", active: false }, (tab) => {
       authTabId = tab.id;
       sendResponse({ tabId: tab.id });
@@ -1393,7 +1396,10 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       clearTimeout(catalogFlushTimer);
       catalogFlushTimer = null;
     }
-    authTabId = null;
+    if (authTabId) {
+      chrome.tabs.remove(authTabId).catch(() => {});
+      authTabId = null;
+    }
     reauthInProgress = false;
     lastLightSyncSignalAt = 0;
     discoveryInProgress = false;

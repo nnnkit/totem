@@ -13,8 +13,15 @@ import { NewTabHome } from "./components/NewTabHome";
 import { BookmarkReader } from "./components/BookmarkReader";
 import { BookmarksList, type ReadingTab } from "./components/BookmarksList";
 import { SettingsModal } from "./components/SettingsModal";
+import { Toast } from "./components/Toast";
 import { useContinueReading } from "./hooks/useContinueReading";
 import type { Bookmark } from "./types";
+
+interface ToastState {
+  message: string;
+  linkUrl?: string;
+  linkLabel?: string;
+}
 
 type AppView = "home" | "reading";
 
@@ -44,6 +51,7 @@ export default function App() {
     setReadingTab(tab);
     localStorage.setItem(LS_READING_TAB, tab);
   }, []);
+  const [toast, setToast] = useState<ToastState | null>(null);
   const [shuffleSeed, setShuffleSeed] = useState(0);
   const handleShuffle = useCallback(() => {
     setShuffleSeed((s) => s + 1);
@@ -161,10 +169,19 @@ export default function App() {
           onShuffle={handleShuffle}
           onPrev={hasPrev ? goToPrev : undefined}
           onNext={hasNext ? goToNext : undefined}
-          onUnbookmark={() => {
-            unbookmark(selectedBookmark.tweetId);
+          onUnbookmark={async () => {
+            const tweetId = selectedBookmark.tweetId;
+            const tweetUrl = `https://x.com/i/web/status/${tweetId}`;
             setView("reading");
             closeReader();
+            const { apiError } = await unbookmark(tweetId);
+            if (apiError) {
+              setToast({
+                message: "Removed locally. Unbookmark it on X to fully remove.",
+                linkUrl: tweetUrl,
+                linkLabel: "Open on X",
+              });
+            }
           }}
           themePreference={themePreference}
           onThemeChange={setThemePreference}
@@ -217,6 +234,14 @@ export default function App() {
         onThemePreferenceChange={setThemePreference}
         onResetLocalData={handleResetLocalData}
       />
+      {toast && (
+        <Toast
+          message={toast.message}
+          linkUrl={toast.linkUrl}
+          linkLabel={toast.linkLabel}
+          onDismiss={() => setToast(null)}
+        />
+      )}
     </>
   );
 }

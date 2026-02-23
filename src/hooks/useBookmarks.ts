@@ -41,7 +41,7 @@ interface UseBookmarksReturn {
   bookmarks: Bookmark[];
   syncState: SyncState;
   refresh: () => void;
-  unbookmark: (tweetId: string) => Promise<void>;
+  unbookmark: (tweetId: string) => Promise<{ apiError?: string }>;
 }
 
 const IDLE_SAFETY_TIMEOUT_MS = 10_000;
@@ -118,12 +118,7 @@ export function useBookmarks(isReady: boolean): UseBookmarksReturn {
           setSyncState({ phase: "done", total: stored.length });
           runLightSync().catch(() => {});
         } else {
-          syncNewBookmarks({ fullReconcile: true });
-          // If sync didn't start (another already in progress), exit "idle"
-          // so the loading spinner doesn't persist.
-          setSyncState((prev) =>
-            prev.phase === "idle" ? { phase: "done", total: 0 } : prev,
-          );
+          setSyncState({ phase: "done", total: 0 });
         }
       })
       .catch(() => {
@@ -425,8 +420,8 @@ export function useBookmarks(isReady: boolean): UseBookmarksReturn {
     }
   }, []);
 
-  const unbookmark = useCallback(async (tweetId: string) => {
-    if (!tweetId) return;
+  const unbookmark = useCallback(async (tweetId: string): Promise<{ apiError?: string }> => {
+    if (!tweetId) return {};
 
     const current = bookmarksRef.current;
     const removed = current.find((bookmark) => bookmark.tweetId === tweetId) || null;
@@ -437,29 +432,21 @@ export function useBookmarks(isReady: boolean): UseBookmarksReturn {
       setBookmarks(filtered);
     }
 
+    await deleteBookmarksByTweetIds([tweetId]);
+
+    setSyncState((prev) => ({
+      ...prev,
+      phase: prev.phase === "idle" ? "done" : prev.phase,
+      total: Math.max(0, prev.total - (removed ? 1 : 0)),
+    }));
+
     try {
-      await deleteBookmarksByTweetIds([tweetId]);
       await deleteBookmark(tweetId);
-      setSyncState((prev) => ({
-        ...prev,
-        phase: prev.phase === "idle" ? "done" : prev.phase,
-        total: Math.max(0, prev.total - (removed ? 1 : 0)),
-      }));
     } catch (error) {
-      if (removed) {
-        const removedBookmark = removed;
-        await upsertBookmarks([removedBookmark]);
-        const currentAfterError = bookmarksRef.current;
-        if (!currentAfterError.some((bookmark) => bookmark.tweetId === tweetId)) {
-          const restored = [removedBookmark, ...currentAfterError].toSorted(
-            compareSortIndexDesc,
-          );
-          bookmarksRef.current = restored;
-          setBookmarks(restored);
-        }
-      }
-      throw error;
+      return { apiError: error instanceof Error ? error.message : "Unknown error" };
     }
+
+    return {};
   }, []);
 
   useEffect(() => {
