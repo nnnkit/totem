@@ -1,3 +1,9 @@
+import { Nav } from "../components/Nav";
+import { Footer } from "../components/Footer";
+import { BrowserFrame } from "../components/BrowserFrame";
+import { FeatureShowcase } from "../components/FeatureShowcase";
+import { useScrollReveal } from "../hooks/useScrollReveal";
+
 const SERIF = "'Spectral', Georgia, serif";
 
 const FEATURES = [
@@ -70,111 +76,308 @@ const STEPS = [
   },
   {
     title: "Browse X",
-    description:
-      "Visit x.com and bookmark posts you want to read later.",
+    description: "Visit x.com and bookmark posts you want to read later.",
   },
   {
     title: "Open a new tab",
-    description:
-      "Your bookmarks appear beautifully. Start reading.",
+    description: "Your bookmarks appear beautifully. Start reading.",
   },
 ];
+
+const SHORTCUTS = [
+  { key: "/", label: "Focus search" },
+  { key: "j / k", label: "Navigate" },
+  { key: "Enter", label: "Open" },
+  { key: "Esc", label: "Back" },
+  { key: "l", label: "All bookmarks" },
+  { key: "s", label: "Surprise me" },
+];
+
+function HeroStaggerItem({
+  children,
+  delay,
+}: {
+  children: React.ReactNode;
+  delay: number;
+}) {
+  return (
+    <div
+      className="animate-[hero-fade-up_600ms_cubic-bezier(0.23,1,0.32,1)_forwards] opacity-0"
+      style={{ animationDelay: `${delay}ms` }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function ReaderMockup() {
+  return (
+    <BrowserFrame title="Reader — Totem">
+      <div className="bg-x-bg p-6 sm:p-8">
+        <div className="mx-auto max-w-lg">
+          <div className="flex items-center gap-3">
+            <div className="size-10 rounded-full bg-stone-300 dark:bg-stone-700" />
+            <div>
+              <p className="text-sm font-semibold text-x-text">antirez</p>
+              <p className="text-xs text-x-text-secondary">@antiabortml</p>
+            </div>
+          </div>
+          <div className="mt-5 space-y-3">
+            <div className="h-2.5 w-full rounded bg-x-border" />
+            <div className="h-2.5 w-11/12 rounded bg-x-border" />
+            <div className="h-2.5 w-full rounded bg-x-border" />
+            <div className="h-2.5 w-9/12 rounded bg-x-border" />
+            <div className="mt-4 h-2.5 w-full rounded bg-x-border" />
+            <div className="h-2.5 w-10/12 rounded bg-x-border" />
+            <div className="h-2.5 w-full rounded bg-x-border" />
+            <div className="h-2.5 w-7/12 rounded bg-x-border" />
+          </div>
+          <div className="mt-6 rounded-xl border border-x-border bg-x-card p-4">
+            <div className="h-2 w-3/4 rounded bg-x-border" />
+            <div className="mt-2 h-2 w-1/2 rounded bg-x-border" />
+          </div>
+        </div>
+      </div>
+    </BrowserFrame>
+  );
+}
+
+function BookmarksMockup() {
+  return (
+    <BrowserFrame title="Bookmarks — Totem">
+      <div className="bg-x-bg p-4 sm:p-6">
+        <div className="mb-4 flex gap-1 rounded-lg bg-x-hover p-1">
+          <span className="flex-1 rounded-md bg-accent px-3 py-1.5 text-center text-xs font-medium text-white">
+            Unread
+          </span>
+          <span className="flex-1 rounded-md px-3 py-1.5 text-center text-xs font-medium text-x-text-secondary">
+            Reading
+          </span>
+          <span className="flex-1 rounded-md px-3 py-1.5 text-center text-xs font-medium text-x-text-secondary">
+            Done
+          </span>
+        </div>
+        {[
+          {
+            author: "Paul Graham",
+            handle: "@paulg",
+            text: "5 things I wish I knew about building products...",
+          },
+          {
+            author: "Andrej Karpathy",
+            handle: "@karpathy",
+            text: "A practical guide to running LLMs in production",
+            progress: 62,
+          },
+          {
+            author: "James Clear",
+            handle: "@JamesClear",
+            text: "The difference between knowledge and execution...",
+          },
+        ].map((item) => (
+          <div
+            key={item.handle}
+            className="flex items-start gap-3 border-b border-x-border py-3 last:border-0"
+          >
+            <div className="size-8 shrink-0 rounded-full bg-stone-300 dark:bg-stone-700" />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-baseline gap-2">
+                <span className="text-sm font-semibold text-x-text">
+                  {item.author}
+                </span>
+                <span className="text-xs text-x-text-secondary">
+                  {item.handle}
+                </span>
+              </div>
+              <p className="mt-0.5 text-sm text-x-text-secondary text-pretty">
+                {item.text}
+              </p>
+              {item.progress && (
+                <div className="mt-2 flex items-center gap-2">
+                  <div className="h-1 flex-1 rounded-full bg-x-border">
+                    <div
+                      className="h-1 rounded-full bg-accent"
+                      style={{ width: `${item.progress}%` }}
+                    />
+                  </div>
+                  <span className="text-xs text-x-text-secondary tabular-nums">
+                    {item.progress}%
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </BrowserFrame>
+  );
+}
+
+function NewTabMockup() {
+  return (
+    <BrowserFrame title="New Tab">
+      <div className="relative aspect-video bg-stone-950">
+        <img
+          src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=1200&q=80"
+          alt="Mountain landscape wallpaper"
+          className="h-full w-full object-cover opacity-50"
+        />
+        <div className="absolute inset-0 flex flex-col items-center justify-end pb-[15%]">
+          <p
+            className="text-4xl font-light text-white/90 sm:text-5xl"
+            style={{ fontFamily: SERIF }}
+          >
+            3:45 PM
+          </p>
+          <div className="mt-6 w-full max-w-xs rounded-xl border border-white/10 bg-black/40 p-4 backdrop-blur-sm sm:max-w-sm">
+            <p className="text-xs font-semibold uppercase tracking-widest text-orange-400/70">
+              Pick up where you left off
+            </p>
+            <p
+              className="mt-2 text-sm text-white/80"
+              style={{ fontFamily: SERIF }}
+            >
+              The Art of Simplicity in Software Design
+            </p>
+            <p className="mt-1 text-xs text-white/50">
+              @antirez &middot; saved 6 hours ago
+            </p>
+          </div>
+        </div>
+      </div>
+    </BrowserFrame>
+  );
+}
+
+function ScrollRevealSection({
+  children,
+  className = "",
+  id,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  id?: string;
+}) {
+  const { ref, isVisible } = useScrollReveal();
+  return (
+    <section
+      ref={ref as React.RefObject<HTMLElement>}
+      id={id}
+      className={`transition-all duration-700 ${
+        isVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
+      } ${className}`}
+      style={{
+        transitionTimingFunction: "cubic-bezier(0.23, 1, 0.32, 1)",
+      }}
+    >
+      {children}
+    </section>
+  );
+}
 
 export default function LandingPage() {
   return (
     <div className="min-h-dvh bg-x-bg text-x-text">
-      {/* Hero */}
+      <Nav currentPage="/" />
+
       <header className="mx-auto max-w-4xl px-6 pt-20 pb-16 text-center">
-        <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-x-border bg-x-card px-4 py-1.5 text-sm text-x-text-secondary">
-          <svg viewBox="0 0 100 100" className="size-4" fill="none">
-            <rect x="10" y="10" width="80" height="80" rx="16" fill="#1A1918" />
-            <path d="M32 68L68 68L68 32Z" fill="#e07a5f" />
-            <path d="M68 32L52 50L68 68Z" fill="#c96b50" />
-            <path d="M52 50L68 32" stroke="rgba(255,255,255,0.15)" strokeWidth="0.5" />
-          </svg>
-          Chrome Extension
-        </div>
+        <HeroStaggerItem delay={0}>
+          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-x-border bg-x-card px-4 py-1.5 text-sm text-x-text-secondary">
+            <svg viewBox="0 0 100 100" className="size-4" fill="none">
+              <path d="M10 90L90 90L90 10Z" fill="#e07a5f" />
+              <path d="M90 10L55 45L90 90Z" fill="#c96b50" />
+              <path
+                d="M55 45L90 10"
+                stroke="rgba(255,255,255,0.2)"
+                strokeWidth="1.5"
+              />
+            </svg>
+            Chrome Extension
+          </div>
+        </HeroStaggerItem>
 
-        <h1
-          className="text-5xl font-bold tracking-tight sm:text-6xl lg:text-7xl"
-          style={{ fontFamily: SERIF }}
-        >
-          A calm reader for
-          <br />
-          <span className="text-x-blue">X bookmarks.</span>
-        </h1>
-
-        <p className="mx-auto mt-6 max-w-xl text-lg text-x-text-secondary">
-          Replace your new tab with a calm reading space. Totem surfaces your
-          saved posts with reading progress, themes, and keyboard navigation
-          &mdash; all without leaving your browser.
-        </p>
-
-        <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
-          <a
-            href="/demo"
-            className="rounded-xl bg-x-blue px-6 py-3 text-base font-semibold text-white transition-opacity hover:opacity-90"
+        <HeroStaggerItem delay={80}>
+          <h1
+            className="text-balance text-5xl font-bold tracking-tight sm:text-6xl lg:text-7xl"
+            style={{ fontFamily: SERIF }}
           >
-            Try the Demo
-          </a>
-          <a
-            href="https://chromewebstore.google.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="rounded-xl border border-x-border bg-x-card px-6 py-3 text-base font-semibold text-x-text transition-colors hover:bg-x-hover"
-          >
-            Add to Chrome &mdash; Free
-          </a>
-        </div>
+            Actually read what
+            <br />
+            <span className="text-accent">you saved on X.</span>
+          </h1>
+        </HeroStaggerItem>
+
+        <HeroStaggerItem delay={160}>
+          <p className="mx-auto mt-6 max-w-xl text-pretty text-lg text-x-text-secondary">
+            Replace your new tab with a calm reading space. Totem surfaces your
+            saved posts with reading progress, themes, and keyboard navigation
+            &mdash; all without leaving your browser.
+          </p>
+        </HeroStaggerItem>
+
+        <HeroStaggerItem delay={240}>
+          <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
+            <a
+              href="https://chromewebstore.google.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-lg bg-accent px-6 py-3 text-base font-semibold text-white transition-opacity hover:opacity-90"
+            >
+              Add to Chrome &mdash; Free
+            </a>
+            <a
+              href="/demo"
+              className="rounded-lg border border-x-border bg-x-card px-6 py-3 text-base font-semibold text-x-text transition-colors hover:bg-x-hover"
+            >
+              Try the Demo
+            </a>
+          </div>
+        </HeroStaggerItem>
+
+        <HeroStaggerItem delay={320}>
+          <p className="mt-6 text-sm text-x-text-secondary">
+            Free &amp; open source. No account needed. Your data stays local.
+          </p>
+        </HeroStaggerItem>
       </header>
 
-      {/* Preview */}
-      <section className="mx-auto max-w-5xl px-6 pb-20">
-        <div className="overflow-hidden rounded-2xl border border-x-border bg-x-card shadow-2xl">
-          <div className="flex items-center gap-2 border-b border-x-border px-4 py-3">
-            <span className="size-3 rounded-full bg-red-400/80" />
-            <span className="size-3 rounded-full bg-yellow-400/80" />
-            <span className="size-3 rounded-full bg-green-400/80" />
-            <span className="ml-4 flex-1 text-center text-xs text-x-text-secondary">
-              New Tab
-            </span>
-          </div>
-          <div className="relative aspect-[16/9] bg-stone-950">
-            <img
-              src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=1200&q=80"
-              alt="Extension preview showing bookmark reader on new tab"
-              className="h-full w-full object-cover opacity-50"
-            />
-            <div className="absolute inset-0 flex flex-col items-center justify-end pb-[15%]">
-              <p
-                className="text-4xl font-light text-white/90 sm:text-5xl"
-                style={{ fontFamily: SERIF }}
-              >
-                3:45 PM
-              </p>
-              <div className="mt-6 w-full max-w-md rounded-2xl border border-white/10 bg-black/40 p-4 backdrop-blur-sm">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-orange-400/70">
-                  Pick up where you left off
-                </p>
-                <p
-                  className="mt-2 text-sm text-white/80"
-                  style={{ fontFamily: SERIF }}
-                >
-                  The Art of Simplicity in Software Design
-                </p>
-                <p className="mt-1 text-[11px] text-white/50">
-                  @antirez &middot; saved 6 hours ago
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      <ScrollRevealSection className="mx-auto max-w-5xl px-6 pb-24">
+        <NewTabMockup />
+      </ScrollRevealSection>
 
-      {/* Features */}
-      <section className="mx-auto max-w-5xl px-6 pb-20">
+      <div className="space-y-24 pb-24">
+        <ScrollRevealSection className="px-6">
+          <FeatureShowcase
+            title="Read without distraction"
+            description="Threads, articles, and long posts rendered in a clean reader view. No sidebar, no trending topics, no algorithmic interruptions — just the words you saved."
+            image={<ReaderMockup />}
+          />
+        </ScrollRevealSection>
+
+        <ScrollRevealSection className="px-6">
+          <FeatureShowcase
+            title="Pick up where you left off"
+            description="Reading progress is saved automatically. Switch tabs, close the browser, come back days later — your scroll position is right where you left it."
+            image={<BookmarksMockup />}
+            reversed
+          />
+        </ScrollRevealSection>
+
+        <ScrollRevealSection className="px-6">
+          <FeatureShowcase
+            title="Your calm new tab"
+            description="Every new tab opens to a beautiful wallpaper, a clock, and the bookmark you were reading. No feed, no notifications — a gentle reminder of what you intended to read."
+            image={<NewTabMockup />}
+          />
+        </ScrollRevealSection>
+      </div>
+
+      <ScrollRevealSection
+        className="mx-auto max-w-5xl px-6 pb-24"
+        id="features"
+      >
         <h2
-          className="mb-12 text-center text-3xl font-bold"
+          className="mb-12 text-balance text-center text-3xl font-bold"
           style={{ fontFamily: SERIF }}
         >
           Everything you need to read more
@@ -183,24 +386,47 @@ export default function LandingPage() {
           {FEATURES.map((f) => (
             <div
               key={f.title}
-              className="rounded-2xl border border-x-border bg-x-card p-6"
+              className="rounded-xl border border-x-border bg-x-card p-6"
             >
-              <span className="mb-4 inline-flex size-10 items-center justify-center rounded-xl bg-x-blue/10 text-x-blue">
+              <span className="mb-4 inline-flex size-10 items-center justify-center rounded-lg bg-accent/10 text-accent">
                 {f.icon}
               </span>
-              <h3 className="text-lg font-semibold text-x-text">{f.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-x-text-secondary">
+              <h3 className="text-balance text-lg font-semibold text-x-text">
+                {f.title}
+              </h3>
+              <p className="mt-2 text-pretty text-sm leading-relaxed text-x-text-secondary">
                 {f.description}
               </p>
             </div>
           ))}
         </div>
-      </section>
+      </ScrollRevealSection>
 
-      {/* How it works */}
-      <section className="mx-auto max-w-4xl px-6 pb-20">
+      <ScrollRevealSection className="mx-auto max-w-3xl px-6 pb-24">
         <h2
-          className="mb-12 text-center text-3xl font-bold"
+          className="mb-10 text-balance text-center text-3xl font-bold"
+          style={{ fontFamily: SERIF }}
+        >
+          Built for your keyboard
+        </h2>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          {SHORTCUTS.map((s) => (
+            <div
+              key={s.key}
+              className="flex items-center gap-3 rounded-xl border border-x-border bg-x-card p-4"
+            >
+              <kbd className="inline-flex min-w-8 items-center justify-center rounded-md border border-x-border bg-x-bg px-2 py-1 text-xs font-mono font-medium text-x-text">
+                {s.key}
+              </kbd>
+              <span className="text-sm text-x-text-secondary">{s.label}</span>
+            </div>
+          ))}
+        </div>
+      </ScrollRevealSection>
+
+      <ScrollRevealSection className="mx-auto max-w-4xl px-6 pb-24">
+        <h2
+          className="mb-12 text-balance text-center text-3xl font-bold"
           style={{ fontFamily: SERIF }}
         >
           Up and running in seconds
@@ -208,71 +434,51 @@ export default function LandingPage() {
         <div className="grid gap-8 sm:grid-cols-3">
           {STEPS.map((step, i) => (
             <div key={step.title} className="text-center">
-              <span className="mx-auto mb-4 flex size-10 items-center justify-center rounded-full bg-x-blue text-lg font-bold text-white">
+              <span className="mx-auto mb-4 flex size-10 items-center justify-center rounded-full bg-accent text-lg font-bold text-white tabular-nums">
                 {i + 1}
               </span>
               <h3 className="text-lg font-semibold text-x-text">
                 {step.title}
               </h3>
-              <p className="mt-2 text-sm text-x-text-secondary">
+              <p className="mt-2 text-pretty text-sm text-x-text-secondary">
                 {step.description}
               </p>
             </div>
           ))}
         </div>
-      </section>
+      </ScrollRevealSection>
 
-      {/* CTA */}
-      <section className="mx-auto max-w-3xl px-6 pb-20 text-center">
-        <div className="rounded-3xl border border-x-border bg-x-card p-10">
+      <ScrollRevealSection className="mx-auto max-w-3xl px-6 pb-24 text-center">
+        <div className="rounded-xl border border-x-border bg-x-card p-10">
           <h2
-            className="text-2xl font-bold"
+            className="text-balance text-2xl font-bold"
             style={{ fontFamily: SERIF }}
           >
             Ready to read better?
           </h2>
-          <p className="mt-3 text-x-text-secondary">
+          <p className="mt-3 text-pretty text-x-text-secondary">
             Free and open source. Your data stays in your browser.
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
             <a
-              href="/demo"
-              className="rounded-xl bg-x-blue px-6 py-3 text-base font-semibold text-white transition-opacity hover:opacity-90"
-            >
-              Try the Demo
-            </a>
-            <a
               href="https://chromewebstore.google.com"
               target="_blank"
               rel="noopener noreferrer"
-              className="rounded-xl border border-x-border px-6 py-3 text-base font-semibold text-x-text transition-colors hover:bg-x-hover"
+              className="rounded-lg bg-accent px-6 py-3 text-base font-semibold text-white transition-opacity hover:opacity-90"
             >
-              Install Extension
-            </a>
-          </div>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="border-t border-x-border px-6 py-8">
-        <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-4 text-sm text-x-text-secondary">
-          <p>Totem</p>
-          <div className="flex gap-6">
-            <a
-              href="https://github.com"
-              className="transition-colors hover:text-x-text"
-            >
-              GitHub
+              Add to Chrome &mdash; Free
             </a>
             <a
               href="/demo"
-              className="transition-colors hover:text-x-text"
+              className="rounded-lg border border-x-border px-6 py-3 text-base font-semibold text-x-text transition-colors hover:bg-x-hover"
             >
-              Demo
+              Try the Demo
             </a>
           </div>
         </div>
-      </footer>
+      </ScrollRevealSection>
+
+      <Footer />
     </div>
   );
 }

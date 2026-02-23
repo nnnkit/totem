@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Totem",
   "version": "1.0.2",
-  "description": "A calm reader for your X bookmarks.",
+  "description": "Actually read what you saved on X.",
   "icons": {
     "16": "icons/icon-16.png",
     "48": "icons/icon-48.png",
@@ -23,7 +23,7 @@
     "https://x.com/*"
   ],
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; img-src 'self' https://*.bing.com https://pbs.twimg.com https://*.twimg.com data:; media-src 'self' https://video.twimg.com https://*.twimg.com"
+    "extension_pages": "script-src 'self'; object-src 'self'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; img-src 'self' https://pbs.twimg.com https://*.twimg.com data:; media-src 'self' https://video.twimg.com https://*.twimg.com"
   },
   "content_scripts": [
     {
@@ -34,6 +34,16 @@
         "content/detect-user.js"
       ],
       "run_at": "document_start"
+    },
+    {
+      "matches": [
+        "https://x.com/*"
+      ],
+      "js": [
+        "content/mutation-hook.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN"
     }
   ],
   "background": {

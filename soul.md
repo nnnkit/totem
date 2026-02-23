@@ -42,7 +42,7 @@ Use one entry per date in `YYYY-MM-DD` format:
 
 ## One-Liner
 
-Totem — a distraction-free reading experience for your Twitter bookmarks.
+Totem — actually read what you saved on X.
 
 ---
 
@@ -61,3 +61,10 @@ Totem — a distraction-free reading experience for your Twitter bookmarks.
 - `Decision / direction`: The extension is a distraction-free reading experience for Twitter bookmarks. Think "Substack for bookmarks" — clean typography, focused layout, one piece at a time. The new tab becomes a reading surface, not a feed.
 - `What we explicitly avoid`: Recreating the Twitter timeline. No infinite scroll of tiny cards. No engagement metrics front-and-center. No "you might also like" suggestions that pull attention away from what the user intentionally saved.
 - `How we know it is working`: Users describe the experience as "reading" their bookmarks rather than "checking" them. Time-on-bookmark goes up, bounce-back-to-X goes down.
+
+### 2026-02-23
+- `Context`: Architecture principle — local-first by default.
+- `What user pain we are solving`: Extensions that depend on external servers break when servers go down, change APIs, or shut down entirely. Users lose access to their data and workflow.
+- `Decision / direction`: Totem operates local-first. All bookmark data, reading progress, highlights, and notes are stored in the browser (IndexedDB + chrome.storage). The only external call is to X.com to fetch bookmarks — there is no Totem backend server.
+- `What we explicitly avoid`: Building or depending on our own server infrastructure. No Totem API, no Totem database, no Totem accounts. The extension should work even if the developer disappears.
+- `How we know it is working`: The extension functions fully offline after initial sync. Users never see "server unavailable" errors from Totem.
