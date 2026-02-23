@@ -39,11 +39,6 @@ function stripHighlightMarks(container: Element) {
     parent.removeChild(mark);
   }
 
-  const stars = container.querySelectorAll(".xbt-note-star");
-  for (const star of stars) {
-    star.remove();
-  }
-
   container.normalize();
 }
 
@@ -107,46 +102,6 @@ function wrapTextRange(
   return wrappedMarks;
 }
 
-function injectNoteStar(
-  section: Element,
-  firstMark: Element,
-  highlightId: string,
-  note: string,
-) {
-  const star = document.createElement("span");
-  star.className = "xbt-note-star";
-  star.dataset.highlightId = highlightId;
-  star.setAttribute("role", "button");
-  star.setAttribute("aria-label", "View note");
-
-  star.appendChild(document.createTextNode("\u2605"));
-
-  const tooltip = document.createElement("span");
-  tooltip.className = "xbt-note-tooltip";
-  tooltip.textContent = note;
-  star.appendChild(tooltip);
-
-  const sectionRect = section.getBoundingClientRect();
-  const markRect = firstMark.getBoundingClientRect();
-  star.style.top = `${markRect.top - sectionRect.top + markRect.height / 2}px`;
-
-  const article = section.closest("article") || section;
-  star.addEventListener("mouseenter", () => {
-    const marks = article.querySelectorAll(
-      `mark.xbt-highlight[data-highlight-id="${highlightId}"]`,
-    );
-    marks.forEach((m) => m.classList.add("xbt-highlight-hover"));
-  });
-  star.addEventListener("mouseleave", () => {
-    const marks = article.querySelectorAll(
-      `mark.xbt-highlight[data-highlight-id="${highlightId}"]`,
-    );
-    marks.forEach((m) => m.classList.remove("xbt-highlight-hover"));
-  });
-
-  section.appendChild(star);
-}
-
 function findMatchingSection(container: Element, highlight: Highlight): Element | null {
   const selector = `#${CSS.escape(highlight.sectionId)}`;
   const sections = Array.from(container.querySelectorAll(selector));
@@ -171,6 +126,7 @@ export function useHighlights({ tweetId, contentReady, containerRef }: Props) {
   const highlightsRef = useRef<Map<string, Highlight>>(new Map());
   const [revision, setRevision] = useState(0);
   const flashIdsRef = useRef<Set<string>>(new Set());
+  const pendingNoteIdRef = useRef<string | null>(null);
   const observerRef = useRef<MutationObserver | null>(null);
   const applyFrameRef = useRef(0);
 
@@ -204,7 +160,6 @@ export function useHighlights({ tweetId, contentReady, containerRef }: Props) {
         for (const mark of marks) {
           (mark as HTMLElement).dataset.hasNote = "true";
         }
-        injectNoteStar(section, marks[0], h.id, h.note);
       }
     }
   }, [containerRef]);
@@ -252,7 +207,7 @@ export function useHighlights({ tweetId, contentReady, containerRef }: Props) {
           if (!(node instanceof Element)) {
             return true;
           }
-          return !node.matches("mark.xbt-highlight, .xbt-note-star");
+          return !node.matches("mark.xbt-highlight");
         });
       });
 
@@ -338,8 +293,10 @@ export function useHighlights({ tweetId, contentReady, containerRef }: Props) {
   );
 
   const addHighlight = useCallback(
-    async (ranges: SelectionRange[], note: string | null = null) => {
+    async (ranges: SelectionRange[], options?: { note?: string | null; type?: "highlight" | "note" }) => {
       const created: Highlight[] = [];
+      const note = options?.note ?? null;
+      const type = options?.type ?? "highlight";
 
       for (const range of ranges) {
         const highlight: Highlight = {
@@ -352,6 +309,7 @@ export function useHighlights({ tweetId, contentReady, containerRef }: Props) {
           note,
           color: "green",
           createdAt: Date.now(),
+          type,
         };
 
         await upsertHighlight(highlight);
@@ -379,8 +337,8 @@ export function useHighlights({ tweetId, contentReady, containerRef }: Props) {
       if (!existing) return;
 
       const updated = { ...existing, note };
-      await upsertHighlight(updated);
       highlightsRef.current.set(id, updated);
+      await upsertHighlight(updated);
       setRevision((r) => r + 1);
     },
     [],
@@ -390,5 +348,9 @@ export function useHighlights({ tweetId, contentReady, containerRef }: Props) {
     return highlightsRef.current.get(id) || null;
   }, []);
 
-  return { addHighlight, removeHighlight, updateHighlightNote, getHighlight };
+  const setPendingNoteId = useCallback((id: string | null) => {
+    pendingNoteIdRef.current = id;
+  }, []);
+
+  return { addHighlight, removeHighlight, updateHighlightNote, getHighlight, applyNow: runApplyNow, setPendingNoteId };
 }

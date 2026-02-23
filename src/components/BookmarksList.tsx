@@ -1,4 +1,5 @@
 import {
+  forwardRef,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -36,6 +37,42 @@ interface Props {
   onSync: () => void;
   onBack: () => void;
 }
+
+interface TabButtonProps {
+  active: boolean;
+  onClick: () => void;
+  label: string;
+  count: number;
+  countClass: string;
+}
+
+const TabButton = forwardRef<HTMLButtonElement, TabButtonProps>(
+  ({ active, onClick, label, count, countClass }, ref) => (
+    <button
+      ref={ref}
+      type="button"
+      role="tab"
+      aria-selected={active}
+      onClick={onClick}
+      className={cn(
+        "px-4 py-2.5 text-sm font-medium transition-colors",
+        active ? "text-x-text" : "text-x-text-secondary hover:text-x-text",
+      )}
+    >
+      {label}
+      {count > 0 && (
+        <span
+          className={cn(
+            "ml-1.5 inline-flex items-center justify-center rounded-md px-1.5 text-xs tabular-nums",
+            countClass,
+          )}
+        >
+          {count}
+        </span>
+      )}
+    </button>
+  ),
+);
 
 function inferKindBadge(bookmark: Bookmark): string {
   if (bookmark.tweetKind === "article") return "Article";
@@ -315,66 +352,30 @@ export function BookmarksList({
           className={cn("relative mx-auto flex px-4", containerWidthClass)}
           role="tablist"
         >
-          <button
+          <TabButton
             ref={unreadTabRef}
-            type="button"
-            role="tab"
-            aria-selected={activeTab === "unread"}
+            active={activeTab === "unread"}
             onClick={() => onTabChange("unread")}
-            className={cn(
-              "px-4 py-2.5 text-sm font-medium transition-colors",
-              activeTab === "unread"
-                ? "text-x-text"
-                : "text-x-text-secondary hover:text-x-text",
-            )}
-          >
-            Unread
-            {filteredUnread.length > 0 && (
-              <span className="ml-1.5 inline-flex size-5 items-center justify-center rounded-md bg-x-text-secondary/10 text-xs tabular-nums text-x-text-secondary">
-                {filteredUnread.length}
-              </span>
-            )}
-          </button>
-          <button
+            label="Unread"
+            count={filteredUnread.length}
+            countClass="bg-x-text-secondary/10 text-x-text-secondary"
+          />
+          <TabButton
             ref={continueTabRef}
-            type="button"
-            role="tab"
-            aria-selected={activeTab === "continue"}
+            active={activeTab === "continue"}
             onClick={() => onTabChange("continue")}
-            className={cn(
-              "px-4 py-2.5 text-sm font-medium transition-colors",
-              activeTab === "continue"
-                ? "text-x-text"
-                : "text-x-text-secondary hover:text-x-text",
-            )}
-          >
-            Reading
-            {filteredInProgress.length > 0 && (
-              <span className="ml-1.5 inline-flex size-5 items-center justify-center rounded-md bg-accent/10 text-xs tabular-nums text-accent">
-                {filteredInProgress.length}
-              </span>
-            )}
-          </button>
-          <button
+            label="Reading"
+            count={filteredInProgress.length}
+            countClass="bg-accent/10 text-accent"
+          />
+          <TabButton
             ref={readTabRef}
-            type="button"
-            role="tab"
-            aria-selected={activeTab === "read"}
+            active={activeTab === "read"}
             onClick={() => onTabChange("read")}
-            className={cn(
-              "px-4 py-2.5 text-sm font-medium transition-colors",
-              activeTab === "read"
-                ? "text-x-text"
-                : "text-x-text-secondary hover:text-x-text",
-            )}
-          >
-            Read
-            {filteredCompleted.length > 0 && (
-              <span className="ml-1.5 inline-flex size-5 items-center justify-center rounded-md bg-x-success/10 text-xs tabular-nums text-x-success">
-                {filteredCompleted.length}
-              </span>
-            )}
-          </button>
+            label="Read"
+            count={filteredCompleted.length}
+            countClass="bg-x-success/10 text-x-success"
+          />
           <span
             className="absolute bottom-0 h-0.5 rounded-full bg-accent transition-all duration-200 ease-[cubic-bezier(0.645,0.045,0.355,1)]"
             style={{ left: indicator.left, width: indicator.width }}

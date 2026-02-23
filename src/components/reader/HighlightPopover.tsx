@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Popover } from "@base-ui/react/popover";
+import { XIcon, NotePencilIcon } from "@phosphor-icons/react";
 import type { Highlight } from "../../types";
 
 interface PopoverState {
@@ -23,11 +24,11 @@ export function HighlightPopover({
   onOpenNote,
 }: Props) {
   const [state, setState] = useState<PopoverState | null>(null);
-  const [confirming, setConfirming] = useState(false);
+  const [confirmingRemove, setConfirmingRemove] = useState(false);
 
   const dismiss = useCallback(() => {
     setState(null);
-    setConfirming(false);
+    setConfirmingRemove(false);
   }, []);
 
   useEffect(() => {
@@ -38,24 +39,20 @@ export function HighlightPopover({
       const target = e.target as HTMLElement;
 
       const mark = target.closest("mark.xbt-highlight") as HTMLElement | null;
-      const star = target.closest(".xbt-note-star") as HTMLElement | null;
+      if (!mark) return;
 
-      const el = star || mark;
-      if (!el) return;
-
-      const highlightId = el.dataset.highlightId;
+      const highlightId = mark.dataset.highlightId;
       if (!highlightId) return;
 
       const highlight = getHighlight(highlightId);
       if (!highlight) return;
 
-      if (star && highlight.note) {
-        onOpenNote(highlight, el);
+      if (highlight.note) {
+        onOpenNote(highlight, mark);
         return;
       }
 
-      setState({ highlight, anchorEl: el });
-      setConfirming(false);
+      setState({ highlight, anchorEl: mark });
     };
 
     container.addEventListener("click", handleClick);
@@ -67,10 +64,6 @@ export function HighlightPopover({
   const { highlight } = state;
 
   const handleUnhighlight = () => {
-    if (!confirming) {
-      setConfirming(true);
-      return;
-    }
     onDelete(highlight.id);
     dismiss();
   };
@@ -85,86 +78,44 @@ export function HighlightPopover({
           positionMethod="fixed"
         >
           <Popover.Popup
-            className="xbt-popover z-30 rounded-lg bg-neutral-900/95 shadow-xl backdrop-blur-sm"
+            className="xbt-popover z-30 rounded-lg border border-x-border bg-x-card shadow-xl"
             onMouseDown={(e) => e.preventDefault()}
           >
-            <div className="px-3 py-2 text-xs text-neutral-400">
-              You highlighted
-            </div>
-
-            <div className="h-px bg-neutral-700" />
-
-            {confirming ? (
-              <div className="flex items-center">
+            {confirmingRemove ? (
+              <div className="flex items-center gap-2 px-3 py-2">
+                <span className="text-xs text-x-text-secondary">Remove?</span>
                 <button
-                  onClick={() => setConfirming(false)}
-                  className="flex items-center gap-1.5 rounded-b-lg px-3 py-2 text-sm text-neutral-400 transition-colors hover:bg-neutral-800 hover:text-neutral-200"
+                  onClick={() => setConfirmingRemove(false)}
+                  className="rounded-md px-2.5 py-1 text-xs text-x-text-secondary transition-colors hover:bg-x-hover"
                 >
                   Cancel
                 </button>
-                <div className="w-px self-stretch bg-neutral-700" />
                 <button
                   onClick={handleUnhighlight}
-                  className="flex items-center gap-1.5 rounded-br-lg px-3 py-2 text-sm text-red-400 transition-colors hover:bg-red-500/10"
+                  className="rounded-md bg-red-500/15 px-2.5 py-1 text-xs font-medium text-red-500 transition-colors hover:bg-red-500/25"
                 >
                   Remove
                 </button>
               </div>
             ) : (
-              <div className="flex items-center">
+              <div className="flex items-center gap-1 px-2 py-1.5">
                 <button
-                  onClick={handleUnhighlight}
-                  className="flex items-center gap-1.5 rounded-bl-lg px-3 py-2 text-sm text-neutral-300 transition-colors hover:bg-neutral-800 hover:text-neutral-100"
+                  onClick={() => setConfirmingRemove(true)}
+                  className="flex items-center gap-1.5 rounded-md px-2 py-1 text-sm text-x-text-secondary transition-colors hover:bg-x-hover hover:text-x-text"
                 >
-                  <svg
-                    width="14"
-                    height="14"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <line x1="18" y1="6" x2="6" y2="18" />
-                    <line x1="6" y1="6" x2="18" y2="18" />
-                  </svg>
-                  Unhighlight
+                  <XIcon weight="bold" className="size-4" />
+                  <span>Remove</span>
                 </button>
-                <div className="w-px self-stretch bg-neutral-700" />
+                <div className="mx-0.5 h-5 w-px bg-x-border" />
                 <button
                   onClick={() => {
                     onAddNote(highlight, state.anchorEl);
                     dismiss();
                   }}
-                  className="flex items-center gap-1.5 rounded-br-lg px-3 py-2 text-sm text-neutral-300 transition-colors hover:bg-neutral-800 hover:text-neutral-100"
+                  className="flex items-center gap-1.5 rounded-md px-2 py-1 text-sm text-x-text-secondary transition-colors hover:bg-x-hover hover:text-x-text"
                 >
-                  <svg
-                    width="14"
-                    height="14"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M12 20h9" />
-                    <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
-                  </svg>
-                  Note
-                  {highlight.note && (
-                    <span className="text-amber-400">
-                      <svg
-                        width="10"
-                        height="10"
-                        viewBox="0 0 24 24"
-                        fill="currentColor"
-                      >
-                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                      </svg>
-                    </span>
-                  )}
+                  <NotePencilIcon weight="bold" className="size-4" />
+                  <span>Note</span>
                 </button>
               </div>
             )}

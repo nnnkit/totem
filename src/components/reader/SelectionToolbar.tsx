@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Popover } from "@base-ui/react/popover";
-import { HighlighterIcon, NotePencilIcon } from "@phosphor-icons/react";
+import { HighlighterIcon, LightningIcon, NotePencilIcon } from "@phosphor-icons/react";
 import type { SelectionRange } from "../../types";
+import { buildGrokUrl } from "./utils";
 
 // --- Selection detection utilities ---
 
@@ -24,6 +25,24 @@ function findSectionForNode(node: Node): Element | null {
     el = el.parentNode;
   }
   return null;
+}
+
+function isWordChar(ch: string): boolean {
+  return /\w/.test(ch) || ch.charCodeAt(0) > 127;
+}
+
+function snapToWordBoundaries(
+  text: string,
+  start: number,
+  end: number,
+): { start: number; end: number } {
+  let s = start;
+  while (s > 0 && isWordChar(text[s - 1])) s--;
+
+  let e = end;
+  while (e < text.length && isWordChar(text[e])) e++;
+
+  return { start: s, end: e };
 }
 
 function isInsideHighlight(node: Node): boolean {
@@ -73,12 +92,18 @@ function serializeSelection(selection: Selection, container: HTMLElement): Selec
     }
   }
 
-  return Array.from(sectionMap.entries()).map(([sectionId, data]) => ({
-    sectionId,
-    startOffset: data.startOffset,
-    endOffset: data.endOffset,
-    selectedText: data.text,
-  }));
+  return Array.from(sectionMap.entries()).map(([sectionId, data]) => {
+    const section = container.querySelector(`#${CSS.escape(sectionId)}`);
+    const sectionText = section?.textContent || "";
+    const snapped = snapToWordBoundaries(sectionText, data.startOffset, data.endOffset);
+
+    return {
+      sectionId,
+      startOffset: snapped.start,
+      endOffset: snapped.end,
+      selectedText: sectionText.slice(snapped.start, snapped.end),
+    };
+  });
 }
 
 // --- Component ---
@@ -90,11 +115,12 @@ interface ToolbarState {
 
 interface Props {
   containerRef: React.RefObject<HTMLElement | null>;
+  tweetUrl: string;
   onHighlight: (ranges: SelectionRange[]) => void;
   onAddNote: (ranges: SelectionRange[]) => void;
 }
 
-export function SelectionToolbar({ containerRef, onHighlight, onAddNote }: Props) {
+export function SelectionToolbar({ containerRef, tweetUrl, onHighlight, onAddNote }: Props) {
   const [state, setState] = useState<ToolbarState | null>(null);
   const dismissTimeoutRef = useRef<number>(0);
 
@@ -168,6 +194,10 @@ export function SelectionToolbar({ containerRef, onHighlight, onAddNote }: Props
     dismiss();
   };
 
+  const grokUrl = state
+    ? buildGrokUrl(tweetUrl, state.ranges.map((r) => r.selectedText).join(" "))
+    : "";
+
   return (
     <Popover.Root open={!!state} onOpenChange={(open) => { if (!open) dismiss(); }}>
       <Popover.Portal>
@@ -178,26 +208,39 @@ export function SelectionToolbar({ containerRef, onHighlight, onAddNote }: Props
           positionMethod="fixed"
         >
           <Popover.Popup
-            className="xbt-popover z-30 rounded-lg bg-neutral-900/95 shadow-lg backdrop-blur-sm"
+            className="xbt-popover z-30 rounded-lg border border-x-border bg-x-card shadow-xl"
             onMouseDown={(e) => e.preventDefault()}
           >
             <div className="flex items-center gap-1 px-2 py-1.5">
               <button
                 onClick={handleHighlight}
-                className="flex items-center gap-1.5 rounded-md px-2 py-1 text-sm text-neutral-200 transition-colors hover:bg-neutral-700/60"
+                className="flex items-center gap-1.5 rounded-md px-2 py-1 text-sm text-x-text-secondary transition-colors hover:bg-x-hover hover:text-x-text"
               >
                 <HighlighterIcon weight="bold" className="size-4" />
                 <span>Highlight</span>
               </button>
 
-              <div className="mx-0.5 h-5 w-px bg-neutral-700" />
+              <div className="mx-0.5 h-5 w-px bg-x-border" />
 
               <button
                 onClick={handleNote}
-                className="flex items-center gap-1.5 rounded-md px-2 py-1 text-sm text-neutral-200 transition-colors hover:bg-neutral-700/60"
+                className="flex items-center gap-1.5 rounded-md px-2 py-1 text-sm text-x-text-secondary transition-colors hover:bg-x-hover hover:text-x-text"
               >
                 <NotePencilIcon weight="bold" className="size-4" />
-                <span>Note</span>
+                <span>Add Note</span>
+              </button>
+
+              <div className="mx-0.5 h-5 w-px bg-x-border" />
+
+              <button
+                onClick={() => {
+                  window.open(grokUrl, "_blank", "noopener,noreferrer");
+                  dismiss();
+                }}
+                className="flex items-center gap-1.5 rounded-md px-2 py-1 text-sm text-x-text-secondary transition-colors hover:bg-x-hover hover:text-x-text"
+              >
+                <LightningIcon weight="bold" className="size-4" />
+                <span>Ask Grok</span>
               </button>
             </div>
           </Popover.Popup>

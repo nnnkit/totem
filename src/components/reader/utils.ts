@@ -12,6 +12,13 @@ export function sanitizeUrl(url: string): string {
   return "";
 }
 
+export function buildGrokUrl(tweetUrl: string, selectedText?: string): string {
+  const prompt = selectedText
+    ? `Explain this in context of the tweet:\n\n"${selectedText}"\n\n${tweetUrl}`
+    : tweetUrl;
+  return `https://grok.com/?q=${encodeURIComponent(prompt)}`;
+}
+
 const URL_REGEX = /https?:\/\/[^\s<]+/g;
 const URL_TOKEN_REGEX = /__URL_TOKEN_(\d+)__/g;
 const MENTION_REGEX =

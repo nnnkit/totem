@@ -4,7 +4,7 @@ import {
   LightningIcon,
 } from "@phosphor-icons/react";
 import type { LinkCard, TweetUrl } from "../../types";
-import { sanitizeUrl } from "./utils";
+import { buildGrokUrl, sanitizeUrl } from "./utils";
 
 type ResolvedUrl = {
   href: string;
@@ -149,7 +149,7 @@ export function TweetLinks({
 
   const askGrokLink = viewOnXUrl ? (
     <a
-      href={`https://x.com/i/grok?text=${encodeURIComponent(viewOnXUrl)}`}
+      href={buildGrokUrl(viewOnXUrl)}
       target="_blank"
       rel="noopener noreferrer"
       className="inline-flex items-center gap-1.5 rounded-md border border-x-border bg-x-card px-3 py-1.5 text-xs font-medium text-x-text-secondary transition-colors hover:bg-x-hover hover:text-x-text"

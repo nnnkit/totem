@@ -169,6 +169,7 @@ export interface Highlight {
   note: string | null;
   color: string;
   createdAt: number;
+  type?: "highlight" | "note";
 }
 
 export interface SelectionRange {

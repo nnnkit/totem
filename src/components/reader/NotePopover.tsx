@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Popover } from "@base-ui/react/popover";
 import type { Highlight } from "../../types";
 
@@ -24,14 +24,26 @@ function formatRelativeTime(timestamp: number): string {
 export function NotePopover({ highlight, anchorEl, onSaveNote, onDeleteNote, onClose }: Props) {
   const [editing, setEditing] = useState(!highlight.note);
   const [noteText, setNoteText] = useState(highlight.note || "");
+
+  const virtualAnchor = useMemo(() => ({
+    getBoundingClientRect: () => {
+      const marks = document.querySelectorAll(
+        `mark[data-highlight-id="${highlight.id}"]`,
+      );
+      const lastMark = marks[marks.length - 1] as HTMLElement | undefined;
+      return lastMark?.getBoundingClientRect() ?? anchorEl.getBoundingClientRect();
+    },
+  }), [highlight.id, anchorEl]);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    if (editing && textareaRef.current) {
-      textareaRef.current.focus();
-      textareaRef.current.setSelectionRange(noteText.length, noteText.length);
-    }
+    if (!editing) return;
+    const timer = setTimeout(() => {
+      textareaRef.current?.focus();
+      textareaRef.current?.setSelectionRange(noteText.length, noteText.length);
+    }, 50);
+    return () => clearTimeout(timer);
   }, [editing]);
 
   const handleSave = useCallback(() => {
@@ -70,15 +82,15 @@ export function NotePopover({ highlight, anchorEl, onSaveNote, onDeleteNote, onC
     <Popover.Root open onOpenChange={(open) => { if (!open) onClose(); }}>
       <Popover.Portal>
         <Popover.Positioner
-          anchor={anchorEl}
+          anchor={virtualAnchor}
           side="bottom"
           sideOffset={8}
           positionMethod="fixed"
         >
-        <Popover.Popup className="xbt-popover z-30 w-80 rounded-xl border border-x-border bg-x-card shadow-xl">
-          <div className="flex items-center justify-between border-b border-x-border px-4 py-3">
+        <Popover.Popup className="xbt-popover z-30 w-80 rounded-lg border border-x-border bg-x-card shadow-xl">
+          <div className="flex items-center justify-between border-b border-x-border px-4 py-2.5">
             <span className="text-xs font-medium uppercase text-x-text-secondary">
-              Notes
+              Note
             </span>
             <button
               onClick={onClose}
@@ -106,14 +118,14 @@ export function NotePopover({ highlight, anchorEl, onSaveNote, onDeleteNote, onC
                 <div className="mt-3 flex justify-end gap-2">
                   <button
                     onClick={handleCancel}
-                    className="rounded-lg px-3 py-1.5 text-xs text-x-text-secondary transition-colors hover:bg-x-hover"
+                    className="rounded-md px-3 py-1.5 text-xs text-x-text-secondary transition-colors hover:bg-x-hover"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleSave}
                     disabled={!noteText.trim()}
-                    className="rounded-lg bg-accent/15 px-3 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent/25 disabled:opacity-40"
+                    className="rounded-md bg-accent/15 px-3 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent/25 disabled:opacity-40"
                   >
                     Save
                   </button>
@@ -121,21 +133,21 @@ export function NotePopover({ highlight, anchorEl, onSaveNote, onDeleteNote, onC
               </>
             ) : (
               <>
-                {highlight.createdAt && (
-                  <p className="mb-2 text-xs tabular-nums text-x-text-secondary">
-                    {formatRelativeTime(highlight.createdAt)}
-                  </p>
-                )}
                 <p className="whitespace-pre-wrap text-sm text-x-text text-pretty">
                   {highlight.note}
                 </p>
-                <div className="mt-4 flex justify-between">
+                {highlight.createdAt && (
+                  <p className="mt-2 text-xs tabular-nums text-x-text-secondary">
+                    {formatRelativeTime(highlight.createdAt)}
+                  </p>
+                )}
+                <div className="mt-3 flex items-center justify-between border-t border-x-border pt-3">
                   <button
                     onClick={() => {
                       setEditing(true);
                       setNoteText(highlight.note || "");
                     }}
-                    className="rounded-lg px-3 py-1.5 text-xs text-x-text-secondary transition-colors hover:bg-x-hover hover:text-x-text"
+                    className="rounded-md px-3 py-1.5 text-xs text-x-text-secondary transition-colors hover:bg-x-hover hover:text-x-text"
                   >
                     Edit
                   </button>
@@ -143,13 +155,13 @@ export function NotePopover({ highlight, anchorEl, onSaveNote, onDeleteNote, onC
                     <div className="flex gap-2">
                       <button
                         onClick={() => setConfirmingDelete(false)}
-                        className="rounded-lg px-3 py-1.5 text-xs text-x-text-secondary transition-colors hover:bg-x-hover"
+                        className="rounded-md px-3 py-1.5 text-xs text-x-text-secondary transition-colors hover:bg-x-hover"
                       >
                         Cancel
                       </button>
                       <button
                         onClick={handleDelete}
-                        className="rounded-lg bg-red-500/15 px-3 py-1.5 text-xs font-medium text-red-500 transition-colors hover:bg-red-500/25"
+                        className="rounded-md bg-red-500/15 px-3 py-1.5 text-xs font-medium text-red-500 transition-colors hover:bg-red-500/25"
                       >
                         Delete
                       </button>
@@ -157,7 +169,7 @@ export function NotePopover({ highlight, anchorEl, onSaveNote, onDeleteNote, onC
                   ) : (
                     <button
                       onClick={() => setConfirmingDelete(true)}
-                      className="rounded-lg px-3 py-1.5 text-xs text-red-500 transition-colors hover:bg-red-500/10"
+                      className="rounded-md px-3 py-1.5 text-xs text-red-500 transition-colors hover:bg-red-500/10"
                     >
                       Delete
                     </button>

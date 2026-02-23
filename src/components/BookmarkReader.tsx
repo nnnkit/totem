@@ -41,6 +41,7 @@ interface Props {
 interface NotePanelState {
   highlight: Highlight;
   anchorEl: HTMLElement;
+  removeOnCancel?: boolean;
 }
 
 export function BookmarkReader({
@@ -109,7 +110,7 @@ export function BookmarkReader({
     };
   }, [bookmark.tweetId, bookmark.sortIndex]);
 
-  const { addHighlight, removeHighlight, updateHighlightNote, getHighlight } =
+  const { addHighlight, removeHighlight, updateHighlightNote, getHighlight, applyNow, setPendingNoteId } =
     useHighlights({
       tweetId: bookmark.tweetId,
       contentReady: !detailLoading,
@@ -118,35 +119,52 @@ export function BookmarkReader({
 
   const [notePanelState, setNotePanelState] = useState<NotePanelState | null>(null);
 
+  useEffect(() => {
+    const container = articleRef.current;
+    if (!container) return;
+    if (notePanelState) {
+      container.dataset.notePopoverOpen = "";
+    } else {
+      delete container.dataset.notePopoverOpen;
+    }
+  }, [notePanelState]);
+
   const handleAddNoteFromToolbar = useCallback(
     async (ranges: SelectionRange[]) => {
-      const created = await addHighlight(ranges);
+      const created = await addHighlight(ranges, { type: "note" });
       if (created.length === 0) return;
       const highlight = created[0];
-      requestAnimationFrame(() => {
-        const mark = document.querySelector(
-          `mark[data-highlight-id="${highlight.id}"]`,
-        ) as HTMLElement | null;
-        if (mark) {
-          setNotePanelState({ highlight, anchorEl: mark });
-        }
-      });
+      setPendingNoteId(highlight.id);
+      applyNow();
+      const marks = document.querySelectorAll(
+        `mark[data-highlight-id="${highlight.id}"]`,
+      );
+      const lastMark = marks[marks.length - 1] as HTMLElement | undefined;
+      if (lastMark) {
+        setNotePanelState({ highlight, anchorEl: lastMark, removeOnCancel: true });
+      }
     },
-    [addHighlight],
+    [addHighlight, applyNow, setPendingNoteId],
   );
 
   const handleSaveNote = useCallback(
     async (note: string, highlightId: string) => {
+      setPendingNoteId(null);
       await updateHighlightNote(highlightId, note);
     },
-    [updateHighlightNote],
+    [updateHighlightNote, setPendingNoteId],
   );
 
   const handleDeleteNote = useCallback(
     async (highlightId: string) => {
-      await updateHighlightNote(highlightId, null);
+      const highlight = getHighlight(highlightId);
+      if (highlight?.type === "note") {
+        await removeHighlight(highlightId);
+      } else {
+        await updateHighlightNote(highlightId, null);
+      }
     },
-    [updateHighlightNote],
+    [getHighlight, removeHighlight, updateHighlightNote],
   );
 
   const handleToggleRead = useCallback(() => {
@@ -271,6 +289,7 @@ export function BookmarkReader({
 
       <SelectionToolbar
         containerRef={articleRef}
+        tweetUrl={`https://x.com/${displayBookmark.author.screenName}/status/${displayBookmark.tweetId}`}
         onHighlight={(ranges) => addHighlight(ranges)}
         onAddNote={handleAddNoteFromToolbar}
       />
@@ -290,9 +309,12 @@ export function BookmarkReader({
           onSaveNote={handleSaveNote}
           onDeleteNote={handleDeleteNote}
           onClose={() => {
-            const latest = getHighlight(notePanelState.highlight.id);
-            if (latest && !latest.note) {
-              removeHighlight(latest.id);
+            setPendingNoteId(null);
+            if (notePanelState.removeOnCancel) {
+              const latest = getHighlight(notePanelState.highlight.id);
+              if (latest && !latest.note) {
+                removeHighlight(latest.id);
+              }
             }
             setNotePanelState(null);
           }}
