@@ -198,21 +198,21 @@ export function NewTabHome({
       <div className="breath-ambient pointer-events-none absolute inset-0" />
       <div className="breath-grain pointer-events-none absolute inset-0" />
 
-      <div className="relative z-10 mx-auto flex min-h-dvh w-full max-w-4xl flex-col px-5 py-6 sm:px-8">
-        <header className="flex items-center justify-between">
-          <TotemLogo className="size-6" />
-          <button
-            data-tour="settings-btn"
-            type="button"
-            onClick={onOpenSettings}
-            className="breath-icon-btn"
-            aria-label="Open settings"
-            title="Settings"
-          >
-            {SETTINGS_ICON}
-          </button>
-        </header>
+      <header className="relative z-20 flex w-full items-center justify-between px-6 pt-5 sm:px-8">
+        <TotemLogo className="size-10" />
+        <button
+          data-tour="settings-btn"
+          type="button"
+          onClick={onOpenSettings}
+          className="breath-icon-btn"
+          aria-label="Open settings"
+          title="Settings"
+        >
+          {SETTINGS_ICON}
+        </button>
+      </header>
 
+      <div className="relative z-10 mx-auto flex min-h-dvh w-full max-w-4xl flex-col px-5 py-6 sm:px-8">
         <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col items-center justify-center">
           <section className="mx-auto w-full max-w-lg space-y-6">
             <div className="text-center">
