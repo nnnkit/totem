@@ -61,7 +61,7 @@ export function SearchBar({
           className="p-2 text-x-text-secondary hover:text-accent hover:bg-accent/10 rounded-lg transition-colors disabled:opacity-50"
           title="Sync bookmarks (top page)"
         >
-          <ArrowsClockwiseIcon className={cn("size-5", syncing && "animate-spin")} />
+          <span className={cn(syncing && "animate-spin")}><ArrowsClockwiseIcon className="size-5" /></span>
         </button>
 
         <button

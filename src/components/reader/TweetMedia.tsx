@@ -4,6 +4,10 @@ import type { Media } from "../../types";
 import { cn } from "../../lib/cn";
 import { Modal } from "../Modal";
 
+const prefersReducedMotion =
+  typeof window !== "undefined" &&
+  window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+
 function mediaHeightClass(total: number, index: number): string {
   if (total === 1) return "max-h-[72vh]";
   if (total === 3 && index === 0) return "h-60";
@@ -23,10 +27,6 @@ export function TweetMedia({ items, bleed = false }: Props) {
   const closePreview = useCallback(() => setPreviewImage(null), []);
 
   if (items.length === 0) return null;
-
-  const prefersReducedMotion =
-    typeof window !== "undefined" &&
-    window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
   const columns = items.length === 1 ? "grid-cols-1" : "grid-cols-2";
   const visible = items.slice(0, 4);

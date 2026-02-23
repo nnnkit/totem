@@ -43,7 +43,7 @@ export function PopupHeader({ stats, activeTab, onTabChange, syncing, onSync }: 
           aria-label="Sync bookmarks"
           title="Sync bookmarks"
         >
-          <ArrowsClockwiseIcon className={cn("size-4", syncing && "animate-spin")} />
+          <span className={cn(syncing && "animate-spin")}><ArrowsClockwiseIcon className="size-4" /></span>
         </button>
       </div>
 

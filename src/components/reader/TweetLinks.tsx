@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import {
   ArrowSquareOutIcon,
   CheckIcon,
@@ -120,13 +121,17 @@ export function TweetLinks({
   onToggleRead,
   isMarkedRead,
 }: Props) {
-  const resolvedUrls: ResolvedUrl[] = urls.flatMap((url) => {
-    const href = sanitizeUrl((url.expandedUrl || url.url || "").trim());
-    if (!href) return [];
-    return [
-      { href, displayUrl: (url.displayUrl || href).trim(), card: url.card },
-    ];
-  });
+  const resolvedUrls = useMemo<ResolvedUrl[]>(
+    () =>
+      urls.flatMap((url) => {
+        const href = sanitizeUrl((url.expandedUrl || url.url || "").trim());
+        if (!href) return [];
+        return [
+          { href, displayUrl: (url.displayUrl || href).trim(), card: url.card },
+        ];
+      }),
+    [urls],
+  );
 
   const readStatusBtn = onToggleRead ? (
     <ReadStatusButton

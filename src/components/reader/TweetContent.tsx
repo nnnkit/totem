@@ -242,7 +242,7 @@ export const TweetContent = memo(function TweetContent({
 
       {detailLoading && (
         <div className="mt-6 flex items-center gap-3 px-6 py-4 text-sm text-x-text-secondary">
-          <div className="size-4 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+          <span className="animate-spin"><div className="size-4 rounded-full border-2 border-accent border-t-transparent" /></span>
           Loading details...
         </div>
       )}

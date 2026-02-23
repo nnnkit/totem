@@ -202,32 +202,31 @@ export function BookmarksList({
   useEffect(() => {
     const tweetIds = continueReadingItems.map((item) => item.bookmark.tweetId);
     if (tweetIds.length === 0) return;
-    getHighlightCountsByTweetIds(tweetIds).then(setHighlightCounts);
+    let cancelled = false;
+    getHighlightCountsByTweetIds(tweetIds)
+      .then((counts) => {
+        if (!cancelled) setHighlightCounts(counts);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
   }, [continueReadingItems]);
 
-  const filteredUnread = useMemo(
-    () =>
-      matchingIds
-        ? unreadBookmarks.filter((b) => matchingIds.has(b.tweetId))
-        : unreadBookmarks,
-    [unreadBookmarks, matchingIds],
-  );
-
-  const filteredInProgress = useMemo(
-    () =>
-      matchingIds
-        ? inProgress.filter((item) => matchingIds.has(item.bookmark.tweetId))
-        : inProgress,
-    [inProgress, matchingIds],
-  );
-
-  const filteredCompleted = useMemo(
-    () =>
-      matchingIds
-        ? completed.filter((item) => matchingIds.has(item.bookmark.tweetId))
-        : completed,
-    [completed, matchingIds],
-  );
+  const { filteredUnread, filteredInProgress, filteredCompleted } = useMemo(() => {
+    if (!matchingIds) {
+      return {
+        filteredUnread: unreadBookmarks,
+        filteredInProgress: inProgress,
+        filteredCompleted: completed,
+      };
+    }
+    return {
+      filteredUnread: unreadBookmarks.filter((b) => matchingIds.has(b.tweetId)),
+      filteredInProgress: inProgress.filter((item) => matchingIds.has(item.bookmark.tweetId)),
+      filteredCompleted: completed.filter((item) => matchingIds.has(item.bookmark.tweetId)),
+    };
+  }, [unreadBookmarks, inProgress, completed, matchingIds]);
 
   const visibleBookmarks = useMemo(() => {
     if (activeTab === "continue") {
@@ -341,9 +340,7 @@ export function BookmarksList({
               aria-label="Sync bookmarks"
               title="Sync bookmarks"
             >
-              <ArrowsClockwiseIcon
-                className={cn("size-5", syncing && "animate-spin")}
-              />
+              <span className={cn(syncing && "animate-spin")}><ArrowsClockwiseIcon className="size-5" /></span>
             </button>
           </div>
         </div>
