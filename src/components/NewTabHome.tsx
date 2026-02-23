@@ -178,7 +178,7 @@ export function NewTabHome({
   );
 
   return (
-    <div className="breath-home relative min-h-dvh overflow-hidden">
+    <div className="breath-home relative flex h-dvh flex-col overflow-hidden">
       {!showWallpaper && gradientCss && (
         <div
           className="pointer-events-none absolute inset-0"
@@ -199,7 +199,7 @@ export function NewTabHome({
       <div className="breath-grain pointer-events-none absolute inset-0" />
 
       <header className="relative z-20 flex w-full items-center justify-between px-6 pt-5 sm:px-8">
-        <TotemLogo className="size-10" />
+        <TotemLogo className="size-8" />
         <button
           data-tour="settings-btn"
           type="button"
@@ -212,7 +212,7 @@ export function NewTabHome({
         </button>
       </header>
 
-      <div className="relative z-10 mx-auto flex min-h-dvh w-full max-w-4xl flex-col px-5 py-6 sm:px-8">
+      <div className="relative z-10 mx-auto flex min-h-0 w-full max-w-4xl flex-1 flex-col px-5 py-6 sm:px-8">
         <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col items-center justify-center">
           <section className="mx-auto w-full max-w-lg space-y-6">
             <div className="text-center">
