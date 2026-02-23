@@ -1,3 +1,5 @@
+import { TotemLogo } from "./TotemLogo";
+
 interface Props {
   phase: "need_login" | "connecting";
   onLogin: () => Promise<void>;
@@ -7,9 +9,7 @@ export function Onboarding({ phase, onLogin }: Props) {
   if (phase === "connecting") {
     return (
       <div className="flex flex-col items-center justify-center min-h-dvh bg-x-bg text-x-text">
-        <svg viewBox="0 0 24 24" className="size-12 text-accent mb-6" fill="currentColor">
-          <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-        </svg>
+        <TotemLogo className="size-12 mb-6" />
         <span className="animate-spin mb-4"><div className="size-8 border-2 border-accent border-t-transparent rounded-full" /></span>
         <p className="text-lg font-bold text-balance">Connecting to X...</p>
         <p className="text-x-text-secondary text-sm mt-2 text-pretty">
@@ -21,11 +21,9 @@ export function Onboarding({ phase, onLogin }: Props) {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-dvh bg-x-bg text-x-text">
-      <svg viewBox="0 0 24 24" className="size-14 text-accent mb-8" fill="currentColor">
-        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-      </svg>
+      <TotemLogo className="size-14 mb-8" />
 
-      <h1 className="text-2xl font-bold mb-2 text-balance">Your bookmarks, beautifully.</h1>
+      <h1 className="text-2xl font-bold mb-2 text-balance">A calm reader for your X bookmarks.</h1>
       <p className="text-x-text-secondary text-lg mb-8 max-w-sm text-center text-pretty">
         Read your saved posts in a clean, distraction-free view.
       </p>

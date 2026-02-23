@@ -86,12 +86,11 @@ export default function LandingPage() {
       {/* Hero */}
       <header className="mx-auto max-w-4xl px-6 pt-20 pb-16 text-center">
         <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-x-border bg-x-card px-4 py-1.5 text-sm text-x-text-secondary">
-          <svg
-            viewBox="0 0 24 24"
-            className="size-4 text-x-blue"
-            fill="currentColor"
-          >
-            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+          <svg viewBox="0 0 100 100" className="size-4" fill="none">
+            <rect x="10" y="10" width="80" height="80" rx="16" fill="#1A1918" />
+            <path d="M32 68L68 68L68 32Z" fill="#e07a5f" />
+            <path d="M68 32L52 50L68 68Z" fill="#c96b50" />
+            <path d="M52 50L68 32" stroke="rgba(255,255,255,0.15)" strokeWidth="0.5" />
           </svg>
           Chrome Extension
         </div>
@@ -100,15 +99,15 @@ export default function LandingPage() {
           className="text-5xl font-bold tracking-tight sm:text-6xl lg:text-7xl"
           style={{ fontFamily: SERIF }}
         >
-          Your bookmarks,
+          A calm reader for
           <br />
-          <span className="text-x-blue">beautifully.</span>
+          <span className="text-x-blue">X bookmarks.</span>
         </h1>
 
         <p className="mx-auto mt-6 max-w-xl text-lg text-x-text-secondary">
-          Replace your new tab with a calm reading space. X Bookmarks Tab
-          surfaces your saved posts with reading progress, themes, and keyboard
-          navigation &mdash; all without leaving your browser.
+          Replace your new tab with a calm reading space. Totem surfaces your
+          saved posts with reading progress, themes, and keyboard navigation
+          &mdash; all without leaving your browser.
         </p>
 
         <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
@@ -257,7 +256,7 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="border-t border-x-border px-6 py-8">
         <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-4 text-sm text-x-text-secondary">
-          <p>X Bookmarks Tab</p>
+          <p>Totem</p>
           <div className="flex gap-6">
             <a
               href="https://github.com"

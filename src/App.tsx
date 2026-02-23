@@ -13,6 +13,7 @@ import { NewTabHome } from "./components/NewTabHome";
 import { BookmarkReader } from "./components/BookmarkReader";
 import { BookmarksList, type ReadingTab } from "./components/BookmarksList";
 import { SettingsModal } from "./components/SettingsModal";
+import { TotemLogo } from "./components/TotemLogo";
 import { Toast } from "./components/Toast";
 import { useContinueReading } from "./hooks/useContinueReading";
 import type { Bookmark } from "./types";
@@ -141,13 +142,7 @@ export default function App() {
     return (
       <div className="flex items-center justify-center min-h-dvh bg-x-bg">
         <div className="animate-pulse">
-          <svg
-            viewBox="0 0 24 24"
-            className="size-12 text-accent"
-            fill="currentColor"
-          >
-            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-          </svg>
+          <TotemLogo className="size-12" />
         </div>
       </div>
     );

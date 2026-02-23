@@ -51,7 +51,7 @@ jobs:
         if: github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v4
         with:
-          name: x-bookmarks-tab-v${{ steps.manifest.outputs.version }}
+          name: totem-v${{ steps.manifest.outputs.version }}
           path: release/*.zip
 
       - name: Publish GitHub Release asset

@@ -22,7 +22,7 @@ if (!version) {
 }
 
 const releaseDir = resolve(rootDir, "release");
-const zipName = `x-bookmarks-tab-v${version}.zip`;
+const zipName = `totem-v${version}.zip`;
 const zipPath = resolve(releaseDir, zipName);
 
 mkdirSync(releaseDir, { recursive: true });

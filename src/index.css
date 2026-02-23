@@ -692,8 +692,10 @@
     padding: 0.86rem 1rem 0.72rem;
     min-height: 8.5rem;
     border-radius: 0.5rem;
+    border: 1px solid var(--breath-border);
     background: var(--breath-surface);
-    backdrop-filter: blur(1px);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
     transition:
         border-color var(--motion-fast) var(--motion-ease-hover),
         background-color var(--motion-fast) var(--motion-ease-hover);

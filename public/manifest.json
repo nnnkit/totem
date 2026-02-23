@@ -1,8 +1,13 @@
 {
   "manifest_version": 3,
-  "name": "X Bookmarks Tab",
+  "name": "Totem",
   "version": "1.0.1",
-  "description": "View your X/Twitter bookmarks on every new tab",
+  "description": "A calm reader for your X bookmarks.",
+  "icons": {
+    "16": "icons/icon-16.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
   "permissions": [
     "cookies",
     "storage",
@@ -36,7 +41,11 @@
   },
   "action": {
     "default_popup": "popup.html",
-    "default_title": "X Bookmarks"
+    "default_title": "Totem",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "48": "icons/icon-48.png"
+    }
   },
   "chrome_url_overrides": {
     "newtab": "newtab.html"

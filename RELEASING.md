@@ -44,7 +44,7 @@ Version bump options:
 Run one command to:
 - bump version in `package.json` and `public/manifest.json`
 - generate/update the top entry in `CHANGELOG.md`
-- build and package `release/x-bookmarks-tab-v<version>.zip`
+- build and package `release/totem-v<version>.zip`
 
 Run this after feature/fix commits are already committed to Git.
 
@@ -93,7 +93,7 @@ pnpm release:check
 ## End-user install (Developer mode)
 
 1. Open the latest release page.
-2. Download `x-bookmarks-tab-v<version>.zip` from the **Assets** section.
+2. Download `totem-v<version>.zip` from the **Assets** section.
 Do not download GitHub "Source code (zip)".
 3. Unzip the asset.
 4. Open `chrome://extensions`.

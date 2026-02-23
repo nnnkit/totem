@@ -2,7 +2,7 @@ export function DemoBanner() {
   return (
     <div className="flex items-center justify-center gap-3 bg-x-blue/95 px-4 py-2 text-white">
       <span className="text-sm font-medium">
-        You&apos;re viewing a demo of X Bookmarks Tab
+        You&apos;re viewing a demo of Totem
       </span>
       <a
         href="https://chromewebstore.google.com"

@@ -1,4 +1,4 @@
-# Soul of X Bookmarks Tab
+# Soul of Totem
 
 This document preserves the product's core intent so decisions do not drift over time.
 
@@ -42,7 +42,7 @@ Use one entry per date in `YYYY-MM-DD` format:
 
 ## One-Liner
 
-Substack for your Twitter bookmarks — a distraction-free reading experience for the content you already saved.
+Totem — a distraction-free reading experience for your Twitter bookmarks.
 
 ---
 

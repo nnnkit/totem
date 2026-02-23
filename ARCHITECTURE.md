@@ -1,4 +1,4 @@
-# X Bookmarks Tab — Architecture
+# Totem — Architecture
 
 ## Lessons from Twillot
 
@@ -70,7 +70,7 @@ We didn't have the `declarativeNetRequest` rule. Without `Origin: https://x.com`
 ### File Structure
 
 ```
-x-bookmarks-tab/
+totem/
 ├── public/
 │   ├── manifest.json
 │   ├── rules.json              ← declarativeNetRequest: Origin header
