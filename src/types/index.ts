@@ -181,9 +181,19 @@ export interface SelectionRange {
 
 export type BackgroundMode = "gradient" | "images";
 
+export type SearchEngineId =
+  | "google"
+  | "bing"
+  | "duckduckgo"
+  | "yahoo"
+  | "brave"
+  | "ecosia"
+  | "default";
+
 export interface UserSettings {
   showTopSites: boolean;
   showSearchBar: boolean;
   topSitesLimit: number;
   backgroundMode: BackgroundMode;
+  searchEngine: SearchEngineId;
 }

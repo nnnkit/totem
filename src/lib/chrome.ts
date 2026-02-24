@@ -5,3 +5,7 @@ export function hasChromeStorageSync(): boolean {
 export function hasChromeStorageOnChanged(): boolean {
   return typeof chrome !== "undefined" && Boolean(chrome.storage?.onChanged);
 }
+
+export function hasChromeSearch(): boolean {
+  return typeof chrome !== "undefined" && Boolean(chrome.search?.query);
+}
