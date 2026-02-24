@@ -168,9 +168,10 @@
         --sh-comment: #a19595;
 
         /* Highlights */
-        --highlight-bg: #81b29ac2;
-        --highlight-bg-hover: #81b29aed;
-        --highlight-bg-active: #81b29aed;
+        --highlight-bg: rgba(224, 122, 95, 0.16);
+        --highlight-bg-hover: rgba(224, 122, 95, 0.26);
+        --highlight-bg-active: rgba(224, 122, 95, 0.30);
+        --highlight-underline: rgba(224, 122, 95, 0.75);
 
         /* Pills */
         --pill-green-text: #15803d;
@@ -239,9 +240,10 @@
             --sh-comment: #636c76;
 
             /* Highlights */
-            --highlight-bg: rgba(129, 178, 154, 0.2);
-            --highlight-bg-hover: rgba(129, 178, 154, 0.35);
-            --highlight-bg-active: rgba(129, 178, 154, 0.5);
+            --highlight-bg: rgba(241, 166, 140, 0.18);
+            --highlight-bg-hover: rgba(241, 166, 140, 0.30);
+            --highlight-bg-active: rgba(241, 166, 140, 0.38);
+            --highlight-underline: rgba(224, 122, 95, 0.75);
 
             /* Pills */
             --pill-green-text: #86efac;
@@ -308,9 +310,10 @@
         --sh-comment: #636c76;
 
         /* Highlights */
-        --highlight-bg: rgba(129, 178, 154, 0.2);
-        --highlight-bg-hover: rgba(129, 178, 154, 0.35);
-        --highlight-bg-active: rgba(129, 178, 154, 0.5);
+        --highlight-bg: rgba(241, 166, 140, 0.18);
+        --highlight-bg-hover: rgba(241, 166, 140, 0.30);
+        --highlight-bg-active: rgba(241, 166, 140, 0.38);
+        --highlight-underline: rgba(224, 122, 95, 0.75);
 
         /* Pills */
         --pill-green-text: #86efac;
@@ -402,6 +405,7 @@
 
     mark.xbt-highlight {
         background-color: var(--highlight-bg);
+        color: inherit;
         box-decoration-break: clone;
         -webkit-box-decoration-break: clone;
         cursor: pointer;
@@ -418,7 +422,7 @@
         background-color: transparent;
         color: inherit;
         text-decoration: underline wavy;
-        text-decoration-color: var(--highlight-bg);
+        text-decoration-color: var(--highlight-underline);
         text-decoration-thickness: 1.5px;
         text-underline-offset: 3px;
         cursor: pointer;
@@ -428,7 +432,7 @@
 
     mark.xbt-highlight[data-has-note="true"]:hover {
         background-color: transparent;
-        text-decoration-color: var(--highlight-bg-hover);
+        text-decoration-color: var(--highlight-underline);
     }
 
     @keyframes note-underline-in {
@@ -436,7 +440,7 @@
             text-decoration-color: transparent;
         }
         to {
-            text-decoration-color: var(--highlight-bg);
+            text-decoration-color: var(--highlight-underline);
         }
     }
 
@@ -459,6 +463,64 @@
 
     .xbt-popover[data-closed] {
         animation: popover-out 150ms ease-in forwards;
+    }
+
+    @keyframes showcase-select {
+        from {
+            transform: scaleX(0);
+        }
+        to {
+            transform: scaleX(1);
+        }
+    }
+
+    @keyframes showcase-toolbar-in {
+        from {
+            opacity: 0;
+            transform: scale(0.92) translateY(4px);
+        }
+        to {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+        }
+    }
+
+    @keyframes showcase-pulse {
+        0% {
+            box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 40%, transparent);
+        }
+        100% {
+            box-shadow: 0 0 0 4px transparent;
+        }
+    }
+
+    .showcase-select-sweep {
+        background-color: color-mix(in srgb, var(--accent) 28%, transparent);
+        transform-origin: left;
+        transform: scaleX(0);
+        animation: showcase-select 400ms cubic-bezier(0.23, 1, 0.32, 1) 600ms forwards;
+    }
+
+    .showcase-toolbar {
+        opacity: 0;
+        animation: showcase-toolbar-in 200ms cubic-bezier(0.23, 1, 0.32, 1) 1100ms forwards;
+    }
+
+    .showcase-pulse-btn {
+        animation: showcase-pulse 200ms ease-out 1600ms forwards;
+    }
+
+    .showcase-highlight-apply {
+        animation: showcase-highlight-result 300ms ease-out 1900ms forwards;
+    }
+
+    @keyframes showcase-highlight-result {
+        from {
+            background-color: transparent;
+        }
+        to {
+            background-color: var(--highlight-bg);
+        }
     }
 
     @keyframes popover-in {
