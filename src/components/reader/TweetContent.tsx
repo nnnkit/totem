@@ -199,6 +199,7 @@ interface Props {
   tweetSectionIdPrefix?: string;
   onToggleRead?: () => void;
   isMarkedRead?: boolean;
+  onUnbookmark?: () => void;
 }
 
 export const TweetContent = memo(function TweetContent({
@@ -213,6 +214,7 @@ export const TweetContent = memo(function TweetContent({
   tweetSectionIdPrefix,
   onToggleRead,
   isMarkedRead,
+  onUnbookmark,
 }: Props) {
   const viewOnXUrl = `https://x.com/${displayBookmark.author.screenName}/status/${displayBookmark.tweetId}`;
 
@@ -237,6 +239,7 @@ export const TweetContent = memo(function TweetContent({
           viewOnXUrl={viewOnXUrl}
           onToggleRead={onToggleRead}
           isMarkedRead={isMarkedRead}
+          onUnbookmark={onUnbookmark}
         />
       </div>
 

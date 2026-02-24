@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeftIcon,
-  BookmarkSimpleIcon,
   CaretLeftIcon,
   CaretRightIcon,
 } from "@phosphor-icons/react";
@@ -16,7 +15,6 @@ import { HighlightPopover } from "./reader/HighlightPopover";
 import { NotePopover } from "./reader/NotePopover";
 import { useReadingProgress } from "../hooks/useReadingProgress";
 import { useHighlights } from "../hooks/useHighlights";
-import { useReaderTour } from "../hooks/useReaderTour";
 
 interface Props {
   bookmark: Bookmark;
@@ -108,14 +106,6 @@ export function BookmarkReader({
       containerRef: articleRef,
     });
 
-  const { dismiss: dismissReaderTour } = useReaderTour({
-    contentReady: !detailLoading,
-  });
-
-  useEffect(() => {
-    return () => dismissReaderTour();
-  }, [bookmark.tweetId, dismissReaderTour]);
-
   const [notePanelState, setNotePanelState] = useState<NotePanelState | null>(null);
 
   useEffect(() => {
@@ -202,7 +192,6 @@ export function BookmarkReader({
           className={cn("mx-auto flex items-center gap-3 px-4 py-3", containerWidthClass)}
         >
           <button
-            data-tour="reader-back"
             onClick={onBack}
             aria-label="Back to bookmarks"
             title="Back"
@@ -213,16 +202,7 @@ export function BookmarkReader({
 
           <span className="text-lg font-semibold text-x-text">Post</span>
 
-          <div className="ml-auto flex items-center gap-1">
-            <button
-              onClick={onUnbookmark}
-              aria-label="Remove bookmark"
-              title="Remove bookmark"
-              className="rounded-lg p-2 text-x-text-secondary transition-colors hover:text-red-500 hover:bg-red-500/10"
-            >
-              <BookmarkSimpleIcon weight="fill" className="size-5" />
-            </button>
-          </div>
+          <div className="ml-auto flex items-center gap-1" />
         </div>
       </div>
 
@@ -250,7 +230,6 @@ export function BookmarkReader({
 
       <article
         ref={articleRef}
-        data-tour="reader-content"
         className={cn(containerWidthClass, "relative mx-auto px-5 pb-16 pt-6")}
       >
         <TweetContent
@@ -265,6 +244,7 @@ export function BookmarkReader({
           tweetSectionIdPrefix="section-tweet"
           onToggleRead={onMarkAsRead ? handleToggleRead : undefined}
           isMarkedRead={effectiveMarkedRead}
+          onUnbookmark={onUnbookmark}
         />
       </article>
 

@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import {
   ArrowSquareOutIcon,
+  BookmarkSimpleIcon,
   CheckIcon,
   LightningIcon,
 } from "@phosphor-icons/react";
@@ -113,6 +114,7 @@ interface Props {
   viewOnXUrl?: string;
   onToggleRead?: () => void;
   isMarkedRead?: boolean;
+  onUnbookmark?: () => void;
 }
 
 export function TweetLinks({
@@ -120,6 +122,7 @@ export function TweetLinks({
   viewOnXUrl,
   onToggleRead,
   isMarkedRead,
+  onUnbookmark,
 }: Props) {
   const resolvedUrls = useMemo<ResolvedUrl[]>(
     () =>
@@ -164,7 +167,18 @@ export function TweetLinks({
     </a>
   ) : null;
 
-  const hasActions = readStatusBtn || viewOnXLink || askGrokLink;
+  const unbookmarkBtn = onUnbookmark ? (
+    <button
+      type="button"
+      onClick={onUnbookmark}
+      className="inline-flex items-center gap-1.5 rounded-md border border-x-border bg-x-card px-3 py-1.5 text-xs font-medium text-x-text-secondary transition-colors hover:text-red-500 hover:border-red-500/30 hover:bg-red-500/10"
+    >
+      <BookmarkSimpleIcon weight="fill" className="size-3.5" />
+      Remove
+    </button>
+  ) : null;
+
+  const hasActions = readStatusBtn || viewOnXLink || askGrokLink || unbookmarkBtn;
 
   return (
     <>
@@ -173,6 +187,7 @@ export function TweetLinks({
         <div className="mt-5 flex items-center justify-end gap-3">
           {viewOnXLink}
           {askGrokLink}
+          {unbookmarkBtn}
           {readStatusBtn}
         </div>
       )}
