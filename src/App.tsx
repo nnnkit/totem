@@ -138,7 +138,7 @@ export default function App() {
     }
   }, [bookmarks, openBookmark]);
 
-  if (phase === "loading" || (isReady && syncState.phase === "idle")) {
+  if (phase === "loading") {
     return (
       <div className="flex items-center justify-center min-h-dvh bg-x-bg">
         <div className="animate-logo-shine">
@@ -207,6 +207,8 @@ export default function App() {
         detailedTweetIds={detailedTweetIds}
         showTopSites={settings.showTopSites}
         showSearchBar={settings.showSearchBar}
+        searchEngine={settings.searchEngine}
+        onSearchEngineChange={(engine) => updateSettings({ searchEngine: engine })}
         topSitesLimit={settings.topSitesLimit}
         backgroundMode={settings.backgroundMode}
         openedTweetIds={openedTweetIds}

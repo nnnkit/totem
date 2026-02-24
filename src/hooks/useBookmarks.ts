@@ -44,7 +44,6 @@ interface UseBookmarksReturn {
   unbookmark: (tweetId: string) => Promise<{ apiError?: string }>;
 }
 
-const IDLE_SAFETY_TIMEOUT_MS = 10_000;
 const SYNC_ABORT_TIMEOUT_MS = 3 * 60 * 1000;
 
 function compareSortIndexDesc(a: Bookmark, b: Bookmark): number {
@@ -84,21 +83,6 @@ export function useBookmarks(isReady: boolean): UseBookmarksReturn {
 
     runCleanup().catch(() => {});
   }, []);
-
-  // Safety net: never stay on the loading spinner forever.
-  // If syncState is still "idle" 10s after auth is ready, force to "done"
-  // so the user sees the main UI (with empty state + sync button) instead of a blank screen.
-  useEffect(() => {
-    if (!isReady || syncState.phase !== "idle") return;
-    const timer = setTimeout(() => {
-      setSyncState((prev) =>
-        prev.phase === "idle"
-          ? { phase: "done", total: bookmarksRef.current.length }
-          : prev,
-      );
-    }, IDLE_SAFETY_TIMEOUT_MS);
-    return () => clearTimeout(timer);
-  }, [isReady, syncState.phase]);
 
   useEffect(() => {
     if (!isReady) return;
