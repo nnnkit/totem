@@ -20,6 +20,7 @@ import { HighlightPopover } from "./reader/HighlightPopover";
 import { NotePopover } from "./reader/NotePopover";
 import { useReadingProgress } from "../hooks/useReadingProgress";
 import { useHighlights } from "../hooks/useHighlights";
+import { useReaderTour } from "../hooks/useReaderTour";
 
 const THEME_CYCLE: ThemePreference[] = ["system", "light", "dark"];
 
@@ -117,6 +118,14 @@ export function BookmarkReader({
       containerRef: articleRef,
     });
 
+  const { dismiss: dismissReaderTour } = useReaderTour({
+    contentReady: !detailLoading,
+  });
+
+  useEffect(() => {
+    return () => dismissReaderTour();
+  }, [bookmark.tweetId, dismissReaderTour]);
+
   const [notePanelState, setNotePanelState] = useState<NotePanelState | null>(null);
 
   useEffect(() => {
@@ -208,6 +217,7 @@ export function BookmarkReader({
           className={cn("mx-auto flex items-center gap-3 px-4 py-3", containerWidthClass)}
         >
           <button
+            data-tour="reader-back"
             onClick={onBack}
             aria-label="Back to bookmarks"
             title="Back"
@@ -270,6 +280,7 @@ export function BookmarkReader({
 
       <article
         ref={articleRef}
+        data-tour="reader-content"
         className={cn(containerWidthClass, "relative mx-auto px-5 pb-16 pt-6")}
       >
         <TweetContent

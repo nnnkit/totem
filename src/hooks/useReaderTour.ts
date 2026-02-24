@@ -1,52 +1,38 @@
 import { useCallback, useEffect, useRef } from "react";
 import { driver, type DriveStep } from "driver.js";
 import "driver.js/dist/driver.css";
-import { LS_TOUR_COMPLETED } from "../lib/storage-keys";
-import { TOUR_DELAY_MS } from "../lib/constants";
+import { LS_READER_TOUR_COMPLETED } from "../lib/storage-keys";
+import { READER_TOUR_DELAY_MS } from "../lib/constants";
 
 interface Props {
-  enabled: boolean;
-  hasBookmarks: boolean;
+  contentReady: boolean;
 }
 
-export function useProductTour({ enabled, hasBookmarks }: Props) {
+export function useReaderTour({ contentReady }: Props) {
   const startedRef = useRef(false);
   const driverRef = useRef<ReturnType<typeof driver> | null>(null);
 
   useEffect(() => {
-    if (!enabled || !hasBookmarks || startedRef.current) return;
-    if (localStorage.getItem(LS_TOUR_COMPLETED) === "1") return;
+    if (!contentReady || startedRef.current) return;
+    if (localStorage.getItem(LS_READER_TOUR_COMPLETED) === "1") return;
 
     startedRef.current = true;
 
     const steps: DriveStep[] = [
       {
-        element: '[data-tour="bookmark-card"]',
+        element: '[data-tour="reader-content"]',
         popover: {
-          title: "Your daily pick",
+          title: "Highlight & take notes",
           description:
-            "A fresh recommendation from your saved bookmarks. Press <kbd>O</kbd> to start reading.",
+            "Select any text to highlight it or add a note. Your annotations save automatically.",
         },
       },
       {
-        element: '[data-tour="open-all-btn"]',
+        element: '[data-tour="reader-back"]',
         popover: {
-          title: "All bookmarks",
-          description: "Press <kbd>L</kbd> to see all your saved bookmarks",
-        },
-      },
-      {
-        element: '[data-tour="surprise-btn"]',
-        popover: {
-          title: "Surprise me",
-          description: "Press <kbd>S</kbd> to open a random bookmark",
-        },
-      },
-      {
-        element: '[data-tour="settings-btn"]',
-        popover: {
-          title: "Settings",
-          description: "Customize your theme, search bar, and quick links",
+          title: "Navigation",
+          description:
+            "Press <kbd>Esc</kbd> to go back. Use <kbd>←</kbd> <kbd>→</kbd> to read the next post.",
         },
       },
     ];
@@ -65,21 +51,21 @@ export function useProductTour({ enabled, hasBookmarks }: Props) {
         doneBtnText: "Done",
         steps,
         onDestroyed: () => {
-          localStorage.setItem(LS_TOUR_COMPLETED, "1");
+          localStorage.setItem(LS_READER_TOUR_COMPLETED, "1");
           driverRef.current = null;
         },
       });
 
       driverRef.current = tour;
       tour.drive();
-    }, TOUR_DELAY_MS);
+    }, READER_TOUR_DELAY_MS);
 
     return () => {
       window.clearTimeout(timeout);
       driverRef.current?.destroy();
       driverRef.current = null;
     };
-  }, [enabled, hasBookmarks]);
+  }, [contentReady]);
 
   const dismiss = useCallback(() => {
     if (driverRef.current) {

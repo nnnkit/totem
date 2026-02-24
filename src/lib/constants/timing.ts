@@ -27,6 +27,7 @@ export const READING_HEIGHT_CHANGE_RATIO = 0.15;
 
 // ── Product tour ────────────────────────────────────────────
 export const TOUR_DELAY_MS = 800;
+export const READER_TOUR_DELAY_MS = 600;
 
 // ── UI transitions ──────────────────────────────────────────
 export const CARD_CLOSE_MS = 150;
