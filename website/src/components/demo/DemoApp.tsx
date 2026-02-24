@@ -6,12 +6,12 @@ import { useContinueReading } from "@ext/hooks/useContinueReading";
 import { pickRelatedBookmarks } from "@ext/lib/related";
 import { NewTabHome } from "@ext/components/NewTabHome";
 import { BookmarkReader } from "@ext/components/BookmarkReader";
-import { BookmarksList } from "@ext/components/BookmarksList";
+import { BookmarksList, type ReadingTab } from "@ext/components/BookmarksList";
 import { SettingsModal } from "@ext/components/SettingsModal";
 import { DemoBanner } from "./DemoBanner";
 import { MOCK_BOOKMARKS } from "../../mock/bookmarks";
 import { deleteBookmarksByTweetIds } from "@ext/db";
-import type { Bookmark } from "@ext/types";
+import type { Bookmark, SyncState } from "@ext/types";
 
 type AppView = "home" | "reading";
 
@@ -31,6 +31,8 @@ export default function DemoApp() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [shuffleSeed, setShuffleSeed] = useState(0);
   const [syncing, setSyncing] = useState(false);
+  const [readingTab, setReadingTab] = useState<ReadingTab>("unread");
+  const [openedTweetIds, setOpenedTweetIds] = useState<Set<string>>(new Set());
 
   if (
     selectedBookmark &&
@@ -47,6 +49,7 @@ export default function DemoApp() {
 
   const openBookmark = useCallback((bookmark: Bookmark) => {
     setSelectedBookmark(bookmark);
+    setOpenedTweetIds((prev) => new Set(prev).add(bookmark.tweetId));
   }, []);
 
   const closeReader = useCallback(() => {
@@ -75,6 +78,14 @@ export default function DemoApp() {
           onOpenBookmark={openBookmark}
           onBack={closeReader}
           onShuffle={() => setShuffleSeed((s) => s + 1)}
+          onDeleteBookmark={() => {
+            setBookmarks((prev) =>
+              prev.filter((b) => b.tweetId !== selectedBookmark.tweetId),
+            );
+            closeReader();
+          }}
+          themePreference={themePreference}
+          onThemeChange={setThemePreference}
         />
       );
     }
@@ -83,7 +94,11 @@ export default function DemoApp() {
         <BookmarksList
           continueReadingItems={continueReading}
           unreadBookmarks={allUnread}
+          syncing={syncing}
+          activeTab={readingTab}
+          onTabChange={setReadingTab}
           onOpenBookmark={openBookmark}
+          onSync={handleSync}
           onBack={() => setView("home")}
         />
       );
@@ -91,7 +106,10 @@ export default function DemoApp() {
     return (
       <NewTabHome
         bookmarks={bookmarks}
-        syncing={syncing}
+        syncState={{ phase: syncing ? "syncing" : "idle", total: bookmarks.length } satisfies SyncState}
+        detailedTweetIds={new Set(bookmarks.map((b) => b.tweetId))}
+        backgroundMode={settings.backgroundMode}
+        openedTweetIds={openedTweetIds}
         showTopSites={settings.showTopSites}
         showSearchBar={settings.showSearchBar}
         topSitesLimit={settings.topSitesLimit}

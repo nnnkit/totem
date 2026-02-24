@@ -165,7 +165,7 @@ export default function App() {
           onShuffle={handleShuffle}
           onPrev={hasPrev ? goToPrev : undefined}
           onNext={hasNext ? goToNext : undefined}
-          onUnbookmark={async () => {
+          onDeleteBookmark={async () => {
             const tweetId = selectedBookmark.tweetId;
             const tweetUrl = `https://x.com/i/web/status/${tweetId}`;
             setView("reading");

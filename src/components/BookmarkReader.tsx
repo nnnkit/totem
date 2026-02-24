@@ -24,7 +24,7 @@ interface Props {
   onShuffle?: () => void;
   onPrev?: () => void;
   onNext?: () => void;
-  onUnbookmark: () => void;
+  onDeleteBookmark: () => void;
   onMarkAsRead?: (tweetId: string) => void;
   onMarkAsUnread?: (tweetId: string) => void;
 }
@@ -43,7 +43,7 @@ export function BookmarkReader({
   onShuffle,
   onPrev,
   onNext,
-  onUnbookmark,
+  onDeleteBookmark,
   onMarkAsRead,
   onMarkAsUnread,
 }: Props) {
@@ -244,7 +244,7 @@ export function BookmarkReader({
           tweetSectionIdPrefix="section-tweet"
           onToggleRead={onMarkAsRead ? handleToggleRead : undefined}
           isMarkedRead={effectiveMarkedRead}
-          onUnbookmark={onUnbookmark}
+          onDeleteBookmark={onDeleteBookmark}
         />
       </article>
 

@@ -114,7 +114,7 @@ interface Props {
   viewOnXUrl?: string;
   onToggleRead?: () => void;
   isMarkedRead?: boolean;
-  onUnbookmark?: () => void;
+  onDeleteBookmark?: () => void;
 }
 
 export function TweetLinks({
@@ -122,7 +122,7 @@ export function TweetLinks({
   viewOnXUrl,
   onToggleRead,
   isMarkedRead,
-  onUnbookmark,
+  onDeleteBookmark,
 }: Props) {
   const resolvedUrls = useMemo<ResolvedUrl[]>(
     () =>
@@ -167,10 +167,10 @@ export function TweetLinks({
     </a>
   ) : null;
 
-  const unbookmarkBtn = onUnbookmark ? (
+  const deleteBookmarkBtn = onDeleteBookmark ? (
     <button
       type="button"
-      onClick={onUnbookmark}
+      onClick={onDeleteBookmark}
       className="inline-flex items-center gap-1.5 rounded-md border border-x-border bg-x-card px-3 py-1.5 text-xs font-medium text-x-text-secondary transition-colors hover:text-red-500 hover:border-red-500/30 hover:bg-red-500/10"
     >
       <BookmarkSimpleIcon weight="fill" className="size-3.5" />
@@ -178,7 +178,7 @@ export function TweetLinks({
     </button>
   ) : null;
 
-  const hasActions = readStatusBtn || viewOnXLink || askGrokLink || unbookmarkBtn;
+  const hasActions = readStatusBtn || viewOnXLink || askGrokLink || deleteBookmarkBtn;
 
   return (
     <>
@@ -187,7 +187,7 @@ export function TweetLinks({
         <div className="mt-5 flex items-center justify-end gap-3">
           {viewOnXLink}
           {askGrokLink}
-          {unbookmarkBtn}
+          {deleteBookmarkBtn}
           {readStatusBtn}
         </div>
       )}
