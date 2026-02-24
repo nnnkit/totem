@@ -897,6 +897,16 @@
     }
 }
 
+@keyframes offline-pulse {
+    0%,
+    100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.4;
+    }
+}
+
 .breath-quick-link {
     display: flex;
     flex-direction: column;

@@ -101,6 +101,7 @@ const bookmarkItems = [
 
     <header class="mx-auto max-w-4xl px-6 pt-20 pb-16 text-center">
       <div
+        data-hero
         class="animate-[hero-fade-up_600ms_cubic-bezier(0.23,1,0.32,1)_forwards] opacity-0"
       >
         <div
@@ -116,6 +117,7 @@ const bookmarkItems = [
       </div>
 
       <div
+        data-hero
         class="animate-[hero-fade-up_600ms_cubic-bezier(0.23,1,0.32,1)_forwards] opacity-0"
         style="animation-delay: 80ms"
       >
@@ -129,6 +131,7 @@ const bookmarkItems = [
       </div>
 
       <div
+        data-hero
         class="animate-[hero-fade-up_600ms_cubic-bezier(0.23,1,0.32,1)_forwards] opacity-0"
         style="animation-delay: 160ms"
       >
@@ -140,6 +143,7 @@ const bookmarkItems = [
       </div>
 
       <div
+        data-hero
         class="animate-[hero-fade-up_600ms_cubic-bezier(0.23,1,0.32,1)_forwards] opacity-0"
         style="animation-delay: 240ms"
       >
@@ -162,6 +166,7 @@ const bookmarkItems = [
       </div>
 
       <div
+        data-hero
         class="animate-[hero-fade-up_600ms_cubic-bezier(0.23,1,0.32,1)_forwards] opacity-0"
         style="animation-delay: 320ms"
       >
@@ -172,7 +177,7 @@ const bookmarkItems = [
     </header>
 
     <!-- New Tab Mockup -->
-    <section data-reveal class="mx-auto max-w-5xl px-6 pb-24">
+    <section class="mx-auto max-w-5xl px-6 pb-24">
       <BrowserFrame title="New Tab">
         <div class="relative aspect-video bg-stone-950">
           <img
@@ -335,7 +340,7 @@ const bookmarkItems = [
     </div>
 
     <!-- Features Grid -->
-    <section data-reveal class="mx-auto max-w-5xl px-6 pb-24" id="features">
+    <section class="mx-auto max-w-5xl px-6 pb-24" id="features">
       <h2
         class="mb-12 text-balance text-center text-3xl font-bold"
         style={`font-family: ${SERIF}`}
@@ -361,7 +366,7 @@ const bookmarkItems = [
     </section>
 
     <!-- Keyboard Shortcuts -->
-    <section data-reveal class="mx-auto max-w-3xl px-6 pb-24">
+    <section class="mx-auto max-w-3xl px-6 pb-24">
       <h2
         class="mb-10 text-balance text-center text-3xl font-bold"
         style={`font-family: ${SERIF}`}
@@ -383,7 +388,7 @@ const bookmarkItems = [
     </section>
 
     <!-- Getting Started -->
-    <section data-reveal class="mx-auto max-w-4xl px-6 pb-24">
+    <section class="mx-auto max-w-4xl px-6 pb-24">
       <h2
         class="mb-12 text-balance text-center text-3xl font-bold"
         style={`font-family: ${SERIF}`}
@@ -406,7 +411,7 @@ const bookmarkItems = [
     </section>
 
     <!-- CTA -->
-    <section data-reveal class="mx-auto max-w-3xl px-6 pb-24 text-center">
+    <section class="mx-auto max-w-3xl px-6 pb-24 text-center">
       <div class="rounded-xl border border-x-border bg-x-card p-10">
         <h2
           class="text-balance text-2xl font-bold"
@@ -441,22 +446,9 @@ const bookmarkItems = [
 </BaseLayout>
 
 <script>
-  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const els = document.querySelectorAll("[data-reveal]");
-  if (reduced) {
-    els.forEach((el) => el.classList.add("is-visible"));
+  if (sessionStorage.getItem("hasSeenIntro")) {
+    document.documentElement.classList.add("skip-intro");
   } else {
-    const obs = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((e) => {
-          if (e.isIntersecting) {
-            e.target.classList.add("is-visible");
-            obs.unobserve(e.target);
-          }
-        });
-      },
-      { threshold: 0.1 },
-    );
-    els.forEach((el) => obs.observe(el));
+    sessionStorage.setItem("hasSeenIntro", "true");
   }
 </script>

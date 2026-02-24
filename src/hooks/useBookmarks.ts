@@ -55,7 +55,7 @@ function compareSortIndexDesc(a: Bookmark, b: Bookmark): number {
   return b.sortIndex.localeCompare(a.sortIndex);
 }
 
-export function useBookmarks(isReady: boolean): UseBookmarksReturn {
+export function useBookmarks(isReady: boolean, loadCacheOnly = false): UseBookmarksReturn {
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
   const [syncState, setSyncState] = useState<SyncState>({
     phase: "idle",
@@ -284,7 +284,7 @@ export function useBookmarks(isReady: boolean): UseBookmarksReturn {
   }, [runHardSync, runSoftSync]);
 
   useEffect(() => {
-    if (!isReady) return;
+    if (!isReady && !loadCacheOnly) return;
     let cancelled = false;
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
@@ -300,26 +300,28 @@ export function useBookmarks(isReady: boolean): UseBookmarksReturn {
         if (stored.length > 0) {
           setBookmarks(stored);
           setSyncState({ phase: "done", total: stored.length });
-          // Check if a hard sync is overdue (>2hr since last reconcile)
-          const meta = await chrome.storage.local.get([CS_LAST_RECONCILE]);
-          const lastReconcile = Number(meta[CS_LAST_RECONCILE] || 0);
-          if (Date.now() - lastReconcile > RECONCILE_THROTTLE_MS) {
-            runHardSync({ fullReconcile: true });
+          if (isReady) {
+            const meta = await chrome.storage.local.get([CS_LAST_RECONCILE]);
+            const lastReconcile = Number(meta[CS_LAST_RECONCILE] || 0);
+            if (Date.now() - lastReconcile > RECONCILE_THROTTLE_MS) {
+              runHardSync({ fullReconcile: true });
+            }
           }
         } else {
-          const meta = await chrome.storage.local.get([CS_LAST_SYNC]);
-          if (!Number(meta[CS_LAST_SYNC])) {
-            // First-time user: auto-trigger hard sync
-            runHardSync();
+          if (isReady) {
+            const meta = await chrome.storage.local.get([CS_LAST_SYNC]);
+            if (!Number(meta[CS_LAST_SYNC])) {
+              runHardSync();
+            } else {
+              setSyncState({ phase: "done", total: 0 });
+            }
           } else {
-            // DB was cleared externally — show empty state, user can click sync
             setSyncState({ phase: "done", total: 0 });
           }
         }
       })
       .catch(() => {
         if (cancelled) return;
-        // Fail open so UI is usable even when IndexedDB bootstrap stalls.
         setSyncState({ phase: "done", total: bookmarksRef.current.length });
       })
       .finally(() => {
@@ -334,7 +336,7 @@ export function useBookmarks(isReady: boolean): UseBookmarksReturn {
         clearTimeout(timeoutId);
       }
     };
-  }, [isReady, runHardSync]);
+  }, [isReady, loadCacheOnly, runHardSync]);
 
   const applyBookmarkEvents = useCallback(async () => {
     if (processingBookmarkEventsRef.current) return;
@@ -495,12 +497,12 @@ export function useBookmarks(isReady: boolean): UseBookmarksReturn {
 
 const EMPTY_SET = new Set<string>();
 
-export function useDetailedTweetIds(): Set<string> {
+export function useDetailedTweetIds(refreshKey = 0): Set<string> {
   const [ids, setIds] = useState<Set<string>>(EMPTY_SET);
 
   useEffect(() => {
     getDetailedTweetIds().then(setIds).catch(() => {});
-  }, []);
+  }, [refreshKey]);
 
   return ids;
 }

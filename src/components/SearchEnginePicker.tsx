@@ -45,7 +45,7 @@ export function SearchEnginePicker({ value, onChange }: Props) {
     <Popover.Root>
       <Popover.Trigger
         type="button"
-        className="flex items-center gap-1 rounded-md px-1 py-1 transition-colors hover:bg-white/10"
+        className="breath-picker-trigger"
         aria-label={`Search engine: ${current.name}`}
       >
         {current.logo}
@@ -58,7 +58,7 @@ export function SearchEnginePicker({ value, onChange }: Props) {
           positionMethod="fixed"
           className="z-50"
         >
-          <Popover.Popup className="xbt-popover w-48 rounded-lg border border-white/10 bg-[rgb(30,27,25)] py-1.5 shadow-xl">
+          <Popover.Popup className="xbt-popover w-48 rounded-lg border border-x-border bg-x-card py-1.5 shadow-xl">
             {OPTIONS.map((option) => {
               const selected = option.id === value;
               return (
@@ -69,8 +69,8 @@ export function SearchEnginePicker({ value, onChange }: Props) {
                   className={cn(
                     "flex w-full items-center gap-2.5 px-3 py-2 text-sm transition-colors",
                     selected
-                      ? "text-white/90"
-                      : "text-white/60 hover:bg-white/6 hover:text-white/90",
+                      ? "text-x-text"
+                      : "text-x-text-secondary hover:bg-x-hover hover:text-x-text",
                   )}
                 >
                   {option.logo}

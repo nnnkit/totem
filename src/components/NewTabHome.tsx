@@ -2,8 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import {
   GearSixIcon,
+  LinkBreakIcon,
   MagnifyingGlassIcon,
-  WifiSlashIcon,
 } from "@phosphor-icons/react";
 import { TotemLogo } from "./TotemLogo";
 import { SearchEnginePicker } from "./SearchEnginePicker";
@@ -398,7 +398,12 @@ export function NewTabHome({
                     <div className="flex items-center gap-1.5">
                       <p className="breath-eyebrow uppercase">recommended</p>
                       {offlineMode && (
-                        <WifiSlashIcon className="size-3 text-x-text-secondary" />
+                        <span title="Not signed in — showing cached bookmarks">
+                          <LinkBreakIcon
+                            className="size-3 text-x-text-secondary"
+                            style={{ animation: "offline-pulse 2s ease-in-out infinite" }}
+                          />
+                        </span>
                       )}
                     </div>
                     <kbd className="breath-kbd">O</kbd>

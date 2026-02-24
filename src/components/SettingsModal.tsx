@@ -56,7 +56,7 @@ export function SettingsModal({
   };
 
   return (
-    <Modal open={open} onClose={onClose} className="bg-black/50" ariaLabelledBy="settings-title">
+    <Modal open={open} onClose={onClose} className="bg-[rgba(11,6,5,0.5)]" ariaLabelledBy="settings-title">
       {(closing) => (
       <div className={cn(
         "max-w-md mx-auto mt-[10vh] max-h-[80vh] flex flex-col rounded-xl border border-x-border bg-x-card shadow-xl",
@@ -90,7 +90,7 @@ export function SettingsModal({
                     "flex-1 py-2 text-sm font-medium rounded-md transition-colors flex items-center justify-center gap-1.5",
                     themePreference === opt.value
                       ? "bg-accent/15 text-accent"
-                      : "text-x-text-secondary hover:text-x-text",
+                      : "text-x-text hover:bg-x-hover",
                   )}
                 >
                   {opt.icon === "monitor" ? (
@@ -120,7 +120,7 @@ export function SettingsModal({
                     "flex-1 py-2 text-sm font-medium rounded-md transition-colors",
                     settings.backgroundMode === opt.value
                       ? "bg-accent/15 text-accent"
-                      : "text-x-text-secondary hover:text-x-text",
+                      : "text-x-text hover:bg-x-hover",
                   )}
                 >
                   {opt.label}

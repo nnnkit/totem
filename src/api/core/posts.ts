@@ -1,7 +1,6 @@
 import { getTweetDetailCache, upsertTweetDetailCache } from "../../db";
 import type { ThreadTweet } from "../../types";
 import { parseTweetDetailPayload, type TweetDetailContent } from "../parsers";
-import { DETAIL_CACHE_TTL_MS } from "../../lib/constants";
 
 interface RuntimeResponse {
   error?: string;
@@ -16,39 +15,20 @@ export async function fetchTweetDetail(
   tweetId: string,
 ): Promise<TweetDetailContent> {
   const cached = await getTweetDetailCache(tweetId).catch(() => null);
-  const cacheAge = cached ? Date.now() - cached.fetchedAt : Number.POSITIVE_INFINITY;
-  const isCacheFresh = Boolean(cached && cacheAge <= DETAIL_CACHE_TTL_MS);
 
-  if (isCacheFresh && cached) {
+  if (cached) {
     return {
       focalTweet: cached.focalTweet,
       thread: cached.thread,
     };
   }
 
-  let response: RuntimeResponse;
-  try {
-    response = (await chrome.runtime.sendMessage({
-      type: "FETCH_TWEET_DETAIL",
-      tweetId,
-    })) as RuntimeResponse;
-  } catch (error) {
-    if (cached) {
-      return {
-        focalTweet: cached.focalTweet,
-        thread: cached.thread,
-      };
-    }
-    throw error;
-  }
+  const response = (await chrome.runtime.sendMessage({
+    type: "FETCH_TWEET_DETAIL",
+    tweetId,
+  })) as RuntimeResponse;
 
   if (response.error) {
-    if (cached) {
-      return {
-        focalTweet: cached.focalTweet,
-        thread: cached.thread,
-      };
-    }
     throw new Error(runtimeError(response));
   }
 

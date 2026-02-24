@@ -41,8 +41,8 @@ export const FETCH_READ_PAUSE_CHANCE = 0.15;
 export const FETCH_READ_PAUSE_MIN_MS = 1000;
 export const FETCH_READ_PAUSE_JITTER_MS = 2000;
 
-// ── Tweet detail cache ──────────────────────────────────────
-export const DETAIL_CACHE_TTL_MS = 1000 * 60 * 60 * 6;
+// ── Prefetch ────────────────────────────────────────────────
+export const PREFETCH_INTERVAL_MS = 45_000;
 
 // ── Highlights ──────────────────────────────────────────────
 export const HIGHLIGHT_RETRY_MS = 100;

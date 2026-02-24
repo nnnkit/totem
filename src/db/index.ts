@@ -361,6 +361,19 @@ export async function getDetailedTweetIds(): Promise<Set<string>> {
   return new Set(keys);
 }
 
+export async function getCompletedTweetIds(): Promise<Set<string>> {
+  const db = await getDb();
+  const tx = db.transaction(PROGRESS_STORE_NAME, "readonly");
+  const ids = new Set<string>();
+  let cursor = await tx.store.openCursor();
+  while (cursor) {
+    if (cursor.value.completed) ids.add(cursor.key as string);
+    cursor = await cursor.continue();
+  }
+  await tx.done;
+  return ids;
+}
+
 export async function upsertHighlight(highlight: Highlight): Promise<void> {
   const db = await getDb();
   await db.put(HIGHLIGHTS_STORE_NAME, highlight);

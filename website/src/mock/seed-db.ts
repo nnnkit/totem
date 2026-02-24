@@ -26,7 +26,7 @@ export async function seedDatabase() {
   const progressEntries: ReadingProgress[] = [
     {
       tweetId: "1003", // antirez article — 35% read
-      scrollPercent: 35,
+      openedAt: Date.now() - 3 * 60 * 60 * 1000,
       scrollY: 420,
       scrollHeight: 1200,
       lastReadAt: Date.now() - 2 * 60 * 60 * 1000,
@@ -34,7 +34,7 @@ export async function seedDatabase() {
     },
     {
       tweetId: "1010", // kelseyhightower thread — 62% read
-      scrollPercent: 62,
+      openedAt: Date.now() - 6 * 60 * 60 * 1000,
       scrollY: 680,
       scrollHeight: 1100,
       lastReadAt: Date.now() - 5 * 60 * 60 * 1000,
@@ -42,7 +42,7 @@ export async function seedDatabase() {
     },
     {
       tweetId: "1006", // karpathy long post — completed
-      scrollPercent: 92,
+      openedAt: Date.now() - 25 * 60 * 60 * 1000,
       scrollY: 1080,
       scrollHeight: 1200,
       lastReadAt: Date.now() - 24 * 60 * 60 * 1000,
