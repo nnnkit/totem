@@ -50,7 +50,6 @@
     "service_worker": "service-worker.js"
   },
   "action": {
-    "default_popup": "popup.html",
     "default_title": "Totem",
     "default_icon": {
       "16": "icons/icon-16.png",

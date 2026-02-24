@@ -1491,3 +1491,7 @@ chrome.storage.local.get(["xbt_auth_headers"], (stored) => {
     discoverAllMissingQueryIds().catch(() => {});
   }
 });
+
+chrome.action.onClicked.addListener(() => {
+  chrome.tabs.create({ url: chrome.runtime.getURL("newtab.html") });
+});
