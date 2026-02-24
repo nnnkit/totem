@@ -1,10 +1,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
-import { GearSixIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
+import {
+  GearSixIcon,
+  MagnifyingGlassIcon,
+  WifiSlashIcon,
+} from "@phosphor-icons/react";
 import { TotemLogo } from "./TotemLogo";
 import { SearchEnginePicker } from "./SearchEnginePicker";
 import type { AuthPhase } from "../hooks/useAuth";
-import type { BackgroundMode, Bookmark, SearchEngineId, SyncState } from "../types";
+import type {
+  BackgroundMode,
+  Bookmark,
+  SearchEngineId,
+  SyncState,
+} from "../types";
 import { SEARCH_ENGINES } from "../lib/search-engines";
 import { hasChromeSearch } from "../lib/chrome";
 import { formatClock } from "../lib/time";
@@ -34,6 +43,7 @@ interface Props {
   onOpenBookmark: (bookmark: Bookmark) => void;
   onOpenSettings: () => void;
   onOpenReading: () => void;
+  offlineMode?: boolean;
   authPhase?: AuthPhase;
   onLogin?: () => Promise<void>;
 }
@@ -65,6 +75,7 @@ export function NewTabHome({
   onOpenBookmark,
   onOpenSettings,
   onOpenReading,
+  offlineMode,
   authPhase,
   onLogin,
 }: Props) {
@@ -172,7 +183,7 @@ export function NewTabHome({
     <div className="breath-home relative flex h-dvh flex-col overflow-hidden">
       {!showWallpaper && gradientCss && (
         <div
-          className="breath-gradient pointer-events-none absolute inset-0"
+          className="pointer-events-none absolute inset-0"
           style={{ background: gradientCss }}
         />
       )}
@@ -215,48 +226,63 @@ export function NewTabHome({
               </h1>
             </div>
 
-            {showSearchBar && (() => {
-              const engineConfig = searchEngine !== "default" ? SEARCH_ENGINES[searchEngine] : null;
-              const isDefault = searchEngine === "default";
+            {showSearchBar &&
+              (() => {
+                const engineConfig =
+                  searchEngine !== "default"
+                    ? SEARCH_ENGINES[searchEngine]
+                    : null;
+                const isDefault = searchEngine === "default";
 
-              const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-                if (!isDefault) return;
-                e.preventDefault();
-                const form = e.currentTarget;
-                const input = form.elements.namedItem("q") as HTMLInputElement;
-                const query = input.value.trim();
-                if (!query) return;
-                if (hasChromeSearch()) {
-                  chrome.search.query({ text: query, disposition: "NEW_TAB" });
-                } else {
-                  window.open(`https://www.google.com/search?q=${encodeURIComponent(query)}`, "_blank");
-                }
-              };
+                const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+                  if (!isDefault) return;
+                  e.preventDefault();
+                  const form = e.currentTarget;
+                  const input = form.elements.namedItem(
+                    "q",
+                  ) as HTMLInputElement;
+                  const query = input.value.trim();
+                  if (!query) return;
+                  if (hasChromeSearch()) {
+                    chrome.search.query({
+                      text: query,
+                      disposition: "NEW_TAB",
+                    });
+                  } else {
+                    window.open(
+                      `https://www.google.com/search?q=${encodeURIComponent(query)}`,
+                      "_blank",
+                    );
+                  }
+                };
 
-              return (
-                <form
-                  className="breath-search"
-                  action={engineConfig?.searchUrl}
-                  method={isDefault ? undefined : "GET"}
-                  target={isDefault ? undefined : "_blank"}
-                  role="search"
-                  onSubmit={handleSubmit}
-                >
-                  <span className="breath-search-logo">
-                    <SearchEnginePicker value={searchEngine} onChange={onSearchEngineChange} />
-                  </span>
-                  <input
-                    ref={searchRef}
-                    type="text"
-                    name={engineConfig?.queryParam ?? "q"}
-                    className="breath-search-input"
-                    placeholder="Search the web"
-                    autoComplete="off"
-                  />
-                  <span className="breath-search-trail">{SEARCH_ICON}</span>
-                </form>
-              );
-            })()}
+                return (
+                  <form
+                    className="breath-search"
+                    action={engineConfig?.searchUrl}
+                    method={isDefault ? undefined : "GET"}
+                    target={isDefault ? undefined : "_blank"}
+                    role="search"
+                    onSubmit={handleSubmit}
+                  >
+                    <span className="breath-search-logo">
+                      <SearchEnginePicker
+                        value={searchEngine}
+                        onChange={onSearchEngineChange}
+                      />
+                    </span>
+                    <input
+                      ref={searchRef}
+                      type="text"
+                      name={engineConfig?.queryParam ?? "q"}
+                      className="breath-search-input"
+                      placeholder="Search the web"
+                      autoComplete="off"
+                    />
+                    <span className="breath-search-trail">{SEARCH_ICON}</span>
+                  </form>
+                );
+              })()}
 
             {showTopSites && topSites.length > 0 && (
               <nav
@@ -289,7 +315,7 @@ export function NewTabHome({
           </section>
         </main>
 
-        <footer className="mx-auto w-full max-w-lg pb-12">
+        <footer className="mx-auto w-full max-w-lg pb-6">
           {authPhase === "connecting" ? (
             <article className="breath-card text-center">
               <p className="breath-eyebrow">Connecting to X&hellip;</p>
@@ -318,7 +344,9 @@ export function NewTabHome({
                 href="https://x.com/login"
                 target="_blank"
                 rel="noopener noreferrer"
-                onClick={() => { onLogin?.().catch(() => {}); }}
+                onClick={() => {
+                  onLogin?.().catch(() => {});
+                }}
                 className="breath-btn breath-btn--primary mt-6 inline-block"
               >
                 Log in to X
@@ -367,7 +395,12 @@ export function NewTabHome({
               >
                 <div className="breath-card-content">
                   <div className="flex justify-between">
-                    <p className="breath-eyebrow uppercase">recommended</p>
+                    <div className="flex items-center gap-1.5">
+                      <p className="breath-eyebrow uppercase">recommended</p>
+                      {offlineMode && (
+                        <WifiSlashIcon className="size-3 text-x-text-secondary" />
+                      )}
+                    </div>
                     <kbd className="breath-kbd">O</kbd>
                   </div>
 
@@ -408,6 +441,24 @@ export function NewTabHome({
                   <kbd className="breath-kbd">S</kbd>
                 </button>
               </div>
+
+              {offlineMode && (
+                <p className="text-center text-xxs text-x-text-secondary/50">
+                  Viewing cached bookmarks.{" "}
+                  <a
+                    href="https://x.com/login"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => {
+                      onLogin?.().catch(() => {});
+                    }}
+                    className="underline hover:text-x-text-secondary"
+                  >
+                    Log in to X
+                  </a>{" "}
+                  to sync new ones.
+                </p>
+              )}
             </div>
           ) : syncState.phase === "syncing" ? (
             <article className="breath-card text-center">
@@ -478,20 +529,32 @@ export function NewTabHome({
         )}
         {curatorHud && (
           <div className="fixed bottom-6 right-6 z-20 flex items-center gap-2 rounded-xl bg-black/60 px-3 py-2 text-xs text-white backdrop-blur-xl">
-            {curatorHud.justSelected && <span className="font-medium text-green-400">Selected!</span>}
-            {curatorHud.loading && <span className="text-white/60">Loading…</span>}
+            {curatorHud.justSelected && (
+              <span className="font-medium text-green-400">Selected!</span>
+            )}
+            {curatorHud.loading && (
+              <span className="text-white/60">Loading…</span>
+            )}
             <span className="tabular-nums font-medium">
               {curatorHud.count}/{curatorHud.total}
             </span>
             {curatorHud.rateRemaining !== null && (
-              <span className="tabular-nums text-white/40">{curatorHud.rateRemaining} req</span>
+              <span className="tabular-nums text-white/40">
+                {curatorHud.rateRemaining} req
+              </span>
             )}
             <span className="text-white/30">|</span>
-            <kbd className="rounded-md border border-white/20 bg-white/10 px-1 py-0.5 font-mono text-white/70">Space</kbd>
+            <kbd className="rounded-md border border-white/20 bg-white/10 px-1 py-0.5 font-mono text-white/70">
+              Space
+            </kbd>
             <span className="text-white/40">Next</span>
-            <kbd className="rounded-md border border-white/20 bg-white/10 px-1 py-0.5 font-mono text-white/70">Y</kbd>
+            <kbd className="rounded-md border border-white/20 bg-white/10 px-1 py-0.5 font-mono text-white/70">
+              Y
+            </kbd>
             <span className="text-white/40">Pick</span>
-            <kbd className="rounded-md border border-white/20 bg-white/10 px-1 py-0.5 font-mono text-white/70">E</kbd>
+            <kbd className="rounded-md border border-white/20 bg-white/10 px-1 py-0.5 font-mono text-white/70">
+              E
+            </kbd>
             <span className="text-white/40">Export</span>
           </div>
         )}

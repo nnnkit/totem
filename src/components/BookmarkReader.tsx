@@ -24,7 +24,7 @@ interface Props {
   onShuffle?: () => void;
   onPrev?: () => void;
   onNext?: () => void;
-  onDeleteBookmark: () => void;
+  onDeleteBookmark?: () => void;
   onMarkAsRead?: (tweetId: string) => void;
   onMarkAsUnread?: (tweetId: string) => void;
 }

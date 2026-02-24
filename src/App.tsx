@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useAuth } from "./hooks/useAuth";
 import { useBookmarks, useDetailedTweetIds } from "./hooks/useBookmarks";
+import { usePrefetchDetails } from "./hooks/usePrefetchDetails";
 import { useTheme } from "./hooks/useTheme";
 import { useSettings } from "./hooks/useSettings";
 import { useKeyboardNavigation } from "./hooks/useKeyboard";
@@ -31,8 +32,11 @@ export default function App() {
   const { settings, updateSettings } = useSettings();
   const isReady = phase === "ready";
   const [hadBookmarks] = useState(() => localStorage.getItem(LS_HAS_BOOKMARKS) === "1");
-  const { bookmarks, syncState, refresh, unbookmark } = useBookmarks(isReady);
-  const detailedTweetIds = useDetailedTweetIds();
+  const isLoggedOut = phase === "need_login";
+  const offlineMode = isLoggedOut && hadBookmarks;
+  const connectingWithCache = phase === "connecting" && hadBookmarks;
+  const showCached = offlineMode || connectingWithCache;
+  const { bookmarks, syncState, refresh, unbookmark } = useBookmarks(isReady, showCached);
   const {
     continueReading,
     allUnread,
@@ -42,6 +46,9 @@ export default function App() {
   const [selectedBookmark, setSelectedBookmark] = useState<Bookmark | null>(
     null,
   );
+  const readerOpen = selectedBookmark !== null;
+  const { prefetchedCount } = usePrefetchDetails(bookmarks, isReady, readerOpen);
+  const detailedTweetIds = useDetailedTweetIds(prefetchedCount);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [readingTab, setReadingTab] = useState<ReadingTab>(() => {
     const stored = localStorage.getItem(LS_READING_TAB);
@@ -138,7 +145,7 @@ export default function App() {
     }
   }, [bookmarks, openBookmark]);
 
-  if (phase === "loading" || (isReady && hadBookmarks && syncState.phase === "idle")) {
+  if (phase === "loading" || ((isReady || showCached) && hadBookmarks && syncState.phase === "idle")) {
     return (
       <div className="flex items-center justify-center min-h-dvh bg-x-bg">
         <div className="animate-logo-shine">
@@ -148,7 +155,7 @@ export default function App() {
     );
   }
 
-  const needsLogin = phase === "need_login" || phase === "connecting";
+  const needsLogin = !showCached && (phase === "need_login" || phase === "connecting");
 
   const mainContent = (() => {
     if (selectedBookmark) {
@@ -162,7 +169,7 @@ export default function App() {
           onShuffle={handleShuffle}
           onPrev={hasPrev ? goToPrev : undefined}
           onNext={hasNext ? goToNext : undefined}
-          onDeleteBookmark={async () => {
+          onDeleteBookmark={offlineMode ? undefined : async () => {
             const tweetId = selectedBookmark.tweetId;
             const tweetUrl = `https://x.com/i/web/status/${tweetId}`;
             setView("reading");
@@ -211,8 +218,9 @@ export default function App() {
         onOpenBookmark={openBookmark}
         onOpenSettings={() => setSettingsOpen(true)}
         onOpenReading={() => setView("reading")}
+        offlineMode={offlineMode}
         authPhase={needsLogin ? phase : undefined}
-        onLogin={needsLogin ? startLogin : undefined}
+        onLogin={needsLogin || offlineMode ? startLogin : undefined}
       />
     );
   })();
