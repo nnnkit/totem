@@ -3,6 +3,7 @@ import { useHotkeys } from "react-hotkeys-hook";
 import { GearSixIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
 import { TotemLogo } from "./TotemLogo";
 import { SearchEnginePicker } from "./SearchEnginePicker";
+import type { AuthPhase } from "../hooks/useAuth";
 import type { BackgroundMode, Bookmark, SearchEngineId, SyncState } from "../types";
 import { SEARCH_ENGINES } from "../lib/search-engines";
 import { hasChromeSearch } from "../lib/chrome";
@@ -33,6 +34,8 @@ interface Props {
   onOpenBookmark: (bookmark: Bookmark) => void;
   onOpenSettings: () => void;
   onOpenReading: () => void;
+  authPhase?: AuthPhase;
+  onLogin?: () => Promise<void>;
 }
 
 interface DecoratedBookmark {
@@ -62,6 +65,8 @@ export function NewTabHome({
   onOpenBookmark,
   onOpenSettings,
   onOpenReading,
+  authPhase,
+  onLogin,
 }: Props) {
   const [now, setNow] = useState(() => new Date());
   const [imgLoaded, setImgLoaded] = useState(false);
@@ -167,7 +172,7 @@ export function NewTabHome({
     <div className="breath-home relative flex h-dvh flex-col overflow-hidden">
       {!showWallpaper && gradientCss && (
         <div
-          className="pointer-events-none absolute inset-0"
+          className="breath-gradient pointer-events-none absolute inset-0"
           style={{ background: gradientCss }}
         />
       )}
@@ -285,7 +290,41 @@ export function NewTabHome({
         </main>
 
         <footer className="mx-auto w-full max-w-lg pb-12">
-          {currentItem ? (
+          {authPhase === "connecting" ? (
+            <article className="breath-card text-center">
+              <p className="breath-eyebrow">Connecting to X&hellip;</p>
+              <div className="mt-4 flex justify-center">
+                <svg
+                  viewBox="0 0 24 24"
+                  className="size-6 animate-spin text-accent"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round" />
+                </svg>
+              </div>
+              <p className="breath-empty mt-4 text-pretty">
+                Syncing your session in the background.
+              </p>
+            </article>
+          ) : authPhase === "need_login" ? (
+            <article className="breath-card text-center">
+              <p className="breath-eyebrow">Log in to see your bookmarks</p>
+              <p className="breath-empty mt-4 text-pretty">
+                Sign in to your X account to sync and read your saved posts.
+              </p>
+              <a
+                href="https://x.com/login"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => { onLogin?.().catch(() => {}); }}
+                className="breath-btn breath-btn--primary mt-6 inline-block"
+              >
+                Log in to X
+              </a>
+            </article>
+          ) : currentItem ? (
             <div className="space-y-4">
               <article
                 data-tour="bookmark-card"

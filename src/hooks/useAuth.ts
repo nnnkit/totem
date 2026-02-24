@@ -10,7 +10,7 @@ import {
   AUTH_CONNECTING_TIMEOUT_MS,
 } from "../lib/constants";
 
-type AuthPhase = "loading" | "need_login" | "connecting" | "ready";
+export type AuthPhase = "loading" | "need_login" | "connecting" | "ready";
 
 interface UseAuthReturn {
   phase: AuthPhase;

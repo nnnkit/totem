@@ -8,7 +8,6 @@ import { ensureReadingProgressExists, markReadingProgressCompleted, markReadingP
 import { pickRelatedBookmarks } from "./lib/related";
 import { resetLocalData } from "./lib/reset";
 import { LS_READING_TAB, LS_HAS_BOOKMARKS } from "./lib/storage-keys";
-import { Onboarding } from "./components/Onboarding";
 import { NewTabHome } from "./components/NewTabHome";
 import { BookmarkReader } from "./components/BookmarkReader";
 import { BookmarksList, type ReadingTab } from "./components/BookmarksList";
@@ -149,9 +148,7 @@ export default function App() {
     );
   }
 
-  if (phase === "need_login" || phase === "connecting") {
-    return <Onboarding phase={phase} onLogin={startLogin} />;
-  }
+  const needsLogin = phase === "need_login" || phase === "connecting";
 
   const mainContent = (() => {
     if (selectedBookmark) {
@@ -214,6 +211,8 @@ export default function App() {
         onOpenBookmark={openBookmark}
         onOpenSettings={() => setSettingsOpen(true)}
         onOpenReading={() => setView("reading")}
+        authPhase={needsLogin ? phase : undefined}
+        onLogin={needsLogin ? startLogin : undefined}
       />
     );
   })();
