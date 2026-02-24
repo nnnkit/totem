@@ -222,9 +222,9 @@ export function NewTabHome({
                 const query = input.value.trim();
                 if (!query) return;
                 if (hasChromeSearch()) {
-                  chrome.search.query({ text: query, disposition: "CURRENT_TAB" });
+                  chrome.search.query({ text: query, disposition: "NEW_TAB" });
                 } else {
-                  window.location.href = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+                  window.open(`https://www.google.com/search?q=${encodeURIComponent(query)}`, "_blank");
                 }
               };
 
@@ -233,6 +233,7 @@ export function NewTabHome({
                   className="breath-search"
                   action={engineConfig?.searchUrl}
                   method={isDefault ? undefined : "GET"}
+                  target={isDefault ? undefined : "_blank"}
                   role="search"
                   onSubmit={handleSubmit}
                 >

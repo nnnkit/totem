@@ -178,8 +178,6 @@ export default function App() {
               });
             }
           }}
-          themePreference={themePreference}
-          onThemeChange={setThemePreference}
           onMarkAsRead={markReadingProgressCompleted}
           onMarkAsUnread={markReadingProgressUncompleted}
         />

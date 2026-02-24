@@ -465,64 +465,6 @@
         animation: popover-out 150ms ease-in forwards;
     }
 
-    @keyframes showcase-select {
-        from {
-            transform: scaleX(0);
-        }
-        to {
-            transform: scaleX(1);
-        }
-    }
-
-    @keyframes showcase-toolbar-in {
-        from {
-            opacity: 0;
-            transform: scale(0.92) translateY(4px);
-        }
-        to {
-            opacity: 1;
-            transform: scale(1) translateY(0);
-        }
-    }
-
-    @keyframes showcase-pulse {
-        0% {
-            box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 40%, transparent);
-        }
-        100% {
-            box-shadow: 0 0 0 4px transparent;
-        }
-    }
-
-    .showcase-select-sweep {
-        background-color: color-mix(in srgb, var(--accent) 28%, transparent);
-        transform-origin: left;
-        transform: scaleX(0);
-        animation: showcase-select 400ms cubic-bezier(0.23, 1, 0.32, 1) 600ms forwards;
-    }
-
-    .showcase-toolbar {
-        opacity: 0;
-        animation: showcase-toolbar-in 200ms cubic-bezier(0.23, 1, 0.32, 1) 1100ms forwards;
-    }
-
-    .showcase-pulse-btn {
-        animation: showcase-pulse 200ms ease-out 1600ms forwards;
-    }
-
-    .showcase-highlight-apply {
-        animation: showcase-highlight-result 300ms ease-out 1900ms forwards;
-    }
-
-    @keyframes showcase-highlight-result {
-        from {
-            background-color: transparent;
-        }
-        to {
-            background-color: var(--highlight-bg);
-        }
-    }
-
     @keyframes popover-in {
         from {
             opacity: 0;

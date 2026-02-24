@@ -1,15 +1,25 @@
 import { useEffect, useState } from "react";
-import type { BackgroundMode, UserSettings } from "../types";
+import type { BackgroundMode, SearchEngineId, UserSettings } from "../types";
 import { hasChromeStorageSync, hasChromeStorageOnChanged } from "../lib/chrome";
 import { SYNC_SETTINGS } from "../lib/storage-keys";
 
 const VALID_BACKGROUND_MODES: BackgroundMode[] = ["gradient", "images"];
+const VALID_SEARCH_ENGINES: SearchEngineId[] = [
+  "google",
+  "bing",
+  "duckduckgo",
+  "yahoo",
+  "brave",
+  "ecosia",
+  "default",
+];
 
 const DEFAULT_SETTINGS: UserSettings = {
   showTopSites: false,
   showSearchBar: true,
   topSitesLimit: 5,
   backgroundMode: "images",
+  searchEngine: "google",
 };
 
 function normalizeSettings(value: unknown): UserSettings {
@@ -34,6 +44,10 @@ function normalizeSettings(value: unknown): UserSettings {
       VALID_BACKGROUND_MODES.includes(raw.backgroundMode as BackgroundMode)
         ? (raw.backgroundMode as BackgroundMode)
         : DEFAULT_SETTINGS.backgroundMode,
+    searchEngine:
+      VALID_SEARCH_ENGINES.includes(raw.searchEngine as SearchEngineId)
+        ? (raw.searchEngine as SearchEngineId)
+        : DEFAULT_SETTINGS.searchEngine,
   };
 }
 

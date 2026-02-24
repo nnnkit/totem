@@ -17,7 +17,8 @@
   ],
   "optional_permissions": [
     "topSites",
-    "favicon"
+    "favicon",
+    "search"
   ],
   "host_permissions": [
     "https://x.com/*"
