@@ -38,9 +38,20 @@ On 401/403 responses:
 ## 5. Rate Limiting
 
 - **Fetch queue**: 1200ms base + 1300ms jitter between API calls
-- **Reconcile throttle**: 4 hours
-- **Light sync**: 30 minutes
-- **Sync abort**: 3 minutes
+- **Hard sync (reconcile) throttle**: 2 hours
+- **Soft sync throttle**: 10 minutes
+- **Hard sync abort**: 3-10 minutes (dynamic, scales with bookmark count)
+
+## 5a. Sync Model
+
+**Hard sync** — full page-through with stale deletion:
+- First install (auto — empty DB + no `CS_LAST_SYNC`)
+- Manual refresh button (smart downgrade to soft sync when within throttle)
+- Auto on mount when last hard sync was >2hr ago
+
+**Soft sync** — 1 page of 20, no stale deletion, silent errors:
+- Bookmark mutation events from service worker (`CS_SOFT_SYNC_NEEDED`)
+- Refresh button click within throttle window (quick feedback)
 
 ## 6. Storage Keys
 

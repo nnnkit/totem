@@ -7,8 +7,8 @@ import {
   CS_LAST_RECONCILE,
   CS_LAST_SYNC,
   CS_BOOKMARK_EVENTS,
-  CS_LAST_LIGHT_SYNC,
-  CS_LIGHT_SYNC_NEEDED,
+  CS_LAST_SOFT_SYNC,
+  CS_SOFT_SYNC_NEEDED,
 } from "./storage-keys";
 
 // chrome.storage.local keys to remove on reset.
@@ -19,8 +19,8 @@ const CHROME_LOCAL_RESET_KEYS = [
   CS_LAST_RECONCILE,
   CS_LAST_SYNC,
   CS_BOOKMARK_EVENTS,
-  CS_LAST_LIGHT_SYNC,
-  CS_LIGHT_SYNC_NEEDED,
+  CS_LAST_SOFT_SYNC,
+  CS_SOFT_SYNC_NEEDED,
 ];
 
 export async function resetLocalData(): Promise<void> {
