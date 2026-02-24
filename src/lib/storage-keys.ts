@@ -29,7 +29,6 @@ export const CS_LAST_SYNC = "xbt_last_sync";
 export const CS_BOOKMARK_EVENTS = "xbt_bookmark_events";
 export const CS_AUTH_HEADERS = "xbt_auth_headers";
 export const CS_AUTH_TIME = "xbt_auth_time";
-export const CS_QUERY_ID = "xbt_query_id";
 export const CS_USER_ID = "xbt_user_id";
 export const CS_LAST_LIGHT_SYNC = "xbt_last_light_sync";
 export const CS_LIGHT_SYNC_NEEDED = "xbt_light_sync_needed";
@@ -40,9 +39,6 @@ export const CS_LIGHT_SYNC_NEEDED = "xbt_light_sync_needed";
 //   xbt_graphql_catalog    – captured GraphQL endpoint catalog
 //   xbt_sw_cleanup_at      – weekly service worker cleanup timestamp
 //   xbt_features           – captured Twitter feature flags JSON
-//   xbt_detail_query_id    – TweetDetail query ID
-//   xbt_delete_query_id    – DeleteBookmark query ID
-//   xbt_create_query_id    – CreateBookmark query ID
 //   xbt_last_mutation      – last bookmark mutation debug info
 //   xbt_last_mutation_done – last completed mutation debug info
 //   xbt_seen_display_types – seen tweetDisplayType values
@@ -54,7 +50,6 @@ export const CHROME_LOCAL_KEYS = [
   CS_BOOKMARK_EVENTS,
   CS_AUTH_HEADERS,
   CS_AUTH_TIME,
-  CS_QUERY_ID,
   CS_USER_ID,
   CS_LAST_LIGHT_SYNC,
   CS_LIGHT_SYNC_NEEDED,

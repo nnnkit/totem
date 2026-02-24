@@ -4,18 +4,18 @@ Rules governing how the extension communicates with x.com's GraphQL API.
 
 ## 1. Auth Separation
 
-The auth gate (`handleCheckAuth`) checks only `xbt_auth_headers` + `xbt_query_id`.
-Mutation and detail query IDs (`xbt_delete_query_id`, `xbt_create_query_id`, `xbt_detail_query_id`) are operational concerns resolved lazily by their respective handlers.
+The auth gate (`handleCheckAuth`) checks `xbt_auth_headers` and resolves the Bookmarks query ID on-demand.
+All query IDs (Bookmarks, DeleteBookmark, CreateBookmark, TweetDetail) are resolved lazily by their respective handlers — nothing is persisted to storage.
 
 ## 2. Self-Healing Query ID Resolution
 
-Every handler uses `resolveQueryId(operationName, storageKey)` with a three-step fallback chain:
+Every handler uses `resolveQueryId(operationName)` with a three-step fallback chain:
 
-1. **Storage** — `chrome.storage.local` (instant)
-2. **Catalog** — GraphQL catalog via `loadGraphqlCatalog()` (in-memory)
+1. **In-memory cache** — `queryIdMemCache` (10min TTL, reset each SW session)
+2. **Catalog** — GraphQL catalog via `loadGraphqlCatalog()` (persisted, passively captured)
 3. **Bundles** — `discoverQueryIdFromBundles(operationName)` (network, 2-5s)
 
-Results are cached in `chrome.storage.local` for subsequent calls.
+Results are cached in-memory only. On HTTP 400 (wrong query ID), `forceRediscoverQueryId()` clears the cache and re-fetches from bundles.
 
 ## 3. Auth Expiry
 
@@ -48,11 +48,12 @@ All keys use `xbt_` prefix + snake_case. Declared in `src/lib/storage-keys.ts`, 
 
 ## 7. Discovery
 
-Three complementary mechanisms, whichever finishes first wins:
+Three complementary mechanisms feed the in-memory cache:
 
-- **Proactive** — After auth capture (`onSendHeaders`) and on service worker startup, `discoverAllMissingQueryIds()` runs non-blocking, batch-fetching bundles for all missing ops.
+- **Proactive** — After auth capture (`onSendHeaders`) and on service worker startup, `discoverAllMissingQueryIds()` runs non-blocking, batch-fetching bundles for all uncached ops.
 - **Lazy** — Per-request via `resolveQueryId()`, blocking until resolved or failed.
-- **Passive** — `onSendHeaders` captures query IDs from normal x.com browsing.
+- **Passive** — `onSendHeaders` captures query IDs from normal x.com browsing into in-memory cache.
+- **Content script** — `mutation-hook.js` discovers IDs from page script bundles and relays via `STORE_QUERY_IDS` message.
 
 ## 8. Reset Contract
 

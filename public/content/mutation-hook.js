@@ -145,6 +145,25 @@
     }
 
     var idx = 0;
+    function extractPairedQueryId(text, operationName) {
+      // Match queryId immediately paired with the operationName (same object literal).
+      // Pattern: queryId:"<id>",operationName:"<name>"
+      var re = new RegExp(
+        'queryId\\s*:\\s*["\']([A-Za-z0-9_\\-]{10,50})["\']\\s*,\\s*operationName\\s*:\\s*["\']' +
+          operationName +
+          '["\']'
+      );
+      var m = text.match(re);
+      if (m) return m[1];
+      // Also try reversed order: operationName:"<name>",operationId/queryId:"<id>"
+      var re2 = new RegExp(
+        'operationName\\s*:\\s*["\']' +
+          operationName +
+          '["\']\\s*,\\s*(?:queryId|operationId)\\s*:\\s*["\']([A-Za-z0-9_\\-]{10,50})["\']'
+      );
+      var m2 = text.match(re2);
+      return m2 ? m2[1] : null;
+    }
     function next() {
       if (idx >= queue.length) {
         if (Object.keys(found).length > 0) {
@@ -159,12 +178,8 @@
           for (var t = 0; t < targets.length; t++) {
             var name = targets[t];
             if (found[name]) continue;
-            var pos = text.indexOf('"' + name + '"');
-            if (pos === -1) pos = text.indexOf("'" + name + "'");
-            if (pos === -1) continue;
-            var region = text.substring(Math.max(0, pos - 300), pos + 300);
-            var m = region.match(/queryId\s*:\s*["']([A-Za-z0-9_\-]{10,50})["']/);
-            if (m) found[name] = m[1];
+            var qid = extractPairedQueryId(text, name);
+            if (qid) found[name] = qid;
           }
           var allFound = targets.every(function (n) { return !!found[n]; });
           if (allFound) {

@@ -1,6 +1,6 @@
 import { useReducer, useEffect, useCallback } from "react";
 import { checkAuth, startAuthCapture, closeAuthTab } from "../api/core/auth";
-import { CS_USER_ID, CS_AUTH_HEADERS, CS_QUERY_ID } from "../lib/storage-keys";
+import { CS_USER_ID, CS_AUTH_HEADERS } from "../lib/storage-keys";
 import {
   AUTH_TIMEOUT_MS,
   AUTH_RECHECK_MS,
@@ -240,7 +240,7 @@ export function useAuth(): UseAuthReturn {
   // 6. Storage listener — recheck on relevant changes
   useEffect(() => {
     const listener = (changes: Record<string, chrome.storage.StorageChange>) => {
-      const hasAuthData = Boolean(changes[CS_AUTH_HEADERS] || changes[CS_QUERY_ID]);
+      const hasAuthData = Boolean(changes[CS_AUTH_HEADERS]);
       const isRelevant =
         hasAuthData ||
         Boolean(changes[CS_USER_ID]);

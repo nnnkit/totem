@@ -279,65 +279,63 @@ async function discoverQueryIdFromBundles(operationName) {
 }
 
 function extractQueryIdForOperation(text, operationName) {
-  // Match queryId immediately paired with the operationName in the same export
+  const escaped = operationName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  // Match queryId:"<id>",operationName:"<name>"
   const pattern = new RegExp(
     'queryId\\s*:\\s*["\']([A-Za-z0-9_\\-]{10,50})["\']\\s*,\\s*operationName\\s*:\\s*["\']' +
-      operationName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") +
+      escaped +
       '["\']',
   );
   const match = text.match(pattern);
-  return match ? match[1] : null;
+  if (match) return match[1];
+  // Also try reversed order: operationName:"<name>",...,queryId:"<id>"
+  const reversed = new RegExp(
+    'operationName\\s*:\\s*["\']' +
+      escaped +
+      '["\']\\s*,\\s*(?:queryId|operationId)\\s*:\\s*["\']([A-Za-z0-9_\\-]{10,50})["\']',
+  );
+  const revMatch = text.match(reversed);
+  return revMatch ? revMatch[1] : null;
 }
 
 // ═══════════════════════════════════════════════════════════
 // QUERY ID RESOLUTION — unified fallback chain
 // ═══════════════════════════════════════════════════════════
 
-async function resolveQueryId(operationName, storageKey) {
-  // 1. Check short-lived in-memory cache
+async function resolveQueryId(operationName) {
+  // 1. Check in-memory cache (10min TTL, reset each SW wake)
   const cached = queryIdMemCache.get(operationName);
   if (cached && Date.now() - cached.ts < QUERY_ID_TTL_MS) {
     return cached.id;
   }
 
-  // 2. Check chrome.storage.local (populated by passive capture)
-  const stored = await chrome.storage.local.get([storageKey]);
-  if (stored[storageKey]) {
-    queryIdMemCache.set(operationName, { id: stored[storageKey], ts: Date.now() });
-    return stored[storageKey];
-  }
-
-  // 3. Check GraphQL catalog
+  // 2. Check GraphQL catalog (passively captured from x.com requests)
   const catalog = await loadGraphqlCatalog();
   for (const entry of Object.values(catalog.endpoints || {})) {
     if (entry && entry.operation === operationName && entry.queryId) {
       queryIdMemCache.set(operationName, { id: entry.queryId, ts: Date.now() });
-      chrome.storage.local.set({ [storageKey]: entry.queryId });
       return entry.queryId;
     }
   }
 
-  // 4. Discover from x.com JS bundles
+  // 3. Discover from x.com JS bundles (network fetch, 2-5s)
   const discovered = await discoverQueryIdFromBundles(operationName).catch(() => null);
   if (discovered) {
     queryIdMemCache.set(operationName, { id: discovered, ts: Date.now() });
-    chrome.storage.local.set({ [storageKey]: discovered });
     return discovered;
   }
 
   return null;
 }
 
-async function forceRediscoverQueryId(operationName, storageKey) {
-  invalidateQueryIdCache(operationName);
-  await chrome.storage.local.remove([storageKey]);
+async function forceRediscoverQueryId(operationName) {
+  queryIdMemCache.delete(operationName);
 
   const freshId = await discoverQueryIdFromBundles(operationName).catch(
     () => null,
   );
   if (freshId) {
     queryIdMemCache.set(operationName, { id: freshId, ts: Date.now() });
-    await chrome.storage.local.set({ [storageKey]: freshId });
   }
   return freshId;
 }
@@ -348,41 +346,35 @@ async function forceRediscoverQueryId(operationName, storageKey) {
 
 let discoveryInProgress = false;
 
-const QUERY_ID_OPS = [
-  { operation: "DeleteBookmark", storageKey: "xbt_delete_query_id" },
-  { operation: "CreateBookmark", storageKey: "xbt_create_query_id" },
-  { operation: "TweetDetail", storageKey: "xbt_detail_query_id" },
-];
+const QUERY_ID_OPS = ["DeleteBookmark", "CreateBookmark", "TweetDetail", "Bookmarks"];
 
 async function discoverAllMissingQueryIds() {
   if (discoveryInProgress) return;
   discoveryInProgress = true;
 
   try {
-    const keys = QUERY_ID_OPS.map((op) => op.storageKey);
-    const stored = await chrome.storage.local.get(keys);
-    const missing = QUERY_ID_OPS.filter((op) => !stored[op.storageKey]);
+    // Only discover operations not already in the in-memory cache
+    const now = Date.now();
+    const missing = QUERY_ID_OPS.filter((op) => {
+      const cached = queryIdMemCache.get(op);
+      return !cached || now - cached.ts >= QUERY_ID_TTL_MS;
+    });
     if (missing.length === 0) return;
 
-    // Check catalog before hitting the network
+    // Check GraphQL catalog first (passively captured from real x.com requests)
     const catalog = await loadGraphqlCatalog();
-    const updates = {};
     const stillMissing = [];
 
     for (const op of missing) {
       let found = false;
       for (const entry of Object.values(catalog.endpoints || {})) {
-        if (entry && entry.operation === op.operation && entry.queryId) {
-          updates[op.storageKey] = entry.queryId;
+        if (entry && entry.operation === op && entry.queryId) {
+          queryIdMemCache.set(op, { id: entry.queryId, ts: now });
           found = true;
           break;
         }
       }
       if (!found) stillMissing.push(op);
-    }
-
-    if (Object.keys(updates).length > 0) {
-      await chrome.storage.local.set(updates);
     }
 
     if (stillMissing.length === 0) return;
@@ -399,8 +391,7 @@ async function discoverAllMissingQueryIds() {
       scriptUrls.push(m[1]);
     }
 
-    const remaining = new Map(stillMissing.map((op) => [op.operation, op]));
-    const bundleUpdates = {};
+    const remaining = new Set(stillMissing);
 
     for (const url of scriptUrls) {
       if (remaining.size === 0) break;
@@ -409,20 +400,16 @@ async function discoverAllMissingQueryIds() {
         if (!jsResp.ok) continue;
         const text = await jsResp.text();
 
-        for (const [opName, op] of remaining) {
+        for (const opName of remaining) {
           const qid = extractQueryIdForOperation(text, opName);
           if (qid) {
-            bundleUpdates[op.storageKey] = qid;
+            queryIdMemCache.set(opName, { id: qid, ts: Date.now() });
             remaining.delete(opName);
           }
         }
       } catch {
         continue;
       }
-    }
-
-    if (Object.keys(bundleUpdates).length > 0) {
-      await chrome.storage.local.set(bundleUpdates);
     }
   } finally {
     discoveryInProgress = false;
@@ -802,17 +789,16 @@ async function captureBookmarkMutation(details) {
 
   const tweetId = extractTweetIdFromRequestBody(details.requestBody) || "";
 
+  // Cache the query ID from live x.com traffic — most trustworthy source
+  queryIdMemCache.set(mutation.operation, { id: mutation.queryId, ts: Date.now() });
+
   if (mutation.operation === "DeleteBookmark") {
-    await chrome.storage.local.set({ xbt_delete_query_id: mutation.queryId });
     await pushBookmarkEvent("DeleteBookmark", tweetId, "x.com");
   }
 
-  if (mutation.operation === "CreateBookmark") {
-    await chrome.storage.local.set({ xbt_create_query_id: mutation.queryId });
-    // Don't push the event here — onBeforeRequest fires BEFORE x.com
-    // processes the request. The page fetch would find nothing new.
-    // CreateBookmark events are pushed from onCompleted instead.
-  }
+  // Don't push CreateBookmark event here — onBeforeRequest fires BEFORE x.com
+  // processes the request. The page fetch would find nothing new.
+  // CreateBookmark events are pushed from onCompleted instead.
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -943,17 +929,22 @@ async function handleCheckAuth() {
     "xbt_user_id",
     "xbt_auth_headers",
     "xbt_auth_time",
-    "xbt_query_id",
   ]);
 
   const userId = await syncAuthSessionFromCookie(stored);
   const hasAuthHeader = !!stored.xbt_auth_headers?.authorization;
   const hasUser = Boolean(userId || hasAuthHeader);
 
+  // Query IDs are resolved on-demand from in-memory cache / bundles.
+  // Check if we already have one cached, or try to resolve it now.
+  const bookmarksQid = hasAuthHeader
+    ? await resolveQueryId("Bookmarks").catch(() => null)
+    : null;
+
   return {
     hasUser,
     hasAuth: hasAuthHeader,
-    hasQueryId: !!stored.xbt_query_id,
+    hasQueryId: !!bookmarksQid,
     userId,
   };
 }
@@ -966,7 +957,7 @@ async function handleFetchBookmarks(cursor, count, _retried = false, _queryIdRet
 
   if (!stored.xbt_auth_headers?.authorization) throw new Error("NO_AUTH");
 
-  const queryId = await resolveQueryId("Bookmarks", "xbt_query_id");
+  const queryId = await resolveQueryId("Bookmarks");
   if (!queryId) throw new Error("NO_QUERY_ID");
 
   const pageCount = typeof count === "number" && count > 0 ? count : 100;
@@ -999,6 +990,10 @@ async function handleFetchBookmarks(cursor, count, _retried = false, _queryIdRet
   }
 
   if (!response.ok) {
+    if (!_queryIdRetried && response.status === 400) {
+      const freshId = await forceRediscoverQueryId("Bookmarks");
+      if (freshId && freshId !== queryId) return handleFetchBookmarks(cursor, count, _retried, true);
+    }
     const body = await response.text().catch(() => "");
     throw new Error(`API_ERROR_${response.status}: ${body.slice(0, 200)}`);
   }
@@ -1006,7 +1001,7 @@ async function handleFetchBookmarks(cursor, count, _retried = false, _queryIdRet
   const json = await response.json();
 
   if (!_queryIdRetried && isQueryIdStale(json)) {
-    const freshId = await forceRediscoverQueryId("Bookmarks", "xbt_query_id");
+    const freshId = await forceRediscoverQueryId("Bookmarks");
     if (freshId) return handleFetchBookmarks(cursor, count, _retried, true);
   }
 
@@ -1019,7 +1014,7 @@ async function handleDeleteBookmark(tweetId, _retried = false, _queryIdRetried =
   const stored = await chrome.storage.local.get(["xbt_auth_headers"]);
   if (!stored.xbt_auth_headers?.authorization) throw new Error("NO_AUTH");
 
-  const queryId = await resolveQueryId("DeleteBookmark", "xbt_delete_query_id");
+  const queryId = await resolveQueryId("DeleteBookmark");
   if (!queryId) throw new Error("NO_QUERY_ID");
   const requestHeaders = await buildHeaders();
 
@@ -1044,6 +1039,11 @@ async function handleDeleteBookmark(tweetId, _retried = false, _queryIdRetried =
   }
 
   if (!response.ok) {
+    // HTTP 400 from a wrong query ID — force rediscover and retry once
+    if (!_queryIdRetried && response.status === 400) {
+      const freshId = await forceRediscoverQueryId("DeleteBookmark");
+      if (freshId && freshId !== queryId) return handleDeleteBookmark(tweetId, _retried, true);
+    }
     const body = await response.text().catch(() => "");
     throw new Error(`DELETE_BOOKMARK_${response.status}: ${body.slice(0, 200)}`);
   }
@@ -1051,7 +1051,7 @@ async function handleDeleteBookmark(tweetId, _retried = false, _queryIdRetried =
   const json = await response.json().catch(() => null);
 
   if (!_queryIdRetried && isQueryIdStale(json)) {
-    const freshId = await forceRediscoverQueryId("DeleteBookmark", "xbt_delete_query_id");
+    const freshId = await forceRediscoverQueryId("DeleteBookmark");
     if (freshId) return handleDeleteBookmark(tweetId, _retried, true);
   }
 
@@ -1123,7 +1123,7 @@ async function handleFetchTweetDetail(tweetId, _retried = false, _queryIdRetried
 
   if (!stored.xbt_auth_headers?.authorization) throw new Error("NO_AUTH");
 
-  const queryId = await resolveQueryId("TweetDetail", "xbt_detail_query_id");
+  const queryId = await resolveQueryId("TweetDetail");
   if (!queryId) throw new Error("NO_QUERY_ID");
 
   const featureSet = {
@@ -1174,6 +1174,10 @@ async function handleFetchTweetDetail(tweetId, _retried = false, _queryIdRetried
   }
 
   if (!response.ok) {
+    if (!_queryIdRetried && response.status === 400) {
+      const freshId = await forceRediscoverQueryId("TweetDetail");
+      if (freshId && freshId !== queryId) return handleFetchTweetDetail(tweetId, _retried, true);
+    }
     const body = await response.text().catch(() => "");
     throw new Error(`DETAIL_ERROR_${response.status}: ${body.slice(0, 200)}`);
   }
@@ -1181,7 +1185,7 @@ async function handleFetchTweetDetail(tweetId, _retried = false, _queryIdRetried
   const json = await response.json();
 
   if (!_queryIdRetried && isQueryIdStale(json)) {
-    const freshId = await forceRediscoverQueryId("TweetDetail", "xbt_detail_query_id");
+    const freshId = await forceRediscoverQueryId("TweetDetail");
     if (freshId) return handleFetchTweetDetail(tweetId, _retried, true);
   }
 
@@ -1235,39 +1239,35 @@ chrome.webRequest.onSendHeaders.addListener(
 
     captureGraphqlEndpoint(details);
 
-    // Capture bookmarks query ID + features
+    // Capture bookmarks query ID (in-memory) + features (persisted for request params)
     const match = details.url.match(/\/i\/api\/graphql\/([^/]+)\/Bookmarks\?(.+)/);
     if (match) {
-      const queryId = match[1];
+      queryIdMemCache.set("Bookmarks", { id: match[1], ts: Date.now() });
       try {
         const params = new URLSearchParams(match[2]);
-        const toStore = { xbt_query_id: queryId };
         const features = params.get("features");
-        if (features) toStore.xbt_features = features;
-        chrome.storage.local.set(toStore);
-      } catch {
-        chrome.storage.local.set({ xbt_query_id: queryId });
-      }
+        if (features) chrome.storage.local.set({ xbt_features: features });
+      } catch {}
     }
 
-    // Capture TweetDetail query ID
+    // Passively capture query IDs into in-memory cache from live x.com traffic
     const detailMatch = details.url.match(/\/i\/api\/graphql\/([^/]+)\/TweetDetail/);
     if (detailMatch) {
-      chrome.storage.local.set({ xbt_detail_query_id: detailMatch[1] });
+      queryIdMemCache.set("TweetDetail", { id: detailMatch[1], ts: Date.now() });
     }
 
     const deleteMatch = details.url.match(
       /\/i\/api\/graphql\/([^/]+)\/DeleteBookmark(?:\?|$)/,
     );
     if (deleteMatch) {
-      chrome.storage.local.set({ xbt_delete_query_id: deleteMatch[1] });
+      queryIdMemCache.set("DeleteBookmark", { id: deleteMatch[1], ts: Date.now() });
     }
 
     const createMatch = details.url.match(
       /\/i\/api\/graphql\/([^/]+)\/CreateBookmark(?:\?|$)/,
     );
     if (createMatch) {
-      chrome.storage.local.set({ xbt_create_query_id: createMatch[1] });
+      queryIdMemCache.set("CreateBookmark", { id: createMatch[1], ts: Date.now() });
     }
 
     const mutation = parseBookmarkMutation(details.url);
@@ -1422,22 +1422,18 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     return true;
   }
   if (message.type === "STORE_QUERY_IDS") {
-    const updates = {};
+    const now = Date.now();
     if (typeof message.ids?.DeleteBookmark === "string" && message.ids.DeleteBookmark) {
-      updates.xbt_delete_query_id = message.ids.DeleteBookmark;
+      queryIdMemCache.set("DeleteBookmark", { id: message.ids.DeleteBookmark, ts: now });
     }
     if (typeof message.ids?.CreateBookmark === "string" && message.ids.CreateBookmark) {
-      updates.xbt_create_query_id = message.ids.CreateBookmark;
+      queryIdMemCache.set("CreateBookmark", { id: message.ids.CreateBookmark, ts: now });
     }
     if (typeof message.ids?.TweetDetail === "string" && message.ids.TweetDetail) {
-      updates.xbt_detail_query_id = message.ids.TweetDetail;
+      queryIdMemCache.set("TweetDetail", { id: message.ids.TweetDetail, ts: now });
     }
-    if (Object.keys(updates).length > 0) {
-      chrome.storage.local.set(updates).then(() => sendResponse({ ok: true })).catch(() => sendResponse({ ok: false }));
-    } else {
-      sendResponse({ ok: true });
-    }
-    return true;
+    sendResponse({ ok: true });
+    return false;
   }
   if (message.type === "REAUTH_STATUS") {
     sendResponse({ inProgress: reauthInProgress });
@@ -1485,7 +1481,8 @@ chrome.cookies.onChanged.addListener((changeInfo) => {
 
 runWeeklyServiceWorkerCleanup().catch(() => {});
 
-// On startup, proactively discover missing query IDs if auth headers exist
+// On startup, proactively discover query IDs into in-memory cache.
+// Nothing is persisted — IDs are always fresh per service worker session.
 chrome.storage.local.get(["xbt_auth_headers"], (stored) => {
   if (stored.xbt_auth_headers?.authorization) {
     discoverAllMissingQueryIds().catch(() => {});
