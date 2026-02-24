@@ -7,7 +7,7 @@ import { useKeyboardNavigation } from "./hooks/useKeyboard";
 import { ensureReadingProgressExists, markReadingProgressCompleted, markReadingProgressUncompleted } from "./db";
 import { pickRelatedBookmarks } from "./lib/related";
 import { resetLocalData } from "./lib/reset";
-import { LS_READING_TAB } from "./lib/storage-keys";
+import { LS_READING_TAB, LS_HAS_BOOKMARKS } from "./lib/storage-keys";
 import { Onboarding } from "./components/Onboarding";
 import { NewTabHome } from "./components/NewTabHome";
 import { BookmarkReader } from "./components/BookmarkReader";
@@ -31,6 +31,7 @@ export default function App() {
   const { themePreference, setThemePreference } = useTheme();
   const { settings, updateSettings } = useSettings();
   const isReady = phase === "ready";
+  const [hadBookmarks] = useState(() => localStorage.getItem(LS_HAS_BOOKMARKS) === "1");
   const { bookmarks, syncState, refresh, unbookmark } = useBookmarks(isReady);
   const detailedTweetIds = useDetailedTweetIds();
   const {
@@ -138,7 +139,7 @@ export default function App() {
     }
   }, [bookmarks, openBookmark]);
 
-  if (phase === "loading") {
+  if (phase === "loading" || (isReady && hadBookmarks && syncState.phase === "idle")) {
     return (
       <div className="flex items-center justify-center min-h-dvh bg-x-bg">
         <div className="animate-logo-shine">

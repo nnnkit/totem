@@ -11,15 +11,15 @@ export const IDB_DATABASE_NAME = "xbt";
 
 // ── localStorage ───────────────────────────────────────────────────
 export const LS_TOUR_COMPLETED = "xbt_tour_completed";
-export const LS_READER_TOUR_COMPLETED = "xbt_reader_tour_completed";
 export const LS_READING_TAB = "xbt_reading_tab";
 export const LS_WALLPAPER_INDEX = "xbt_wallpaper_index";
+export const LS_HAS_BOOKMARKS = "xbt_has_bookmarks";
 
 export const LOCAL_STORAGE_KEYS = [
   LS_TOUR_COMPLETED,
-  LS_READER_TOUR_COMPLETED,
   LS_READING_TAB,
   LS_WALLPAPER_INDEX,
+  LS_HAS_BOOKMARKS,
 ] as const;
 
 // ── chrome.storage.local (shared between app + service worker) ─────
@@ -30,8 +30,8 @@ export const CS_BOOKMARK_EVENTS = "xbt_bookmark_events";
 export const CS_AUTH_HEADERS = "xbt_auth_headers";
 export const CS_AUTH_TIME = "xbt_auth_time";
 export const CS_USER_ID = "xbt_user_id";
-export const CS_LAST_LIGHT_SYNC = "xbt_last_light_sync";
-export const CS_LIGHT_SYNC_NEEDED = "xbt_light_sync_needed";
+export const CS_LAST_SOFT_SYNC = "xbt_last_light_sync";
+export const CS_SOFT_SYNC_NEEDED = "xbt_light_sync_needed";
 
 // ── chrome.storage.local (service-worker only) ─────────────────────
 // These are written/read exclusively by public/service-worker.js.
@@ -51,8 +51,8 @@ export const CHROME_LOCAL_KEYS = [
   CS_AUTH_HEADERS,
   CS_AUTH_TIME,
   CS_USER_ID,
-  CS_LAST_LIGHT_SYNC,
-  CS_LIGHT_SYNC_NEEDED,
+  CS_LAST_SOFT_SYNC,
+  CS_SOFT_SYNC_NEEDED,
 ] as const;
 
 // ── chrome.storage.sync ────────────────────────────────────────────
