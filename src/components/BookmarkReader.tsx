@@ -4,12 +4,8 @@ import {
   BookmarkSimpleIcon,
   CaretLeftIcon,
   CaretRightIcon,
-  MonitorIcon,
-  MoonIcon,
-  SunIcon,
 } from "@phosphor-icons/react";
 import type { Bookmark, Highlight, SelectionRange, ThreadTweet } from "../types";
-import type { ThemePreference } from "../hooks/useTheme";
 import { fetchTweetDetail } from "../api/core/posts";
 import { cn } from "../lib/cn";
 
@@ -22,8 +18,6 @@ import { useReadingProgress } from "../hooks/useReadingProgress";
 import { useHighlights } from "../hooks/useHighlights";
 import { useReaderTour } from "../hooks/useReaderTour";
 
-const THEME_CYCLE: ThemePreference[] = ["system", "light", "dark"];
-
 interface Props {
   bookmark: Bookmark;
   relatedBookmarks: Bookmark[];
@@ -33,8 +27,6 @@ interface Props {
   onPrev?: () => void;
   onNext?: () => void;
   onUnbookmark: () => void;
-  themePreference: ThemePreference;
-  onThemeChange: (pref: ThemePreference) => void;
   onMarkAsRead?: (tweetId: string) => void;
   onMarkAsUnread?: (tweetId: string) => void;
 }
@@ -54,8 +46,6 @@ export function BookmarkReader({
   onPrev,
   onNext,
   onUnbookmark,
-  themePreference,
-  onThemeChange,
   onMarkAsRead,
   onMarkAsUnread,
 }: Props) {
@@ -203,11 +193,6 @@ export function BookmarkReader({
     };
   }, [displayBookmark.article?.title, displayBookmark.text]);
 
-  const cycleTheme = () => {
-    const idx = THEME_CYCLE.indexOf(themePreference);
-    onThemeChange(THEME_CYCLE[(idx + 1) % THEME_CYCLE.length]);
-  };
-
   const containerWidthClass = "max-w-3xl";
 
   return (
@@ -229,21 +214,6 @@ export function BookmarkReader({
           <span className="text-lg font-semibold text-x-text">Post</span>
 
           <div className="ml-auto flex items-center gap-1">
-            <button
-              onClick={cycleTheme}
-              aria-label={`Theme: ${themePreference}`}
-              title={`Theme: ${themePreference}`}
-              className="rounded-lg p-2 text-x-text-secondary transition-colors hover:text-x-text hover:bg-x-hover"
-            >
-              {themePreference === "light" ? (
-                <SunIcon className="size-5" />
-              ) : themePreference === "dark" ? (
-                <MoonIcon className="size-5" />
-              ) : (
-                <MonitorIcon className="size-5" />
-              )}
-            </button>
-
             <button
               onClick={onUnbookmark}
               aria-label="Remove bookmark"
