@@ -405,7 +405,7 @@
         scroll-margin-top: 5rem;
     }
 
-    mark.xbt-highlight {
+    mark.totem-highlight {
         background-color: var(--highlight-bg);
         color: inherit;
         box-decoration-break: clone;
@@ -415,12 +415,12 @@
         transition: background-color 150ms ease;
     }
 
-    mark.xbt-highlight:hover,
-    mark.xbt-highlight.xbt-highlight-hover {
+    mark.totem-highlight:hover,
+    mark.totem-highlight.totem-highlight-hover {
         background-color: var(--highlight-bg-hover);
     }
 
-    mark.xbt-highlight[data-has-note="true"] {
+    mark.totem-highlight[data-has-note="true"] {
         background-color: transparent;
         color: inherit;
         text-decoration: underline wavy;
@@ -432,7 +432,7 @@
             forwards;
     }
 
-    mark.xbt-highlight[data-has-note="true"]:hover {
+    mark.totem-highlight[data-has-note="true"]:hover {
         background-color: transparent;
         text-decoration-color: var(--highlight-underline);
     }
@@ -455,15 +455,15 @@
         }
     }
 
-    mark.xbt-highlight-new {
+    mark.totem-highlight-new {
         animation: highlight-flash 600ms ease-out forwards;
     }
 
-    .xbt-popover[data-open] {
+    .totem-popover[data-open] {
         animation: popover-in 200ms cubic-bezier(0.23, 1, 0.32, 1) forwards;
     }
 
-    .xbt-popover[data-closed] {
+    .totem-popover[data-closed] {
         animation: popover-out 150ms ease-in forwards;
     }
 
@@ -551,7 +551,7 @@
     --tw-prose-td-borders: var(--x-border);
 }
 
-.breath-home {
+.totem-home {
     --motion-fast: 150ms;
     --motion-standard: 200ms;
     --motion-slow: 260ms;
@@ -560,52 +560,52 @@
     --motion-ease-hover: ease;
 
     /* On-background colors — always white (background is always dark photo/gradient) */
-    --breath-on-bg: rgba(255, 255, 255, 0.92);
-    --breath-on-bg-muted: rgba(255, 255, 255, 0.62);
-    --breath-on-bg-ghost: rgba(255, 255, 255, 0.56);
+    --totem-on-bg: rgba(255, 255, 255, 0.92);
+    --totem-on-bg-muted: rgba(255, 255, 255, 0.62);
+    --totem-on-bg-ghost: rgba(255, 255, 255, 0.56);
 
     /* On-surface colors — light theme (default), used inside cards/search */
-    --breath-bg: var(--x-bg);
-    --breath-surface: rgba(254, 249, 247, 0.97);
-    --breath-surface-hover: #fef9f7;
-    --breath-surface-shadow:
+    --totem-bg: var(--x-bg);
+    --totem-surface: rgba(254, 249, 247, 0.97);
+    --totem-surface-hover: #fef9f7;
+    --totem-surface-shadow:
         0 1px 3px rgba(11, 6, 5, 0.06), 0 6px 24px rgba(11, 6, 5, 0.06);
-    --breath-border: rgba(11, 6, 5, 0.08);
-    --breath-border-strong: rgba(11, 6, 5, 0.14);
-    --breath-text-primary: rgba(11, 6, 5, 0.92);
-    --breath-text-secondary: rgba(11, 6, 5, 0.82);
-    --breath-text-muted: rgba(11, 6, 5, 0.54);
-    --breath-text-ghost: rgba(11, 6, 5, 0.42);
-    --breath-accent: #e28067;
-    --breath-accent-muted: rgba(226, 128, 103, 0.72);
-    --breath-accent-bg: rgba(226, 128, 103, 0.08);
-    --breath-search-bg: rgba(254, 249, 247, 0.97);
-    --breath-search-shadow:
+    --totem-border: rgba(11, 6, 5, 0.08);
+    --totem-border-strong: rgba(11, 6, 5, 0.14);
+    --totem-text-primary: rgba(11, 6, 5, 0.92);
+    --totem-text-secondary: rgba(11, 6, 5, 0.82);
+    --totem-text-muted: rgba(11, 6, 5, 0.54);
+    --totem-text-ghost: rgba(11, 6, 5, 0.42);
+    --totem-accent: #e28067;
+    --totem-accent-muted: rgba(226, 128, 103, 0.72);
+    --totem-accent-bg: rgba(226, 128, 103, 0.08);
+    --totem-search-bg: rgba(254, 249, 247, 0.97);
+    --totem-search-shadow:
         0 1px 3px rgba(11, 6, 5, 0.06), 0 6px 24px rgba(11, 6, 5, 0.06);
-    --breath-placeholder: rgba(11, 6, 5, 0.36);
-    --breath-secondary-bg: rgba(254, 249, 247, 0.95);
-    --breath-secondary-border: rgba(11, 6, 5, 0.1);
-    --breath-secondary-text: rgba(11, 6, 5, 0.72);
-    --breath-secondary-hover-text: rgba(11, 6, 5, 0.88);
-    --breath-secondary-hover-border: rgba(11, 6, 5, 0.18);
-    --breath-overlay-bg: rgba(255, 255, 255, 0.08);
-    --breath-overlay-border: rgba(255, 255, 255, 0.1);
-    --breath-overlay-shadow: 0 1px 0 rgba(255, 255, 255, 0.06);
-    --breath-overlay-hover-bg: rgba(255, 255, 255, 0.14);
-    --breath-overlay-hover-border: rgba(255, 255, 255, 0.18);
-    --breath-description-text: rgba(11, 6, 5, 0.6);
-    --breath-empty-text: rgba(11, 6, 5, 0.44);
+    --totem-placeholder: rgba(11, 6, 5, 0.36);
+    --totem-secondary-bg: rgba(254, 249, 247, 0.95);
+    --totem-secondary-border: rgba(11, 6, 5, 0.1);
+    --totem-secondary-text: rgba(11, 6, 5, 0.72);
+    --totem-secondary-hover-text: rgba(11, 6, 5, 0.88);
+    --totem-secondary-hover-border: rgba(11, 6, 5, 0.18);
+    --totem-overlay-bg: rgba(255, 255, 255, 0.08);
+    --totem-overlay-border: rgba(255, 255, 255, 0.1);
+    --totem-overlay-shadow: 0 1px 0 rgba(255, 255, 255, 0.06);
+    --totem-overlay-hover-bg: rgba(255, 255, 255, 0.14);
+    --totem-overlay-hover-border: rgba(255, 255, 255, 0.18);
+    --totem-description-text: rgba(11, 6, 5, 0.6);
+    --totem-empty-text: rgba(11, 6, 5, 0.44);
 
-    background: var(--breath-bg);
-    color: var(--breath-text-primary);
+    background: var(--totem-bg);
+    color: var(--totem-text-primary);
 }
 
-.breath-wallpaper {
+.totem-wallpaper {
     transition: opacity var(--motion-slow) var(--motion-ease-enter);
     filter: brightness(0.72);
 }
 
-.breath-ambient {
+.totem-ambient {
     background:
         radial-gradient(
             ellipse 80% 70% at 50% 45%,
@@ -625,7 +625,7 @@
         );
 }
 
-.breath-grain {
+.totem-grain {
     opacity: 0.18;
     mix-blend-mode: overlay;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
@@ -633,40 +633,40 @@
     background-size: 200px 200px;
 }
 
-.breath-clock,
-.breath-title {
+.totem-clock,
+.totem-title {
     font-family:
         "Spectral", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
 }
 
-.breath-clock {
-    color: var(--breath-on-bg);
+.totem-clock {
+    color: var(--totem-on-bg);
     font-size: clamp(2.4rem, 7vw, 4.2rem);
     font-weight: 300;
     letter-spacing: -0.04em;
     line-height: 1;
 }
 
-.breath-search {
+.totem-search {
     position: relative;
     display: flex;
     align-items: center;
     max-width: 36rem;
     margin-inline: auto;
     border-radius: 0.5rem;
-    background: var(--breath-search-bg);
+    background: var(--totem-search-bg);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    box-shadow: var(--breath-search-shadow);
+    box-shadow: var(--totem-search-shadow);
 }
 
-.breath-search-logo {
+.totem-search-logo {
     display: flex;
     align-items: center;
     padding-left: 0.5rem;
 }
 
-.breath-picker-trigger {
+.totem-picker-trigger {
     display: flex;
     align-items: center;
     gap: 0.25rem;
@@ -675,17 +675,17 @@
     transition: background-color var(--motion-fast) var(--motion-ease-hover);
 }
 
-.breath-picker-trigger:hover {
-    background: var(--breath-accent-bg);
+.totem-picker-trigger:hover {
+    background: var(--totem-accent-bg);
 }
 
-.breath-search-input {
+.totem-search-input {
     width: 100%;
     padding: 0.85rem 0.75rem;
     border-radius: 0;
     border: none;
     background: transparent;
-    color: var(--breath-text-primary);
+    color: var(--totem-text-primary);
     font-size: 1rem;
     font-family: inherit;
     outline: none;
@@ -693,22 +693,22 @@
     appearance: none;
 }
 
-.breath-search-input::placeholder {
-    color: var(--breath-placeholder);
+.totem-search-input::placeholder {
+    color: var(--totem-placeholder);
 }
 
-.breath-search-trail {
+.totem-search-trail {
     display: flex;
     align-items: center;
     padding-right: 1rem;
-    color: var(--breath-text-primary);
+    color: var(--totem-text-primary);
     pointer-events: none;
 }
 
-.breath-icon-btn {
+.totem-icon-btn {
     border: 1px solid transparent;
     border-radius: 0.5rem;
-    color: var(--breath-on-bg-muted);
+    color: var(--totem-on-bg-muted);
     background: transparent;
     padding: 0.46rem;
     transition:
@@ -717,33 +717,33 @@
         background-color var(--motion-fast) var(--motion-ease-hover);
 }
 
-.breath-icon-btn:hover {
-    border-color: var(--breath-border);
+.totem-icon-btn:hover {
+    border-color: var(--totem-border);
 }
 
-.breath-card {
+.totem-card {
     position: relative;
     overflow: hidden;
     padding: 0.86rem 1rem 0.72rem;
     min-height: 8.5rem;
     border-radius: 0.5rem;
-    background: var(--breath-surface);
+    background: var(--totem-surface);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    box-shadow: var(--breath-surface-shadow);
+    box-shadow: var(--totem-surface-shadow);
     transition: background-color var(--motion-fast) var(--motion-ease-hover);
 }
 
-.breath-card--zen {
+.totem-card--zen {
     min-height: 8.9rem;
     cursor: pointer;
 }
 
-.breath-card.is-engaged {
-    background: var(--breath-surface-hover);
+.totem-card.is-engaged {
+    background: var(--totem-surface-hover);
 }
 
-.breath-card-content {
+.totem-card-content {
     min-height: 7rem;
     transform: translateY(0);
     opacity: 1;
@@ -752,7 +752,7 @@
         opacity var(--motion-standard) var(--motion-ease-enter);
 }
 
-.breath-eyebrow {
+.totem-eyebrow {
     color: var(--accent);
     font-size: 0.68rem;
     font-weight: 600;
@@ -760,8 +760,8 @@
     text-transform: uppercase;
 }
 
-.breath-title {
-    color: var(--breath-text-secondary);
+.totem-title {
+    color: var(--totem-text-secondary);
     font-size: clamp(0.96rem, 1.8vw, 1.16rem);
     line-height: 1.28;
     font-weight: 400;
@@ -772,8 +772,8 @@
     -webkit-box-orient: vertical;
 }
 
-.breath-description {
-    color: var(--breath-description-text);
+.totem-description {
+    color: var(--totem-description-text);
     font-size: 0.76rem;
     line-height: 1.48;
     min-height: calc(1.48em * 1);
@@ -783,13 +783,13 @@
     -webkit-box-orient: vertical;
 }
 
-.breath-meta {
-    color: var(--breath-text-muted);
+.totem-meta {
+    color: var(--totem-text-muted);
     font-size: 0.72rem;
     line-height: 1.2;
 }
 
-.breath-actions {
+.totem-actions {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -797,20 +797,20 @@
     margin-top: 2rem;
 }
 
-.breath-link {
+.totem-link {
     border: none;
     background: none;
-    color: var(--breath-text-ghost);
+    color: var(--totem-text-ghost);
     font-size: 0.72rem;
     cursor: pointer;
     transition: color var(--motion-fast) var(--motion-ease-hover);
 }
 
-.breath-divider {
-    color: var(--breath-overlay-border);
+.totem-divider {
+    color: var(--totem-overlay-border);
 }
 
-.breath-btn {
+.totem-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -826,46 +826,46 @@
         background-color var(--motion-fast) var(--motion-ease-hover);
 }
 
-.breath-btn:disabled {
+.totem-btn:disabled {
     opacity: 0.56;
     cursor: default;
 }
 
-.breath-btn--primary {
+.totem-btn--primary {
     border: none;
-    background: var(--breath-accent);
+    background: var(--totem-accent);
     color: white;
     padding: 0.5rem 1rem;
 }
 
-.breath-btn--secondary {
-    border: 1px solid var(--breath-secondary-border);
-    background: var(--breath-secondary-bg);
-    color: var(--breath-secondary-text);
+.totem-btn--secondary {
+    border: 1px solid var(--totem-secondary-border);
+    background: var(--totem-secondary-bg);
+    color: var(--totem-secondary-text);
     padding: 0.68rem 1.28rem;
 }
 
-.breath-kbd {
+.totem-kbd {
     margin-left: 0.5rem;
-    border: 1px solid var(--breath-secondary-border);
-    background: var(--breath-accent-bg);
-    color: var(--breath-text-muted);
+    border: 1px solid var(--totem-secondary-border);
+    background: var(--totem-accent-bg);
+    color: var(--totem-text-muted);
 }
 
-.breath-btn--ghost {
-    border: 1px solid var(--breath-overlay-border);
-    background: var(--breath-overlay-bg);
-    color: var(--breath-text-ghost);
+.totem-btn--ghost {
+    border: 1px solid var(--totem-overlay-border);
+    background: var(--totem-overlay-bg);
+    color: var(--totem-text-ghost);
     padding: 0.68rem 1rem;
 }
 
-.breath-btn--compact {
+.totem-btn--compact {
     font-size: 0.74rem;
     padding: 0.44rem 0.68rem;
 }
 
-.breath-empty {
-    color: var(--breath-empty-text);
+.totem-empty {
+    color: var(--totem-empty-text);
     font-size: 0.95rem;
 }
 
@@ -907,7 +907,7 @@
     }
 }
 
-.breath-quick-link {
+.totem-quick-link {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -916,26 +916,26 @@
     transition: opacity var(--motion-fast) var(--motion-ease-hover);
 }
 
-.breath-quick-link-icon {
+.totem-quick-link-icon {
     display: flex;
     align-items: center;
     justify-content: center;
     width: 2.5rem;
     height: 2.5rem;
     border-radius: 0.5rem;
-    background: var(--breath-overlay-bg);
-    border: 1px solid var(--breath-overlay-border);
+    background: var(--totem-overlay-bg);
+    border: 1px solid var(--totem-overlay-border);
     transition:
         background var(--motion-fast) var(--motion-ease-hover),
         border-color var(--motion-fast) var(--motion-ease-hover);
 }
 
-.breath-quick-link-icon img {
+.totem-quick-link-icon img {
     border-radius: 2px;
 }
 
-.breath-quick-link-label {
-    color: var(--breath-on-bg-ghost);
+.totem-quick-link-label {
+    color: var(--totem-on-bg-ghost);
     font-size: 0.62rem;
     max-width: 4.5rem;
     overflow: hidden;
@@ -945,158 +945,158 @@
 }
 
 @media (hover: hover) and (pointer: fine) {
-    .breath-quick-link:hover .breath-quick-link-icon {
-        background: var(--breath-overlay-hover-bg);
-        border-color: var(--breath-overlay-hover-border);
+    .totem-quick-link:hover .totem-quick-link-icon {
+        background: var(--totem-overlay-hover-bg);
+        border-color: var(--totem-overlay-hover-border);
     }
 
-    .breath-quick-link:hover .breath-quick-link-label {
-        color: var(--breath-on-bg-muted);
+    .totem-quick-link:hover .totem-quick-link-label {
+        color: var(--totem-on-bg-muted);
     }
 
-    .breath-icon-btn:hover {
+    .totem-icon-btn:hover {
         border-color: rgba(255, 255, 255, 0.16);
-        color: var(--breath-on-bg);
+        color: var(--totem-on-bg);
         background: rgba(255, 255, 255, 0.06);
     }
 
-    .breath-card:hover {
-        background: var(--breath-surface-hover);
+    .totem-card:hover {
+        background: var(--totem-surface-hover);
     }
 
-    .breath-link:hover {
-        color: var(--breath-text-secondary);
+    .totem-link:hover {
+        color: var(--totem-text-secondary);
     }
 
-    .breath-btn--primary:hover:not(:disabled) {
+    .totem-btn--primary:hover:not(:disabled) {
         opacity: 0.9;
     }
 
-    .breath-btn--secondary:hover:not(:disabled) {
-        background: var(--breath-surface-hover);
+    .totem-btn--secondary:hover:not(:disabled) {
+        background: var(--totem-surface-hover);
     }
 
-    .breath-btn--ghost:hover:not(:disabled) {
-        color: var(--breath-secondary-text);
-        border-color: var(--breath-secondary-hover-border);
+    .totem-btn--ghost:hover:not(:disabled) {
+        color: var(--totem-secondary-text);
+        border-color: var(--totem-secondary-hover-border);
     }
 
-    .breath-wallpaper-arrow:hover:not(:disabled) {
-        border-color: var(--breath-overlay-hover-border);
-        color: var(--breath-secondary-text);
-        background: var(--breath-overlay-bg);
+    .totem-wallpaper-arrow:hover:not(:disabled) {
+        border-color: var(--totem-overlay-hover-border);
+        color: var(--totem-secondary-text);
+        background: var(--totem-overlay-bg);
     }
 }
 
-.breath-card:focus-visible,
-.breath-link:focus-visible,
-.breath-btn:focus-visible,
-.breath-icon-btn:focus-visible {
+.totem-card:focus-visible,
+.totem-link:focus-visible,
+.totem-btn:focus-visible,
+.totem-icon-btn:focus-visible {
     outline: 2px solid rgba(226, 128, 103, 0.82);
     outline-offset: 2px;
 }
 
 @media (max-width: 768px) {
-    .breath-card {
+    .totem-card {
         min-height: 8.4rem;
     }
 
-    .breath-card-content {
+    .totem-card-content {
         min-height: 6.8rem;
     }
 }
 
 @media (max-width: 480px) {
-    .breath-card {
+    .totem-card {
         padding: 0.82rem 0.9rem 0.78rem;
         min-height: 8.2rem;
     }
 
-    .breath-title {
+    .totem-title {
         font-size: 0.92rem;
     }
 
-    .breath-card-content {
+    .totem-card-content {
         min-height: 6.6rem;
     }
 
-    .breath-actions {
+    .totem-actions {
         gap: 0.55rem;
     }
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .breath-wallpaper,
-    .breath-card-content,
-    .breath-link,
-    .breath-btn,
-    .breath-icon-btn {
+    .totem-wallpaper,
+    .totem-card-content,
+    .totem-link,
+    .totem-btn,
+    .totem-icon-btn {
         transition: none;
     }
 
-    mark.xbt-highlight-new {
+    mark.totem-highlight-new {
         animation: none;
     }
 }
 
-/* Dark theme overrides for breath-home — system preference */
+/* Dark theme overrides for totem-home — system preference */
 @media (prefers-color-scheme: dark) {
-    :root:not([data-theme]) .breath-home {
-        --breath-surface: rgba(15, 11, 9, 0.92);
-        --breath-surface-hover: rgba(22, 17, 15, 0.92);
-        --breath-surface-shadow: none;
-        --breath-border: rgba(226, 128, 103, 0.16);
-        --breath-border-strong: rgba(226, 128, 103, 0.3);
-        --breath-text-primary: rgba(255, 255, 255, 0.92);
-        --breath-text-secondary: rgba(255, 255, 255, 0.86);
-        --breath-text-muted: rgba(255, 255, 255, 0.62);
-        --breath-text-ghost: rgba(255, 255, 255, 0.56);
-        --breath-accent: #e28067;
-        --breath-accent-muted: rgba(226, 128, 103, 0.78);
-        --breath-accent-bg: rgba(226, 128, 103, 0.12);
-        --breath-search-bg: rgb(20, 16, 14);
-        --breath-search-shadow:
+    :root:not([data-theme]) .totem-home {
+        --totem-surface: rgba(15, 11, 9, 0.92);
+        --totem-surface-hover: rgba(22, 17, 15, 0.92);
+        --totem-surface-shadow: none;
+        --totem-border: rgba(226, 128, 103, 0.16);
+        --totem-border-strong: rgba(226, 128, 103, 0.3);
+        --totem-text-primary: rgba(255, 255, 255, 0.92);
+        --totem-text-secondary: rgba(255, 255, 255, 0.86);
+        --totem-text-muted: rgba(255, 255, 255, 0.62);
+        --totem-text-ghost: rgba(255, 255, 255, 0.56);
+        --totem-accent: #e28067;
+        --totem-accent-muted: rgba(226, 128, 103, 0.78);
+        --totem-accent-bg: rgba(226, 128, 103, 0.12);
+        --totem-search-bg: rgb(20, 16, 14);
+        --totem-search-shadow:
             0 1px 6px rgba(11, 6, 5, 0.2), 0 4px 24px rgba(11, 6, 5, 0.12);
-        --breath-placeholder: rgba(255, 255, 255, 0.45);
-        --breath-secondary-bg: rgb(32, 28, 26);
-        --breath-secondary-border: rgba(255, 255, 255, 0.14);
-        --breath-secondary-text: rgba(255, 255, 255, 0.8);
-        --breath-secondary-hover-text: rgba(255, 255, 255, 0.88);
-        --breath-secondary-hover-border: rgba(255, 255, 255, 0.2);
-        --breath-description-text: rgba(255, 255, 255, 0.74);
-        --breath-empty-text: rgba(255, 255, 255, 0.5);
+        --totem-placeholder: rgba(255, 255, 255, 0.45);
+        --totem-secondary-bg: rgb(32, 28, 26);
+        --totem-secondary-border: rgba(255, 255, 255, 0.14);
+        --totem-secondary-text: rgba(255, 255, 255, 0.8);
+        --totem-secondary-hover-text: rgba(255, 255, 255, 0.88);
+        --totem-secondary-hover-border: rgba(255, 255, 255, 0.2);
+        --totem-description-text: rgba(255, 255, 255, 0.74);
+        --totem-empty-text: rgba(255, 255, 255, 0.5);
     }
 }
 
-/* Dark theme overrides for breath-home — manual toggle */
-[data-theme="dark"] .breath-home {
-    --breath-surface: rgba(15, 11, 9, 0.92);
-    --breath-surface-hover: rgba(22, 17, 15, 0.92);
-    --breath-surface-shadow: none;
-    --breath-border: rgba(226, 128, 103, 0.16);
-    --breath-border-strong: rgba(226, 128, 103, 0.3);
-    --breath-text-primary: rgba(255, 255, 255, 0.92);
-    --breath-text-secondary: rgba(255, 255, 255, 0.86);
-    --breath-text-muted: rgba(255, 255, 255, 0.62);
-    --breath-text-ghost: rgba(255, 255, 255, 0.56);
-    --breath-accent: #e28067;
-    --breath-accent-muted: rgba(226, 128, 103, 0.78);
-    --breath-accent-bg: rgba(226, 128, 103, 0.12);
-    --breath-search-bg: rgb(20, 16, 14);
-    --breath-search-shadow:
+/* Dark theme overrides for totem-home — manual toggle */
+[data-theme="dark"] .totem-home {
+    --totem-surface: rgba(15, 11, 9, 0.92);
+    --totem-surface-hover: rgba(22, 17, 15, 0.92);
+    --totem-surface-shadow: none;
+    --totem-border: rgba(226, 128, 103, 0.16);
+    --totem-border-strong: rgba(226, 128, 103, 0.3);
+    --totem-text-primary: rgba(255, 255, 255, 0.92);
+    --totem-text-secondary: rgba(255, 255, 255, 0.86);
+    --totem-text-muted: rgba(255, 255, 255, 0.62);
+    --totem-text-ghost: rgba(255, 255, 255, 0.56);
+    --totem-accent: #e28067;
+    --totem-accent-muted: rgba(226, 128, 103, 0.78);
+    --totem-accent-bg: rgba(226, 128, 103, 0.12);
+    --totem-search-bg: rgb(20, 16, 14);
+    --totem-search-shadow:
         0 1px 6px rgba(11, 6, 5, 0.2), 0 4px 24px rgba(11, 6, 5, 0.12);
-    --breath-placeholder: rgba(255, 255, 255, 0.45);
-    --breath-secondary-bg: rgb(32, 28, 26);
-    --breath-secondary-border: rgba(255, 255, 255, 0.14);
-    --breath-secondary-text: rgba(255, 255, 255, 0.8);
-    --breath-secondary-hover-text: rgba(255, 255, 255, 0.88);
-    --breath-secondary-hover-border: rgba(255, 255, 255, 0.2);
-    --breath-description-text: rgba(255, 255, 255, 0.74);
-    --breath-empty-text: rgba(255, 255, 255, 0.5);
+    --totem-placeholder: rgba(255, 255, 255, 0.45);
+    --totem-secondary-bg: rgb(32, 28, 26);
+    --totem-secondary-border: rgba(255, 255, 255, 0.14);
+    --totem-secondary-text: rgba(255, 255, 255, 0.8);
+    --totem-secondary-hover-text: rgba(255, 255, 255, 0.88);
+    --totem-secondary-hover-border: rgba(255, 255, 255, 0.2);
+    --totem-description-text: rgba(255, 255, 255, 0.74);
+    --totem-empty-text: rgba(255, 255, 255, 0.5);
 }
 
 /* Tour popover — light theme (default) */
-.xbt-tour-popover {
+.totem-tour-popover {
     background: rgba(255, 255, 255, 0.94) !important;
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
@@ -1109,7 +1109,7 @@
     max-width: 20rem !important;
 }
 
-.xbt-tour-popover .driver-popover-close-btn {
+.totem-tour-popover .driver-popover-close-btn {
     color: rgba(28, 25, 23, 0.32) !important;
     font-size: 1.25rem !important;
     width: 1.75rem !important;
@@ -1123,24 +1123,24 @@
         background 150ms;
 }
 
-.xbt-tour-popover .driver-popover-close-btn:hover {
+.totem-tour-popover .driver-popover-close-btn:hover {
     color: rgba(28, 25, 23, 0.72) !important;
     background: rgba(28, 25, 23, 0.06) !important;
 }
 
-.xbt-tour-popover .driver-popover-title {
+.totem-tour-popover .driver-popover-title {
     color: var(--x-text) !important;
     font-size: 0.875rem !important;
     font-weight: 600 !important;
 }
 
-.xbt-tour-popover .driver-popover-description {
+.totem-tour-popover .driver-popover-description {
     color: rgba(28, 25, 23, 0.58) !important;
     font-size: 0.8125rem !important;
     line-height: 1.5 !important;
 }
 
-.xbt-tour-popover .driver-popover-description kbd {
+.totem-tour-popover .driver-popover-description kbd {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -1157,12 +1157,12 @@
     color: rgba(28, 25, 23, 0.72);
 }
 
-.xbt-tour-popover .driver-popover-navigation-btns {
+.totem-tour-popover .driver-popover-navigation-btns {
     gap: 0.5rem !important;
 }
 
-.xbt-tour-popover .driver-popover-prev-btn,
-.xbt-tour-popover .driver-popover-next-btn {
+.totem-tour-popover .driver-popover-prev-btn,
+.totem-tour-popover .driver-popover-next-btn {
     display: inline-flex !important;
     align-items: center !important;
     gap: 0.25rem !important;
@@ -1176,39 +1176,39 @@
         border-color 150ms;
 }
 
-.xbt-tour-popover .driver-popover-prev-btn kbd,
-.xbt-tour-popover .driver-popover-next-btn kbd {
+.totem-tour-popover .driver-popover-prev-btn kbd,
+.totem-tour-popover .driver-popover-next-btn kbd {
     font-size: 0.85em;
     font-weight: 600;
     opacity: 0.7;
 }
 
-.xbt-tour-popover .driver-popover-prev-btn {
+.totem-tour-popover .driver-popover-prev-btn {
     border: 1px solid rgba(28, 25, 23, 0.12) !important;
     background: rgba(28, 25, 23, 0.04) !important;
     color: rgba(28, 25, 23, 0.62) !important;
 }
 
-.xbt-tour-popover .driver-popover-prev-btn:hover {
+.totem-tour-popover .driver-popover-prev-btn:hover {
     background: rgba(28, 25, 23, 0.08) !important;
     border-color: rgba(28, 25, 23, 0.18) !important;
 }
 
-.xbt-tour-popover .driver-popover-next-btn {
+.totem-tour-popover .driver-popover-next-btn {
     border: none !important;
     background: #e28067 !important;
     color: white !important;
 }
 
-.xbt-tour-popover .driver-popover-next-btn:hover {
+.totem-tour-popover .driver-popover-next-btn:hover {
     opacity: 0.88;
 }
 
-.xbt-tour-popover .driver-popover-arrow {
+.totem-tour-popover .driver-popover-arrow {
     display: none !important;
 }
 
-.xbt-tour-popover .driver-popover-progress-text {
+.totem-tour-popover .driver-popover-progress-text {
     color: rgba(28, 25, 23, 0.36) !important;
     font-size: 0.6875rem !important;
     font-variant-numeric: tabular-nums;
@@ -1216,82 +1216,82 @@
 
 /* Dark theme overrides for tour — system preference */
 @media (prefers-color-scheme: dark) {
-    :root:not([data-theme]) .xbt-tour-popover {
+    :root:not([data-theme]) .totem-tour-popover {
         background: rgba(24, 22, 20, 0.96) !important;
         border-color: rgba(226, 128, 103, 0.18) !important;
         box-shadow:
             0 4px 24px rgba(11, 6, 5, 0.4),
             0 1px 4px rgba(11, 6, 5, 0.2) !important;
     }
-    :root:not([data-theme]) .xbt-tour-popover .driver-popover-close-btn {
+    :root:not([data-theme]) .totem-tour-popover .driver-popover-close-btn {
         color: rgba(255, 255, 255, 0.32) !important;
     }
-    :root:not([data-theme]) .xbt-tour-popover .driver-popover-close-btn:hover {
+    :root:not([data-theme]) .totem-tour-popover .driver-popover-close-btn:hover {
         color: rgba(255, 255, 255, 0.72) !important;
         background: rgba(255, 255, 255, 0.08) !important;
     }
-    :root:not([data-theme]) .xbt-tour-popover .driver-popover-description {
+    :root:not([data-theme]) .totem-tour-popover .driver-popover-description {
         color: rgba(255, 255, 255, 0.64) !important;
     }
-    :root:not([data-theme]) .xbt-tour-popover .driver-popover-description kbd {
+    :root:not([data-theme]) .totem-tour-popover .driver-popover-description kbd {
         border-color: rgba(255, 255, 255, 0.14);
         background: rgba(255, 255, 255, 0.07);
         box-shadow: 0 1px 0 rgba(255, 255, 255, 0.05);
         color: rgba(255, 255, 255, 0.82);
     }
-    :root:not([data-theme]) .xbt-tour-popover .driver-popover-prev-btn {
+    :root:not([data-theme]) .totem-tour-popover .driver-popover-prev-btn {
         border-color: rgba(255, 255, 255, 0.12) !important;
         background: rgba(255, 255, 255, 0.05) !important;
         color: rgba(255, 255, 255, 0.72) !important;
     }
-    :root:not([data-theme]) .xbt-tour-popover .driver-popover-prev-btn:hover {
+    :root:not([data-theme]) .totem-tour-popover .driver-popover-prev-btn:hover {
         background: rgba(255, 255, 255, 0.1) !important;
         border-color: rgba(255, 255, 255, 0.18) !important;
     }
-    :root:not([data-theme]) .xbt-tour-popover .driver-popover-next-btn {
+    :root:not([data-theme]) .totem-tour-popover .driver-popover-next-btn {
         background: #e28067 !important;
     }
-    :root:not([data-theme]) .xbt-tour-popover .driver-popover-progress-text {
+    :root:not([data-theme]) .totem-tour-popover .driver-popover-progress-text {
         color: rgba(255, 255, 255, 0.36) !important;
     }
 }
 
 /* Dark theme overrides for tour — manual toggle */
-[data-theme="dark"] .xbt-tour-popover {
+[data-theme="dark"] .totem-tour-popover {
     background: rgba(24, 22, 20, 0.96) !important;
     border-color: rgba(226, 128, 103, 0.18) !important;
     box-shadow:
         0 4px 24px rgba(0, 0, 0, 0.4),
         0 1px 4px rgba(0, 0, 0, 0.2) !important;
 }
-[data-theme="dark"] .xbt-tour-popover .driver-popover-close-btn {
+[data-theme="dark"] .totem-tour-popover .driver-popover-close-btn {
     color: rgba(255, 255, 255, 0.32) !important;
 }
-[data-theme="dark"] .xbt-tour-popover .driver-popover-close-btn:hover {
+[data-theme="dark"] .totem-tour-popover .driver-popover-close-btn:hover {
     color: rgba(255, 255, 255, 0.72) !important;
     background: rgba(255, 255, 255, 0.08) !important;
 }
-[data-theme="dark"] .xbt-tour-popover .driver-popover-description {
+[data-theme="dark"] .totem-tour-popover .driver-popover-description {
     color: rgba(255, 255, 255, 0.64) !important;
 }
-[data-theme="dark"] .xbt-tour-popover .driver-popover-description kbd {
+[data-theme="dark"] .totem-tour-popover .driver-popover-description kbd {
     border-color: rgba(255, 255, 255, 0.14);
     background: rgba(255, 255, 255, 0.07);
     box-shadow: 0 1px 0 rgba(255, 255, 255, 0.05);
     color: rgba(255, 255, 255, 0.82);
 }
-[data-theme="dark"] .xbt-tour-popover .driver-popover-prev-btn {
+[data-theme="dark"] .totem-tour-popover .driver-popover-prev-btn {
     border-color: rgba(255, 255, 255, 0.12) !important;
     background: rgba(255, 255, 255, 0.05) !important;
     color: rgba(255, 255, 255, 0.72) !important;
 }
-[data-theme="dark"] .xbt-tour-popover .driver-popover-prev-btn:hover {
+[data-theme="dark"] .totem-tour-popover .driver-popover-prev-btn:hover {
     background: rgba(255, 255, 255, 0.1) !important;
     border-color: rgba(255, 255, 255, 0.18) !important;
 }
-[data-theme="dark"] .xbt-tour-popover .driver-popover-next-btn {
+[data-theme="dark"] .totem-tour-popover .driver-popover-next-btn {
     background: #e28067 !important;
 }
-[data-theme="dark"] .xbt-tour-popover .driver-popover-progress-text {
+[data-theme="dark"] .totem-tour-popover .driver-popover-progress-text {
     color: rgba(255, 255, 255, 0.36) !important;
 }

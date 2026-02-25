@@ -10,11 +10,21 @@ if (
 }
 
 // Pre-seed wallpaper cache so useWallpaper doesn't try to fetch from Bing (CORS)
-const WALLPAPER_KEY = "xbt_wallpaper_cache_v5";
-const LS_PREFIX = "__xbt_local_";
-const existing = localStorage.getItem(LS_PREFIX + WALLPAPER_KEY);
+const WALLPAPER_KEY = "totem_wallpaper_cache_v5";
+const LEGACY_WALLPAPER_KEY = "xbt_wallpaper_cache_v5";
+const LS_PREFIX = "__totem_local_";
+const LEGACY_LS_PREFIX = "__xbt_local_";
+const cacheKey = LS_PREFIX + WALLPAPER_KEY;
+const legacyCacheKey = LEGACY_LS_PREFIX + LEGACY_WALLPAPER_KEY;
+const existing = localStorage.getItem(cacheKey);
 
 if (!existing) {
+  const legacy = localStorage.getItem(legacyCacheKey);
+  if (legacy) {
+    localStorage.setItem(cacheKey, legacy);
+    localStorage.removeItem(legacyCacheKey);
+  }
+
   const now = new Date();
   const cachedAt = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
@@ -44,8 +54,7 @@ if (!existing) {
     cachedAt,
   };
 
-  localStorage.setItem(
-    LS_PREFIX + WALLPAPER_KEY,
-    JSON.stringify(wallpaperCache),
-  );
+  if (!localStorage.getItem(cacheKey)) {
+    localStorage.setItem(cacheKey, JSON.stringify(wallpaperCache));
+  }
 }

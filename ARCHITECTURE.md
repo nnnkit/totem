@@ -30,7 +30,7 @@ We didn't have the `declarativeNetRequest` rule. Without `Origin: https://x.com`
 #### 1. Content Script (`public/content/detect-user.js`)
 - Runs at `document_start` on `https://x.com/*`
 - Reads `twid` cookie → extracts user ID
-- Stores `xbt_user_id` in `chrome.storage.local`
+- Stores `totem_user_id` in `chrome.storage.local`
 
 #### 2. Background Service Worker (`public/service-worker.js`)
 - `chrome.webRequest.onSendHeaders` — captures auth headers from x.com GraphQL requests
@@ -52,7 +52,7 @@ We didn't have the `declarativeNetRequest` rule. Without `Origin: https://x.com`
 | Store | What | Why |
 |-------|------|-----|
 | `chrome.storage.local` | Auth headers, user ID, sync cursor, settings | Accessible from all contexts |
-| IndexedDB (`xbt`) | Bookmarks data | Better for 1000s of records, indexed queries |
+| IndexedDB (`totem`) | Bookmarks data | Better for 1000s of records, indexed queries |
 
 ### Manifest V3 Permissions
 

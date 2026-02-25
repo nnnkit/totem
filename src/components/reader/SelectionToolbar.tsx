@@ -48,7 +48,7 @@ function snapToWordBoundaries(
 function isInsideHighlight(node: Node): boolean {
   let el: Node | null = node;
   while (el) {
-    if (el instanceof Element && el.tagName === "MARK" && el.classList.contains("xbt-highlight")) return true;
+    if (el instanceof Element && el.tagName === "MARK" && el.classList.contains("totem-highlight")) return true;
     el = el.parentNode;
   }
   return false;
@@ -208,7 +208,7 @@ export function SelectionToolbar({ containerRef, tweetUrl, onHighlight, onAddNot
           positionMethod="fixed"
         >
           <Popover.Popup
-            className="xbt-popover z-30 rounded-lg border border-x-border bg-x-card shadow-xl"
+            className="totem-popover z-30 rounded-lg border border-x-border bg-x-card shadow-xl"
             onMouseDown={(e) => e.preventDefault()}
           >
             <div className="flex items-center gap-1 px-2 py-1.5">

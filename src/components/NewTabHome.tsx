@@ -180,7 +180,7 @@ export function NewTabHome({
   );
 
   return (
-    <div className="breath-home relative flex h-dvh flex-col overflow-hidden">
+    <div className="totem-home relative flex h-dvh flex-col overflow-hidden">
       {!showWallpaper && gradientCss && (
         <div
           className="pointer-events-none absolute inset-0"
@@ -193,12 +193,12 @@ export function NewTabHome({
           alt=""
           onLoad={() => setImgLoaded(true)}
           onError={() => setImgError(true)}
-          className="breath-wallpaper pointer-events-none absolute inset-0 h-full w-full object-cover"
+          className="totem-wallpaper pointer-events-none absolute inset-0 h-full w-full object-cover"
           style={{ opacity: imgLoaded ? 0.6 : 0 }}
         />
       )}
-      <div className="breath-ambient pointer-events-none absolute inset-0" />
-      <div className="breath-grain pointer-events-none absolute inset-0" />
+      <div className="totem-ambient pointer-events-none absolute inset-0" />
+      <div className="totem-grain pointer-events-none absolute inset-0" />
 
       <header className="relative z-20 flex w-full items-center justify-between px-6 pt-5 sm:px-8">
         <TotemLogo className="size-8" />
@@ -206,7 +206,7 @@ export function NewTabHome({
           data-tour="settings-btn"
           type="button"
           onClick={onOpenSettings}
-          className="breath-icon-btn"
+          className="totem-icon-btn"
           aria-label="Open settings"
           title="Settings"
         >
@@ -219,7 +219,7 @@ export function NewTabHome({
           <section className="mx-auto w-full max-w-lg space-y-6">
             <div className="text-center">
               <h1
-                className="breath-clock text-balance tabular-nums"
+                className="totem-clock text-balance tabular-nums"
                 aria-label={`Current time: ${formatClock(now)}`}
               >
                 {formatClock(now)}
@@ -258,14 +258,14 @@ export function NewTabHome({
 
                 return (
                   <form
-                    className="breath-search"
+                    className="totem-search"
                     action={engineConfig?.searchUrl}
                     method={isDefault ? undefined : "GET"}
                     target={isDefault ? undefined : "_blank"}
                     role="search"
                     onSubmit={handleSubmit}
                   >
-                    <span className="breath-search-logo">
+                    <span className="totem-search-logo">
                       <SearchEnginePicker
                         value={searchEngine}
                         onChange={onSearchEngineChange}
@@ -275,11 +275,11 @@ export function NewTabHome({
                       ref={searchRef}
                       type="text"
                       name={engineConfig?.queryParam ?? "q"}
-                      className="breath-search-input"
+                      className="totem-search-input"
                       placeholder="Search the web"
                       autoComplete="off"
                     />
-                    <span className="breath-search-trail">{SEARCH_ICON}</span>
+                    <span className="totem-search-trail">{SEARCH_ICON}</span>
                   </form>
                 );
               })()}
@@ -293,10 +293,10 @@ export function NewTabHome({
                   <a
                     key={site.url}
                     href={site.url}
-                    className="breath-quick-link"
+                    className="totem-quick-link"
                     title={site.title}
                   >
-                    <span className="breath-quick-link-icon">
+                    <span className="totem-quick-link-icon">
                       <img
                         src={site.faviconUrl}
                         alt=""
@@ -305,7 +305,7 @@ export function NewTabHome({
                         loading="lazy"
                       />
                     </span>
-                    <span className="breath-quick-link-label">
+                    <span className="totem-quick-link-label">
                       {site.hostname.replace(/^www\./, "")}
                     </span>
                   </a>
@@ -317,8 +317,8 @@ export function NewTabHome({
 
         <footer className="mx-auto w-full max-w-lg pb-6">
           {authPhase === "connecting" ? (
-            <article className="breath-card text-center">
-              <p className="breath-eyebrow">Connecting to X&hellip;</p>
+            <article className="totem-card text-center">
+              <p className="totem-eyebrow">Connecting to X&hellip;</p>
               <div className="mt-4 flex justify-center">
                 <svg
                   viewBox="0 0 24 24"
@@ -330,14 +330,14 @@ export function NewTabHome({
                   <path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round" />
                 </svg>
               </div>
-              <p className="breath-empty mt-4 text-pretty">
+              <p className="totem-empty mt-4 text-pretty">
                 Syncing your session in the background.
               </p>
             </article>
           ) : authPhase === "need_login" ? (
-            <article className="breath-card text-center">
-              <p className="breath-eyebrow">Log in to see your bookmarks</p>
-              <p className="breath-empty mt-4 text-pretty">
+            <article className="totem-card text-center">
+              <p className="totem-eyebrow">Log in to see your bookmarks</p>
+              <p className="totem-empty mt-4 text-pretty">
                 Sign in to your X account to sync and read your saved posts.
               </p>
               <a
@@ -347,7 +347,7 @@ export function NewTabHome({
                 onClick={() => {
                   onLogin?.().catch(() => {});
                 }}
-                className="breath-btn breath-btn--primary mt-6 inline-block"
+                className="totem-btn totem-btn--primary mt-6 inline-block"
               >
                 Log in to X
               </a>
@@ -357,7 +357,7 @@ export function NewTabHome({
               <article
                 data-tour="bookmark-card"
                 className={cn(
-                  "breath-card breath-card--zen",
+                  "totem-card totem-card--zen",
                   cardEngaged && "is-engaged",
                 )}
                 onMouseEnter={() => setCardEngaged(true)}
@@ -393,10 +393,10 @@ export function NewTabHome({
                     : ""
                 }`}
               >
-                <div className="breath-card-content">
+                <div className="totem-card-content">
                   <div className="flex justify-between">
                     <div className="flex items-center gap-1.5">
-                      <p className="breath-eyebrow uppercase">recommended</p>
+                      <p className="totem-eyebrow uppercase">recommended</p>
                       {offlineMode && (
                         <span title="Not signed in — showing cached bookmarks">
                           <LinkBreakIcon
@@ -406,44 +406,44 @@ export function NewTabHome({
                         </span>
                       )}
                     </div>
-                    <kbd className="breath-kbd">O</kbd>
+                    <kbd className="totem-kbd">O</kbd>
                   </div>
 
-                  <h2 className="breath-title mt-4 text-balance">
+                  <h2 className="totem-title mt-4 text-balance">
                     {currentItem.title}
                   </h2>
-                  <p className="breath-description mt-2.5 text-pretty">
+                  <p className="totem-description mt-2.5 text-pretty">
                     {currentItem.excerpt}
                   </p>
                   <div className="mt-3 flex items-end justify-between gap-3">
-                    <p className="breath-meta">
+                    <p className="totem-meta">
                       @{currentItem.bookmark.author.screenName}
                     </p>
                   </div>
                 </div>
               </article>
 
-              <div className="breath-actions">
+              <div className="totem-actions">
                 <button
                   data-tour="open-all-btn"
                   type="button"
-                  className="breath-btn breath-btn--secondary"
+                  className="totem-btn totem-btn--secondary"
                   onClick={() => {
                     dismissTour();
                     onOpenReading();
                   }}
                 >
                   Open all bookmarks
-                  <kbd className="breath-kbd">L</kbd>
+                  <kbd className="totem-kbd">L</kbd>
                 </button>
                 <button
                   data-tour="surprise-btn"
                   type="button"
-                  className="breath-btn breath-btn--secondary"
+                  className="totem-btn totem-btn--secondary"
                   onClick={surpriseMe}
                 >
                   Surprise me
-                  <kbd className="breath-kbd">S</kbd>
+                  <kbd className="totem-kbd">S</kbd>
                 </button>
               </div>
 
@@ -466,8 +466,8 @@ export function NewTabHome({
               )}
             </div>
           ) : syncState.phase === "syncing" ? (
-            <article className="breath-card text-center">
-              <p className="breath-eyebrow">Syncing your bookmarks&hellip;</p>
+            <article className="totem-card text-center">
+              <p className="totem-eyebrow">Syncing your bookmarks&hellip;</p>
               <div className="mt-4 flex justify-center">
                 <svg
                   viewBox="0 0 24 24"
@@ -479,14 +479,14 @@ export function NewTabHome({
                   <path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round" />
                 </svg>
               </div>
-              <p className="breath-empty mt-4 text-pretty">
+              <p className="totem-empty mt-4 text-pretty">
                 Fetching bookmarks from your account. This may take a moment.
               </p>
             </article>
           ) : syncState.phase === "error" ? (
-            <article className="breath-card text-center">
-              <p className="breath-eyebrow">Something went wrong</p>
-              <p className="breath-empty mt-4 text-pretty">
+            <article className="totem-card text-center">
+              <p className="totem-eyebrow">Something went wrong</p>
+              <p className="totem-empty mt-4 text-pretty">
                 {syncState.error === "reconnecting"
                   ? "Reconnecting to your account\u2026"
                   : "Could not sync your bookmarks. Check your connection and try again."}
@@ -495,23 +495,23 @@ export function NewTabHome({
                 <button
                   type="button"
                   onClick={onSync}
-                  className="breath-btn breath-btn--primary mt-6"
+                  className="totem-btn totem-btn--primary mt-6"
                 >
                   Try again
                 </button>
               )}
             </article>
           ) : (
-            <article className="breath-card text-center">
-              <p className="breath-eyebrow">Your reading list is quiet</p>
-              <p className="breath-empty mt-4 text-pretty">
+            <article className="totem-card text-center">
+              <p className="totem-eyebrow">Your reading list is quiet</p>
+              <p className="totem-empty mt-4 text-pretty">
                 No bookmarks found. Bookmark some posts on X, then sync to see
                 them here.
               </p>
               <button
                 type="button"
                 onClick={onSync}
-                className="breath-btn breath-btn--primary mt-6"
+                className="totem-btn totem-btn--primary mt-6"
               >
                 Sync bookmarks
               </button>

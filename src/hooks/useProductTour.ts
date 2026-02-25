@@ -53,7 +53,7 @@ export function useProductTour({ enabled, hasBookmarks }: Props) {
 
     const timeout = window.setTimeout(() => {
       const tour = driver({
-        popoverClass: "xbt-tour-popover",
+        popoverClass: "totem-tour-popover",
         stagePadding: 6,
         stageRadius: 12,
         animate: true,

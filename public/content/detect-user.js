@@ -2,7 +2,7 @@
 // Reads the twid cookie to detect the logged-in user ID and relays
 // mutation messages from the MAIN world hook to the service worker.
 (function () {
-  const MESSAGE_SOURCE = "xbt-bookmark-mutation";
+  const MESSAGE_SOURCE = "totem-bookmark-mutation";
 
   function parseTwidUserId(rawValue) {
     if (typeof rawValue !== "string" || !rawValue) return null;
@@ -39,9 +39,9 @@
   const currentUserId = parseTwidUserId(twidRawValue);
 
   if (currentUserId) {
-    chrome.storage.local.set({ xbt_user_id: currentUserId });
+    chrome.storage.local.set({ totem_user_id: currentUserId });
   } else {
-    chrome.storage.local.remove(["xbt_user_id"]);
+    chrome.storage.local.remove(["totem_user_id"]);
   }
 
   function handleBookmarkMutationMessage(event) {

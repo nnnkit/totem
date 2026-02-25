@@ -1,10 +1,10 @@
 // Content script: runs in MAIN world at document_start on x.com
 // Hooks fetch/XHR to detect bookmark mutations and discovers query IDs
 (() => {
-  if (window.__xbtBookmarkMutationHookInstalled) return;
-  window.__xbtBookmarkMutationHookInstalled = true;
+  if (window.__totemBookmarkMutationHookInstalled) return;
+  window.__totemBookmarkMutationHookInstalled = true;
 
-  const SOURCE = "xbt-bookmark-mutation";
+  const SOURCE = "totem-bookmark-mutation";
 
   const parseTweetIdFromObject = (obj) => {
     if (!obj || typeof obj !== "object") return "";
@@ -100,14 +100,14 @@
 
   XMLHttpRequest.prototype.open = function (...args) {
     try {
-      this.__xbtUrl = typeof args[1] === "string" ? args[1] : "";
+      this.__totemUrl = typeof args[1] === "string" ? args[1] : "";
     } catch {}
     return originalOpen.apply(this, args);
   };
 
   XMLHttpRequest.prototype.send = function (body) {
     try {
-      const operation = operationFromUrl(this.__xbtUrl || "");
+      const operation = operationFromUrl(this.__totemUrl || "");
       if (operation) {
         emit(operation, parseTweetId(body));
       }
@@ -133,8 +133,8 @@
   };
 
   function discoverQueryIds() {
-    if (window.__xbtQidsScanned) return;
-    window.__xbtQidsScanned = true;
+    if (window.__totemQidsScanned) return;
+    window.__totemQidsScanned = true;
 
     var targets = ["DeleteBookmark", "CreateBookmark", "TweetDetail"];
     var found = {};

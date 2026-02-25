@@ -160,11 +160,36 @@ const TOP_SITES = [
   { title: "Netflix", url: "https://www.netflix.com" },
 ];
 
+function migrateLegacyPrefix(oldPrefix: string, newPrefix: string) {
+  const keysToCopy: string[] = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const raw = localStorage.key(i);
+    if (raw?.startsWith(oldPrefix)) {
+      keysToCopy.push(raw);
+    }
+  }
+
+  for (const oldKey of keysToCopy) {
+    const suffix = oldKey.slice(oldPrefix.length);
+    const newKey = newPrefix + suffix;
+    if (localStorage.getItem(newKey) === null) {
+      const value = localStorage.getItem(oldKey);
+      if (value !== null) {
+        localStorage.setItem(newKey, value);
+      }
+    }
+    localStorage.removeItem(oldKey);
+  }
+}
+
 export function createMockChrome() {
+  migrateLegacyPrefix("__xbt_local_", "__totem_local_");
+  migrateLegacyPrefix("__xbt_sync_", "__totem_sync_");
+
   return {
     storage: {
-      local: createStorageArea("__xbt_local_", "local"),
-      sync: createStorageArea("__xbt_sync_", "sync"),
+      local: createStorageArea("__totem_local_", "local"),
+      sync: createStorageArea("__totem_sync_", "sync"),
       onChanged: {
         addListener(cb: StorageChangeCallback) {
           globalListeners.add(cb);

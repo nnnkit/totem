@@ -38,7 +38,7 @@ export function HighlightPopover({
     const handleClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
 
-      const mark = target.closest("mark.xbt-highlight") as HTMLElement | null;
+      const mark = target.closest("mark.totem-highlight") as HTMLElement | null;
       if (!mark) return;
 
       const highlightId = mark.dataset.highlightId;
@@ -78,7 +78,7 @@ export function HighlightPopover({
           positionMethod="fixed"
         >
           <Popover.Popup
-            className="xbt-popover z-30 rounded-lg border border-x-border bg-x-card shadow-xl"
+            className="totem-popover z-30 rounded-lg border border-x-border bg-x-card shadow-xl"
             onMouseDown={(e) => e.preventDefault()}
           >
             {confirmingRemove ? (

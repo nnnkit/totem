@@ -13,6 +13,7 @@ import {
   STORE_READING_PROGRESS as PROGRESS_STORE_NAME,
   STORE_HIGHLIGHTS as HIGHLIGHTS_STORE_NAME,
 } from "../lib/constants";
+import { LEGACY_IDB_DATABASE_NAME } from "../lib/storage-keys";
 
 interface XBookmarksDbSchema extends DBSchema {
   bookmarks: {
@@ -50,6 +51,7 @@ interface XBookmarksDbSchema extends DBSchema {
 }
 
 let dbPromise: Promise<IDBPDatabase<XBookmarksDbSchema>> | null = null;
+let legacyDbMigrationPromise: Promise<void> | null = null;
 
 function createDb() {
   return openDB<XBookmarksDbSchema>(DB_NAME, DB_VERSION, {
@@ -120,9 +122,90 @@ function createDb() {
   });
 }
 
+async function hasDatabase(name: string): Promise<boolean> {
+  if (typeof indexedDB === "undefined" || typeof indexedDB.databases !== "function") {
+    return false;
+  }
+  try {
+    const databases = await indexedDB.databases();
+    return databases.some((entry) => entry.name === name);
+  } catch {
+    return false;
+  }
+}
+
+async function migrateLegacyDatabaseIfNeeded(db: IDBPDatabase<XBookmarksDbSchema>): Promise<void> {
+  if (!(await hasDatabase(LEGACY_IDB_DATABASE_NAME))) return;
+
+  const [bookmarkCount, detailCount, progressCount, highlightCount] =
+    await Promise.all([
+      db.count(STORE_NAME),
+      db.count(DETAIL_STORE_NAME),
+      db.count(PROGRESS_STORE_NAME),
+      db.count(HIGHLIGHTS_STORE_NAME),
+    ]);
+
+  // If the target DB already has user data, don't overwrite it.
+  if (bookmarkCount + detailCount + progressCount + highlightCount > 0) return;
+
+  const legacyDb = await openDB<XBookmarksDbSchema>(LEGACY_IDB_DATABASE_NAME);
+  try {
+    const bookmarks = legacyDb.objectStoreNames.contains(STORE_NAME)
+      ? await legacyDb.getAll(STORE_NAME)
+      : [];
+    const details = legacyDb.objectStoreNames.contains(DETAIL_STORE_NAME)
+      ? await legacyDb.getAll(DETAIL_STORE_NAME)
+      : [];
+    const progress = legacyDb.objectStoreNames.contains(PROGRESS_STORE_NAME)
+      ? await legacyDb.getAll(PROGRESS_STORE_NAME)
+      : [];
+    const highlights = legacyDb.objectStoreNames.contains(HIGHLIGHTS_STORE_NAME)
+      ? await legacyDb.getAll(HIGHLIGHTS_STORE_NAME)
+      : [];
+
+    if (
+      bookmarks.length === 0 &&
+      details.length === 0 &&
+      progress.length === 0 &&
+      highlights.length === 0
+    ) {
+      return;
+    }
+
+    const tx = db.transaction(
+      [STORE_NAME, DETAIL_STORE_NAME, PROGRESS_STORE_NAME, HIGHLIGHTS_STORE_NAME],
+      "readwrite",
+    );
+    for (const row of bookmarks) {
+      tx.objectStore(STORE_NAME).put(row);
+    }
+    for (const row of details) {
+      tx.objectStore(DETAIL_STORE_NAME).put(row);
+    }
+    for (const row of progress) {
+      tx.objectStore(PROGRESS_STORE_NAME).put(row);
+    }
+    for (const row of highlights) {
+      tx.objectStore(HIGHLIGHTS_STORE_NAME).put(row);
+    }
+    await tx.done;
+  } finally {
+    legacyDb.close();
+  }
+}
+
 async function getDb(): Promise<IDBPDatabase<XBookmarksDbSchema>> {
   if (!dbPromise) {
-    dbPromise = createDb().catch((error) => {
+    dbPromise = (async () => {
+      const db = await createDb();
+      if (!legacyDbMigrationPromise) {
+        legacyDbMigrationPromise = migrateLegacyDatabaseIfNeeded(db).catch(
+          () => {},
+        );
+      }
+      await legacyDbMigrationPromise;
+      return db;
+    })().catch((error) => {
       dbPromise = null;
       throw error;
     });

@@ -29,7 +29,7 @@ function getTextNodesInSection(section: Element): Text[] {
 }
 
 function stripHighlightMarks(container: Element) {
-  const marks = container.querySelectorAll("mark.xbt-highlight");
+  const marks = container.querySelectorAll("mark.totem-highlight");
   for (const mark of marks) {
     const parent = mark.parentNode;
     if (!parent) continue;
@@ -82,7 +82,7 @@ function wrapTextRange(
     const afterText = textNode.textContent!.slice(overlapEnd);
 
     const mark = document.createElement("mark");
-    mark.className = flash ? "xbt-highlight xbt-highlight-new" : "xbt-highlight";
+    mark.className = flash ? "totem-highlight totem-highlight-new" : "totem-highlight";
     mark.dataset.highlightId = highlightId;
     mark.textContent = highlightText;
 
@@ -207,7 +207,7 @@ export function useHighlights({ tweetId, contentReady, containerRef }: Props) {
           if (!(node instanceof Element)) {
             return true;
           }
-          return !node.matches("mark.xbt-highlight");
+          return !node.matches("mark.totem-highlight");
         });
       });
 
@@ -254,7 +254,7 @@ export function useHighlights({ tweetId, contentReady, containerRef }: Props) {
         const container = containerRef.current;
         if (
           container &&
-          !container.querySelector("mark.xbt-highlight") &&
+          !container.querySelector("mark.totem-highlight") &&
           attempts < 10
         ) {
           attempts++;

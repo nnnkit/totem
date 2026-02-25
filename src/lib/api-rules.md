@@ -4,7 +4,7 @@ Rules governing how the extension communicates with x.com's GraphQL API.
 
 ## 1. Auth Separation
 
-The auth gate (`handleCheckAuth`) checks `xbt_auth_headers` and resolves the Bookmarks query ID on-demand.
+The auth gate (`handleCheckAuth`) checks `totem_auth_headers` and resolves the Bookmarks query ID on-demand.
 All query IDs (Bookmarks, DeleteBookmark, CreateBookmark, TweetDetail) are resolved lazily by their respective handlers — nothing is persisted to storage.
 
 ## 2. Self-Healing Query ID Resolution
@@ -20,7 +20,7 @@ Results are cached in-memory only. On HTTP 400 (wrong query ID), `forceRediscove
 ## 3. Auth Expiry
 
 On 401/403 responses:
-1. Remove `xbt_auth_headers` + `xbt_auth_time`
+1. Remove `totem_auth_headers` + `totem_auth_time`
 2. Call `reAuthSilently()` (opens hidden `x.com/i/bookmarks` tab, 15s timeout)
 3. Retry the original request once
 4. Throw `AUTH_EXPIRED` if retry also fails
@@ -55,7 +55,7 @@ On 401/403 responses:
 
 ## 6. Storage Keys
 
-All keys use `xbt_` prefix + snake_case. Declared in `src/lib/storage-keys.ts`, mirrored as string literals in `public/service-worker.js`.
+All keys use `totem_` prefix + snake_case. Declared in `src/lib/storage-keys.ts`, mirrored as string literals in `public/service-worker.js`.
 
 ## 7. Discovery
 

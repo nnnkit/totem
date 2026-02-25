@@ -87,7 +87,7 @@ export function NotePopover({ highlight, anchorEl, onSaveNote, onDeleteNote, onC
           sideOffset={8}
           positionMethod="fixed"
         >
-        <Popover.Popup className="xbt-popover z-30 w-80 rounded-lg border border-x-border bg-x-card shadow-xl">
+          <Popover.Popup className="totem-popover z-30 w-80 rounded-lg border border-x-border bg-x-card shadow-xl">
           <div className="flex items-center justify-between px-4 pt-3">
             <span className="text-[11px] font-medium uppercase tracking-wide text-x-text-secondary/50">
               Note

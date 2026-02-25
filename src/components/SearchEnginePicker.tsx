@@ -45,7 +45,7 @@ export function SearchEnginePicker({ value, onChange }: Props) {
     <Popover.Root>
       <Popover.Trigger
         type="button"
-        className="breath-picker-trigger"
+        className="totem-picker-trigger"
         aria-label={`Search engine: ${current.name}`}
       >
         {current.logo}
@@ -58,7 +58,7 @@ export function SearchEnginePicker({ value, onChange }: Props) {
           positionMethod="fixed"
           className="z-50"
         >
-          <Popover.Popup className="xbt-popover w-48 rounded-lg border border-x-border bg-x-card py-1.5 shadow-xl">
+          <Popover.Popup className="totem-popover w-48 rounded-lg border border-x-border bg-x-card py-1.5 shadow-xl">
             {OPTIONS.map((option) => {
               const selected = option.id === value;
               return (

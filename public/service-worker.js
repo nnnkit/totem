@@ -15,21 +15,21 @@ const CAPTURED_HEADERS = new Set([
   "x-twitter-client-language",
 ]);
 
-// Key convention: xbt_ prefix + snake_case.
+// Key convention: totem_ prefix + snake_case.
 // Keep in sync with src/lib/storage-keys.ts.
-const GRAPHQL_CATALOG_STORAGE_KEY = "xbt_graphql_catalog";
+const GRAPHQL_CATALOG_STORAGE_KEY = "totem_graphql_catalog";
 const GRAPHQL_CATALOG_VERSION = 1;
 const MAX_GRAPHQL_ENDPOINTS = 300;
 const MAX_CAPTURED_PARAM_LENGTH = 12000;
 const CATALOG_FLUSH_DELAY_MS = 600;
-const BOOKMARK_EVENTS_STORAGE_KEY = "xbt_bookmark_events";
+const BOOKMARK_EVENTS_STORAGE_KEY = "totem_bookmark_events";
 const MAX_BOOKMARK_EVENTS = 400;
 const AUTH_STATE_STORAGE_KEYS = [
-  "xbt_user_id",
-  "xbt_auth_headers",
-  "xbt_auth_time",
+  "totem_user_id",
+  "totem_auth_headers",
+  "totem_auth_time",
 ];
-const WEEKLY_SW_CLEANUP_KEY = "xbt_sw_cleanup_at";
+const WEEKLY_SW_CLEANUP_KEY = "totem_sw_cleanup_at";
 const WEEKLY_SW_CLEANUP_INTERVAL_MS = 1000 * 60 * 60 * 24 * 7;
 const BOOKMARK_EVENT_RETENTION_MS = 1000 * 60 * 60 * 24 * 14;
 const GRAPHQL_ENDPOINT_RETENTION_MS = 1000 * 60 * 60 * 24 * 30;
@@ -135,8 +135,8 @@ async function clearAuthSessionState() {
 async function syncAuthSessionFromCookie(storedState = null) {
   const userId = await readUserIdFromTwidCookie();
   if (userId) {
-    if (storedState?.xbt_user_id !== userId) {
-      await chrome.storage.local.set({ xbt_user_id: userId });
+    if (storedState?.totem_user_id !== userId) {
+      await chrome.storage.local.set({ totem_user_id: userId });
     }
     return userId;
   }
@@ -144,9 +144,9 @@ async function syncAuthSessionFromCookie(storedState = null) {
   // Avoid clearing stored auth state here: cookie reads can be unavailable
   // transiently in service worker context even when the user is signed in.
   const storedUserId =
-    typeof storedState?.xbt_user_id === "string" &&
-    storedState.xbt_user_id
-      ? storedState.xbt_user_id
+    typeof storedState?.totem_user_id === "string" &&
+    storedState.totem_user_id
+      ? storedState.totem_user_id
       : null;
   return storedUserId;
 }
@@ -185,7 +185,7 @@ function reAuthSilently() {
     };
 
     const onChange = (changes) => {
-      if (changes.xbt_auth_headers && !resolved) {
+      if (changes.totem_auth_headers && !resolved) {
         resolved = true;
         cleanup();
         resolve(true);
@@ -210,8 +210,8 @@ function reAuthSilently() {
 }
 
 async function buildHeaders() {
-  const stored = await chrome.storage.local.get(["xbt_auth_headers"]);
-  const auth = stored.xbt_auth_headers;
+  const stored = await chrome.storage.local.get(["totem_auth_headers"]);
+  const auth = stored.totem_auth_headers;
   if (!auth?.authorization) throw new Error("NO_AUTH");
 
   const headers = {
@@ -875,32 +875,59 @@ async function runWeeklyServiceWorkerCleanup() {
 }
 
 // ═══════════════════════════════════════════════════════════
-// ONE-TIME MIGRATION: tw_ → xbt_ storage keys
+// ONE-TIME MIGRATION: tw_ / xbt_ → totem_ storage keys
 // ═══════════════════════════════════════════════════════════
 
-const TW_TO_XBT_KEY_MAP = {
-  tw_graphql_catalog: "xbt_graphql_catalog",
-  tw_auth_headers: "xbt_auth_headers",
-  tw_auth_time: "xbt_auth_time",
-  tw_query_id: "xbt_query_id",
-  tw_features: "xbt_features",
-  tw_detail_query_id: "xbt_detail_query_id",
-  tw_delete_query_id: "xbt_delete_query_id",
-  tw_create_query_id: "xbt_create_query_id",
-  tw_bookmark_events: "xbt_bookmark_events",
-  current_user_id: "xbt_user_id",
-  tw_weekly_cleanup_at: "xbt_sw_cleanup_at",
-  tw_seen_tweet_display_types: "xbt_seen_display_types",
+const TW_TO_TOTEM_KEY_MAP = {
+  tw_graphql_catalog: "totem_graphql_catalog",
+  tw_auth_headers: "totem_auth_headers",
+  tw_auth_time: "totem_auth_time",
+  tw_query_id: "totem_query_id",
+  tw_features: "totem_features",
+  tw_detail_query_id: "totem_detail_query_id",
+  tw_delete_query_id: "totem_delete_query_id",
+  tw_create_query_id: "totem_create_query_id",
+  tw_bookmark_events: "totem_bookmark_events",
+  current_user_id: "totem_user_id",
+  tw_weekly_cleanup_at: "totem_sw_cleanup_at",
+  tw_seen_tweet_display_types: "totem_seen_display_types",
+};
+
+const XBT_TO_TOTEM_KEY_MAP = {
+  xbt_graphql_catalog: "totem_graphql_catalog",
+  xbt_auth_headers: "totem_auth_headers",
+  xbt_auth_time: "totem_auth_time",
+  xbt_query_id: "totem_query_id",
+  xbt_features: "totem_features",
+  xbt_detail_query_id: "totem_detail_query_id",
+  xbt_delete_query_id: "totem_delete_query_id",
+  xbt_create_query_id: "totem_create_query_id",
+  xbt_bookmark_events: "totem_bookmark_events",
+  xbt_user_id: "totem_user_id",
+  xbt_sw_cleanup_at: "totem_sw_cleanup_at",
+  xbt_seen_display_types: "totem_seen_display_types",
+  xbt_db_cleanup_at: "totem_db_cleanup_at",
+  xbt_last_reconcile: "totem_last_reconcile",
+  xbt_last_sync: "totem_last_sync",
+  xbt_last_light_sync: "totem_last_light_sync",
+  xbt_light_sync_needed: "totem_light_sync_needed",
+  xbt_last_mutation: "totem_last_mutation",
+  xbt_last_mutation_done: "totem_last_mutation_done",
 };
 
 async function migrateOldStorageKeys() {
-  const oldKeys = Object.keys(TW_TO_XBT_KEY_MAP);
-  const newKeys = Object.values(TW_TO_XBT_KEY_MAP);
+  const legacyKeyMap = {
+    ...TW_TO_TOTEM_KEY_MAP,
+    ...XBT_TO_TOTEM_KEY_MAP,
+  };
+
+  const oldKeys = Object.keys(legacyKeyMap);
+  const newKeys = Object.values(legacyKeyMap);
   const stored = await chrome.storage.local.get([...oldKeys, ...newKeys]);
   const updates = {};
   const toRemove = [];
 
-  for (const [oldKey, newKey] of Object.entries(TW_TO_XBT_KEY_MAP)) {
+  for (const [oldKey, newKey] of Object.entries(legacyKeyMap)) {
     if (stored[oldKey] !== undefined) {
       // Only migrate if the new key doesn't already have data
       if (stored[newKey] === undefined) {
@@ -926,13 +953,13 @@ migrateOldStorageKeys().catch(() => {});
 
 async function handleCheckAuth() {
   const stored = await chrome.storage.local.get([
-    "xbt_user_id",
-    "xbt_auth_headers",
-    "xbt_auth_time",
+    "totem_user_id",
+    "totem_auth_headers",
+    "totem_auth_time",
   ]);
 
   const userId = await syncAuthSessionFromCookie(stored);
-  const hasAuthHeader = !!stored.xbt_auth_headers?.authorization;
+  const hasAuthHeader = !!stored.totem_auth_headers?.authorization;
   const hasUser = Boolean(userId || hasAuthHeader);
 
   // Query IDs are resolved on-demand from in-memory cache / bundles.
@@ -951,11 +978,11 @@ async function handleCheckAuth() {
 
 async function handleFetchBookmarks(cursor, count, _retried = false, _queryIdRetried = false) {
   const stored = await chrome.storage.local.get([
-    "xbt_auth_headers",
-    "xbt_features",
+    "totem_auth_headers",
+    "totem_features",
   ]);
 
-  if (!stored.xbt_auth_headers?.authorization) throw new Error("NO_AUTH");
+  if (!stored.totem_auth_headers?.authorization) throw new Error("NO_AUTH");
 
   const queryId = await resolveQueryId("Bookmarks");
   if (!queryId) throw new Error("NO_QUERY_ID");
@@ -964,7 +991,7 @@ async function handleFetchBookmarks(cursor, count, _retried = false, _queryIdRet
   const variables = { count: pageCount, includePromotedContent: true };
   if (cursor) variables.cursor = cursor;
 
-  const features = stored.xbt_features || JSON.stringify(DEFAULT_FEATURES);
+  const features = stored.totem_features || JSON.stringify(DEFAULT_FEATURES);
 
   const params = new URLSearchParams({
     variables: JSON.stringify(variables),
@@ -982,7 +1009,7 @@ async function handleFetchBookmarks(cursor, count, _retried = false, _queryIdRet
 
   if (response.status === 401 || response.status === 403) {
     if (!_retried) {
-      await chrome.storage.local.remove(["xbt_auth_headers", "xbt_auth_time"]);
+      await chrome.storage.local.remove(["totem_auth_headers", "totem_auth_time"]);
       const success = await reAuthSilently();
       if (success) return handleFetchBookmarks(cursor, count, true, _queryIdRetried);
     }
@@ -1011,8 +1038,8 @@ async function handleFetchBookmarks(cursor, count, _retried = false, _queryIdRet
 async function handleDeleteBookmark(tweetId, _retried = false, _queryIdRetried = false) {
   if (!tweetId) throw new Error("MISSING_TWEET_ID");
 
-  const stored = await chrome.storage.local.get(["xbt_auth_headers"]);
-  if (!stored.xbt_auth_headers?.authorization) throw new Error("NO_AUTH");
+  const stored = await chrome.storage.local.get(["totem_auth_headers"]);
+  if (!stored.totem_auth_headers?.authorization) throw new Error("NO_AUTH");
 
   const queryId = await resolveQueryId("DeleteBookmark");
   if (!queryId) throw new Error("NO_QUERY_ID");
@@ -1031,7 +1058,7 @@ async function handleDeleteBookmark(tweetId, _retried = false, _queryIdRetried =
 
   if (response.status === 401 || response.status === 403) {
     if (!_retried) {
-      await chrome.storage.local.remove(["xbt_auth_headers", "xbt_auth_time"]);
+      await chrome.storage.local.remove(["totem_auth_headers", "totem_auth_time"]);
       const success = await reAuthSilently();
       if (success) return handleDeleteBookmark(tweetId, true, _queryIdRetried);
     }
@@ -1102,9 +1129,9 @@ async function persistSeenTweetDisplayTypes(payload) {
   const incoming = collectTweetDisplayTypes(payload);
   if (incoming.length === 0) return;
 
-  const stored = await chrome.storage.local.get(["xbt_seen_display_types"]);
-  const existing = Array.isArray(stored.xbt_seen_display_types)
-    ? stored.xbt_seen_display_types.filter((item) => typeof item === "string")
+  const stored = await chrome.storage.local.get(["totem_seen_display_types"]);
+  const existing = Array.isArray(stored.totem_seen_display_types)
+    ? stored.totem_seen_display_types.filter((item) => typeof item === "string")
     : [];
 
   const merged = Array.from(new Set([...existing, ...incoming])).sort();
@@ -1112,23 +1139,23 @@ async function persistSeenTweetDisplayTypes(payload) {
     return;
   }
 
-  await chrome.storage.local.set({ xbt_seen_display_types: merged });
+  await chrome.storage.local.set({ totem_seen_display_types: merged });
 }
 
 async function handleFetchTweetDetail(tweetId, _retried = false, _queryIdRetried = false) {
   const stored = await chrome.storage.local.get([
-    "xbt_auth_headers",
-    "xbt_features",
+    "totem_auth_headers",
+    "totem_features",
   ]);
 
-  if (!stored.xbt_auth_headers?.authorization) throw new Error("NO_AUTH");
+  if (!stored.totem_auth_headers?.authorization) throw new Error("NO_AUTH");
 
   const queryId = await resolveQueryId("TweetDetail");
   if (!queryId) throw new Error("NO_QUERY_ID");
 
   const featureSet = {
     ...DEFAULT_FEATURES,
-    ...parseFeatureSet(stored.xbt_features),
+    ...parseFeatureSet(stored.totem_features),
     ...DETAIL_FEATURE_OVERRIDES,
   };
 
@@ -1166,7 +1193,7 @@ async function handleFetchTweetDetail(tweetId, _retried = false, _queryIdRetried
 
   if (response.status === 401 || response.status === 403) {
     if (!_retried) {
-      await chrome.storage.local.remove(["xbt_auth_headers", "xbt_auth_time"]);
+      await chrome.storage.local.remove(["totem_auth_headers", "totem_auth_time"]);
       const success = await reAuthSilently();
       if (success) return handleFetchTweetDetail(tweetId, true, _queryIdRetried);
     }
@@ -1206,10 +1233,10 @@ function maybeSignalLightSync() {
   if (now - lastLightSyncSignalAt < LIGHT_SYNC_DEBOUNCE_MS) return;
   lastLightSyncSignalAt = now;
 
-  chrome.storage.local.get(["xbt_last_light_sync"], (stored) => {
-    const lastSync = Number(stored.xbt_last_light_sync || 0);
+  chrome.storage.local.get(["totem_last_light_sync"], (stored) => {
+    const lastSync = Number(stored.totem_last_light_sync || 0);
     if (now - lastSync < LIGHT_SYNC_THROTTLE_MS) return;
-    chrome.storage.local.set({ xbt_light_sync_needed: now });
+    chrome.storage.local.set({ totem_light_sync_needed: now });
   });
 }
 
@@ -1231,8 +1258,8 @@ chrome.webRequest.onSendHeaders.addListener(
 
     if (headers["authorization"] && headers["cookie"] && headers["x-csrf-token"]) {
       chrome.storage.local.set({
-        xbt_auth_headers: headers,
-        xbt_auth_time: Date.now(),
+        totem_auth_headers: headers,
+        totem_auth_time: Date.now(),
       });
       discoverAllMissingQueryIds().catch(() => {});
     }
@@ -1246,7 +1273,7 @@ chrome.webRequest.onSendHeaders.addListener(
       try {
         const params = new URLSearchParams(match[2]);
         const features = params.get("features");
-        if (features) chrome.storage.local.set({ xbt_features: features });
+        if (features) chrome.storage.local.set({ totem_features: features });
       } catch {}
     }
 
@@ -1276,7 +1303,7 @@ chrome.webRequest.onSendHeaders.addListener(
       const tweetId = extractTweetIdFromReferer(referer) || "";
       chrome.storage.local
         .set({
-          xbt_last_mutation: {
+          totem_last_mutation: {
             at: Date.now(),
             operation: mutation.operation,
             url: details.url,
@@ -1326,7 +1353,7 @@ chrome.webRequest.onCompleted.addListener(
 
     chrome.storage.local
       .set({
-        xbt_last_mutation_done: {
+        totem_last_mutation_done: {
           at: Date.now(),
           operation: mutation.operation,
           url: details.url,
@@ -1483,8 +1510,8 @@ runWeeklyServiceWorkerCleanup().catch(() => {});
 
 // On startup, proactively discover query IDs into in-memory cache.
 // Nothing is persisted — IDs are always fresh per service worker session.
-chrome.storage.local.get(["xbt_auth_headers"], (stored) => {
-  if (stored.xbt_auth_headers?.authorization) {
+chrome.storage.local.get(["totem_auth_headers"], (stored) => {
+  if (stored.totem_auth_headers?.authorization) {
     discoverAllMissingQueryIds().catch(() => {});
   }
 });
