@@ -24,6 +24,9 @@ import {
   getHighlightCountsByTweetIds,
   type HighlightCounts,
 } from "../db";
+import { Button } from "./ui/Button";
+import { Input } from "./ui/Input";
+import { Badge } from "./ui/Badge";
 
 export type ReadingTab = "continue" | "read" | "unread";
 
@@ -305,18 +308,13 @@ export function BookmarksList({
             containerWidthClass,
           )}
         >
-          <button
-            onClick={onBack}
-            aria-label="Back to home"
-            title="Back"
-            className="rounded-lg p-2 text-foreground transition-colors hover:bg-surface-hover"
-          >
+          <Button variant="ghost" size="icon" onClick={onBack} aria-label="Back to home" title="Back">
             <ArrowLeftIcon className="size-5" />
-          </button>
+          </Button>
           <span className="text-lg font-semibold text-foreground">Reading</span>
           <div className="relative ml-auto mr-2 max-w-xs flex-1">
             <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
-            <input
+            <Input
               ref={searchInputRef}
               type="text"
               value={query}
@@ -328,20 +326,20 @@ export function BookmarksList({
                 }
               }}
               placeholder="Search bookmarks..."
-              className="w-full rounded-lg border border-border bg-surface-card py-1.5 pl-9 pr-3 text-sm text-foreground placeholder:text-muted/60 focus:border-accent focus:outline-none"
+              className="pl-9 pr-3"
             />
           </div>
           <div>
-            <button
-              type="button"
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={onSync}
               disabled={syncing}
-              className="rounded-lg p-2 text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
               aria-label="Sync bookmarks"
               title="Sync bookmarks"
             >
               <span className={cn(syncing && "animate-spin")}><ArrowsClockwiseIcon className="size-5" /></span>
-            </button>
+            </Button>
           </div>
         </div>
         <div
@@ -411,16 +409,12 @@ export function BookmarksList({
                           {pickTitle(bookmark)}
                         </p>
                         {newBookmarkIds.has(bookmark.tweetId) && (
-                          <span className="shrink-0 rounded-md bg-accent px-2 py-0.5 text-xs font-medium text-white">
-                            New
-                          </span>
+                          <Badge variant="accent">New</Badge>
                         )}
                       </div>
                       <p className="mt-1 text-xs text-muted">
                         @{bookmark.author.screenName} &middot;{" "}
-                        <span className="rounded bg-border/50 px-1.5 py-0.5 text-xs uppercase">
-                          {inferKindBadge(bookmark)}
-                        </span>
+                        <Badge>{inferKindBadge(bookmark)}</Badge>
                       </p>
                     </div>
                   </button>
@@ -431,13 +425,9 @@ export function BookmarksList({
                 <p className="text-muted text-lg text-pretty">
                   All caught up! No unread bookmarks.
                 </p>
-                <button
-                  type="button"
-                  onClick={onSync}
-                  className="mt-4 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90"
-                >
+                <Button onClick={onSync} className="mt-4">
                   Sync new bookmarks
-                </button>
+                </Button>
               </div>
             )}
           </>
@@ -476,9 +466,7 @@ export function BookmarksList({
                             {pickTitle(bookmark)}
                           </p>
                           {newBookmarkIds.has(bookmark.tweetId) && (
-                            <span className="shrink-0 rounded-md bg-accent px-2 py-0.5 text-xs font-medium text-white">
-                              New
-                            </span>
+                            <Badge variant="accent">New</Badge>
                           )}
                         </div>
                         <p className="mt-1 text-xs text-muted">
@@ -507,13 +495,9 @@ export function BookmarksList({
                 <p className="text-muted text-lg text-pretty">
                   No reading in progress. Open a bookmark to start tracking.
                 </p>
-                <button
-                  type="button"
-                  onClick={() => onTabChange("unread")}
-                  className="mt-4 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90"
-                >
+                <Button onClick={() => onTabChange("unread")} className="mt-4">
                   Browse unread
-                </button>
+                </Button>
               </div>
             )}
           </>
@@ -552,9 +536,7 @@ export function BookmarksList({
                             {pickTitle(bookmark)}
                           </p>
                           {newBookmarkIds.has(bookmark.tweetId) && (
-                            <span className="shrink-0 rounded-md bg-accent px-2 py-0.5 text-xs font-medium text-white">
-                              New
-                            </span>
+                            <Badge variant="accent">New</Badge>
                           )}
                         </div>
                         <p className="mt-1 text-xs text-muted">
@@ -583,13 +565,9 @@ export function BookmarksList({
                 <p className="text-muted text-lg text-pretty">
                   Nothing finished yet. Keep reading!
                 </p>
-                <button
-                  type="button"
-                  onClick={() => onTabChange("continue")}
-                  className="mt-4 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90"
-                >
+                <Button onClick={() => onTabChange("continue")} className="mt-4">
                   Continue reading
-                </button>
+                </Button>
               </div>
             )}
           </>

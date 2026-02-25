@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Popover } from "@base-ui/react/popover";
 import { HighlighterIcon, LightningIcon, NotePencilIcon } from "@phosphor-icons/react";
 import type { SelectionRange } from "../../types";
 import { buildGrokUrl } from "./utils";
+import { Button } from "../ui/Button";
+import { PopoverContent, Popover } from "../ui/Popover";
+import { Separator } from "../ui/Separator";
 
 // --- Selection detection utilities ---
 
@@ -207,43 +209,36 @@ export function SelectionToolbar({ containerRef, tweetUrl, onHighlight, onAddNot
           sideOffset={8}
           positionMethod="fixed"
         >
-          <Popover.Popup
-            className="totem-popover z-30 rounded-lg border border-border bg-surface-card shadow-xl"
-            onMouseDown={(e) => e.preventDefault()}
-          >
+          <PopoverContent onMouseDown={(e) => e.preventDefault()}>
             <div className="flex items-center gap-1 px-2 py-1.5">
-              <button
-                onClick={handleHighlight}
-                className="flex items-center gap-1.5 rounded-md px-2 py-1 text-sm text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
-              >
+              <Button variant="ghost" size="sm" onClick={handleHighlight} className="gap-1.5">
                 <HighlighterIcon weight="bold" className="size-4" />
                 <span>Highlight</span>
-              </button>
+              </Button>
 
-              <div className="mx-0.5 h-5 w-px bg-border" />
+              <Separator orientation="vertical" />
 
-              <button
-                onClick={handleNote}
-                className="flex items-center gap-1.5 rounded-md px-2 py-1 text-sm text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
-              >
+              <Button variant="ghost" size="sm" onClick={handleNote} className="gap-1.5">
                 <NotePencilIcon weight="bold" className="size-4" />
                 <span>Add Note</span>
-              </button>
+              </Button>
 
-              <div className="mx-0.5 h-5 w-px bg-border" />
+              <Separator orientation="vertical" />
 
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => {
                   window.open(grokUrl, "_blank", "noopener,noreferrer");
                   dismiss();
                 }}
-                className="flex items-center gap-1.5 rounded-md px-2 py-1 text-sm text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
+                className="gap-1.5"
               >
                 <LightningIcon weight="bold" className="size-4" />
                 <span>Ask Grok</span>
-              </button>
+              </Button>
             </div>
-          </Popover.Popup>
+          </PopoverContent>
         </Popover.Positioner>
       </Popover.Portal>
     </Popover.Root>

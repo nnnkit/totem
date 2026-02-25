@@ -7,6 +7,7 @@ import {
 } from "@phosphor-icons/react";
 import type { LinkCard, TweetUrl } from "../../types";
 import { buildGrokUrl, sanitizeUrl } from "./utils";
+import { Button } from "../ui/Button";
 
 type ResolvedUrl = {
   href: string;
@@ -94,18 +95,19 @@ interface ReadStatusButtonProps {
 
 function ReadStatusButton({ onToggle, isRead }: ReadStatusButtonProps) {
   return (
-    <button
-      type="button"
+    <Button
+      variant={isRead ? "outline" : "outline"}
+      size="sm"
       onClick={onToggle}
       className={
         isRead
-          ? "inline-flex items-center gap-1.5 rounded-md border border-green-500/30 bg-green-500/10 px-3 py-1.5 text-xs font-medium text-success transition-colors hover:border-green-500/50 hover:bg-green-500/20"
-          : "inline-flex items-center gap-1.5 rounded-md border border-border bg-surface-card px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
+          ? "border-green-500/30 bg-green-500/10 text-success hover:border-green-500/50 hover:bg-green-500/20"
+          : ""
       }
     >
       <CheckIcon weight="bold" className="size-3.5" />
       {isRead ? "Read" : "Mark as read"}
-    </button>
+    </Button>
   );
 }
 
@@ -168,14 +170,15 @@ export function TweetLinks({
   ) : null;
 
   const deleteBookmarkBtn = onDeleteBookmark ? (
-    <button
-      type="button"
+    <Button
+      variant="outline"
+      size="sm"
       onClick={onDeleteBookmark}
-      className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface-card px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:text-red-500 hover:border-red-500/30 hover:bg-red-500/10"
+      className="hover:text-red-500 hover:border-red-500/30 hover:bg-red-500/10"
     >
       <BookmarkSimpleIcon weight="fill" className="size-3.5" />
       Remove
-    </button>
+    </Button>
   ) : null;
 
   const hasActions = readStatusBtn || viewOnXLink || askGrokLink || deleteBookmarkBtn;

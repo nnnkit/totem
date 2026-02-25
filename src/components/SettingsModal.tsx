@@ -3,7 +3,11 @@ import { MonitorIcon, MoonIcon, SunIcon, XIcon } from "@phosphor-icons/react";
 import type { UserSettings } from "../types";
 import type { ThemePreference } from "../hooks/useTheme";
 import { cn } from "../lib/cn";
-import { Modal } from "./Modal";
+import { Modal } from "./ui/Modal";
+import { Button } from "./ui/Button";
+import { ToggleGroup } from "./ui/ToggleGroup";
+import { Switch } from "./ui/Switch";
+import { Select } from "./ui/Select";
 
 interface Props {
   open: boolean;
@@ -15,15 +19,15 @@ interface Props {
   onResetLocalData: () => Promise<void>;
 }
 
-const BACKGROUND_OPTIONS: { value: UserSettings["backgroundMode"]; label: string }[] = [
-  { value: "gradient", label: "Gradient" },
-  { value: "images", label: "Images" },
+const BACKGROUND_OPTIONS = [
+  { value: "gradient" as const, label: "Gradient" },
+  { value: "images" as const, label: "Images" },
 ];
 
-const THEME_OPTIONS: { value: ThemePreference; label: string; icon: "monitor" | "sun" | "moon" }[] = [
-  { value: "system", label: "Auto", icon: "monitor" },
-  { value: "light", label: "Light", icon: "sun" },
-  { value: "dark", label: "Dark", icon: "moon" },
+const THEME_OPTIONS = [
+  { value: "system" as ThemePreference, label: "Auto", icon: <MonitorIcon className="size-4" /> },
+  { value: "light" as ThemePreference, label: "Light", icon: <SunIcon className="size-4" /> },
+  { value: "dark" as ThemePreference, label: "Dark", icon: <MoonIcon className="size-4" /> },
 ];
 
 export function SettingsModal({
@@ -64,15 +68,16 @@ export function SettingsModal({
       )}>
         <div className="flex shrink-0 items-center justify-between px-6 pt-5 pb-3">
           <h2 id="settings-title" className="text-lg font-semibold text-foreground">Settings</h2>
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={onClose}
-            className="p-2 -mr-2 rounded-lg text-muted hover:text-foreground hover:bg-surface-hover transition-colors"
+            className="-mr-2"
             aria-label="Close settings"
             title="Close"
           >
             <XIcon className="size-5" />
-          </button>
+          </Button>
         </div>
 
         <div className="overflow-y-auto px-6 pb-6 space-y-5">
@@ -80,53 +85,22 @@ export function SettingsModal({
             <h3 className="text-xs font-medium text-muted mb-2.5">
               Appearance
             </h3>
-            <div className="flex gap-1 rounded-lg bg-surface p-1">
-              {THEME_OPTIONS.map((opt) => (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => onThemePreferenceChange(opt.value)}
-                  className={cn(
-                    "flex-1 py-2 text-sm font-medium rounded-md transition-colors flex items-center justify-center gap-1.5",
-                    themePreference === opt.value
-                      ? "bg-accent/15 text-accent"
-                      : "text-foreground hover:bg-surface-hover",
-                  )}
-                >
-                  {opt.icon === "monitor" ? (
-                    <MonitorIcon className="size-4" />
-                  ) : opt.icon === "sun" ? (
-                    <SunIcon className="size-4" />
-                  ) : (
-                    <MoonIcon className="size-4" />
-                  )}
-                  {opt.label}
-                </button>
-              ))}
-            </div>
+            <ToggleGroup
+              items={THEME_OPTIONS}
+              value={themePreference}
+              onChange={onThemePreferenceChange}
+            />
           </section>
 
           <section>
             <h3 className="text-xs font-medium text-muted mb-2.5">
               Background
             </h3>
-            <div className="flex gap-1 rounded-lg bg-surface p-1">
-              {BACKGROUND_OPTIONS.map((opt) => (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => onUpdateSettings({ backgroundMode: opt.value })}
-                  className={cn(
-                    "flex-1 py-2 text-sm font-medium rounded-md transition-colors",
-                    settings.backgroundMode === opt.value
-                      ? "bg-accent/15 text-accent"
-                      : "text-foreground hover:bg-surface-hover",
-                  )}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
+            <ToggleGroup
+              items={BACKGROUND_OPTIONS}
+              value={settings.backgroundMode}
+              onChange={(value) => onUpdateSettings({ backgroundMode: value })}
+            />
           </section>
 
           <section>
@@ -138,41 +112,21 @@ export function SettingsModal({
                 <span id="label-search-bar" className="text-sm text-foreground">
                   Show search bar
                 </span>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={settings.showSearchBar}
+                <Switch
+                  checked={settings.showSearchBar}
+                  onCheckedChange={(checked) => onUpdateSettings({ showSearchBar: checked })}
                   aria-labelledby="label-search-bar"
-                  onClick={() =>
-                    onUpdateSettings({
-                      showSearchBar: !settings.showSearchBar,
-                    })
-                  }
-                  className={cn(
-                    "relative inline-flex h-6 w-11 items-center rounded-full transition-colors",
-                    settings.showSearchBar ? "bg-accent" : "bg-border",
-                  )}
-                >
-                  <span
-                    className={cn(
-                      "inline-block size-4 rounded-full bg-white transition-transform",
-                      settings.showSearchBar ? "translate-x-6" : "translate-x-1",
-                    )}
-                  />
-                </button>
+                />
               </label>
 
               <label className="flex items-center justify-between cursor-pointer">
                 <span id="label-quick-links" className="text-sm text-foreground">
                   Show quick links
                 </span>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={settings.showTopSites}
-                  aria-labelledby="label-quick-links"
-                  onClick={async () => {
-                    if (!settings.showTopSites) {
+                <Switch
+                  checked={settings.showTopSites}
+                  onCheckedChange={async (checked) => {
+                    if (checked) {
                       try {
                         const granted = await chrome.permissions.request({
                           permissions: ["topSites", "favicon"],
@@ -182,22 +136,10 @@ export function SettingsModal({
                         return;
                       }
                     }
-                    onUpdateSettings({
-                      showTopSites: !settings.showTopSites,
-                    });
+                    onUpdateSettings({ showTopSites: checked });
                   }}
-                  className={cn(
-                    "relative inline-flex h-6 w-11 items-center rounded-full transition-colors",
-                    settings.showTopSites ? "bg-accent" : "bg-border",
-                  )}
-                >
-                  <span
-                    className={cn(
-                      "inline-block size-4 rounded-full bg-white transition-transform",
-                      settings.showTopSites ? "translate-x-6" : "translate-x-1",
-                    )}
-                  />
-                </button>
+                  aria-labelledby="label-quick-links"
+                />
               </label>
 
               {settings.showTopSites && (
@@ -205,21 +147,20 @@ export function SettingsModal({
                   <span className="text-sm text-muted">
                     Max quick links
                   </span>
-                  <select
+                  <Select
                     value={settings.topSitesLimit}
                     onChange={(e) =>
                       onUpdateSettings({
                         topSitesLimit: Number(e.target.value),
                       })
                     }
-                    className="rounded-lg border border-border bg-surface px-2.5 py-1.5 text-sm text-foreground focus:border-accent focus:outline-none transition-colors"
                   >
                     {[3, 4, 5, 6, 8, 10].map((n) => (
                       <option key={n} value={n}>
                         {n}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </div>
               )}
             </div>
@@ -231,31 +172,31 @@ export function SettingsModal({
             </h3>
             {confirmingReset ? (
               <div className="flex gap-2">
-                <button
-                  type="button"
+                <Button
+                  variant="secondary"
                   onClick={() => setConfirmingReset(false)}
                   disabled={resetting}
-                  className="flex-1 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-muted transition-colors hover:bg-surface-hover disabled:opacity-70"
+                  className="flex-1"
                 >
                   Cancel
-                </button>
-                <button
-                  type="button"
+                </Button>
+                <Button
+                  variant="destructive"
                   onClick={handleResetLocalData}
                   disabled={resetting}
-                  className="flex-1 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm font-medium text-red-400 transition-colors hover:bg-red-500/20 disabled:opacity-70"
+                  className="flex-1 border border-red-500/30"
                 >
                   {resetting ? "Resetting..." : "Confirm reset"}
-                </button>
+                </Button>
               </div>
             ) : (
-              <button
-                type="button"
+              <Button
+                variant="secondary"
                 onClick={() => setConfirmingReset(true)}
-                className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-muted transition-colors hover:bg-surface-hover"
+                className="w-full"
               >
                 Reset local data
-              </button>
+              </Button>
             )}
             {resetError ? (
               <p className="text-xs text-red-400 mt-2">
@@ -269,4 +210,3 @@ export function SettingsModal({
     </Modal>
   );
 }
-

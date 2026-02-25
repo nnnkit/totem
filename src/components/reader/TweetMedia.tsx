@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from "react";
 import { XIcon } from "@phosphor-icons/react";
 import type { Media } from "../../types";
 import { cn } from "../../lib/cn";
-import { Modal } from "../Modal";
+import { Modal } from "../ui/Modal";
 
 const prefersReducedMotion =
   typeof window !== "undefined" &&

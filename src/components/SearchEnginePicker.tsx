@@ -1,8 +1,8 @@
-import { Popover } from "@base-ui/react/popover";
 import { CaretUpDownIcon, CheckIcon } from "@phosphor-icons/react";
 import type { SearchEngineId } from "../types";
 import { SEARCH_ENGINES, BROWSER_DEFAULT_LOGO } from "../lib/search-engines";
 import { cn } from "../lib/cn";
+import { PopoverContent, Popover } from "./ui/Popover";
 
 interface PickerOption {
   id: SearchEngineId;
@@ -58,7 +58,7 @@ export function SearchEnginePicker({ value, onChange }: Props) {
           positionMethod="fixed"
           className="z-50"
         >
-          <Popover.Popup className="totem-popover w-48 rounded-lg border border-border bg-surface-card py-1.5 shadow-xl">
+          <PopoverContent className="w-48 py-1.5">
             {OPTIONS.map((option) => {
               const selected = option.id === value;
               return (
@@ -79,7 +79,7 @@ export function SearchEnginePicker({ value, onChange }: Props) {
                 </Popover.Close>
               );
             })}
-          </Popover.Popup>
+          </PopoverContent>
         </Popover.Positioner>
       </Popover.Portal>
     </Popover.Root>

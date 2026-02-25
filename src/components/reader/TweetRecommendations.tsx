@@ -1,6 +1,7 @@
 import { ShuffleIcon } from "@phosphor-icons/react";
 import type { Bookmark } from "../../types";
 import { compactPreview } from "./utils";
+import { Button } from "../ui/Button";
 
 interface Props {
   relatedBookmarks: Bookmark[];
@@ -23,15 +24,15 @@ export function TweetRecommendations({
         </h2>
         <div className="flex items-center gap-2">
           {onShuffle && (
-            <button
-              type="button"
+            <Button
+              variant="outline"
+              size="sm"
               onClick={onShuffle}
-              className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface-card px-2.5 py-1 text-xs font-medium text-muted transition-colors hover:bg-surface-hover hover:text-accent"
               aria-label="Shuffle recommendations"
               title="Shuffle recommendations"
             >
               <ShuffleIcon className="size-4" />
-            </button>
+            </Button>
           )}
         </div>
       </div>

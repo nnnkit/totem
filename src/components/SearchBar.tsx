@@ -6,6 +6,7 @@ import {
 } from "@phosphor-icons/react";
 import { cn } from "../lib/cn";
 import { TotemLogo } from "./TotemLogo";
+import { Button } from "./ui/Button";
 
 interface Props {
   query: string;
@@ -30,14 +31,9 @@ export function SearchBar({
     <div className="sticky top-0 z-10 bg-surface/80 backdrop-blur-md border-b border-border">
       <div className="max-w-3xl mx-auto px-4 py-3 flex items-center gap-4">
         {onBack && (
-          <button
-            onClick={onBack}
-            aria-label="Back to home"
-            title="Back"
-            className="p-2 -ml-2 text-muted hover:text-foreground hover:bg-surface-hover rounded-lg transition-colors"
-          >
+          <Button variant="ghost" size="icon" onClick={onBack} className="-ml-2" aria-label="Back to home" title="Back">
             <ArrowLeftIcon className="size-5" />
-          </button>
+          </Button>
         )}
         <TotemLogo className="size-7 shrink-0" />
 
@@ -53,24 +49,26 @@ export function SearchBar({
           />
         </div>
 
-        <button
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={onRefresh}
           disabled={syncing}
           aria-label="Sync bookmarks"
-          className="p-2 text-muted hover:text-accent hover:bg-accent/10 rounded-lg transition-colors disabled:opacity-50"
           title="Sync bookmarks (top page)"
         >
           <span className={cn(syncing && "animate-spin")}><ArrowsClockwiseIcon className="size-5" /></span>
-        </button>
+        </Button>
 
-        <button
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={onOpenSettings}
           aria-label="Open settings"
-          className="p-2 text-muted hover:text-accent hover:bg-accent/10 rounded-lg transition-colors"
           title="Settings"
         >
           <GearSixIcon className="size-5" />
-        </button>
+        </Button>
 
         <span className="text-muted text-sm shrink-0 tabular-nums">
           {bookmarkCount}

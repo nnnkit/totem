@@ -15,6 +15,7 @@ import { HighlightPopover } from "./reader/HighlightPopover";
 import { NotePopover } from "./reader/NotePopover";
 import { useReadingProgress } from "../hooks/useReadingProgress";
 import { useHighlights } from "../hooks/useHighlights";
+import { Button } from "./ui/Button";
 
 interface Props {
   bookmark: Bookmark;
@@ -191,14 +192,9 @@ export function BookmarkReader({
         <div
           className={cn("mx-auto flex items-center gap-3 px-4 py-3", containerWidthClass)}
         >
-          <button
-            onClick={onBack}
-            aria-label="Back to bookmarks"
-            title="Back"
-            className="rounded-lg p-2 text-foreground transition-colors hover:bg-surface-hover"
-          >
+          <Button variant="ghost" size="icon" onClick={onBack} aria-label="Back to bookmarks" title="Back">
             <ArrowLeftIcon className="size-5" />
-          </button>
+          </Button>
 
           <span className="text-lg font-semibold text-foreground">Post</span>
 

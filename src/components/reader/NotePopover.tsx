@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Popover } from "@base-ui/react/popover";
 import type { Highlight } from "../../types";
+import { Button } from "../ui/Button";
+import { PopoverContent, Popover } from "../ui/Popover";
+import { Textarea } from "../ui/Textarea";
 
 interface Props {
   highlight: Highlight;
@@ -87,7 +89,7 @@ export function NotePopover({ highlight, anchorEl, onSaveNote, onDeleteNote, onC
           sideOffset={8}
           positionMethod="fixed"
         >
-          <Popover.Popup className="totem-popover z-30 w-80 rounded-lg border border-border bg-surface-card shadow-xl">
+          <PopoverContent className="w-80">
           <div className="flex items-center justify-between px-4 pt-3">
             <span className="text-[11px] font-medium uppercase tracking-wide text-muted/50">
               Note
@@ -106,29 +108,28 @@ export function NotePopover({ highlight, anchorEl, onSaveNote, onDeleteNote, onC
           <div className="px-4 pb-3">
             {editing ? (
               <>
-                <textarea
+                <Textarea
                   ref={textareaRef}
                   value={noteText}
                   onChange={(e) => setNoteText(e.target.value)}
                   onKeyDown={handleTextareaKeyDown}
                   placeholder="Write a note..."
                   rows={3}
-                  className="mt-2 w-full resize-none rounded-lg border border-border bg-transparent px-3 py-2 text-sm leading-relaxed text-foreground placeholder:text-muted/40 focus:border-accent focus:outline-none"
+                  className="mt-2"
                 />
                 <div className="mt-2.5 flex justify-end gap-2">
-                  <button
-                    onClick={handleCancel}
-                    className="rounded-md px-3 py-1.5 text-xs text-muted transition-colors hover:bg-surface-hover"
-                  >
+                  <Button variant="ghost" size="sm" onClick={handleCancel}>
                     Cancel
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant="accent-soft"
+                    size="sm"
                     onClick={handleSave}
                     disabled={!noteText.trim()}
-                    className="rounded-md bg-accent/15 px-3 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent/25 disabled:opacity-40"
+                    className="font-medium"
                   >
                     Save
-                  </button>
+                  </Button>
                 </div>
               </>
             ) : (
@@ -142,43 +143,40 @@ export function NotePopover({ highlight, anchorEl, onSaveNote, onDeleteNote, onC
                   </p>
                 )}
                 <div className="mt-3 flex items-center justify-end gap-1">
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={() => {
                       setEditing(true);
                       setNoteText(highlight.note || "");
                     }}
-                    className="rounded-md px-2.5 py-1 text-xs text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
                   >
                     Edit
-                  </button>
+                  </Button>
                   {confirmingDelete ? (
                     <div className="flex gap-1">
-                      <button
-                        onClick={() => setConfirmingDelete(false)}
-                        className="rounded-md px-2.5 py-1 text-xs text-muted transition-colors hover:bg-surface-hover"
-                      >
+                      <Button variant="ghost" size="sm" onClick={() => setConfirmingDelete(false)}>
                         Cancel
-                      </button>
-                      <button
-                        onClick={handleDelete}
-                        className="rounded-md bg-red-500/15 px-2.5 py-1 text-xs font-medium text-red-500 transition-colors hover:bg-red-500/25"
-                      >
+                      </Button>
+                      <Button variant="destructive" size="sm" className="font-medium" onClick={handleDelete}>
                         Delete
-                      </button>
+                      </Button>
                     </div>
                   ) : (
-                    <button
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       onClick={() => setConfirmingDelete(true)}
-                      className="rounded-md px-2.5 py-1 text-xs text-red-400/80 transition-colors hover:bg-red-500/10 hover:text-red-400"
+                      className="text-red-400/80 hover:bg-red-500/10 hover:text-red-400"
                     >
                       Delete
-                    </button>
+                    </Button>
                   )}
                 </div>
               </>
             )}
           </div>
-        </Popover.Popup>
+        </PopoverContent>
         </Popover.Positioner>
       </Popover.Portal>
     </Popover.Root>

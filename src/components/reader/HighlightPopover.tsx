@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
-import { Popover } from "@base-ui/react/popover";
 import { XIcon, NotePencilIcon } from "@phosphor-icons/react";
 import type { Highlight } from "../../types";
+import { Button } from "../ui/Button";
+import { PopoverContent, Popover } from "../ui/Popover";
+import { Separator } from "../ui/Separator";
 
 interface PopoverState {
   highlight: Highlight;
@@ -77,49 +79,44 @@ export function HighlightPopover({
           sideOffset={8}
           positionMethod="fixed"
         >
-          <Popover.Popup
-            className="totem-popover z-30 rounded-lg border border-border bg-surface-card shadow-xl"
-            onMouseDown={(e) => e.preventDefault()}
-          >
+          <PopoverContent onMouseDown={(e) => e.preventDefault()}>
             {confirmingRemove ? (
               <div className="flex items-center gap-2 px-3 py-2">
                 <span className="text-xs text-muted">Remove?</span>
-                <button
-                  onClick={() => setConfirmingRemove(false)}
-                  className="rounded-md px-2.5 py-1 text-xs text-muted transition-colors hover:bg-surface-hover"
-                >
+                <Button variant="ghost" size="sm" onClick={() => setConfirmingRemove(false)}>
                   Cancel
-                </button>
-                <button
-                  onClick={handleUnhighlight}
-                  className="rounded-md bg-red-500/15 px-2.5 py-1 text-xs font-medium text-red-500 transition-colors hover:bg-red-500/25"
-                >
+                </Button>
+                <Button variant="destructive" size="sm" className="font-medium" onClick={handleUnhighlight}>
                   Remove
-                </button>
+                </Button>
               </div>
             ) : (
               <div className="flex items-center gap-1 px-2 py-1.5">
-                <button
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => setConfirmingRemove(true)}
-                  className="flex items-center gap-1.5 rounded-md px-2 py-1 text-sm text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
+                  className="gap-1.5"
                 >
                   <XIcon weight="bold" className="size-4" />
                   <span>Remove</span>
-                </button>
-                <div className="mx-0.5 h-5 w-px bg-border" />
-                <button
+                </Button>
+                <Separator orientation="vertical" />
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => {
                     onAddNote(highlight, state.anchorEl);
                     dismiss();
                   }}
-                  className="flex items-center gap-1.5 rounded-md px-2 py-1 text-sm text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
+                  className="gap-1.5"
                 >
                   <NotePencilIcon weight="bold" className="size-4" />
                   <span>Note</span>
-                </button>
+                </Button>
               </div>
             )}
-          </Popover.Popup>
+          </PopoverContent>
         </Popover.Positioner>
       </Popover.Portal>
     </Popover.Root>

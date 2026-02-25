@@ -14,7 +14,7 @@ import { BookmarkReader } from "./components/BookmarkReader";
 import { BookmarksList, type ReadingTab } from "./components/BookmarksList";
 import { SettingsModal } from "./components/SettingsModal";
 import { TotemLogo } from "./components/TotemLogo";
-import { Toast } from "./components/Toast";
+import { Toast } from "./components/ui/Toast";
 import { useContinueReading } from "./hooks/useContinueReading";
 import type { Bookmark } from "./types";
 
