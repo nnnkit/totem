@@ -54,8 +54,8 @@ function TweetBody({
         {repostComment && (
           <RichTextBlock text={repostComment} compact={compact} style="tweet" />
         )}
-        <div className="mt-4 rounded-xl border border-x-border p-4">
-          <p className="text-xs uppercase text-x-text-secondary">
+        <div className="mt-4 rounded-xl border border-border p-4">
+          <p className="text-xs uppercase text-muted">
             Reposted content
           </p>
           <div className="mt-2 flex items-center gap-2 text-sm">
@@ -65,10 +65,10 @@ function TweetBody({
               className="size-7 rounded-full"
               loading="lazy"
             />
-            <span className="truncate font-semibold text-x-text">
+            <span className="truncate font-semibold text-foreground">
               {tweet.retweetedTweet.author.name}
             </span>
-            <span className="truncate text-x-text-secondary">
+            <span className="truncate text-muted">
               @{tweet.retweetedTweet.author.screenName}
             </span>
           </div>
@@ -141,7 +141,7 @@ function ThreadTweets({ tweets }: ThreadTweetsProps) {
 
   return (
     <section className="mt-8">
-      <p className="mb-4 text-xs font-semibold uppercase text-x-text-secondary">
+      <p className="mb-4 text-xs font-semibold uppercase text-muted">
         Thread
       </p>
       <div>
@@ -160,18 +160,18 @@ function ThreadTweets({ tweets }: ThreadTweetsProps) {
                   className="size-10 shrink-0 rounded-full"
                   loading="lazy"
                 />
-                {!isLast && <div className="mt-1 w-0.5 flex-1 bg-x-border" />}
+                {!isLast && <div className="mt-1 w-0.5 flex-1 bg-border" />}
               </div>
               <div className={cn("min-w-0 flex-1", !isLast && "pb-5")}>
                 <div className="flex items-center gap-1.5 text-sm">
-                  <span className="truncate font-bold text-x-text">
+                  <span className="truncate font-bold text-foreground">
                     {tweet.author.name}
                   </span>
-                  <span className="truncate text-x-text-secondary">
+                  <span className="truncate text-muted">
                     @{tweet.author.screenName}
                   </span>
-                  <span className="text-x-text-secondary">&middot;</span>
-                  <span className="shrink-0 text-x-text-secondary">
+                  <span className="text-muted">&middot;</span>
+                  <span className="shrink-0 text-muted">
                     {formatThreadDate(tweet.createdAt)}
                   </span>
                 </div>
@@ -244,14 +244,14 @@ export const TweetContent = memo(function TweetContent({
       </div>
 
       {detailLoading && (
-        <div className="mt-6 flex items-center gap-3 px-6 py-4 text-sm text-x-text-secondary">
+        <div className="mt-6 flex items-center gap-3 px-6 py-4 text-sm text-muted">
           <span className="animate-spin"><div className="size-4 rounded-full border-2 border-accent border-t-transparent" /></span>
           Loading details...
         </div>
       )}
 
       {detailError && (
-        <p className="mt-6 px-6 py-2 text-sm text-x-text-secondary">
+        <p className="mt-6 px-6 py-2 text-sm text-muted">
           Could not load complete post details. Showing cached bookmark data.
         </p>
       )}

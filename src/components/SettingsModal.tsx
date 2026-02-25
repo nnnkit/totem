@@ -59,15 +59,15 @@ export function SettingsModal({
     <Modal open={open} onClose={onClose} className="bg-[rgba(11,6,5,0.5)]" ariaLabelledBy="settings-title">
       {(closing) => (
       <div className={cn(
-        "max-w-md mx-auto mt-[10vh] max-h-[80vh] flex flex-col rounded-xl border border-x-border bg-x-card shadow-xl",
+        "max-w-md mx-auto mt-[10vh] max-h-[80vh] flex flex-col rounded-xl border border-border bg-surface-card shadow-xl",
         closing ? "animate-preview-out" : "animate-preview-in",
       )}>
         <div className="flex shrink-0 items-center justify-between px-6 pt-5 pb-3">
-          <h2 id="settings-title" className="text-lg font-semibold text-x-text">Settings</h2>
+          <h2 id="settings-title" className="text-lg font-semibold text-foreground">Settings</h2>
           <button
             type="button"
             onClick={onClose}
-            className="p-2 -mr-2 rounded-lg text-x-text-secondary hover:text-x-text hover:bg-x-hover transition-colors"
+            className="p-2 -mr-2 rounded-lg text-muted hover:text-foreground hover:bg-surface-hover transition-colors"
             aria-label="Close settings"
             title="Close"
           >
@@ -77,10 +77,10 @@ export function SettingsModal({
 
         <div className="overflow-y-auto px-6 pb-6 space-y-5">
           <section>
-            <h3 className="text-xs font-medium text-x-text-secondary mb-2.5">
+            <h3 className="text-xs font-medium text-muted mb-2.5">
               Appearance
             </h3>
-            <div className="flex gap-1 rounded-lg bg-x-bg p-1">
+            <div className="flex gap-1 rounded-lg bg-surface p-1">
               {THEME_OPTIONS.map((opt) => (
                 <button
                   key={opt.value}
@@ -90,7 +90,7 @@ export function SettingsModal({
                     "flex-1 py-2 text-sm font-medium rounded-md transition-colors flex items-center justify-center gap-1.5",
                     themePreference === opt.value
                       ? "bg-accent/15 text-accent"
-                      : "text-x-text hover:bg-x-hover",
+                      : "text-foreground hover:bg-surface-hover",
                   )}
                 >
                   {opt.icon === "monitor" ? (
@@ -107,10 +107,10 @@ export function SettingsModal({
           </section>
 
           <section>
-            <h3 className="text-xs font-medium text-x-text-secondary mb-2.5">
+            <h3 className="text-xs font-medium text-muted mb-2.5">
               Background
             </h3>
-            <div className="flex gap-1 rounded-lg bg-x-bg p-1">
+            <div className="flex gap-1 rounded-lg bg-surface p-1">
               {BACKGROUND_OPTIONS.map((opt) => (
                 <button
                   key={opt.value}
@@ -120,7 +120,7 @@ export function SettingsModal({
                     "flex-1 py-2 text-sm font-medium rounded-md transition-colors",
                     settings.backgroundMode === opt.value
                       ? "bg-accent/15 text-accent"
-                      : "text-x-text hover:bg-x-hover",
+                      : "text-foreground hover:bg-surface-hover",
                   )}
                 >
                   {opt.label}
@@ -130,12 +130,12 @@ export function SettingsModal({
           </section>
 
           <section>
-            <h3 className="text-xs font-medium text-x-text-secondary mb-2.5">
+            <h3 className="text-xs font-medium text-muted mb-2.5">
               New Tab
             </h3>
             <div className="space-y-3">
               <label className="flex items-center justify-between cursor-pointer">
-                <span id="label-search-bar" className="text-sm text-x-text">
+                <span id="label-search-bar" className="text-sm text-foreground">
                   Show search bar
                 </span>
                 <button
@@ -150,7 +150,7 @@ export function SettingsModal({
                   }
                   className={cn(
                     "relative inline-flex h-6 w-11 items-center rounded-full transition-colors",
-                    settings.showSearchBar ? "bg-accent" : "bg-x-border",
+                    settings.showSearchBar ? "bg-accent" : "bg-border",
                   )}
                 >
                   <span
@@ -163,7 +163,7 @@ export function SettingsModal({
               </label>
 
               <label className="flex items-center justify-between cursor-pointer">
-                <span id="label-quick-links" className="text-sm text-x-text">
+                <span id="label-quick-links" className="text-sm text-foreground">
                   Show quick links
                 </span>
                 <button
@@ -188,7 +188,7 @@ export function SettingsModal({
                   }}
                   className={cn(
                     "relative inline-flex h-6 w-11 items-center rounded-full transition-colors",
-                    settings.showTopSites ? "bg-accent" : "bg-x-border",
+                    settings.showTopSites ? "bg-accent" : "bg-border",
                   )}
                 >
                   <span
@@ -202,7 +202,7 @@ export function SettingsModal({
 
               {settings.showTopSites && (
                 <div className="flex items-center justify-between pl-4">
-                  <span className="text-sm text-x-text-secondary">
+                  <span className="text-sm text-muted">
                     Max quick links
                   </span>
                   <select
@@ -212,7 +212,7 @@ export function SettingsModal({
                         topSitesLimit: Number(e.target.value),
                       })
                     }
-                    className="rounded-lg border border-x-border bg-x-bg px-2.5 py-1.5 text-sm text-x-text focus:border-accent focus:outline-none transition-colors"
+                    className="rounded-lg border border-border bg-surface px-2.5 py-1.5 text-sm text-foreground focus:border-accent focus:outline-none transition-colors"
                   >
                     {[3, 4, 5, 6, 8, 10].map((n) => (
                       <option key={n} value={n}>
@@ -226,7 +226,7 @@ export function SettingsModal({
           </section>
 
           <section>
-            <h3 className="text-xs font-medium text-x-text-secondary mb-2.5">
+            <h3 className="text-xs font-medium text-muted mb-2.5">
               Data
             </h3>
             {confirmingReset ? (
@@ -235,7 +235,7 @@ export function SettingsModal({
                   type="button"
                   onClick={() => setConfirmingReset(false)}
                   disabled={resetting}
-                  className="flex-1 rounded-lg border border-x-border bg-x-bg px-3 py-2 text-sm font-medium text-x-text-secondary transition-colors hover:bg-x-hover disabled:opacity-70"
+                  className="flex-1 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-muted transition-colors hover:bg-surface-hover disabled:opacity-70"
                 >
                   Cancel
                 </button>
@@ -252,7 +252,7 @@ export function SettingsModal({
               <button
                 type="button"
                 onClick={() => setConfirmingReset(true)}
-                className="w-full rounded-lg border border-x-border bg-x-bg px-3 py-2 text-sm font-medium text-x-text-secondary transition-colors hover:bg-x-hover"
+                className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-muted transition-colors hover:bg-surface-hover"
               >
                 Reset local data
               </button>

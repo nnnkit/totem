@@ -87,15 +87,15 @@ export function NotePopover({ highlight, anchorEl, onSaveNote, onDeleteNote, onC
           sideOffset={8}
           positionMethod="fixed"
         >
-          <Popover.Popup className="totem-popover z-30 w-80 rounded-lg border border-x-border bg-x-card shadow-xl">
+          <Popover.Popup className="totem-popover z-30 w-80 rounded-lg border border-border bg-surface-card shadow-xl">
           <div className="flex items-center justify-between px-4 pt-3">
-            <span className="text-[11px] font-medium uppercase tracking-wide text-x-text-secondary/50">
+            <span className="text-[11px] font-medium uppercase tracking-wide text-muted/50">
               Note
             </span>
             <button
               onClick={onClose}
               aria-label="Close notes panel"
-              className="-mr-1 rounded-md p-1 text-x-text-secondary/40 transition-colors hover:bg-x-hover hover:text-x-text"
+              className="-mr-1 rounded-md p-1 text-muted/40 transition-colors hover:bg-surface-hover hover:text-foreground"
             >
               <svg width="12" height="12" viewBox="0 0 256 256" fill="currentColor">
                 <path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z" />
@@ -113,12 +113,12 @@ export function NotePopover({ highlight, anchorEl, onSaveNote, onDeleteNote, onC
                   onKeyDown={handleTextareaKeyDown}
                   placeholder="Write a note..."
                   rows={3}
-                  className="mt-2 w-full resize-none rounded-lg border border-x-border bg-transparent px-3 py-2 text-sm leading-relaxed text-x-text placeholder:text-x-text-secondary/40 focus:border-accent focus:outline-none"
+                  className="mt-2 w-full resize-none rounded-lg border border-border bg-transparent px-3 py-2 text-sm leading-relaxed text-foreground placeholder:text-muted/40 focus:border-accent focus:outline-none"
                 />
                 <div className="mt-2.5 flex justify-end gap-2">
                   <button
                     onClick={handleCancel}
-                    className="rounded-md px-3 py-1.5 text-xs text-x-text-secondary transition-colors hover:bg-x-hover"
+                    className="rounded-md px-3 py-1.5 text-xs text-muted transition-colors hover:bg-surface-hover"
                   >
                     Cancel
                   </button>
@@ -133,11 +133,11 @@ export function NotePopover({ highlight, anchorEl, onSaveNote, onDeleteNote, onC
               </>
             ) : (
               <>
-                <p className="mt-1.5 whitespace-pre-wrap text-sm leading-relaxed text-x-text text-pretty">
+                <p className="mt-1.5 whitespace-pre-wrap text-sm leading-relaxed text-foreground text-pretty">
                   {highlight.note}
                 </p>
                 {highlight.createdAt && (
-                  <p className="mt-1.5 text-[11px] tabular-nums text-x-text-secondary/50">
+                  <p className="mt-1.5 text-[11px] tabular-nums text-muted/50">
                     {formatRelativeTime(highlight.createdAt)}
                   </p>
                 )}
@@ -147,7 +147,7 @@ export function NotePopover({ highlight, anchorEl, onSaveNote, onDeleteNote, onC
                       setEditing(true);
                       setNoteText(highlight.note || "");
                     }}
-                    className="rounded-md px-2.5 py-1 text-xs text-x-text-secondary transition-colors hover:bg-x-hover hover:text-x-text"
+                    className="rounded-md px-2.5 py-1 text-xs text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
                   >
                     Edit
                   </button>
@@ -155,7 +155,7 @@ export function NotePopover({ highlight, anchorEl, onSaveNote, onDeleteNote, onC
                     <div className="flex gap-1">
                       <button
                         onClick={() => setConfirmingDelete(false)}
-                        className="rounded-md px-2.5 py-1 text-xs text-x-text-secondary transition-colors hover:bg-x-hover"
+                        className="rounded-md px-2.5 py-1 text-xs text-muted transition-colors hover:bg-surface-hover"
                       >
                         Cancel
                       </button>

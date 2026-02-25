@@ -14,7 +14,7 @@ function TweetKindPill({ kind }: TweetKindPillProps) {
   return (
     <span
       className={cn(
-        "inline-block rounded-md bg-x-hover px-2 py-0.5 text-xs font-medium",
+        "inline-block rounded-md bg-surface-hover px-2 py-0.5 text-xs font-medium",
         kindPillClass(kind),
       )}
     >
@@ -55,7 +55,7 @@ function AuthorCard({ author, closing, onClose }: AuthorCardProps) {
     <div
       ref={cardRef}
       className={cn(
-        "mb-4 overflow-hidden rounded-xl border border-x-border bg-x-card",
+        "mb-4 overflow-hidden rounded-xl border border-border bg-surface-card",
         closing ? "animate-card-out" : "animate-card-in",
       )}
     >
@@ -73,7 +73,7 @@ function AuthorCard({ author, closing, onClose }: AuthorCardProps) {
           <img
             src={author.profileImageUrl}
             alt=""
-            className="size-16 rounded-full border-2 border-x-card"
+            className="size-16 rounded-full border-2 border-surface-card"
             loading="lazy"
           />
         </div>
@@ -84,7 +84,7 @@ function AuthorCard({ author, closing, onClose }: AuthorCardProps) {
               href={authorUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="truncate font-bold text-x-text hover:underline"
+              className="truncate font-bold text-foreground hover:underline"
             >
               {author.name}
             </a>
@@ -97,36 +97,36 @@ function AuthorCard({ author, closing, onClose }: AuthorCardProps) {
             href={authorUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-sm text-x-text-secondary hover:underline"
+            className="text-sm text-muted hover:underline"
           >
             @{author.screenName}
           </a>
         </div>
 
         {author.bio && (
-          <p className="mt-2 truncate text-sm text-x-text">{author.bio}</p>
+          <p className="mt-2 truncate text-sm text-foreground">{author.bio}</p>
         )}
 
         <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
           {author.followingCount != null && (
             <span>
-              <span className="font-semibold text-x-text">
+              <span className="font-semibold text-foreground">
                 {formatCompactNumber(author.followingCount)}
               </span>{" "}
-              <span className="text-x-text-secondary">Following</span>
+              <span className="text-muted">Following</span>
             </span>
           )}
           {author.followersCount != null && (
             <span>
-              <span className="font-semibold text-x-text">
+              <span className="font-semibold text-foreground">
                 {formatCompactNumber(author.followersCount)}
               </span>{" "}
-              <span className="text-x-text-secondary">Followers</span>
+              <span className="text-muted">Followers</span>
             </span>
           )}
         </div>
 
-        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-x-text-secondary">
+        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted">
           {author.website && sanitizeUrl(author.website) && (
             <a
               href={sanitizeUrl(author.website)}
@@ -146,7 +146,7 @@ function AuthorCard({ author, closing, onClose }: AuthorCardProps) {
           href={authorUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-3 inline-block rounded-lg bg-x-text px-4 py-1.5 text-sm font-semibold text-x-bg hover:opacity-90"
+          className="mt-3 inline-block rounded-lg bg-foreground px-4 py-1.5 text-sm font-semibold text-surface hover:opacity-90"
         >
           View on X
         </a>
@@ -173,7 +173,7 @@ interface AffiliateBadgeProps {
 
 function AffiliateBadge({ affiliate }: AffiliateBadgeProps) {
   const content = (
-    <span className="inline-flex items-center gap-1 text-xs text-x-text-secondary">
+    <span className="inline-flex items-center gap-1 text-xs text-muted">
       {affiliate.badgeUrl && (
         <img
           src={affiliate.badgeUrl}
@@ -251,7 +251,7 @@ export function TweetHeader({ author, displayKind, readingMinutes }: Props) {
                 href={authorUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="truncate text-base font-bold text-x-text hover:underline"
+                className="truncate text-base font-bold text-foreground hover:underline"
               >
                 {author.name}
               </a>
@@ -260,7 +260,7 @@ export function TweetHeader({ author, displayKind, readingMinutes }: Props) {
                 <AffiliateBadge affiliate={author.affiliate} />
               )}
             </div>
-            <div className="flex items-center gap-1 text-xs text-x-text-secondary">
+            <div className="flex items-center gap-1 text-xs text-muted">
               <a
                 href={authorUrl}
                 target="_blank"
@@ -279,7 +279,7 @@ export function TweetHeader({ author, displayKind, readingMinutes }: Props) {
               )}
             </div>
             {author.bio && (
-              <p className="mt-0.5 max-w-xs truncate text-xs text-x-text-secondary">
+              <p className="mt-0.5 max-w-xs truncate text-xs text-muted">
                 {author.bio}
               </p>
             )}
@@ -300,8 +300,8 @@ export function TweetHeader({ author, displayKind, readingMinutes }: Props) {
         <TweetKindPill kind={displayKind} />
         {readingMinutes != null && (
           <>
-            <span className="text-xs text-x-text-secondary">&middot;</span>
-            <span className="text-xs tabular-nums text-x-text-secondary">
+            <span className="text-xs text-muted">&middot;</span>
+            <span className="text-xs tabular-nums text-muted">
               {readingMinutes} min read
             </span>
           </>

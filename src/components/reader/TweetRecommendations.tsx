@@ -16,9 +16,9 @@ export function TweetRecommendations({
   if (relatedBookmarks.length === 0) return null;
 
   return (
-    <section className="mt-8 border-t border-x-border pt-6">
+    <section className="mt-8 border-t border-border pt-6">
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-balance text-x-text">
+        <h2 className="text-lg font-semibold text-balance text-foreground">
           Recommended bookmarks
         </h2>
         <div className="flex items-center gap-2">
@@ -26,7 +26,7 @@ export function TweetRecommendations({
             <button
               type="button"
               onClick={onShuffle}
-              className="inline-flex items-center gap-1.5 rounded-md border border-x-border bg-x-card px-2.5 py-1 text-xs font-medium text-x-text-secondary transition-colors hover:bg-x-hover hover:text-accent"
+              className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface-card px-2.5 py-1 text-xs font-medium text-muted transition-colors hover:bg-surface-hover hover:text-accent"
               aria-label="Shuffle recommendations"
               title="Shuffle recommendations"
             >
@@ -42,7 +42,7 @@ export function TweetRecommendations({
             key={related.tweetId}
             type="button"
             onClick={() => onOpenBookmark(related)}
-            className="w-full rounded-lg border border-x-border bg-x-card/60 p-2.5 text-left transition-colors hover:bg-x-hover"
+            className="w-full rounded-lg border border-border bg-surface-card/60 p-2.5 text-left transition-colors hover:bg-surface-hover"
           >
             <div className="flex items-center gap-1.5">
               <img
@@ -52,15 +52,15 @@ export function TweetRecommendations({
                 loading="lazy"
               />
               <div className="min-w-0">
-                <p className="truncate text-xs font-semibold text-x-text">
+                <p className="truncate text-xs font-semibold text-foreground">
                   {related.author.name}
                 </p>
-                <p className="truncate text-xs text-x-text-secondary">
+                <p className="truncate text-xs text-muted">
                   @{related.author.screenName}
                 </p>
               </div>
             </div>
-            <p className="mt-2 line-clamp-2 text-xs leading-5 text-pretty text-x-text">
+            <p className="mt-2 line-clamp-2 text-xs leading-5 text-pretty text-foreground">
               {compactPreview(related.text)}
             </p>
           </button>

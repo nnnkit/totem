@@ -25,7 +25,7 @@ function LinkPreviewCard({ url, card }: LinkPreviewCardProps) {
       href={url.href}
       target="_blank"
       rel="noopener noreferrer"
-      className="flex overflow-hidden rounded-xl border border-x-border bg-x-link-card transition-colors hover:bg-x-hover"
+      className="flex overflow-hidden rounded-xl border border-border bg-surface-link-card transition-colors hover:bg-surface-hover"
     >
       {card.imageUrl && (
         <img
@@ -35,14 +35,14 @@ function LinkPreviewCard({ url, card }: LinkPreviewCardProps) {
         />
       )}
       <div className="flex min-w-0 flex-col justify-center px-3 py-2.5">
-        <span className="truncate text-xs text-x-text-secondary">
+        <span className="truncate text-xs text-muted">
           {card.domain || url.displayUrl}
         </span>
-        <span className="mt-0.5 text-sm font-medium text-x-text line-clamp-1">
+        <span className="mt-0.5 text-sm font-medium text-foreground line-clamp-1">
           {card.title}
         </span>
         {card.description && (
-          <span className="mt-0.5 text-xs text-x-text-secondary line-clamp-2">
+          <span className="mt-0.5 text-xs text-muted line-clamp-2">
             {card.description}
           </span>
         )}
@@ -72,11 +72,11 @@ function LinkCards({ urls }: LinkCardsProps) {
             href={url.href}
             target="_blank"
             rel="noopener noreferrer"
-            className="block rounded-xl border border-x-border bg-x-link-card px-4 py-3 transition-colors hover:bg-x-hover"
+            className="block rounded-xl border border-border bg-surface-link-card px-4 py-3 transition-colors hover:bg-surface-hover"
           >
             <span className="text-sm text-accent">{url.displayUrl}</span>
             {url.displayUrl !== url.href && (
-              <span className="mt-1 block text-xs text-x-text-secondary">
+              <span className="mt-1 block text-xs text-muted">
                 {url.href}
               </span>
             )}
@@ -99,8 +99,8 @@ function ReadStatusButton({ onToggle, isRead }: ReadStatusButtonProps) {
       onClick={onToggle}
       className={
         isRead
-          ? "inline-flex items-center gap-1.5 rounded-md border border-green-500/30 bg-green-500/10 px-3 py-1.5 text-xs font-medium text-green-600 transition-colors hover:border-green-500/50 hover:bg-green-500/20 dark:text-green-400"
-          : "inline-flex items-center gap-1.5 rounded-md border border-x-border bg-x-card px-3 py-1.5 text-xs font-medium text-x-text-secondary transition-colors hover:bg-x-hover hover:text-x-text"
+          ? "inline-flex items-center gap-1.5 rounded-md border border-green-500/30 bg-green-500/10 px-3 py-1.5 text-xs font-medium text-success transition-colors hover:border-green-500/50 hover:bg-green-500/20"
+          : "inline-flex items-center gap-1.5 rounded-md border border-border bg-surface-card px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
       }
     >
       <CheckIcon weight="bold" className="size-3.5" />
@@ -148,7 +148,7 @@ export function TweetLinks({
       href={viewOnXUrl}
       target="_blank"
       rel="noopener noreferrer"
-      className="inline-flex items-center gap-1.5 text-sm text-x-text-secondary transition-colors hover:text-x-text"
+      className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-foreground"
     >
       View on X
       <ArrowSquareOutIcon className="size-3.5" />
@@ -160,7 +160,7 @@ export function TweetLinks({
       href={buildGrokUrl(viewOnXUrl)}
       target="_blank"
       rel="noopener noreferrer"
-      className="inline-flex items-center gap-1.5 rounded-md border border-x-border bg-x-card px-3 py-1.5 text-xs font-medium text-x-text-secondary transition-colors hover:bg-x-hover hover:text-x-text"
+      className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface-card px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
     >
       <LightningIcon weight="bold" className="size-3.5" />
       Ask Grok
@@ -171,7 +171,7 @@ export function TweetLinks({
     <button
       type="button"
       onClick={onDeleteBookmark}
-      className="inline-flex items-center gap-1.5 rounded-md border border-x-border bg-x-card px-3 py-1.5 text-xs font-medium text-x-text-secondary transition-colors hover:text-red-500 hover:border-red-500/30 hover:bg-red-500/10"
+      className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface-card px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:text-red-500 hover:border-red-500/30 hover:bg-red-500/10"
     >
       <BookmarkSimpleIcon weight="fill" className="size-3.5" />
       Remove

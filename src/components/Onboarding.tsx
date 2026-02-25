@@ -8,11 +8,11 @@ interface Props {
 export function Onboarding({ phase, onLogin }: Props) {
   if (phase === "connecting") {
     return (
-      <div className="flex flex-col items-center justify-center min-h-dvh bg-x-bg text-x-text">
+      <div className="flex flex-col items-center justify-center min-h-dvh bg-surface text-foreground">
         <TotemLogo className="size-12 mb-6" />
         <span className="animate-spin mb-4"><div className="size-8 border-2 border-accent border-t-transparent rounded-full" /></span>
         <p className="text-lg font-bold text-balance">Connecting to X...</p>
-        <p className="text-x-text-secondary text-sm mt-2 text-pretty">
+        <p className="text-muted text-sm mt-2 text-pretty">
           Syncing your session in the background.
         </p>
       </div>
@@ -20,11 +20,11 @@ export function Onboarding({ phase, onLogin }: Props) {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-dvh bg-x-bg text-x-text">
+    <div className="flex flex-col items-center justify-center min-h-dvh bg-surface text-foreground">
       <TotemLogo className="size-14 mb-8" />
 
       <h1 className="text-2xl font-bold mb-2 text-balance">A calm reader for your X bookmarks.</h1>
-      <p className="text-x-text-secondary text-lg mb-8 max-w-sm text-center text-pretty">
+      <p className="text-muted text-lg mb-8 max-w-sm text-center text-pretty">
         Read your saved posts in a clean, distraction-free view.
       </p>
 
@@ -40,7 +40,7 @@ export function Onboarding({ phase, onLogin }: Props) {
         Log in to X
       </a>
 
-      <p className="text-x-text-secondary text-sm mt-4 text-pretty">
+      <p className="text-muted text-sm mt-4 text-pretty">
         Already logged in? Just open a new tab.
       </p>
     </div>

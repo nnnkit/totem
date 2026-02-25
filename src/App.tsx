@@ -147,7 +147,7 @@ export default function App() {
 
   if (phase === "loading" || ((isReady || showCached) && hadBookmarks && syncState.phase === "idle")) {
     return (
-      <div className="flex items-center justify-center min-h-dvh bg-x-bg">
+      <div className="flex items-center justify-center min-h-dvh bg-surface">
         <div className="animate-logo-shine">
           <TotemLogo className="size-16" />
         </div>

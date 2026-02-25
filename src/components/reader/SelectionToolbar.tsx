@@ -208,36 +208,36 @@ export function SelectionToolbar({ containerRef, tweetUrl, onHighlight, onAddNot
           positionMethod="fixed"
         >
           <Popover.Popup
-            className="totem-popover z-30 rounded-lg border border-x-border bg-x-card shadow-xl"
+            className="totem-popover z-30 rounded-lg border border-border bg-surface-card shadow-xl"
             onMouseDown={(e) => e.preventDefault()}
           >
             <div className="flex items-center gap-1 px-2 py-1.5">
               <button
                 onClick={handleHighlight}
-                className="flex items-center gap-1.5 rounded-md px-2 py-1 text-sm text-x-text-secondary transition-colors hover:bg-x-hover hover:text-x-text"
+                className="flex items-center gap-1.5 rounded-md px-2 py-1 text-sm text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
               >
                 <HighlighterIcon weight="bold" className="size-4" />
                 <span>Highlight</span>
               </button>
 
-              <div className="mx-0.5 h-5 w-px bg-x-border" />
+              <div className="mx-0.5 h-5 w-px bg-border" />
 
               <button
                 onClick={handleNote}
-                className="flex items-center gap-1.5 rounded-md px-2 py-1 text-sm text-x-text-secondary transition-colors hover:bg-x-hover hover:text-x-text"
+                className="flex items-center gap-1.5 rounded-md px-2 py-1 text-sm text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
               >
                 <NotePencilIcon weight="bold" className="size-4" />
                 <span>Add Note</span>
               </button>
 
-              <div className="mx-0.5 h-5 w-px bg-x-border" />
+              <div className="mx-0.5 h-5 w-px bg-border" />
 
               <button
                 onClick={() => {
                   window.open(grokUrl, "_blank", "noopener,noreferrer");
                   dismiss();
                 }}
-                className="flex items-center gap-1.5 rounded-md px-2 py-1 text-sm text-x-text-secondary transition-colors hover:bg-x-hover hover:text-x-text"
+                className="flex items-center gap-1.5 rounded-md px-2 py-1 text-sm text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
               >
                 <LightningIcon weight="bold" className="size-4" />
                 <span>Ask Grok</span>

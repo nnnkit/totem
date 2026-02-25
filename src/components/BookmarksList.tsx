@@ -56,7 +56,7 @@ const TabButton = forwardRef<HTMLButtonElement, TabButtonProps>(
       onClick={onClick}
       className={cn(
         "px-4 py-2.5 text-sm font-medium transition-colors",
-        active ? "text-x-text" : "text-x-text-secondary hover:text-x-text",
+        active ? "text-foreground" : "text-muted hover:text-foreground",
       )}
     >
       {label}
@@ -297,8 +297,8 @@ export function BookmarksList({
   let continueIdx = 0;
 
   return (
-    <div className="min-h-dvh bg-x-bg">
-      <div className="sticky top-0 z-10 border-b border-x-border bg-x-bg/80 backdrop-blur-md">
+    <div className="min-h-dvh bg-surface">
+      <div className="sticky top-0 z-10 border-b border-border bg-surface/80 backdrop-blur-md">
         <div
           className={cn(
             "mx-auto flex items-center gap-3 px-4 py-3",
@@ -309,13 +309,13 @@ export function BookmarksList({
             onClick={onBack}
             aria-label="Back to home"
             title="Back"
-            className="rounded-lg p-2 text-x-text transition-colors hover:bg-x-hover"
+            className="rounded-lg p-2 text-foreground transition-colors hover:bg-surface-hover"
           >
             <ArrowLeftIcon className="size-5" />
           </button>
-          <span className="text-lg font-semibold text-x-text">Reading</span>
+          <span className="text-lg font-semibold text-foreground">Reading</span>
           <div className="relative ml-auto mr-2 max-w-xs flex-1">
-            <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-x-text-secondary" />
+            <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
             <input
               ref={searchInputRef}
               type="text"
@@ -328,7 +328,7 @@ export function BookmarksList({
                 }
               }}
               placeholder="Search bookmarks..."
-              className="w-full rounded-lg border border-x-border bg-x-card py-1.5 pl-9 pr-3 text-sm text-x-text placeholder:text-x-text-secondary/60 focus:border-accent focus:outline-none"
+              className="w-full rounded-lg border border-border bg-surface-card py-1.5 pl-9 pr-3 text-sm text-foreground placeholder:text-muted/60 focus:border-accent focus:outline-none"
             />
           </div>
           <div>
@@ -336,7 +336,7 @@ export function BookmarksList({
               type="button"
               onClick={onSync}
               disabled={syncing}
-              className="rounded-lg p-2 text-x-text-secondary transition-colors hover:bg-x-hover hover:text-x-text"
+              className="rounded-lg p-2 text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
               aria-label="Sync bookmarks"
               title="Sync bookmarks"
             >
@@ -355,7 +355,7 @@ export function BookmarksList({
             onClick={() => onTabChange("unread")}
             label="Unread"
             count={filteredUnread.length}
-            countClass="bg-x-text-secondary/10 text-x-text-secondary"
+            countClass="bg-muted/10 text-muted"
           />
           <TabButton
             ref={continueTabRef}
@@ -371,7 +371,7 @@ export function BookmarksList({
             onClick={() => onTabChange("read")}
             label="Read"
             count={filteredCompleted.length}
-            countClass="bg-x-success/10 text-x-success"
+            countClass="bg-success/10 text-success"
           />
           <span
             className="absolute bottom-0 h-0.5 rounded-full bg-accent transition-all duration-200 ease-[cubic-bezier(0.645,0.045,0.355,1)]"
@@ -394,10 +394,10 @@ export function BookmarksList({
                     type="button"
                     onClick={() => onOpenBookmark(bookmark)}
                     className={cn(
-                      "bookmark-list-item flex w-full cursor-pointer items-center gap-3 rounded-lg border p-3 text-left transition-colors hover:bg-x-hover",
+                      "bookmark-list-item flex w-full cursor-pointer items-center gap-3 rounded-lg border p-3 text-left transition-colors hover:bg-surface-hover",
                       focusedIndex === idx
-                        ? "border-accent ring-2 ring-accent/40 bg-x-hover"
-                        : "border-x-border bg-x-card",
+                        ? "border-accent ring-2 ring-accent/40 bg-surface-hover"
+                        : "border-border bg-surface-card",
                     )}
                   >
                     <img
@@ -407,7 +407,7 @@ export function BookmarksList({
                     />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <p className="truncate text-sm font-medium text-x-text">
+                        <p className="truncate text-sm font-medium text-foreground">
                           {pickTitle(bookmark)}
                         </p>
                         {newBookmarkIds.has(bookmark.tweetId) && (
@@ -416,9 +416,9 @@ export function BookmarksList({
                           </span>
                         )}
                       </div>
-                      <p className="mt-1 text-xs text-x-text-secondary">
+                      <p className="mt-1 text-xs text-muted">
                         @{bookmark.author.screenName} &middot;{" "}
-                        <span className="rounded bg-x-border/50 px-1.5 py-0.5 text-xs uppercase">
+                        <span className="rounded bg-border/50 px-1.5 py-0.5 text-xs uppercase">
                           {inferKindBadge(bookmark)}
                         </span>
                       </p>
@@ -428,7 +428,7 @@ export function BookmarksList({
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-20 text-center">
-                <p className="text-x-text-secondary text-lg text-pretty">
+                <p className="text-muted text-lg text-pretty">
                   All caught up! No unread bookmarks.
                 </p>
                 <button
@@ -459,10 +459,10 @@ export function BookmarksList({
                       type="button"
                       onClick={() => onOpenBookmark(bookmark)}
                       className={cn(
-                        "bookmark-list-item flex w-full cursor-pointer items-center gap-3 rounded-lg border p-3 text-left transition-colors hover:bg-x-hover",
+                        "bookmark-list-item flex w-full cursor-pointer items-center gap-3 rounded-lg border p-3 text-left transition-colors hover:bg-surface-hover",
                         focusedIndex === idx
-                          ? "border-accent ring-2 ring-accent/40 bg-x-hover"
-                          : "border-x-border bg-x-card",
+                          ? "border-accent ring-2 ring-accent/40 bg-surface-hover"
+                          : "border-border bg-surface-card",
                       )}
                     >
                       <img
@@ -472,7 +472,7 @@ export function BookmarksList({
                       />
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                          <p className="truncate text-sm font-medium text-x-text">
+                          <p className="truncate text-sm font-medium text-foreground">
                             {pickTitle(bookmark)}
                           </p>
                           {newBookmarkIds.has(bookmark.tweetId) && (
@@ -481,7 +481,7 @@ export function BookmarksList({
                             </span>
                           )}
                         </div>
-                        <p className="mt-1 text-xs text-x-text-secondary">
+                        <p className="mt-1 text-xs text-muted">
                           @{bookmark.author.screenName} &middot; Last read{" "}
                           {timeAgo(progress.lastReadAt)}
                           {counts && counts.highlights > 0 && (
@@ -504,7 +504,7 @@ export function BookmarksList({
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-20 text-center">
-                <p className="text-x-text-secondary text-lg text-pretty">
+                <p className="text-muted text-lg text-pretty">
                   No reading in progress. Open a bookmark to start tracking.
                 </p>
                 <button
@@ -535,10 +535,10 @@ export function BookmarksList({
                       type="button"
                       onClick={() => onOpenBookmark(bookmark)}
                       className={cn(
-                        "bookmark-list-item flex w-full cursor-pointer items-center gap-3 rounded-lg border p-3 text-left transition-colors hover:bg-x-hover",
+                        "bookmark-list-item flex w-full cursor-pointer items-center gap-3 rounded-lg border p-3 text-left transition-colors hover:bg-surface-hover",
                         focusedIndex === idx
-                          ? "border-accent ring-2 ring-accent/40 bg-x-hover"
-                          : "border-x-border bg-x-card",
+                          ? "border-accent ring-2 ring-accent/40 bg-surface-hover"
+                          : "border-border bg-surface-card",
                       )}
                     >
                       <img
@@ -548,7 +548,7 @@ export function BookmarksList({
                       />
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                          <p className="truncate text-sm font-medium text-x-text">
+                          <p className="truncate text-sm font-medium text-foreground">
                             {pickTitle(bookmark)}
                           </p>
                           {newBookmarkIds.has(bookmark.tweetId) && (
@@ -557,7 +557,7 @@ export function BookmarksList({
                             </span>
                           )}
                         </div>
-                        <p className="mt-1 text-xs text-x-text-secondary">
+                        <p className="mt-1 text-xs text-muted">
                           @{bookmark.author.screenName} &middot; Finished{" "}
                           {timeAgo(progress.lastReadAt)}
                           {counts && counts.highlights > 0 && (
@@ -580,7 +580,7 @@ export function BookmarksList({
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-20 text-center">
-                <p className="text-x-text-secondary text-lg text-pretty">
+                <p className="text-muted text-lg text-pretty">
                   Nothing finished yet. Keep reading!
                 </p>
                 <button

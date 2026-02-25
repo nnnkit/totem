@@ -217,7 +217,7 @@ export function TweetArticle({ article, compact = false, authorProfileImageUrl }
 
   const serifFont = `font-[Charter,"Iowan Old Style","Palatino Linotype","Book Antiqua",Georgia,serif]`;
   const titleClass = cn(
-    "reader-heading mt-6 text-4xl font-bold text-balance text-x-text",
+    "reader-heading mt-6 text-4xl font-bold text-balance text-foreground",
     serifFont,
   );
 
@@ -328,7 +328,7 @@ export function TweetArticle({ article, compact = false, authorProfileImageUrl }
   }
 
   const headingClass =
-    "reader-heading text-base font-semibold mt-6 mb-2 text-x-text";
+    "reader-heading text-base font-semibold mt-6 mb-2 text-foreground";
 
   return (
     <section>

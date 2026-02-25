@@ -60,6 +60,68 @@ const SETTINGS_ICON = <GearSixIcon className="size-5" />;
 
 const SEARCH_ICON = <MagnifyingGlassIcon className="size-4 opacity-50" />;
 
+const SERIF_DISPLAY_CLASS =
+  "font-['Spectral','Iowan_Old_Style','Palatino_Linotype',Georgia,serif]";
+
+const CLOCK_CLASS = `${SERIF_DISPLAY_CLASS} text-balance text-[clamp(2.4rem,7vw,4.2rem)] font-light leading-none tracking-[-0.04em] text-[color:var(--totem-on-bg)] tabular-nums`;
+
+const ICON_BUTTON_CLASS =
+  "rounded-lg border border-transparent bg-transparent p-[0.46rem] text-[color:var(--totem-on-bg-muted)] transition-[border-color,color,background-color] duration-150 ease-[var(--motion-ease-hover)] hover:border-[rgba(255,255,255,0.16)] hover:bg-[rgba(255,255,255,0.06)] hover:text-[color:var(--totem-on-bg)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[rgba(226,128,103,0.82)]";
+
+const SEARCH_FORM_CLASS =
+  "relative mx-auto flex max-w-[36rem] items-center rounded-lg [background:var(--totem-search-bg)] backdrop-blur-[12px] [box-shadow:var(--totem-search-shadow)]";
+
+const SEARCH_LOGO_CLASS = "flex items-center pl-2";
+
+const SEARCH_INPUT_CLASS =
+  "w-full appearance-none border-0 bg-transparent px-3 py-[0.85rem] text-base text-[color:var(--totem-text-primary)] [font-family:inherit] outline-none placeholder:text-[color:var(--totem-placeholder)]";
+
+const SEARCH_TRAIL_CLASS =
+  "pointer-events-none flex items-center pr-4 text-[color:var(--totem-text-primary)]";
+
+const QUICK_LINK_CLASS =
+  "group flex flex-col items-center gap-[0.35rem] no-underline transition-opacity duration-150 ease-[var(--motion-ease-hover)]";
+
+const QUICK_LINK_ICON_CLASS =
+  "flex size-10 items-center justify-center rounded-lg border border-[color:var(--totem-overlay-border)] [background:var(--totem-overlay-bg)] transition-[background,border-color] duration-150 ease-[var(--motion-ease-hover)] group-hover:[background:var(--totem-overlay-hover-bg)] group-hover:border-[color:var(--totem-overlay-hover-border)]";
+
+const QUICK_LINK_LABEL_CLASS =
+  "max-w-[4.5rem] overflow-hidden text-ellipsis whitespace-nowrap text-center text-[0.62rem] text-[color:var(--totem-on-bg-ghost)] group-hover:text-[color:var(--totem-on-bg-muted)]";
+
+const CARD_BASE_CLASS =
+  "relative min-h-[8.5rem] overflow-hidden rounded-lg p-[0.86rem_1rem_0.72rem] [background:var(--totem-surface)] [backdrop-filter:blur(20px)] [box-shadow:var(--totem-surface-shadow)] transition-colors duration-150 ease-[var(--motion-ease-hover)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[rgba(226,128,103,0.82)] max-[768px]:min-h-[8.4rem] max-[480px]:min-h-[8.2rem] max-[480px]:p-[0.82rem_0.9rem_0.78rem]";
+
+const PICK_CARD_CLASS = "min-h-[8.9rem] cursor-pointer hover:[background:var(--totem-surface-hover)]";
+
+const CARD_CONTENT_CLASS =
+  "min-h-[7rem] translate-y-0 opacity-100 transition-[transform,opacity] duration-200 ease-[cubic-bezier(0.215,0.61,0.355,1)] motion-reduce:transition-none max-[768px]:min-h-[6.8rem] max-[480px]:min-h-[6.6rem]";
+
+const EYEBROW_CLASS = "text-[0.68rem] font-semibold uppercase tracking-[0.26em] text-accent";
+
+const CARD_TITLE_CLASS = `${SERIF_DISPLAY_CLASS} mt-4 line-clamp-2 min-h-[calc(1.28em*2)] text-balance text-[clamp(0.96rem,1.8vw,1.16rem)] font-normal leading-[1.28] text-[color:var(--totem-text-secondary)] max-[480px]:text-[0.92rem]`;
+
+const CARD_DESCRIPTION_CLASS =
+  "mt-2.5 line-clamp-1 min-h-[calc(1.48em*1)] text-pretty text-[0.76rem] leading-[1.48] text-[color:var(--totem-description-text)]";
+
+const CARD_META_CLASS = "text-[0.72rem] leading-[1.2] text-[color:var(--totem-text-muted)]";
+
+const ACTIONS_CLASS = "mt-8 flex items-center justify-between gap-[0.65rem] max-[480px]:gap-[0.55rem]";
+
+const CTA_BUTTON_CLASS =
+  "inline-flex items-center justify-center rounded-lg text-[0.79rem] font-semibold leading-none transition-[opacity,color,border-color,background-color] duration-150 ease-[var(--motion-ease-hover)] disabled:cursor-default disabled:opacity-[0.56] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[rgba(226,128,103,0.82)]";
+
+const PRIMARY_BUTTON_CLASS =
+  "border-0 bg-[color:var(--totem-accent)] px-4 py-2 text-white hover:opacity-90";
+
+const SECONDARY_BUTTON_CLASS =
+  "border border-[color:var(--totem-secondary-border)] [background:var(--totem-secondary-bg)] px-[1.28rem] py-[0.68rem] text-[color:var(--totem-secondary-text)] hover:[background:var(--totem-surface-hover)]";
+
+const HOTKEY_KBD_CLASS =
+  "ml-2 border-[color:var(--totem-secondary-border)] [background:var(--totem-accent-bg)] text-[color:var(--totem-text-muted)]";
+
+const EMPTY_STATE_TEXT_CLASS =
+  "mt-4 text-pretty text-[0.95rem] text-[color:var(--totem-empty-text)]";
+
 export function NewTabHome({
   bookmarks,
   syncState,
@@ -180,7 +242,7 @@ export function NewTabHome({
   );
 
   return (
-    <div className="totem-home relative flex h-dvh flex-col overflow-hidden">
+    <div className="totem-home relative flex h-dvh flex-col overflow-hidden [background:var(--totem-bg)] text-[color:var(--totem-text-primary)]">
       {!showWallpaper && gradientCss && (
         <div
           className="pointer-events-none absolute inset-0"
@@ -193,7 +255,7 @@ export function NewTabHome({
           alt=""
           onLoad={() => setImgLoaded(true)}
           onError={() => setImgError(true)}
-          className="totem-wallpaper pointer-events-none absolute inset-0 h-full w-full object-cover"
+          className="pointer-events-none absolute inset-0 h-full w-full object-cover transition-opacity duration-[260ms] ease-[cubic-bezier(0.215,0.61,0.355,1)] [filter:brightness(0.72)] motion-reduce:transition-none"
           style={{ opacity: imgLoaded ? 0.6 : 0 }}
         />
       )}
@@ -206,7 +268,7 @@ export function NewTabHome({
           data-tour="settings-btn"
           type="button"
           onClick={onOpenSettings}
-          className="totem-icon-btn"
+          className={ICON_BUTTON_CLASS}
           aria-label="Open settings"
           title="Settings"
         >
@@ -219,7 +281,7 @@ export function NewTabHome({
           <section className="mx-auto w-full max-w-lg space-y-6">
             <div className="text-center">
               <h1
-                className="totem-clock text-balance tabular-nums"
+                className={CLOCK_CLASS}
                 aria-label={`Current time: ${formatClock(now)}`}
               >
                 {formatClock(now)}
@@ -258,14 +320,14 @@ export function NewTabHome({
 
                 return (
                   <form
-                    className="totem-search"
+                    className={SEARCH_FORM_CLASS}
                     action={engineConfig?.searchUrl}
                     method={isDefault ? undefined : "GET"}
                     target={isDefault ? undefined : "_blank"}
                     role="search"
                     onSubmit={handleSubmit}
                   >
-                    <span className="totem-search-logo">
+                    <span className={SEARCH_LOGO_CLASS}>
                       <SearchEnginePicker
                         value={searchEngine}
                         onChange={onSearchEngineChange}
@@ -275,11 +337,11 @@ export function NewTabHome({
                       ref={searchRef}
                       type="text"
                       name={engineConfig?.queryParam ?? "q"}
-                      className="totem-search-input"
+                      className={SEARCH_INPUT_CLASS}
                       placeholder="Search the web"
                       autoComplete="off"
                     />
-                    <span className="totem-search-trail">{SEARCH_ICON}</span>
+                    <span className={SEARCH_TRAIL_CLASS}>{SEARCH_ICON}</span>
                   </form>
                 );
               })()}
@@ -293,19 +355,20 @@ export function NewTabHome({
                   <a
                     key={site.url}
                     href={site.url}
-                    className="totem-quick-link"
+                    className={QUICK_LINK_CLASS}
                     title={site.title}
                   >
-                    <span className="totem-quick-link-icon">
+                    <span className={QUICK_LINK_ICON_CLASS}>
                       <img
                         src={site.faviconUrl}
                         alt=""
                         width={20}
                         height={20}
                         loading="lazy"
+                        className="rounded-[2px]"
                       />
                     </span>
-                    <span className="totem-quick-link-label">
+                    <span className={QUICK_LINK_LABEL_CLASS}>
                       {site.hostname.replace(/^www\./, "")}
                     </span>
                   </a>
@@ -317,8 +380,8 @@ export function NewTabHome({
 
         <footer className="mx-auto w-full max-w-lg pb-6">
           {authPhase === "connecting" ? (
-            <article className="totem-card text-center">
-              <p className="totem-eyebrow">Connecting to X&hellip;</p>
+            <article className={cn(CARD_BASE_CLASS, "text-center")}>
+              <p className={EYEBROW_CLASS}>Connecting to X&hellip;</p>
               <div className="mt-4 flex justify-center">
                 <svg
                   viewBox="0 0 24 24"
@@ -330,14 +393,14 @@ export function NewTabHome({
                   <path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round" />
                 </svg>
               </div>
-              <p className="totem-empty mt-4 text-pretty">
+              <p className={EMPTY_STATE_TEXT_CLASS}>
                 Syncing your session in the background.
               </p>
             </article>
           ) : authPhase === "need_login" ? (
-            <article className="totem-card text-center">
-              <p className="totem-eyebrow">Log in to see your bookmarks</p>
-              <p className="totem-empty mt-4 text-pretty">
+            <article className={cn(CARD_BASE_CLASS, "text-center")}>
+              <p className={EYEBROW_CLASS}>Log in to see your bookmarks</p>
+              <p className={EMPTY_STATE_TEXT_CLASS}>
                 Sign in to your X account to sync and read your saved posts.
               </p>
               <a
@@ -347,7 +410,11 @@ export function NewTabHome({
                 onClick={() => {
                   onLogin?.().catch(() => {});
                 }}
-                className="totem-btn totem-btn--primary mt-6 inline-block"
+                className={cn(
+                  CTA_BUTTON_CLASS,
+                  PRIMARY_BUTTON_CLASS,
+                  "mt-6 inline-block",
+                )}
               >
                 Log in to X
               </a>
@@ -357,8 +424,9 @@ export function NewTabHome({
               <article
                 data-tour="bookmark-card"
                 className={cn(
-                  "totem-card totem-card--zen",
-                  cardEngaged && "is-engaged",
+                  CARD_BASE_CLASS,
+                  PICK_CARD_CLASS,
+                  cardEngaged && "[background:var(--totem-surface-hover)]",
                 )}
                 onMouseEnter={() => setCardEngaged(true)}
                 onMouseLeave={() => setCardEngaged(false)}
@@ -393,62 +461,61 @@ export function NewTabHome({
                     : ""
                 }`}
               >
-                <div className="totem-card-content">
+                <div className={CARD_CONTENT_CLASS}>
                   <div className="flex justify-between">
                     <div className="flex items-center gap-1.5">
-                      <p className="totem-eyebrow uppercase">recommended</p>
+                      <p className={EYEBROW_CLASS}>recommended</p>
                       {offlineMode && (
                         <span title="Not signed in — showing cached bookmarks">
                           <LinkBreakIcon
-                            className="size-3 text-x-text-secondary"
-                            style={{ animation: "offline-pulse 2s ease-in-out infinite" }}
+                            className="size-3 animate-[offline-pulse_2s_ease-in-out_infinite] text-muted"
                           />
                         </span>
                       )}
                     </div>
-                    <kbd className="totem-kbd">O</kbd>
+                    <kbd className={HOTKEY_KBD_CLASS}>O</kbd>
                   </div>
 
-                  <h2 className="totem-title mt-4 text-balance">
+                  <h2 className={CARD_TITLE_CLASS}>
                     {currentItem.title}
                   </h2>
-                  <p className="totem-description mt-2.5 text-pretty">
+                  <p className={CARD_DESCRIPTION_CLASS}>
                     {currentItem.excerpt}
                   </p>
                   <div className="mt-3 flex items-end justify-between gap-3">
-                    <p className="totem-meta">
+                    <p className={CARD_META_CLASS}>
                       @{currentItem.bookmark.author.screenName}
                     </p>
                   </div>
                 </div>
               </article>
 
-              <div className="totem-actions">
+              <div className={ACTIONS_CLASS}>
                 <button
                   data-tour="open-all-btn"
                   type="button"
-                  className="totem-btn totem-btn--secondary"
+                  className={cn(CTA_BUTTON_CLASS, SECONDARY_BUTTON_CLASS)}
                   onClick={() => {
                     dismissTour();
                     onOpenReading();
                   }}
                 >
                   Open all bookmarks
-                  <kbd className="totem-kbd">L</kbd>
+                  <kbd className={HOTKEY_KBD_CLASS}>L</kbd>
                 </button>
                 <button
                   data-tour="surprise-btn"
                   type="button"
-                  className="totem-btn totem-btn--secondary"
+                  className={cn(CTA_BUTTON_CLASS, SECONDARY_BUTTON_CLASS)}
                   onClick={surpriseMe}
                 >
                   Surprise me
-                  <kbd className="totem-kbd">S</kbd>
+                  <kbd className={HOTKEY_KBD_CLASS}>S</kbd>
                 </button>
               </div>
 
               {offlineMode && (
-                <p className="text-center text-xxs text-x-text-secondary/50">
+                <p className="text-center text-xxs text-muted/50">
                   Viewing cached bookmarks.{" "}
                   <a
                     href="https://x.com/login"
@@ -457,7 +524,7 @@ export function NewTabHome({
                     onClick={() => {
                       onLogin?.().catch(() => {});
                     }}
-                    className="underline hover:text-x-text-secondary"
+                    className="underline hover:text-muted"
                   >
                     Log in to X
                   </a>{" "}
@@ -466,8 +533,8 @@ export function NewTabHome({
               )}
             </div>
           ) : syncState.phase === "syncing" ? (
-            <article className="totem-card text-center">
-              <p className="totem-eyebrow">Syncing your bookmarks&hellip;</p>
+            <article className={cn(CARD_BASE_CLASS, "text-center")}>
+              <p className={EYEBROW_CLASS}>Syncing your bookmarks&hellip;</p>
               <div className="mt-4 flex justify-center">
                 <svg
                   viewBox="0 0 24 24"
@@ -479,14 +546,14 @@ export function NewTabHome({
                   <path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round" />
                 </svg>
               </div>
-              <p className="totem-empty mt-4 text-pretty">
+              <p className={EMPTY_STATE_TEXT_CLASS}>
                 Fetching bookmarks from your account. This may take a moment.
               </p>
             </article>
           ) : syncState.phase === "error" ? (
-            <article className="totem-card text-center">
-              <p className="totem-eyebrow">Something went wrong</p>
-              <p className="totem-empty mt-4 text-pretty">
+            <article className={cn(CARD_BASE_CLASS, "text-center")}>
+              <p className={EYEBROW_CLASS}>Something went wrong</p>
+              <p className={EMPTY_STATE_TEXT_CLASS}>
                 {syncState.error === "reconnecting"
                   ? "Reconnecting to your account\u2026"
                   : "Could not sync your bookmarks. Check your connection and try again."}
@@ -495,23 +562,23 @@ export function NewTabHome({
                 <button
                   type="button"
                   onClick={onSync}
-                  className="totem-btn totem-btn--primary mt-6"
+                  className={cn(CTA_BUTTON_CLASS, PRIMARY_BUTTON_CLASS, "mt-6")}
                 >
                   Try again
                 </button>
               )}
             </article>
           ) : (
-            <article className="totem-card text-center">
-              <p className="totem-eyebrow">Your reading list is quiet</p>
-              <p className="totem-empty mt-4 text-pretty">
+            <article className={cn(CARD_BASE_CLASS, "text-center")}>
+              <p className={EYEBROW_CLASS}>Your reading list is quiet</p>
+              <p className={EMPTY_STATE_TEXT_CLASS}>
                 No bookmarks found. Bookmark some posts on X, then sync to see
                 them here.
               </p>
               <button
                 type="button"
                 onClick={onSync}
-                className="totem-btn totem-btn--primary mt-6"
+                className={cn(CTA_BUTTON_CLASS, PRIMARY_BUTTON_CLASS, "mt-6")}
               >
                 Sync bookmarks
               </button>
@@ -520,13 +587,13 @@ export function NewTabHome({
         </footer>
 
         {showWallpaper && wallpaperCredit && (
-          <p className="fixed bottom-6 left-6 z-20 text-xs text-gray-500">
+          <p className="fixed bottom-6 left-6 z-20 text-xs text-stone-500">
             Photo by{" "}
             <a
               href={wallpaperCredit.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="transition-colors hover:text-gray-400"
+              className="transition-colors hover:text-stone-400"
             >
               {wallpaperCredit.name}
             </a>

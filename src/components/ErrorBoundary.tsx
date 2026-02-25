@@ -26,10 +26,10 @@ export class ErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="flex min-h-dvh items-center justify-center bg-x-bg p-8">
+        <div className="flex min-h-dvh items-center justify-center bg-surface p-8">
           <div className="max-w-sm text-center">
-            <h1 className="text-lg font-semibold text-x-text text-balance">Something went wrong</h1>
-            <p className="mt-2 text-sm text-x-text-secondary text-pretty">
+            <h1 className="text-lg font-semibold text-foreground text-balance">Something went wrong</h1>
+            <p className="mt-2 text-sm text-muted text-pretty">
               Try reloading the page.
             </p>
             <button

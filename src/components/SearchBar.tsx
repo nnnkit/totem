@@ -27,14 +27,14 @@ export function SearchBar({
   onBack,
 }: Props) {
   return (
-    <div className="sticky top-0 z-10 bg-x-bg/80 backdrop-blur-md border-b border-x-border">
+    <div className="sticky top-0 z-10 bg-surface/80 backdrop-blur-md border-b border-border">
       <div className="max-w-3xl mx-auto px-4 py-3 flex items-center gap-4">
         {onBack && (
           <button
             onClick={onBack}
             aria-label="Back to home"
             title="Back"
-            className="p-2 -ml-2 text-x-text-secondary hover:text-x-text hover:bg-x-hover rounded-lg transition-colors"
+            className="p-2 -ml-2 text-muted hover:text-foreground hover:bg-surface-hover rounded-lg transition-colors"
           >
             <ArrowLeftIcon className="size-5" />
           </button>
@@ -42,14 +42,14 @@ export function SearchBar({
         <TotemLogo className="size-7 shrink-0" />
 
         <div className="relative flex-1">
-          <MagnifyingGlassIcon className="size-5 text-x-text-secondary absolute left-3 top-1/2 -translate-y-1/2" />
+          <MagnifyingGlassIcon className="size-5 text-muted absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             id="search-input"
             type="text"
             placeholder="Search bookmarks... (press /)"
             value={query}
             onChange={(e) => onQueryChange(e.target.value)}
-            className="w-full bg-x-card text-x-text placeholder-x-text-secondary rounded-lg py-2.5 pl-11 pr-4 border border-x-border focus:border-accent focus:outline-none transition-colors"
+            className="w-full bg-surface-card text-foreground placeholder-muted rounded-lg py-2.5 pl-11 pr-4 border border-border focus:border-accent focus:outline-none transition-colors"
           />
         </div>
 
@@ -57,7 +57,7 @@ export function SearchBar({
           onClick={onRefresh}
           disabled={syncing}
           aria-label="Sync bookmarks"
-          className="p-2 text-x-text-secondary hover:text-accent hover:bg-accent/10 rounded-lg transition-colors disabled:opacity-50"
+          className="p-2 text-muted hover:text-accent hover:bg-accent/10 rounded-lg transition-colors disabled:opacity-50"
           title="Sync bookmarks (top page)"
         >
           <span className={cn(syncing && "animate-spin")}><ArrowsClockwiseIcon className="size-5" /></span>
@@ -66,13 +66,13 @@ export function SearchBar({
         <button
           onClick={onOpenSettings}
           aria-label="Open settings"
-          className="p-2 text-x-text-secondary hover:text-accent hover:bg-accent/10 rounded-lg transition-colors"
+          className="p-2 text-muted hover:text-accent hover:bg-accent/10 rounded-lg transition-colors"
           title="Settings"
         >
           <GearSixIcon className="size-5" />
         </button>
 
-        <span className="text-x-text-secondary text-sm shrink-0 tabular-nums">
+        <span className="text-muted text-sm shrink-0 tabular-nums">
           {bookmarkCount}
         </span>
       </div>
