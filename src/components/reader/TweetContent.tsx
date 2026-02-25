@@ -54,7 +54,7 @@ function TweetBody({
         {repostComment && (
           <RichTextBlock text={repostComment} compact={compact} style="tweet" />
         )}
-        <div className="mt-4 rounded-xl border border-border p-4">
+        <div className="mt-4 rounded border border-border p-4">
           <p className="text-xs uppercase text-muted">
             Reposted content
           </p>

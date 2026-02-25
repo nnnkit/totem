@@ -45,7 +45,7 @@ export function SearchBar({
             placeholder="Search bookmarks... (press /)"
             value={query}
             onChange={(e) => onQueryChange(e.target.value)}
-            className="w-full bg-surface-card text-foreground placeholder-muted rounded-lg py-2.5 pl-11 pr-4 border border-border focus:border-accent focus:outline-none transition-colors"
+            className="w-full bg-surface-card text-foreground placeholder-muted rounded py-2.5 pl-11 pr-4 border border-border focus:border-accent focus:outline-none transition-colors"
           />
         </div>
 

@@ -37,7 +37,7 @@ function ArticleBlockRenderer({ blocks, entityMap }: ArticleBlockRendererProps) 
   const groups = useMemo(() => groupBlocks(blocks), [blocks]);
 
   return (
-    <div className="prose prose-lg prose-reader max-w-none font-[Charter,'Iowan_Old_Style','Palatino_Linotype','Book_Antiqua',Georgia,serif] [&_a]:text-accent [&_a:hover]:underline">
+    <div className="prose prose-lg prose-reader max-w-none [&_a]:text-accent [&_a:hover]:underline">
       {groups.map((group, groupIdx) => {
         if (group.type === "unordered-list") {
           return (
@@ -86,7 +86,7 @@ function ArticleBlockRenderer({ blocks, entityMap }: ArticleBlockRendererProps) 
                     <img
                       src={imageUrl}
                       alt=""
-                      className="w-full rounded-xl object-cover"
+                      className="w-full rounded object-cover"
                       loading="lazy"
                     />
                   </figure>
@@ -215,11 +215,7 @@ export function TweetArticle({ article, compact = false, authorProfileImageUrl }
     [plainText, hasBlocks],
   );
 
-  const serifFont = `font-[Charter,"Iowan Old Style","Palatino Linotype","Book Antiqua",Georgia,serif]`;
-  const titleClass = cn(
-    "reader-heading mt-6 text-4xl font-bold text-balance text-foreground",
-    serifFont,
-  );
+  const titleClass = "reader-heading mt-6 text-4xl font-bold text-balance text-foreground";
 
   if (hasBlocks) {
     return (
@@ -238,7 +234,7 @@ export function TweetArticle({ article, compact = false, authorProfileImageUrl }
           <img
             src={coverImageUrl}
             alt=""
-            className="mb-5 w-full rounded-xl object-cover"
+            className="mb-5 w-full rounded object-cover"
             loading="lazy"
           />
         )}
@@ -275,7 +271,7 @@ export function TweetArticle({ article, compact = false, authorProfileImageUrl }
           <img
             src={coverImageUrl}
             alt=""
-            className="mb-5 w-full rounded-xl object-cover"
+            className="mb-5 w-full rounded object-cover"
             loading="lazy"
           />
         )}
@@ -346,7 +342,7 @@ export function TweetArticle({ article, compact = false, authorProfileImageUrl }
         <img
           src={coverImageUrl}
           alt=""
-          className="mb-5 w-full rounded-xl object-cover"
+          className="mb-5 w-full rounded object-cover"
           loading="lazy"
         />
       )}

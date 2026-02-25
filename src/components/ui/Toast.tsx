@@ -37,7 +37,7 @@ export function Toast({
         if (exiting) onDismiss();
       }}
     >
-      <div className="flex items-center gap-3 rounded-lg bg-surface-card px-4 py-3 text-sm text-foreground shadow-lg border border-border">
+      <div className="flex items-center gap-3 rounded bg-surface-card px-4 py-3 text-sm text-foreground shadow-lg border border-border">
         <p className="text-pretty">{message}</p>
         {linkUrl && (
           <a
@@ -51,7 +51,7 @@ export function Toast({
         )}
         <button
           onClick={handleDismiss}
-          className="shrink-0 rounded-md p-1 text-muted transition-colors hover:text-foreground"
+          className="shrink-0 rounded p-1 text-muted transition-colors hover:text-foreground"
           aria-label="Dismiss"
         >
           <XIcon className="size-4" />

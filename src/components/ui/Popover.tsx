@@ -9,7 +9,7 @@ export function PopoverContent({ className, ...props }: PopoverContentProps) {
   return (
     <Popover.Popup
       className={cn(
-        "totem-popover z-30 rounded-lg border border-border bg-surface-card shadow-xl",
+        "totem-popover z-30 rounded border border-border bg-surface-card shadow-xl",
         className,
       )}
       {...props}

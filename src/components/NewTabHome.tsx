@@ -60,67 +60,64 @@ const SETTINGS_ICON = <GearSixIcon className="size-5" />;
 
 const SEARCH_ICON = <MagnifyingGlassIcon className="size-4 opacity-50" />;
 
-const SERIF_DISPLAY_CLASS =
-  "font-['Spectral','Iowan_Old_Style','Palatino_Linotype',Georgia,serif]";
-
-const CLOCK_CLASS = `${SERIF_DISPLAY_CLASS} text-balance text-[clamp(2.4rem,7vw,4.2rem)] font-light leading-none tracking-[-0.04em] text-[color:var(--totem-on-bg)] tabular-nums`;
+const CLOCK_CLASS = "text-balance text-[clamp(2.4rem,7vw,4.2rem)] font-light leading-none tracking-[-0.04em] text-on-bg tabular-nums";
 
 const ICON_BUTTON_CLASS =
-  "rounded-lg border border-transparent bg-transparent p-[0.46rem] text-[color:var(--totem-on-bg-muted)] transition-[border-color,color,background-color] duration-150 ease-[var(--motion-ease-hover)] hover:border-[rgba(255,255,255,0.16)] hover:bg-[rgba(255,255,255,0.06)] hover:text-[color:var(--totem-on-bg)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[rgba(226,128,103,0.82)]";
+  "rounded border border-transparent bg-transparent p-[0.46rem] text-on-bg-muted transition-[border-color,color,background-color] duration-150 ease-hover hover:border-[rgba(255,255,255,0.16)] hover:bg-[rgba(255,255,255,0.06)] hover:text-on-bg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[rgba(226,128,103,0.82)]";
 
 const SEARCH_FORM_CLASS =
-  "relative mx-auto flex max-w-[36rem] items-center rounded-lg [background:var(--totem-search-bg)] backdrop-blur-[12px] [box-shadow:var(--totem-search-shadow)]";
+  "relative mx-auto flex max-w-[36rem] items-center rounded bg-search-bg backdrop-blur-[12px] shadow-search";
 
 const SEARCH_LOGO_CLASS = "flex items-center pl-2";
 
 const SEARCH_INPUT_CLASS =
-  "w-full appearance-none border-0 bg-transparent px-3 py-[0.85rem] text-base text-[color:var(--totem-text-primary)] [font-family:inherit] outline-none placeholder:text-[color:var(--totem-placeholder)]";
+  "w-full appearance-none border-0 bg-transparent px-3 py-[0.85rem] text-base text-home-fg [font-family:inherit] outline-none placeholder:text-home-placeholder";
 
 const SEARCH_TRAIL_CLASS =
-  "pointer-events-none flex items-center pr-4 text-[color:var(--totem-text-primary)]";
+  "pointer-events-none flex items-center pr-4 text-home-fg";
 
 const QUICK_LINK_CLASS =
-  "group flex flex-col items-center gap-[0.35rem] no-underline transition-opacity duration-150 ease-[var(--motion-ease-hover)]";
+  "group flex flex-col items-center gap-[0.35rem] no-underline transition-opacity duration-150 ease-hover";
 
 const QUICK_LINK_ICON_CLASS =
-  "flex size-10 items-center justify-center rounded-lg border border-[color:var(--totem-overlay-border)] [background:var(--totem-overlay-bg)] transition-[background,border-color] duration-150 ease-[var(--motion-ease-hover)] group-hover:[background:var(--totem-overlay-hover-bg)] group-hover:border-[color:var(--totem-overlay-hover-border)]";
+  "flex size-10 items-center justify-center rounded border border-overlay-edge bg-overlay transition-[background,border-color] duration-150 ease-hover group-hover:bg-overlay-hover group-hover:border-overlay-hover-edge";
 
 const QUICK_LINK_LABEL_CLASS =
-  "max-w-[4.5rem] overflow-hidden text-ellipsis whitespace-nowrap text-center text-[0.62rem] text-[color:var(--totem-on-bg-ghost)] group-hover:text-[color:var(--totem-on-bg-muted)]";
+  "max-w-[4.5rem] overflow-hidden text-ellipsis whitespace-nowrap text-center text-[0.62rem] text-on-bg-ghost group-hover:text-on-bg-muted";
 
 const CARD_BASE_CLASS =
-  "relative min-h-[8.5rem] overflow-hidden rounded-lg p-[0.86rem_1rem_0.72rem] [background:var(--totem-surface)] [backdrop-filter:blur(20px)] [box-shadow:var(--totem-surface-shadow)] transition-colors duration-150 ease-[var(--motion-ease-hover)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[rgba(226,128,103,0.82)] max-[768px]:min-h-[8.4rem] max-[480px]:min-h-[8.2rem] max-[480px]:p-[0.82rem_0.9rem_0.78rem]";
+  "relative min-h-[8.5rem] overflow-hidden rounded p-[0.86rem_1rem_0.72rem] bg-glass backdrop-blur-[20px] shadow-glass transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[rgba(226,128,103,0.82)] max-[768px]:min-h-[8.4rem] max-[480px]:min-h-[8.2rem] max-[480px]:p-[0.82rem_0.9rem_0.78rem]";
 
-const PICK_CARD_CLASS = "min-h-[8.9rem] cursor-pointer hover:[background:var(--totem-surface-hover)]";
+const PICK_CARD_CLASS = "min-h-[8.9rem] cursor-pointer hover:bg-glass-hover";
 
 const CARD_CONTENT_CLASS =
   "min-h-[7rem] translate-y-0 opacity-100 transition-[transform,opacity] duration-200 ease-[cubic-bezier(0.215,0.61,0.355,1)] motion-reduce:transition-none max-[768px]:min-h-[6.8rem] max-[480px]:min-h-[6.6rem]";
 
 const EYEBROW_CLASS = "text-[0.68rem] font-semibold uppercase tracking-[0.26em] text-accent";
 
-const CARD_TITLE_CLASS = `${SERIF_DISPLAY_CLASS} mt-4 line-clamp-2 min-h-[calc(1.28em*2)] text-balance text-[clamp(0.96rem,1.8vw,1.16rem)] font-normal leading-[1.28] text-[color:var(--totem-text-secondary)] max-[480px]:text-[0.92rem]`;
+const CARD_TITLE_CLASS = "mt-4 line-clamp-2 min-h-[calc(1.28em*2)] text-balance text-[clamp(0.96rem,1.8vw,1.16rem)] font-normal leading-[1.28] text-home-fg-secondary max-[480px]:text-[0.92rem]";
 
 const CARD_DESCRIPTION_CLASS =
-  "mt-2.5 line-clamp-1 min-h-[calc(1.48em*1)] text-pretty text-[0.76rem] leading-[1.48] text-[color:var(--totem-description-text)]";
+  "mt-2.5 line-clamp-1 min-h-[calc(1.48em*1)] text-pretty text-[0.76rem] leading-[1.48] text-home-description";
 
-const CARD_META_CLASS = "text-[0.72rem] leading-[1.2] text-[color:var(--totem-text-muted)]";
+const CARD_META_CLASS = "text-[0.72rem] leading-[1.2] text-home-fg-muted";
 
 const ACTIONS_CLASS = "mt-8 flex items-center justify-between gap-[0.65rem] max-[480px]:gap-[0.55rem]";
 
 const CTA_BUTTON_CLASS =
-  "inline-flex items-center justify-center rounded-lg text-[0.79rem] font-semibold leading-none transition-[opacity,color,border-color,background-color] duration-150 ease-[var(--motion-ease-hover)] disabled:cursor-default disabled:opacity-[0.56] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[rgba(226,128,103,0.82)]";
+  "inline-flex items-center justify-center rounded text-[0.79rem] font-semibold leading-none transition-[opacity,color,border-color,background-color] duration-150 ease-hover disabled:cursor-default disabled:opacity-[0.56] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[rgba(226,128,103,0.82)]";
 
 const PRIMARY_BUTTON_CLASS =
-  "border-0 bg-[color:var(--totem-accent)] px-4 py-2 text-white hover:opacity-90";
+  "border-0 bg-home-accent px-4 py-2 text-white hover:opacity-90";
 
 const SECONDARY_BUTTON_CLASS =
-  "border border-[color:var(--totem-secondary-border)] [background:var(--totem-secondary-bg)] px-[1.28rem] py-[0.68rem] text-[color:var(--totem-secondary-text)] hover:[background:var(--totem-surface-hover)]";
+  "border border-home-secondary-border bg-home-secondary-bg px-[1.28rem] py-[0.68rem] text-home-secondary-text hover:bg-glass-hover";
 
 const HOTKEY_KBD_CLASS =
-  "ml-2 border-[color:var(--totem-secondary-border)] [background:var(--totem-accent-bg)] text-[color:var(--totem-text-muted)]";
+  "ml-2 border-home-secondary-border bg-accent-tint text-home-fg-muted";
 
 const EMPTY_STATE_TEXT_CLASS =
-  "mt-4 text-pretty text-[0.95rem] text-[color:var(--totem-empty-text)]";
+  "mt-4 text-pretty text-[0.95rem] text-home-empty";
 
 export function NewTabHome({
   bookmarks,
@@ -242,12 +239,15 @@ export function NewTabHome({
   );
 
   return (
-    <div className="totem-home relative flex h-dvh flex-col overflow-hidden [background:var(--totem-bg)] text-[color:var(--totem-text-primary)]">
+    <div className="totem-home relative flex h-dvh flex-col overflow-hidden bg-surface text-home-fg">
       {!showWallpaper && gradientCss && (
         <div
           className="pointer-events-none absolute inset-0"
           style={{ background: gradientCss }}
         />
+      )}
+      {showWallpaper && (
+        <div className="pointer-events-none absolute inset-0 bg-black" />
       )}
       {showWallpaper && (
         <img
@@ -365,7 +365,7 @@ export function NewTabHome({
                         width={20}
                         height={20}
                         loading="lazy"
-                        className="rounded-[2px]"
+                        className="rounded"
                       />
                     </span>
                     <span className={QUICK_LINK_LABEL_CLASS}>
@@ -426,7 +426,7 @@ export function NewTabHome({
                 className={cn(
                   CARD_BASE_CLASS,
                   PICK_CARD_CLASS,
-                  cardEngaged && "[background:var(--totem-surface-hover)]",
+                  cardEngaged && "bg-glass-hover",
                 )}
                 onMouseEnter={() => setCardEngaged(true)}
                 onMouseLeave={() => setCardEngaged(false)}
@@ -600,7 +600,7 @@ export function NewTabHome({
           </p>
         )}
         {curatorHud && (
-          <div className="fixed bottom-6 right-6 z-20 flex items-center gap-2 rounded-xl bg-black/60 px-3 py-2 text-xs text-white backdrop-blur-xl">
+          <div className="fixed bottom-6 right-6 z-20 flex items-center gap-2 rounded bg-black/60 px-3 py-2 text-xs text-white backdrop-blur-xl">
             {curatorHud.justSelected && (
               <span className="font-medium text-green-400">Selected!</span>
             )}
@@ -616,15 +616,15 @@ export function NewTabHome({
               </span>
             )}
             <span className="text-white/30">|</span>
-            <kbd className="rounded-md border border-white/20 bg-white/10 px-1 py-0.5 font-mono text-white/70">
+            <kbd className="rounded border border-white/20 bg-white/10 px-1 py-0.5 font-mono text-white/70">
               Space
             </kbd>
             <span className="text-white/40">Next</span>
-            <kbd className="rounded-md border border-white/20 bg-white/10 px-1 py-0.5 font-mono text-white/70">
+            <kbd className="rounded border border-white/20 bg-white/10 px-1 py-0.5 font-mono text-white/70">
               Y
             </kbd>
             <span className="text-white/40">Pick</span>
-            <kbd className="rounded-md border border-white/20 bg-white/10 px-1 py-0.5 font-mono text-white/70">
+            <kbd className="rounded border border-white/20 bg-white/10 px-1 py-0.5 font-mono text-white/70">
               E
             </kbd>
             <span className="text-white/40">Export</span>

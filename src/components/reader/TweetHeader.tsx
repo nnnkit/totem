@@ -14,7 +14,7 @@ function TweetKindPill({ kind }: TweetKindPillProps) {
   return (
     <span
       className={cn(
-        "inline-block rounded-md bg-surface-hover px-2 py-0.5 text-xs font-medium",
+        "inline-block rounded bg-surface-hover px-2 py-0.5 text-xs font-medium",
         kindPillClass(kind),
       )}
     >
@@ -55,7 +55,7 @@ function AuthorCard({ author, closing, onClose }: AuthorCardProps) {
     <div
       ref={cardRef}
       className={cn(
-        "mb-4 overflow-hidden rounded-xl border border-border bg-surface-card",
+        "mb-4 overflow-hidden rounded border border-border bg-surface-card",
         closing ? "animate-card-out" : "animate-card-in",
       )}
     >
@@ -146,7 +146,7 @@ function AuthorCard({ author, closing, onClose }: AuthorCardProps) {
           href={authorUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-3 inline-block rounded-lg bg-foreground px-4 py-1.5 text-sm font-semibold text-surface hover:opacity-90"
+          className="mt-3 inline-block rounded bg-foreground px-4 py-1.5 text-sm font-semibold text-surface hover:opacity-90"
         >
           View on X
         </a>

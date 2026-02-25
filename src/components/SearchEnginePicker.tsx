@@ -45,7 +45,7 @@ export function SearchEnginePicker({ value, onChange }: Props) {
     <Popover.Root>
       <Popover.Trigger
         type="button"
-        className="flex items-center gap-1 rounded-md p-1 transition-colors hover:[background:var(--totem-accent-bg)]"
+        className="flex items-center gap-1 rounded p-1 transition-colors hover:bg-accent-tint"
         aria-label={`Search engine: ${current.name}`}
       >
         {current.logo}

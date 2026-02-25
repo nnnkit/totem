@@ -26,7 +26,7 @@ function LinkPreviewCard({ url, card }: LinkPreviewCardProps) {
       href={url.href}
       target="_blank"
       rel="noopener noreferrer"
-      className="flex overflow-hidden rounded-xl border border-border bg-surface-link-card transition-colors hover:bg-surface-hover"
+      className="flex overflow-hidden rounded border border-border bg-surface-link-card transition-colors hover:bg-surface-hover"
     >
       {card.imageUrl && (
         <img
@@ -73,7 +73,7 @@ function LinkCards({ urls }: LinkCardsProps) {
             href={url.href}
             target="_blank"
             rel="noopener noreferrer"
-            className="block rounded-xl border border-border bg-surface-link-card px-4 py-3 transition-colors hover:bg-surface-hover"
+            className="block rounded border border-border bg-surface-link-card px-4 py-3 transition-colors hover:bg-surface-hover"
           >
             <span className="text-sm text-accent">{url.displayUrl}</span>
             {url.displayUrl !== url.href && (
@@ -162,7 +162,7 @@ export function TweetLinks({
       href={buildGrokUrl(viewOnXUrl)}
       target="_blank"
       rel="noopener noreferrer"
-      className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface-card px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
+      className="inline-flex items-center gap-1.5 rounded border border-border bg-surface-card px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
     >
       <LightningIcon weight="bold" className="size-3.5" />
       Ask Grok

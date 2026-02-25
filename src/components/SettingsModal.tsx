@@ -63,7 +63,7 @@ export function SettingsModal({
     <Modal open={open} onClose={onClose} className="bg-[rgba(11,6,5,0.5)]" ariaLabelledBy="settings-title">
       {(closing) => (
       <div className={cn(
-        "max-w-md mx-auto mt-[10vh] max-h-[80vh] flex flex-col rounded-xl border border-border bg-surface-card shadow-xl",
+        "max-w-md mx-auto mt-[10vh] max-h-[80vh] flex flex-col rounded border border-border bg-surface-card shadow-xl",
         closing ? "animate-preview-out" : "animate-preview-in",
       )}>
         <div className="flex shrink-0 items-center justify-between px-6 pt-5 pb-3">

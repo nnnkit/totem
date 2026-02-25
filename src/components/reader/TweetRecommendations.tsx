@@ -43,7 +43,7 @@ export function TweetRecommendations({
             key={related.tweetId}
             type="button"
             onClick={() => onOpenBookmark(related)}
-            className="w-full rounded-lg border border-border bg-surface-card/60 p-2.5 text-left transition-colors hover:bg-surface-hover"
+            className="w-full rounded border border-border bg-surface-card/60 p-2.5 text-left transition-colors hover:bg-surface-hover"
           >
             <div className="flex items-center gap-1.5">
               <img

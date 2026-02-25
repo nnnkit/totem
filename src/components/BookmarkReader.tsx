@@ -187,7 +187,7 @@ export function BookmarkReader({
   const containerWidthClass = "max-w-3xl";
 
   return (
-    <div className="min-h-dvh bg-surface">
+    <div className="reader-page min-h-dvh">
       <div className="sticky top-0 z-10 border-b border-border bg-surface/80 backdrop-blur-md">
         <div
           className={cn("mx-auto flex items-center gap-3 px-4 py-3", containerWidthClass)}
@@ -207,7 +207,7 @@ export function BookmarkReader({
           onClick={onPrev}
           aria-label="Previous post"
           title="Previous"
-          className="fixed left-4 top-1/2 z-20 -translate-y-1/2 rounded-lg bg-surface/80 p-3 text-muted shadow-md border border-border backdrop-blur-sm transition-colors hover:bg-surface-hover hover:text-foreground"
+          className="fixed left-4 top-1/2 z-20 -translate-y-1/2 rounded bg-surface/80 p-3 text-muted shadow-md border border-border backdrop-blur-sm transition-colors hover:bg-surface-hover hover:text-foreground"
         >
           <CaretLeftIcon className="size-5" />
         </button>
@@ -218,7 +218,7 @@ export function BookmarkReader({
           onClick={onNext}
           aria-label="Next post"
           title="Next"
-          className="fixed right-4 top-1/2 z-20 -translate-y-1/2 rounded-lg bg-surface/80 p-3 text-muted shadow-md border border-border backdrop-blur-sm transition-colors hover:bg-surface-hover hover:text-foreground"
+          className="fixed right-4 top-1/2 z-20 -translate-y-1/2 rounded bg-surface/80 p-3 text-muted shadow-md border border-border backdrop-blur-sm transition-colors hover:bg-surface-hover hover:text-foreground"
         >
           <CaretRightIcon className="size-5" />
         </button>
@@ -226,7 +226,7 @@ export function BookmarkReader({
 
       <article
         ref={articleRef}
-        className={cn(containerWidthClass, "relative mx-auto px-5 pb-16 pt-6")}
+        className={cn(containerWidthClass, "reader-card relative mx-auto px-5 pb-16 pt-6")}
       >
         <TweetContent
           displayBookmark={displayBookmark}

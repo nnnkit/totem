@@ -35,7 +35,7 @@ export function Onboarding({ phase, onLogin }: Props) {
         onClick={() => {
           onLogin().catch(() => {});
         }}
-        className="bg-accent hover:bg-accent/90 text-white font-bold py-3 px-8 rounded-lg text-lg transition-colors"
+        className="bg-accent hover:bg-accent/90 text-white font-bold py-3 px-8 rounded text-lg transition-colors"
       >
         Log in to X
       </a>

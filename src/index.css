@@ -35,6 +35,34 @@
     --color-border: var(--border);
     --color-success: var(--success);
 
+    /* Home page tokens — values scoped to .totem-home */
+    --color-on-bg: var(--on-bg);
+    --color-on-bg-muted: var(--on-bg-muted);
+    --color-on-bg-ghost: var(--on-bg-ghost);
+    --color-glass: var(--glass);
+    --color-glass-hover: var(--glass-hover);
+    --color-home-fg: var(--home-fg);
+    --color-home-fg-secondary: var(--home-fg-secondary);
+    --color-home-fg-muted: var(--home-fg-muted);
+    --color-home-accent: var(--home-accent);
+    --color-accent-tint: var(--accent-tint);
+    --color-search-bg: var(--search-bg);
+    --color-home-placeholder: var(--home-placeholder);
+    --color-home-secondary-bg: var(--home-secondary-bg);
+    --color-home-secondary-border: var(--home-secondary-border);
+    --color-home-secondary-text: var(--home-secondary-text);
+    --color-overlay: var(--overlay);
+    --color-overlay-edge: var(--overlay-edge);
+    --color-overlay-hover: var(--overlay-hover);
+    --color-overlay-hover-edge: var(--overlay-hover-edge);
+    --color-home-description: var(--home-description);
+    --color-home-empty: var(--home-empty);
+
+    --shadow-glass: var(--glass-shadow);
+    --shadow-search: var(--search-shadow);
+
+    --ease-hover: ease;
+
     --animate-overlay-in: overlay-in 200ms cubic-bezier(0.215, 0.61, 0.355, 1)
         forwards;
     --animate-overlay-out: overlay-out 150ms ease-in forwards;
@@ -319,7 +347,7 @@
         font-size: 85%;
         white-space: break-spaces;
         background-color: var(--inline-code-bg);
-        border-radius: 2px;
+        border-radius: 0.25rem;
     }
 
     :not(pre) > code::before,
@@ -334,7 +362,7 @@
         vertical-align: middle;
         min-width: 1.6em;
         padding: 0.2em 0.4em;
-        border-radius: 3px;
+        border-radius: 0.25rem;
         border: 1px solid var(--border);
         background: var(--surface-card);
         box-shadow: 0 1px 0 var(--border);
@@ -506,35 +534,46 @@
 }
 
 .totem-home {
-    /* On-background colors — always white (background is always dark photo/gradient) */
-    --totem-on-bg: rgba(255, 255, 255, 0.92);
-    --totem-on-bg-muted: rgba(255, 255, 255, 0.62);
-    --totem-on-bg-ghost: rgba(255, 255, 255, 0.56);
+    /* On-background — always white (background is always dark photo/gradient) */
+    --on-bg: rgba(255, 255, 255, 0.92);
+    --on-bg-muted: rgba(255, 255, 255, 0.62);
+    --on-bg-ghost: rgba(255, 255, 255, 0.56);
 
-    /* On-surface colors — light theme (default), used inside cards/search */
-    --totem-bg: var(--surface);
-    --totem-surface: rgba(254, 249, 247, 0.97);
-    --totem-surface-hover: #fef9f7;
-    --totem-surface-shadow:
+    /* Glass card surface */
+    --glass: rgba(254, 249, 247, 0.97);
+    --glass-hover: #fef9f7;
+    --glass-shadow:
         0 1px 3px rgba(11, 6, 5, 0.06), 0 6px 24px rgba(11, 6, 5, 0.06);
-    --totem-text-primary: rgba(11, 6, 5, 0.92);
-    --totem-text-secondary: rgba(11, 6, 5, 0.82);
-    --totem-text-muted: rgba(11, 6, 5, 0.54);
-    --totem-accent: #e28067;
-    --totem-accent-bg: rgba(226, 128, 103, 0.08);
-    --totem-search-bg: rgba(254, 249, 247, 0.97);
-    --totem-search-shadow:
+
+    /* Card text */
+    --home-fg: rgba(11, 6, 5, 0.92);
+    --home-fg-secondary: rgba(11, 6, 5, 0.82);
+    --home-fg-muted: rgba(11, 6, 5, 0.54);
+
+    /* Accent */
+    --home-accent: #e28067;
+    --accent-tint: rgba(226, 128, 103, 0.08);
+
+    /* Search */
+    --search-bg: rgba(254, 249, 247, 0.97);
+    --search-shadow:
         0 1px 3px rgba(11, 6, 5, 0.06), 0 6px 24px rgba(11, 6, 5, 0.06);
-    --totem-placeholder: rgba(11, 6, 5, 0.36);
-    --totem-secondary-bg: rgba(254, 249, 247, 0.95);
-    --totem-secondary-border: rgba(11, 6, 5, 0.1);
-    --totem-secondary-text: rgba(11, 6, 5, 0.72);
-    --totem-overlay-bg: rgba(255, 255, 255, 0.08);
-    --totem-overlay-border: rgba(255, 255, 255, 0.1);
-    --totem-overlay-hover-bg: rgba(255, 255, 255, 0.14);
-    --totem-overlay-hover-border: rgba(255, 255, 255, 0.18);
-    --totem-description-text: rgba(11, 6, 5, 0.6);
-    --totem-empty-text: rgba(11, 6, 5, 0.44);
+    --home-placeholder: rgba(11, 6, 5, 0.36);
+
+    /* Secondary buttons */
+    --home-secondary-bg: rgba(254, 249, 247, 0.95);
+    --home-secondary-border: rgba(11, 6, 5, 0.1);
+    --home-secondary-text: rgba(11, 6, 5, 0.72);
+
+    /* Overlay (translucent white on photo) */
+    --overlay: rgba(255, 255, 255, 0.08);
+    --overlay-edge: rgba(255, 255, 255, 0.1);
+    --overlay-hover: rgba(255, 255, 255, 0.14);
+    --overlay-hover-edge: rgba(255, 255, 255, 0.18);
+
+    /* Description & empty state */
+    --home-description: rgba(11, 6, 5, 0.6);
+    --home-empty: rgba(11, 6, 5, 0.44);
 }
 
 .totem-ambient {
@@ -557,6 +596,43 @@
         );
 }
 
+/* Reader page: two-tone background so article stands out in light mode */
+.reader-page {
+    background: #e8e3df;
+}
+
+.reader-card {
+    margin-block: 1.5rem;
+    background: white;
+    border-radius: 0.25rem;
+    box-shadow:
+        0 0 0 1px rgba(0, 0, 0, 0.04),
+        0 2px 8px rgba(0, 0, 0, 0.03);
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme]) .reader-page {
+        background: var(--surface);
+    }
+    :root:not([data-theme]) .reader-card {
+        margin-block: 0;
+        background: transparent;
+        border-radius: 0;
+        box-shadow: none;
+    }
+}
+
+[data-theme="dark"] .reader-page {
+    background: var(--surface);
+}
+
+[data-theme="dark"] .reader-card {
+    margin-block: 0;
+    background: transparent;
+    border-radius: 0;
+    box-shadow: none;
+}
+
 .totem-grain {
     opacity: 0.18;
     mix-blend-mode: overlay;
@@ -568,7 +644,7 @@
 .animate-logo-shine {
     position: relative;
     overflow: hidden;
-    border-radius: 1rem;
+    border-radius: 0.25rem;
 }
 
 .animate-logo-shine::after {
@@ -596,45 +672,45 @@
 /* Dark theme overrides for totem-home — system preference */
 @media (prefers-color-scheme: dark) {
     :root:not([data-theme]) .totem-home {
-        --totem-surface: rgba(15, 11, 9, 0.92);
-        --totem-surface-hover: rgba(22, 17, 15, 0.92);
-        --totem-surface-shadow: none;
-        --totem-text-primary: rgba(255, 255, 255, 0.92);
-        --totem-text-secondary: rgba(255, 255, 255, 0.86);
-        --totem-text-muted: rgba(255, 255, 255, 0.62);
-        --totem-accent: #e28067;
-        --totem-accent-bg: rgba(226, 128, 103, 0.12);
-        --totem-search-bg: rgb(20, 16, 14);
-        --totem-search-shadow:
+        --glass: rgba(15, 11, 9, 0.92);
+        --glass-hover: rgba(22, 17, 15, 0.92);
+        --glass-shadow: none;
+        --home-fg: rgba(255, 255, 255, 0.92);
+        --home-fg-secondary: rgba(255, 255, 255, 0.86);
+        --home-fg-muted: rgba(255, 255, 255, 0.62);
+        --home-accent: #e28067;
+        --accent-tint: rgba(226, 128, 103, 0.12);
+        --search-bg: rgb(20, 16, 14);
+        --search-shadow:
             0 1px 6px rgba(11, 6, 5, 0.2), 0 4px 24px rgba(11, 6, 5, 0.12);
-        --totem-placeholder: rgba(255, 255, 255, 0.45);
-        --totem-secondary-bg: rgb(32, 28, 26);
-        --totem-secondary-border: rgba(255, 255, 255, 0.14);
-        --totem-secondary-text: rgba(255, 255, 255, 0.8);
-        --totem-description-text: rgba(255, 255, 255, 0.74);
-        --totem-empty-text: rgba(255, 255, 255, 0.5);
+        --home-placeholder: rgba(255, 255, 255, 0.45);
+        --home-secondary-bg: rgb(32, 28, 26);
+        --home-secondary-border: rgba(255, 255, 255, 0.14);
+        --home-secondary-text: rgba(255, 255, 255, 0.8);
+        --home-description: rgba(255, 255, 255, 0.74);
+        --home-empty: rgba(255, 255, 255, 0.5);
     }
 }
 
 /* Dark theme overrides for totem-home — manual toggle */
 [data-theme="dark"] .totem-home {
-    --totem-surface: rgba(15, 11, 9, 0.92);
-    --totem-surface-hover: rgba(22, 17, 15, 0.92);
-    --totem-surface-shadow: none;
-    --totem-text-primary: rgba(255, 255, 255, 0.92);
-    --totem-text-secondary: rgba(255, 255, 255, 0.86);
-    --totem-text-muted: rgba(255, 255, 255, 0.62);
-    --totem-accent: #e28067;
-    --totem-accent-bg: rgba(226, 128, 103, 0.12);
-    --totem-search-bg: rgb(20, 16, 14);
-    --totem-search-shadow:
+    --glass: rgba(15, 11, 9, 0.92);
+    --glass-hover: rgba(22, 17, 15, 0.92);
+    --glass-shadow: none;
+    --home-fg: rgba(255, 255, 255, 0.92);
+    --home-fg-secondary: rgba(255, 255, 255, 0.86);
+    --home-fg-muted: rgba(255, 255, 255, 0.62);
+    --home-accent: #e28067;
+    --accent-tint: rgba(226, 128, 103, 0.12);
+    --search-bg: rgb(20, 16, 14);
+    --search-shadow:
         0 1px 6px rgba(11, 6, 5, 0.2), 0 4px 24px rgba(11, 6, 5, 0.12);
-    --totem-placeholder: rgba(255, 255, 255, 0.45);
-    --totem-secondary-bg: rgb(32, 28, 26);
-    --totem-secondary-border: rgba(255, 255, 255, 0.14);
-    --totem-secondary-text: rgba(255, 255, 255, 0.8);
-    --totem-description-text: rgba(255, 255, 255, 0.74);
-    --totem-empty-text: rgba(255, 255, 255, 0.5);
+    --home-placeholder: rgba(255, 255, 255, 0.45);
+    --home-secondary-bg: rgb(32, 28, 26);
+    --home-secondary-border: rgba(255, 255, 255, 0.14);
+    --home-secondary-text: rgba(255, 255, 255, 0.8);
+    --home-description: rgba(255, 255, 255, 0.74);
+    --home-empty: rgba(255, 255, 255, 0.5);
 }
 
 /* Tour popover */
@@ -643,7 +719,7 @@
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border: 1px solid var(--tour-border) !important;
-    border-radius: 0.75rem !important;
+    border-radius: 0.25rem !important;
     color: var(--foreground) !important;
     box-shadow: var(--tour-shadow) !important;
     max-width: 20rem !important;
@@ -657,7 +733,7 @@
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    border-radius: 0.375rem !important;
+    border-radius: 0.25rem !important;
     transition:
         color 150ms,
         background 150ms;
@@ -706,7 +782,7 @@
     display: inline-flex !important;
     align-items: center !important;
     gap: 0.25rem !important;
-    border-radius: 0.5rem !important;
+    border-radius: 0.25rem !important;
     font-size: 0.8125rem !important;
     font-weight: 600 !important;
     padding: 0.4rem 0.875rem !important;

@@ -13,7 +13,7 @@ interface Props {
 
 export function Badge({ variant = "muted", className, children }: Props) {
   return (
-    <span className={cn("shrink-0 rounded-md", variants[variant], className)}>
+    <span className={cn("shrink-0 rounded", variants[variant], className)}>
       {children}
     </span>
   );

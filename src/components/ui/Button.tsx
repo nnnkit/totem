@@ -3,10 +3,10 @@ import { cn } from "../../lib/cn";
 
 const variants = {
   primary: "bg-accent text-white hover:opacity-90",
-  secondary: "border border-border bg-surface text-muted hover:bg-surface-hover",
+  secondary: "border border-border bg-surface-card text-muted hover:bg-surface-hover",
   ghost: "text-muted hover:text-foreground hover:bg-surface-hover",
   destructive: "bg-red-500/15 text-red-500 hover:bg-red-500/25",
-  "accent-soft": "bg-accent/15 text-accent hover:bg-accent/25",
+  "accent-soft": "bg-accent-surface text-accent hover:bg-accent-surface-hover",
   outline: "border border-border bg-surface-card text-muted hover:bg-surface-hover hover:text-foreground",
 } as const;
 
@@ -29,7 +29,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     <button
       ref={ref}
       className={cn(
-        "inline-flex items-center justify-center gap-1.5 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:pointer-events-none",
+        "inline-flex items-center justify-center gap-1.5 rounded font-medium transition-colors disabled:opacity-50 disabled:pointer-events-none",
         variants[variant],
         sizes[size],
         className,

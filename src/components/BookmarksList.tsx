@@ -66,7 +66,7 @@ const TabButton = forwardRef<HTMLButtonElement, TabButtonProps>(
       {count > 0 && (
         <span
           className={cn(
-            "ml-1.5 inline-flex items-center justify-center rounded-md px-1.5 text-xs tabular-nums",
+            "ml-1.5 inline-flex items-center justify-center rounded px-1.5 text-xs tabular-nums",
             countClass,
           )}
         >
@@ -297,6 +297,26 @@ export function BookmarksList({
     [activeTab, onTabChange],
   );
 
+  useHotkeys(
+    "ArrowRight",
+    () => {
+      const idx = tabOrder.indexOf(activeTab);
+      if (idx < tabOrder.length - 1) onTabChange(tabOrder[idx + 1]);
+    },
+    { preventDefault: true },
+    [activeTab, onTabChange],
+  );
+
+  useHotkeys(
+    "ArrowLeft",
+    () => {
+      const idx = tabOrder.indexOf(activeTab);
+      if (idx > 0) onTabChange(tabOrder[idx - 1]);
+    },
+    { preventDefault: true },
+    [activeTab, onTabChange],
+  );
+
   let continueIdx = 0;
 
   return (
@@ -361,7 +381,7 @@ export function BookmarksList({
             onClick={() => onTabChange("continue")}
             label="Reading"
             count={filteredInProgress.length}
-            countClass="bg-accent/10 text-accent"
+            countClass="bg-accent-surface text-accent"
           />
           <TabButton
             ref={readTabRef}
@@ -392,7 +412,7 @@ export function BookmarksList({
                     type="button"
                     onClick={() => onOpenBookmark(bookmark)}
                     className={cn(
-                      "bookmark-list-item flex w-full cursor-pointer items-center gap-3 rounded-lg border p-3 text-left transition-colors hover:bg-surface-hover",
+                      "bookmark-list-item flex w-full cursor-pointer items-center gap-3 rounded border p-3 text-left transition-colors hover:bg-surface-hover",
                       focusedIndex === idx
                         ? "border-accent ring-2 ring-accent/40 bg-surface-hover"
                         : "border-border bg-surface-card",
@@ -449,7 +469,7 @@ export function BookmarksList({
                       type="button"
                       onClick={() => onOpenBookmark(bookmark)}
                       className={cn(
-                        "bookmark-list-item flex w-full cursor-pointer items-center gap-3 rounded-lg border p-3 text-left transition-colors hover:bg-surface-hover",
+                        "bookmark-list-item flex w-full cursor-pointer items-center gap-3 rounded border p-3 text-left transition-colors hover:bg-surface-hover",
                         focusedIndex === idx
                           ? "border-accent ring-2 ring-accent/40 bg-surface-hover"
                           : "border-border bg-surface-card",
@@ -519,7 +539,7 @@ export function BookmarksList({
                       type="button"
                       onClick={() => onOpenBookmark(bookmark)}
                       className={cn(
-                        "bookmark-list-item flex w-full cursor-pointer items-center gap-3 rounded-lg border p-3 text-left transition-colors hover:bg-surface-hover",
+                        "bookmark-list-item flex w-full cursor-pointer items-center gap-3 rounded border p-3 text-left transition-colors hover:bg-surface-hover",
                         focusedIndex === idx
                           ? "border-accent ring-2 ring-accent/40 bg-surface-hover"
                           : "border-border bg-surface-card",

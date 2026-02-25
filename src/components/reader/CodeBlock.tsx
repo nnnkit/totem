@@ -13,7 +13,7 @@ function HighlightedCode({ code }: Props) {
 
 export function CodeBlock({ code }: Props) {
   return (
-    <pre className="overflow-x-auto rounded-lg bg-surface-card p-4 text-sm leading-relaxed break-inside-avoid">
+    <pre className="overflow-x-auto rounded bg-surface-card p-4 text-sm leading-relaxed break-inside-avoid">
       <HighlightedCode code={code} />
     </pre>
   );
