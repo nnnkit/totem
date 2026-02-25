@@ -35,31 +35,31 @@
     --color-border: var(--border);
     --color-success: var(--success);
 
-    /* Home page tokens — values scoped to .totem-home */
-    --color-on-bg: var(--on-bg);
-    --color-on-bg-muted: var(--on-bg-muted);
-    --color-on-bg-ghost: var(--on-bg-ghost);
-    --color-glass: var(--glass);
-    --color-glass-hover: var(--glass-hover);
-    --color-home-fg: var(--home-fg);
-    --color-home-fg-secondary: var(--home-fg-secondary);
-    --color-home-fg-muted: var(--home-fg-muted);
-    --color-home-accent: var(--home-accent);
-    --color-accent-tint: var(--accent-tint);
-    --color-search-bg: var(--search-bg);
-    --color-home-placeholder: var(--home-placeholder);
-    --color-home-secondary-bg: var(--home-secondary-bg);
-    --color-home-secondary-border: var(--home-secondary-border);
-    --color-home-secondary-text: var(--home-secondary-text);
-    --color-overlay: var(--overlay);
-    --color-overlay-edge: var(--overlay-edge);
-    --color-overlay-hover: var(--overlay-hover);
-    --color-overlay-hover-edge: var(--overlay-hover-edge);
-    --color-home-description: var(--home-description);
-    --color-home-empty: var(--home-empty);
+    /* Home page tokens — defaults here, scoped overrides in .totem-home */
+    --color-on-bg: transparent;
+    --color-on-bg-muted: transparent;
+    --color-on-bg-ghost: transparent;
+    --color-glass: transparent;
+    --color-glass-hover: transparent;
+    --color-home-fg: transparent;
+    --color-home-fg-secondary: transparent;
+    --color-home-fg-muted: transparent;
+    --color-home-accent: transparent;
+    --color-accent-tint: transparent;
+    --color-search-bg: transparent;
+    --color-home-placeholder: transparent;
+    --color-home-secondary-bg: transparent;
+    --color-home-secondary-border: transparent;
+    --color-home-secondary-text: transparent;
+    --color-overlay: transparent;
+    --color-overlay-edge: transparent;
+    --color-overlay-hover: transparent;
+    --color-overlay-hover-edge: transparent;
+    --color-home-description: transparent;
+    --color-home-empty: transparent;
 
-    --shadow-glass: var(--glass-shadow);
-    --shadow-search: var(--search-shadow);
+    --shadow-glass: none;
+    --shadow-search: none;
 
     --ease-hover: ease;
 
@@ -535,45 +535,45 @@
 
 .totem-home {
     /* On-background — always white (background is always dark photo/gradient) */
-    --on-bg: rgba(255, 255, 255, 0.92);
-    --on-bg-muted: rgba(255, 255, 255, 0.62);
-    --on-bg-ghost: rgba(255, 255, 255, 0.56);
+    --color-on-bg: rgba(255, 255, 255, 0.92);
+    --color-on-bg-muted: rgba(255, 255, 255, 0.62);
+    --color-on-bg-ghost: rgba(255, 255, 255, 0.56);
 
     /* Glass card surface */
-    --glass: rgba(254, 249, 247, 0.97);
-    --glass-hover: #fef9f7;
-    --glass-shadow:
+    --color-glass: rgba(254, 249, 247, 0.97);
+    --color-glass-hover: #fef9f7;
+    --shadow-glass:
         0 1px 3px rgba(11, 6, 5, 0.06), 0 6px 24px rgba(11, 6, 5, 0.06);
 
     /* Card text */
-    --home-fg: rgba(11, 6, 5, 0.92);
-    --home-fg-secondary: rgba(11, 6, 5, 0.82);
-    --home-fg-muted: rgba(11, 6, 5, 0.54);
+    --color-home-fg: rgba(11, 6, 5, 0.92);
+    --color-home-fg-secondary: rgba(11, 6, 5, 0.82);
+    --color-home-fg-muted: rgba(11, 6, 5, 0.54);
 
     /* Accent */
-    --home-accent: #e28067;
-    --accent-tint: rgba(226, 128, 103, 0.08);
+    --color-home-accent: #e28067;
+    --color-accent-tint: rgba(226, 128, 103, 0.08);
 
     /* Search */
-    --search-bg: rgba(254, 249, 247, 0.97);
-    --search-shadow:
+    --color-search-bg: rgba(254, 249, 247, 0.97);
+    --shadow-search:
         0 1px 3px rgba(11, 6, 5, 0.06), 0 6px 24px rgba(11, 6, 5, 0.06);
-    --home-placeholder: rgba(11, 6, 5, 0.36);
+    --color-home-placeholder: rgba(11, 6, 5, 0.36);
 
     /* Secondary buttons */
-    --home-secondary-bg: rgba(254, 249, 247, 0.95);
-    --home-secondary-border: rgba(11, 6, 5, 0.1);
-    --home-secondary-text: rgba(11, 6, 5, 0.72);
+    --color-home-secondary-bg: rgba(254, 249, 247, 0.95);
+    --color-home-secondary-border: rgba(11, 6, 5, 0.1);
+    --color-home-secondary-text: rgba(11, 6, 5, 0.72);
 
     /* Overlay (translucent white on photo) */
-    --overlay: rgba(255, 255, 255, 0.08);
-    --overlay-edge: rgba(255, 255, 255, 0.1);
-    --overlay-hover: rgba(255, 255, 255, 0.14);
-    --overlay-hover-edge: rgba(255, 255, 255, 0.18);
+    --color-overlay: rgba(255, 255, 255, 0.08);
+    --color-overlay-edge: rgba(255, 255, 255, 0.1);
+    --color-overlay-hover: rgba(255, 255, 255, 0.14);
+    --color-overlay-hover-edge: rgba(255, 255, 255, 0.18);
 
     /* Description & empty state */
-    --home-description: rgba(11, 6, 5, 0.6);
-    --home-empty: rgba(11, 6, 5, 0.44);
+    --color-home-description: rgba(11, 6, 5, 0.6);
+    --color-home-empty: rgba(11, 6, 5, 0.44);
 }
 
 .totem-ambient {
@@ -672,45 +672,45 @@
 /* Dark theme overrides for totem-home — system preference */
 @media (prefers-color-scheme: dark) {
     :root:not([data-theme]) .totem-home {
-        --glass: rgba(15, 11, 9, 0.92);
-        --glass-hover: rgba(22, 17, 15, 0.92);
-        --glass-shadow: none;
-        --home-fg: rgba(255, 255, 255, 0.92);
-        --home-fg-secondary: rgba(255, 255, 255, 0.86);
-        --home-fg-muted: rgba(255, 255, 255, 0.62);
-        --home-accent: #e28067;
-        --accent-tint: rgba(226, 128, 103, 0.12);
-        --search-bg: rgb(20, 16, 14);
-        --search-shadow:
+        --color-glass: rgba(15, 11, 9, 0.92);
+        --color-glass-hover: rgba(22, 17, 15, 0.92);
+        --shadow-glass: none;
+        --color-home-fg: rgba(255, 255, 255, 0.92);
+        --color-home-fg-secondary: rgba(255, 255, 255, 0.86);
+        --color-home-fg-muted: rgba(255, 255, 255, 0.62);
+        --color-home-accent: #e28067;
+        --color-accent-tint: rgba(226, 128, 103, 0.12);
+        --color-search-bg: rgb(20, 16, 14);
+        --shadow-search:
             0 1px 6px rgba(11, 6, 5, 0.2), 0 4px 24px rgba(11, 6, 5, 0.12);
-        --home-placeholder: rgba(255, 255, 255, 0.45);
-        --home-secondary-bg: rgb(32, 28, 26);
-        --home-secondary-border: rgba(255, 255, 255, 0.14);
-        --home-secondary-text: rgba(255, 255, 255, 0.8);
-        --home-description: rgba(255, 255, 255, 0.74);
-        --home-empty: rgba(255, 255, 255, 0.5);
+        --color-home-placeholder: rgba(255, 255, 255, 0.45);
+        --color-home-secondary-bg: rgb(32, 28, 26);
+        --color-home-secondary-border: rgba(255, 255, 255, 0.14);
+        --color-home-secondary-text: rgba(255, 255, 255, 0.8);
+        --color-home-description: rgba(255, 255, 255, 0.74);
+        --color-home-empty: rgba(255, 255, 255, 0.5);
     }
 }
 
 /* Dark theme overrides for totem-home — manual toggle */
 [data-theme="dark"] .totem-home {
-    --glass: rgba(15, 11, 9, 0.92);
-    --glass-hover: rgba(22, 17, 15, 0.92);
-    --glass-shadow: none;
-    --home-fg: rgba(255, 255, 255, 0.92);
-    --home-fg-secondary: rgba(255, 255, 255, 0.86);
-    --home-fg-muted: rgba(255, 255, 255, 0.62);
-    --home-accent: #e28067;
-    --accent-tint: rgba(226, 128, 103, 0.12);
-    --search-bg: rgb(20, 16, 14);
-    --search-shadow:
+    --color-glass: rgba(15, 11, 9, 0.92);
+    --color-glass-hover: rgba(22, 17, 15, 0.92);
+    --shadow-glass: none;
+    --color-home-fg: rgba(255, 255, 255, 0.92);
+    --color-home-fg-secondary: rgba(255, 255, 255, 0.86);
+    --color-home-fg-muted: rgba(255, 255, 255, 0.62);
+    --color-home-accent: #e28067;
+    --color-accent-tint: rgba(226, 128, 103, 0.12);
+    --color-search-bg: rgb(20, 16, 14);
+    --shadow-search:
         0 1px 6px rgba(11, 6, 5, 0.2), 0 4px 24px rgba(11, 6, 5, 0.12);
-    --home-placeholder: rgba(255, 255, 255, 0.45);
-    --home-secondary-bg: rgb(32, 28, 26);
-    --home-secondary-border: rgba(255, 255, 255, 0.14);
-    --home-secondary-text: rgba(255, 255, 255, 0.8);
-    --home-description: rgba(255, 255, 255, 0.74);
-    --home-empty: rgba(255, 255, 255, 0.5);
+    --color-home-placeholder: rgba(255, 255, 255, 0.45);
+    --color-home-secondary-bg: rgb(32, 28, 26);
+    --color-home-secondary-border: rgba(255, 255, 255, 0.14);
+    --color-home-secondary-text: rgba(255, 255, 255, 0.8);
+    --color-home-description: rgba(255, 255, 255, 0.74);
+    --color-home-empty: rgba(255, 255, 255, 0.5);
 }
 
 /* Tour popover */
