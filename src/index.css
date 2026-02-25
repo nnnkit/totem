@@ -12,6 +12,8 @@
 
 @theme {
     --color-accent: var(--accent);
+    --color-accent-surface: var(--accent-surface);
+    --color-accent-surface-hover: var(--accent-surface-hover);
     --color-accent-50: #fef5f2;
     --color-accent-100: #fde8e2;
     --color-accent-200: #fcd5ca;
@@ -103,7 +105,9 @@
     :root,
     [data-theme="light"] {
         /* Surfaces */
-        --accent: #e28067;
+        --accent: #c25a41;
+        --accent-surface: #fde8e2;
+        --accent-surface-hover: #fcd5ca;
         --surface: #fef9f7;
         --surface-card: #ffffff;
         --surface-hover: #f5efed;
@@ -121,6 +125,17 @@
 
         /* Code */
         --inline-code-bg: rgba(135, 131, 120, 0.15);
+
+        /* Syntax highlighting (sugar-high) */
+        --sh-class: #2d5e9d;
+        --sh-identifier: #354150;
+        --sh-sign: #8996a3;
+        --sh-property: #0550ae;
+        --sh-entity: #249a97;
+        --sh-jsxliterals: #6266d1;
+        --sh-string: #00a99a;
+        --sh-keyword: #cf222e;
+        --sh-comment: #a19595;
 
         /* Highlights */
         --highlight-bg: rgba(226, 128, 103, 0.16);
@@ -154,6 +169,8 @@
         :root:not([data-theme]) {
             /* Surfaces */
             --accent: #e28067;
+            --accent-surface: rgba(226, 128, 103, 0.10);
+            --accent-surface-hover: rgba(226, 128, 103, 0.18);
             --surface: #0b0605;
             --surface-card: #151210;
             --surface-hover: #201c1a;
@@ -171,6 +188,17 @@
 
             /* Code */
             --inline-code-bg: rgba(180, 176, 168, 0.18);
+
+            /* Syntax highlighting (sugar-high) */
+            --sh-class: #8db9e2;
+            --sh-identifier: #c9d1d9;
+            --sh-sign: #768390;
+            --sh-property: #79c0ff;
+            --sh-entity: #56d4cf;
+            --sh-jsxliterals: #a5a6f6;
+            --sh-string: #a5d6ff;
+            --sh-keyword: #f47067;
+            --sh-comment: #636c76;
 
             /* Highlights */
             --highlight-bg: rgba(226, 128, 103, 0.18);
@@ -202,6 +230,8 @@
     [data-theme="dark"] {
         /* Surfaces */
         --accent: #e28067;
+        --accent-surface: rgba(226, 128, 103, 0.10);
+        --accent-surface-hover: rgba(226, 128, 103, 0.18);
         --surface: #0b0605;
         --surface-card: #151210;
         --surface-hover: #201c1a;
@@ -219,6 +249,17 @@
 
         /* Code */
         --inline-code-bg: rgba(180, 176, 168, 0.18);
+
+        /* Syntax highlighting (sugar-high) */
+        --sh-class: #8db9e2;
+        --sh-identifier: #c9d1d9;
+        --sh-sign: #768390;
+        --sh-property: #79c0ff;
+        --sh-entity: #56d4cf;
+        --sh-jsxliterals: #a5a6f6;
+        --sh-string: #a5d6ff;
+        --sh-keyword: #f47067;
+        --sh-comment: #636c76;
 
         /* Highlights */
         --highlight-bg: rgba(226, 128, 103, 0.18);
@@ -695,7 +736,7 @@
 
 .totem-tour-popover .driver-popover-next-btn {
     border: none !important;
-    background: #e28067 !important;
+    background: var(--accent) !important;
     color: white !important;
 }
 
