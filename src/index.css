@@ -8,24 +8,13 @@
    cubic-bezier(0.215, 0.61, 0.355, 1)               — overlay entrance
    ease-in                                            — all exits
    ease                                               — hover/color transitions
-   cubic-bezier(0.645, 0.045, 0.355, 1)              — on-screen movement (tabs)
 */
 
 @theme {
-    --color-stone-50: var(--stone-50);
-    --color-stone-100: var(--stone-100);
-    --color-stone-200: var(--stone-200);
     --color-stone-300: var(--stone-300);
-    --color-stone-500: var(--stone-500);
-    --color-stone-600: var(--stone-600);
     --color-stone-700: var(--stone-700);
-    --color-stone-800: var(--stone-800);
-    --color-stone-900: var(--stone-900);
     --color-stone-950: var(--stone-950);
-    --color-orange-300: var(--orange-300);
     --color-orange-400: var(--orange-400);
-    --color-orange-500: var(--orange-500);
-    --color-orange-600: var(--orange-600);
 
     --color-accent: var(--accent);
     --color-x-bg: var(--x-bg);
@@ -35,21 +24,7 @@
     --color-x-text-secondary: var(--x-text-secondary);
     --color-x-hover: var(--x-hover);
     --color-x-link-card: var(--x-link-card);
-    --color-x-reader-surface: var(--x-reader-surface);
-    --color-x-reader-border: var(--x-reader-border);
     --color-x-success: var(--x-success);
-    --color-pill-green-text: var(--pill-green-text);
-    --color-pill-green-bg: var(--pill-green-bg);
-    --color-pill-green-border: var(--pill-green-border);
-    --color-pill-amber-text: var(--pill-amber-text);
-    --color-pill-amber-bg: var(--pill-amber-bg);
-    --color-pill-amber-border: var(--pill-amber-border);
-    --color-pill-cyan-text: var(--pill-cyan-text);
-    --color-pill-cyan-bg: var(--pill-cyan-bg);
-    --color-pill-cyan-border: var(--pill-cyan-border);
-    --color-pill-orange-text: var(--pill-orange-text);
-    --color-pill-orange-bg: var(--pill-orange-bg);
-    --color-pill-orange-border: var(--pill-orange-border);
 
     --font-size-xxs: 0.625rem;
 
@@ -123,20 +98,12 @@
     :root,
     [data-theme="light"] {
         /* Palette */
-        --stone-50: #fafaf9;
-        --stone-100: #f5f5f4;
         --stone-200: #e7e5e4;
         --stone-300: #d6d3d1;
-        --stone-500: #78716c;
-        --stone-600: #57534e;
         --stone-700: #44403c;
-        --stone-800: #292524;
         --stone-900: #1c1917;
         --stone-950: #0c0a09;
-        --orange-300: #fdba74;
         --orange-400: #fb923c;
-        --orange-500: #f97316;
-        --orange-600: #ea580c;
 
         /* Surfaces */
         --accent: #e28067;
@@ -144,7 +111,6 @@
         --x-card: #ffffff;
         --x-hover: #f5efed;
         --x-link-card: #faf5f3;
-        --x-reader-surface: #fdfaf8;
 
         /* Text */
         --x-text: var(--stone-900);
@@ -152,42 +118,18 @@
 
         /* Borders */
         --x-border: var(--stone-200);
-        --x-reader-border: var(--stone-200);
 
         /* Status */
         --x-success: #15803d;
 
-        /* Code & syntax */
+        /* Code */
         --inline-code-bg: rgba(135, 131, 120, 0.15);
-        --sh-class: #2d5e9d;
-        --sh-identifier: #354150;
-        --sh-sign: #8996a3;
-        --sh-property: #0550ae;
-        --sh-entity: #249a97;
-        --sh-jsxliterals: #6266d1;
-        --sh-string: #00a99a;
-        --sh-keyword: #cf222e;
-        --sh-comment: #a19595;
 
         /* Highlights */
         --highlight-bg: rgba(226, 128, 103, 0.16);
         --highlight-bg-hover: rgba(226, 128, 103, 0.26);
         --highlight-bg-active: rgba(226, 128, 103, 0.3);
         --highlight-underline: rgba(226, 128, 103, 0.75);
-
-        /* Pills */
-        --pill-green-text: #15803d;
-        --pill-green-bg: rgba(34, 197, 94, 0.12);
-        --pill-green-border: rgba(34, 197, 94, 0.3);
-        --pill-amber-text: #b45309;
-        --pill-amber-bg: rgba(245, 158, 11, 0.12);
-        --pill-amber-border: rgba(245, 158, 11, 0.3);
-        --pill-cyan-text: #0e7490;
-        --pill-cyan-bg: rgba(6, 182, 212, 0.12);
-        --pill-cyan-border: rgba(6, 182, 212, 0.3);
-        --pill-orange-text: #e28067;
-        --pill-orange-bg: rgba(226, 128, 103, 0.12);
-        --pill-orange-border: rgba(226, 128, 103, 0.3);
     }
 
     /* Dark values are defined twice: once for system preference, once for manual toggle.
@@ -195,20 +137,12 @@
     @media (prefers-color-scheme: dark) {
         :root:not([data-theme]) {
             /* Palette */
-            --stone-50: #fafaf9;
-            --stone-100: #f5f5f4;
             --stone-200: #e7e5e4;
             --stone-300: #d6d3d1;
-            --stone-500: #a8a29e;
-            --stone-600: #d6d3d1;
             --stone-700: #e7e5e4;
-            --stone-800: #f5f5f4;
             --stone-900: #fafaf9;
             --stone-950: #0b0605;
-            --orange-300: #f1a68c;
             --orange-400: #e28067;
-            --orange-500: #cd7057;
-            --orange-600: #bc634b;
 
             /* Surfaces */
             --accent: #e28067;
@@ -216,7 +150,6 @@
             --x-card: #151210;
             --x-hover: #201c1a;
             --x-link-card: #1a1614;
-            --x-reader-surface: #121010;
 
             /* Text */
             --x-text: rgba(255, 255, 255, 0.92);
@@ -224,61 +157,29 @@
 
             /* Borders */
             --x-border: #262220;
-            --x-reader-border: #2a2624;
 
             /* Status */
             --x-success: #22c55e;
 
-            /* Code & syntax */
+            /* Code */
             --inline-code-bg: rgba(180, 176, 168, 0.18);
-            --sh-class: #8db9e2;
-            --sh-identifier: #c9d1d9;
-            --sh-sign: #768390;
-            --sh-property: #79c0ff;
-            --sh-entity: #56d4cf;
-            --sh-jsxliterals: #a5a6f6;
-            --sh-string: #a5d6ff;
-            --sh-keyword: #f47067;
-            --sh-comment: #636c76;
 
             /* Highlights */
             --highlight-bg: rgba(226, 128, 103, 0.18);
             --highlight-bg-hover: rgba(226, 128, 103, 0.3);
             --highlight-bg-active: rgba(226, 128, 103, 0.38);
             --highlight-underline: rgba(226, 128, 103, 0.75);
-
-            /* Pills */
-            --pill-green-text: #86efac;
-            --pill-green-bg: rgba(34, 197, 94, 0.12);
-            --pill-green-border: rgba(34, 197, 94, 0.3);
-            --pill-amber-text: #fcd34d;
-            --pill-amber-bg: rgba(245, 158, 11, 0.12);
-            --pill-amber-border: rgba(245, 158, 11, 0.3);
-            --pill-cyan-text: #67e8f9;
-            --pill-cyan-bg: rgba(6, 182, 212, 0.12);
-            --pill-cyan-border: rgba(6, 182, 212, 0.3);
-            --pill-orange-text: #fdba74;
-            --pill-orange-bg: rgba(226, 128, 103, 0.12);
-            --pill-orange-border: rgba(226, 128, 103, 0.3);
         }
     }
 
     [data-theme="dark"] {
         /* Palette */
-        --stone-50: #fafaf9;
-        --stone-100: #f5f5f4;
         --stone-200: #e7e5e4;
         --stone-300: #d6d3d1;
-        --stone-500: #a8a29e;
-        --stone-600: #d6d3d1;
         --stone-700: #e7e5e4;
-        --stone-800: #f5f5f4;
         --stone-900: #fafaf9;
         --stone-950: #0b0605;
-        --orange-300: #f1a68c;
         --orange-400: #e28067;
-        --orange-500: #cd7057;
-        --orange-600: #bc634b;
 
         /* Surfaces */
         --accent: #e28067;
@@ -286,7 +187,6 @@
         --x-card: #151210;
         --x-hover: #201c1a;
         --x-link-card: #1a1614;
-        --x-reader-surface: #121010;
 
         /* Text */
         --x-text: rgba(255, 255, 255, 0.92);
@@ -294,42 +194,18 @@
 
         /* Borders */
         --x-border: #262220;
-        --x-reader-border: #2a2624;
 
         /* Status */
         --x-success: #22c55e;
 
-        /* Code & syntax */
+        /* Code */
         --inline-code-bg: rgba(180, 176, 168, 0.18);
-        --sh-class: #8db9e2;
-        --sh-identifier: #c9d1d9;
-        --sh-sign: #768390;
-        --sh-property: #79c0ff;
-        --sh-entity: #56d4cf;
-        --sh-jsxliterals: #a5a6f6;
-        --sh-string: #a5d6ff;
-        --sh-keyword: #f47067;
-        --sh-comment: #636c76;
 
         /* Highlights */
         --highlight-bg: rgba(226, 128, 103, 0.18);
         --highlight-bg-hover: rgba(226, 128, 103, 0.3);
         --highlight-bg-active: rgba(226, 128, 103, 0.38);
         --highlight-underline: rgba(226, 128, 103, 0.75);
-
-        /* Pills */
-        --pill-green-text: #86efac;
-        --pill-green-bg: rgba(34, 197, 94, 0.12);
-        --pill-green-border: rgba(34, 197, 94, 0.3);
-        --pill-amber-text: #fcd34d;
-        --pill-amber-bg: rgba(245, 158, 11, 0.12);
-        --pill-amber-border: rgba(245, 158, 11, 0.3);
-        --pill-cyan-text: #67e8f9;
-        --pill-cyan-bg: rgba(6, 182, 212, 0.12);
-        --pill-cyan-border: rgba(6, 182, 212, 0.3);
-        --pill-orange-text: #fdba74;
-        --pill-orange-bg: rgba(226, 128, 103, 0.12);
-        --pill-orange-border: rgba(226, 128, 103, 0.3);
     }
 
     html,
@@ -415,8 +291,7 @@
         transition: background-color 150ms ease;
     }
 
-    mark.totem-highlight:hover,
-    mark.totem-highlight.totem-highlight-hover {
+    mark.totem-highlight:hover {
         background-color: var(--highlight-bg-hover);
     }
 
@@ -556,7 +431,6 @@
     --motion-standard: 200ms;
     --motion-slow: 260ms;
     --motion-ease-enter: cubic-bezier(0.215, 0.61, 0.355, 1);
-    --motion-ease-move: cubic-bezier(0.645, 0.045, 0.355, 1);
     --motion-ease-hover: ease;
 
     /* On-background colors — always white (background is always dark photo/gradient) */
@@ -571,13 +445,10 @@
     --totem-surface-shadow:
         0 1px 3px rgba(11, 6, 5, 0.06), 0 6px 24px rgba(11, 6, 5, 0.06);
     --totem-border: rgba(11, 6, 5, 0.08);
-    --totem-border-strong: rgba(11, 6, 5, 0.14);
     --totem-text-primary: rgba(11, 6, 5, 0.92);
     --totem-text-secondary: rgba(11, 6, 5, 0.82);
     --totem-text-muted: rgba(11, 6, 5, 0.54);
-    --totem-text-ghost: rgba(11, 6, 5, 0.42);
     --totem-accent: #e28067;
-    --totem-accent-muted: rgba(226, 128, 103, 0.72);
     --totem-accent-bg: rgba(226, 128, 103, 0.08);
     --totem-search-bg: rgba(254, 249, 247, 0.97);
     --totem-search-shadow:
@@ -586,11 +457,8 @@
     --totem-secondary-bg: rgba(254, 249, 247, 0.95);
     --totem-secondary-border: rgba(11, 6, 5, 0.1);
     --totem-secondary-text: rgba(11, 6, 5, 0.72);
-    --totem-secondary-hover-text: rgba(11, 6, 5, 0.88);
-    --totem-secondary-hover-border: rgba(11, 6, 5, 0.18);
     --totem-overlay-bg: rgba(255, 255, 255, 0.08);
     --totem-overlay-border: rgba(255, 255, 255, 0.1);
-    --totem-overlay-shadow: 0 1px 0 rgba(255, 255, 255, 0.06);
     --totem-overlay-hover-bg: rgba(255, 255, 255, 0.14);
     --totem-overlay-hover-border: rgba(255, 255, 255, 0.18);
     --totem-description-text: rgba(11, 6, 5, 0.6);
@@ -797,19 +665,6 @@
     margin-top: 2rem;
 }
 
-.totem-link {
-    border: none;
-    background: none;
-    color: var(--totem-text-ghost);
-    font-size: 0.72rem;
-    cursor: pointer;
-    transition: color var(--motion-fast) var(--motion-ease-hover);
-}
-
-.totem-divider {
-    color: var(--totem-overlay-border);
-}
-
 .totem-btn {
     display: inline-flex;
     align-items: center;
@@ -850,18 +705,6 @@
     border: 1px solid var(--totem-secondary-border);
     background: var(--totem-accent-bg);
     color: var(--totem-text-muted);
-}
-
-.totem-btn--ghost {
-    border: 1px solid var(--totem-overlay-border);
-    background: var(--totem-overlay-bg);
-    color: var(--totem-text-ghost);
-    padding: 0.68rem 1rem;
-}
-
-.totem-btn--compact {
-    font-size: 0.74rem;
-    padding: 0.44rem 0.68rem;
 }
 
 .totem-empty {
@@ -964,10 +807,6 @@
         background: var(--totem-surface-hover);
     }
 
-    .totem-link:hover {
-        color: var(--totem-text-secondary);
-    }
-
     .totem-btn--primary:hover:not(:disabled) {
         opacity: 0.9;
     }
@@ -975,21 +814,9 @@
     .totem-btn--secondary:hover:not(:disabled) {
         background: var(--totem-surface-hover);
     }
-
-    .totem-btn--ghost:hover:not(:disabled) {
-        color: var(--totem-secondary-text);
-        border-color: var(--totem-secondary-hover-border);
-    }
-
-    .totem-wallpaper-arrow:hover:not(:disabled) {
-        border-color: var(--totem-overlay-hover-border);
-        color: var(--totem-secondary-text);
-        background: var(--totem-overlay-bg);
-    }
 }
 
 .totem-card:focus-visible,
-.totem-link:focus-visible,
 .totem-btn:focus-visible,
 .totem-icon-btn:focus-visible {
     outline: 2px solid rgba(226, 128, 103, 0.82);
@@ -1028,7 +855,6 @@
 @media (prefers-reduced-motion: reduce) {
     .totem-wallpaper,
     .totem-card-content,
-    .totem-link,
     .totem-btn,
     .totem-icon-btn {
         transition: none;
@@ -1046,13 +872,10 @@
         --totem-surface-hover: rgba(22, 17, 15, 0.92);
         --totem-surface-shadow: none;
         --totem-border: rgba(226, 128, 103, 0.16);
-        --totem-border-strong: rgba(226, 128, 103, 0.3);
         --totem-text-primary: rgba(255, 255, 255, 0.92);
         --totem-text-secondary: rgba(255, 255, 255, 0.86);
         --totem-text-muted: rgba(255, 255, 255, 0.62);
-        --totem-text-ghost: rgba(255, 255, 255, 0.56);
         --totem-accent: #e28067;
-        --totem-accent-muted: rgba(226, 128, 103, 0.78);
         --totem-accent-bg: rgba(226, 128, 103, 0.12);
         --totem-search-bg: rgb(20, 16, 14);
         --totem-search-shadow:
@@ -1061,8 +884,6 @@
         --totem-secondary-bg: rgb(32, 28, 26);
         --totem-secondary-border: rgba(255, 255, 255, 0.14);
         --totem-secondary-text: rgba(255, 255, 255, 0.8);
-        --totem-secondary-hover-text: rgba(255, 255, 255, 0.88);
-        --totem-secondary-hover-border: rgba(255, 255, 255, 0.2);
         --totem-description-text: rgba(255, 255, 255, 0.74);
         --totem-empty-text: rgba(255, 255, 255, 0.5);
     }
@@ -1074,13 +895,10 @@
     --totem-surface-hover: rgba(22, 17, 15, 0.92);
     --totem-surface-shadow: none;
     --totem-border: rgba(226, 128, 103, 0.16);
-    --totem-border-strong: rgba(226, 128, 103, 0.3);
     --totem-text-primary: rgba(255, 255, 255, 0.92);
     --totem-text-secondary: rgba(255, 255, 255, 0.86);
     --totem-text-muted: rgba(255, 255, 255, 0.62);
-    --totem-text-ghost: rgba(255, 255, 255, 0.56);
     --totem-accent: #e28067;
-    --totem-accent-muted: rgba(226, 128, 103, 0.78);
     --totem-accent-bg: rgba(226, 128, 103, 0.12);
     --totem-search-bg: rgb(20, 16, 14);
     --totem-search-shadow:
@@ -1089,8 +907,6 @@
     --totem-secondary-bg: rgb(32, 28, 26);
     --totem-secondary-border: rgba(255, 255, 255, 0.14);
     --totem-secondary-text: rgba(255, 255, 255, 0.8);
-    --totem-secondary-hover-text: rgba(255, 255, 255, 0.88);
-    --totem-secondary-hover-border: rgba(255, 255, 255, 0.2);
     --totem-description-text: rgba(255, 255, 255, 0.74);
     --totem-empty-text: rgba(255, 255, 255, 0.5);
 }
@@ -1226,14 +1042,19 @@
     :root:not([data-theme]) .totem-tour-popover .driver-popover-close-btn {
         color: rgba(255, 255, 255, 0.32) !important;
     }
-    :root:not([data-theme]) .totem-tour-popover .driver-popover-close-btn:hover {
+    :root:not([data-theme])
+        .totem-tour-popover
+        .driver-popover-close-btn:hover {
         color: rgba(255, 255, 255, 0.72) !important;
         background: rgba(255, 255, 255, 0.08) !important;
     }
     :root:not([data-theme]) .totem-tour-popover .driver-popover-description {
         color: rgba(255, 255, 255, 0.64) !important;
     }
-    :root:not([data-theme]) .totem-tour-popover .driver-popover-description kbd {
+    :root:not([data-theme])
+        .totem-tour-popover
+        .driver-popover-description
+        kbd {
         border-color: rgba(255, 255, 255, 0.14);
         background: rgba(255, 255, 255, 0.07);
         box-shadow: 0 1px 0 rgba(255, 255, 255, 0.05);
