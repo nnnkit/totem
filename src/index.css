@@ -11,6 +11,14 @@
 */
 
 @theme {
+    --font-sans:
+        "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+        Helvetica, Arial, sans-serif;
+    --font-serif: "Spectral", Charter, "Iowan Old Style", Georgia, serif;
+    --font-mono:
+        ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    --default-font-family: var(--font-sans);
+
     --color-accent: var(--accent);
     --color-accent-surface: var(--accent-surface);
     --color-accent-surface-hover: var(--accent-surface-hover);
@@ -174,7 +182,8 @@
         /* Tour popover */
         --tour-bg: rgba(255, 255, 255, 0.94);
         --tour-border: rgba(226, 128, 103, 0.12);
-        --tour-shadow: 0 4px 24px rgba(11, 6, 5, 0.1), 0 1px 4px rgba(11, 6, 5, 0.06);
+        --tour-shadow:
+            0 4px 24px rgba(11, 6, 5, 0.1), 0 1px 4px rgba(11, 6, 5, 0.06);
         --tour-close: rgba(28, 25, 23, 0.32);
         --tour-close-hover: rgba(28, 25, 23, 0.72);
         --tour-close-hover-bg: rgba(28, 25, 23, 0.06);
@@ -197,7 +206,7 @@
         :root:not([data-theme]) {
             /* Surfaces */
             --accent: #e28067;
-            --accent-surface: rgba(226, 128, 103, 0.10);
+            --accent-surface: rgba(226, 128, 103, 0.1);
             --accent-surface-hover: rgba(226, 128, 103, 0.18);
             --surface: #0b0605;
             --surface-card: #151210;
@@ -237,7 +246,8 @@
             /* Tour popover */
             --tour-bg: rgba(24, 22, 20, 0.96);
             --tour-border: rgba(226, 128, 103, 0.18);
-            --tour-shadow: 0 4px 24px rgba(0, 0, 0, 0.4), 0 1px 4px rgba(0, 0, 0, 0.2);
+            --tour-shadow:
+                0 4px 24px rgba(0, 0, 0, 0.4), 0 1px 4px rgba(0, 0, 0, 0.2);
             --tour-close: rgba(255, 255, 255, 0.32);
             --tour-close-hover: rgba(255, 255, 255, 0.72);
             --tour-close-hover-bg: rgba(255, 255, 255, 0.08);
@@ -258,7 +268,7 @@
     [data-theme="dark"] {
         /* Surfaces */
         --accent: #e28067;
-        --accent-surface: rgba(226, 128, 103, 0.10);
+        --accent-surface: rgba(226, 128, 103, 0.1);
         --accent-surface-hover: rgba(226, 128, 103, 0.18);
         --surface: #0b0605;
         --surface-card: #151210;
@@ -298,7 +308,8 @@
         /* Tour popover */
         --tour-bg: rgba(24, 22, 20, 0.96);
         --tour-border: rgba(226, 128, 103, 0.18);
-        --tour-shadow: 0 4px 24px rgba(0, 0, 0, 0.4), 0 1px 4px rgba(0, 0, 0, 0.2);
+        --tour-shadow:
+            0 4px 24px rgba(0, 0, 0, 0.4), 0 1px 4px rgba(0, 0, 0, 0.2);
         --tour-close: rgba(255, 255, 255, 0.32);
         --tour-close-hover: rgba(255, 255, 255, 0.72);
         --tour-close-hover-bg: rgba(255, 255, 255, 0.08);
@@ -328,18 +339,13 @@
     body {
         @apply bg-surface text-foreground antialiased;
         text-rendering: optimizeLegibility;
-        font-family:
-            "Avenir Next", "Avenir", "Segoe UI", "Helvetica Neue", Helvetica,
-            sans-serif;
     }
 
     code,
     pre,
     kbd,
     samp {
-        font-family:
-            "Berkeley Mono", "IBM Plex Mono", "JetBrains Mono", "Fira Code",
-            ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-family: var(--font-mono);
     }
 
     :not(pre) > code {
@@ -351,7 +357,9 @@
     }
 
     :not(pre) > code::before,
-    :not(pre) > code::after {
+    :not(pre) > code::after,
+    .prose code::before,
+    .prose code::after {
         content: none;
     }
 
@@ -531,6 +539,10 @@
     --tw-prose-pre-bg: var(--surface-card);
     --tw-prose-th-borders: var(--border);
     --tw-prose-td-borders: var(--border);
+
+    & :is(h1, h2, h3, h4, h5, h6) {
+        font-family: var(--font-sans);
+    }
 }
 
 .totem-home {

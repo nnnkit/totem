@@ -5,7 +5,7 @@ import { cn } from "../../lib/cn";
 export { compactPreview, normalizeText, truncateLabel } from "../../lib/text";
 
 export const baseTweetTextClass =
-  "break-words [&_a]:text-accent [&_a:hover]:underline";
+  "font-serif break-words [&_a]:text-accent [&_a:hover]:underline";
 
 export function sanitizeUrl(url: string): string {
   if (/^https?:\/\//i.test(url)) return url;
@@ -182,6 +182,19 @@ export function renderBlockInlineContent(
     }
   }
 
+  // Strip backtick delimiters around code segments
+  for (let i = 0; i < segments.length; i++) {
+    if (segments[i].code) {
+      segments[i].text = segments[i].text.replace(/^`|`$/g, "");
+      if (i > 0 && !segments[i - 1].code) {
+        segments[i - 1].text = segments[i - 1].text.replace(/`$/, "");
+      }
+      if (i < segments.length - 1 && !segments[i + 1].code) {
+        segments[i + 1].text = segments[i + 1].text.replace(/^`/, "");
+      }
+    }
+  }
+
   const raw = segments
     .map((seg) => {
       let html = escapeHtml(seg.text);
@@ -189,7 +202,7 @@ export function renderBlockInlineContent(
         html = linkifyMentionsAndTags(html);
       }
       if (seg.code) html = `<code>${html}</code>`;
-      if (seg.bold) html = `<strong>${html}</strong>`;
+      if (seg.bold && !seg.code) html = `<strong>${html}</strong>`;
       if (seg.italic) html = `<em>${html}</em>`;
       if (seg.entityKey >= 0) {
         const entity = entityMap[String(seg.entityKey)];

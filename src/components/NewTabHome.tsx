@@ -60,7 +60,7 @@ const SETTINGS_ICON = <GearSixIcon className="size-5" />;
 
 const SEARCH_ICON = <MagnifyingGlassIcon className="size-4 opacity-50" />;
 
-const CLOCK_CLASS = "text-balance text-[clamp(2.4rem,7vw,4.2rem)] font-light leading-none tracking-[-0.04em] text-on-bg tabular-nums";
+const CLOCK_CLASS = "font-serif text-balance text-[clamp(2.4rem,7vw,4.2rem)] font-light leading-none tracking-[-0.04em] text-on-bg tabular-nums";
 
 const ICON_BUTTON_CLASS =
   "rounded border border-transparent bg-transparent p-[0.46rem] text-on-bg-muted transition-[border-color,color,background-color] duration-150 ease-hover hover:border-[rgba(255,255,255,0.16)] hover:bg-[rgba(255,255,255,0.06)] hover:text-on-bg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[rgba(226,128,103,0.82)]";
@@ -95,7 +95,7 @@ const CARD_CONTENT_CLASS =
 
 const EYEBROW_CLASS = "text-[0.68rem] font-semibold uppercase tracking-[0.26em] text-accent";
 
-const CARD_TITLE_CLASS = "mt-4 line-clamp-2 min-h-[calc(1.28em*2)] text-balance text-[clamp(0.96rem,1.8vw,1.16rem)] font-normal leading-[1.28] text-home-fg-secondary max-[480px]:text-[0.92rem]";
+const CARD_TITLE_CLASS = "font-serif mt-4 line-clamp-2 min-h-[calc(1.28em*2)] text-balance text-[clamp(0.96rem,1.8vw,1.16rem)] font-normal leading-[1.28] text-home-fg-secondary max-[480px]:text-[0.92rem]";
 
 const CARD_DESCRIPTION_CLASS =
   "mt-2.5 line-clamp-1 min-h-[calc(1.48em*1)] text-pretty text-[0.76rem] leading-[1.48] text-home-description";

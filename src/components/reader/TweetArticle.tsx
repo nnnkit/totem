@@ -37,7 +37,7 @@ function ArticleBlockRenderer({ blocks, entityMap }: ArticleBlockRendererProps) 
   const groups = useMemo(() => groupBlocks(blocks), [blocks]);
 
   return (
-    <div className="prose prose-lg prose-reader max-w-none [&_a]:text-accent [&_a:hover]:underline">
+    <div className="prose prose-lg prose-reader font-serif max-w-none [&_a]:text-accent [&_a:hover]:underline">
       {groups.map((group, groupIdx) => {
         if (group.type === "unordered-list") {
           return (
