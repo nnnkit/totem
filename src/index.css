@@ -71,6 +71,15 @@
 
     --ease-hover: ease;
 
+    --text-xxs: 0.625rem;
+    --text-xxs--line-height: 1;
+    --tracking-extra-wide: 0.25em;
+    --animate-offline-pulse: offline-pulse 2s ease-in-out infinite;
+    @keyframes offline-pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.4; }
+    }
+
     --animate-overlay-in: overlay-in 200ms cubic-bezier(0.215, 0.61, 0.355, 1)
         forwards;
     --animate-overlay-out: overlay-out 150ms ease-in forwards;
@@ -349,7 +358,7 @@
     }
 
     :not(pre) > code {
-        padding: 0.2em 0.4em;
+        padding: 2px 4px;
         font-size: 85%;
         white-space: break-spaces;
         background-color: var(--inline-code-bg);
@@ -357,9 +366,7 @@
     }
 
     :not(pre) > code::before,
-    :not(pre) > code::after,
-    .prose code::before,
-    .prose code::after {
+    :not(pre) > code::after {
         content: none;
     }
 
@@ -507,6 +514,16 @@
     }
 }
 
+/* Unlayered — wins over @tailwindcss/typography's components-layer rules */
+.prose code::before,
+.prose code::after {
+    content: none;
+}
+
+.prose code {
+    font-weight: inherit;
+}
+
 @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
@@ -608,41 +625,9 @@
         );
 }
 
-/* Reader page: two-tone background so article stands out in light mode */
+/* Reader page — flat, no card */
 .reader-page {
-    background: #e8e3df;
-}
-
-.reader-card {
-    margin-block: 1.5rem;
-    background: white;
-    border-radius: 0.25rem;
-    box-shadow:
-        0 0 0 1px rgba(0, 0, 0, 0.04),
-        0 2px 8px rgba(0, 0, 0, 0.03);
-}
-
-@media (prefers-color-scheme: dark) {
-    :root:not([data-theme]) .reader-page {
-        background: var(--surface);
-    }
-    :root:not([data-theme]) .reader-card {
-        margin-block: 0;
-        background: transparent;
-        border-radius: 0;
-        box-shadow: none;
-    }
-}
-
-[data-theme="dark"] .reader-page {
     background: var(--surface);
-}
-
-[data-theme="dark"] .reader-card {
-    margin-block: 0;
-    background: transparent;
-    border-radius: 0;
-    box-shadow: none;
 }
 
 .totem-grain {

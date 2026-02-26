@@ -60,7 +60,7 @@ export function SettingsModal({
   };
 
   return (
-    <Modal open={open} onClose={onClose} className="bg-[rgba(11,6,5,0.5)]" ariaLabelledBy="settings-title">
+    <Modal open={open} onClose={onClose} className="bg-black/50" ariaLabelledBy="settings-title">
       {(closing) => (
       <div className={cn(
         "max-w-md mx-auto mt-[10vh] max-h-[80vh] flex flex-col rounded border border-border bg-surface-card shadow-xl",

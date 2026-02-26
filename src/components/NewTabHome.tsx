@@ -56,69 +56,6 @@ interface DecoratedBookmark {
   isRead: boolean;
 }
 
-const SETTINGS_ICON = <GearSixIcon className="size-5" />;
-
-const SEARCH_ICON = <MagnifyingGlassIcon className="size-4 opacity-50" />;
-
-const CLOCK_CLASS = "font-serif text-balance text-[clamp(2.4rem,7vw,4.2rem)] font-light leading-none tracking-[-0.04em] text-on-bg tabular-nums";
-
-const ICON_BUTTON_CLASS =
-  "rounded border border-transparent bg-transparent p-[0.46rem] text-on-bg-muted transition-[border-color,color,background-color] duration-150 ease-hover hover:border-[rgba(255,255,255,0.16)] hover:bg-[rgba(255,255,255,0.06)] hover:text-on-bg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[rgba(226,128,103,0.82)]";
-
-const SEARCH_FORM_CLASS =
-  "relative mx-auto flex max-w-[36rem] items-center rounded bg-search-bg backdrop-blur-[12px] shadow-search";
-
-const SEARCH_LOGO_CLASS = "flex items-center pl-2";
-
-const SEARCH_INPUT_CLASS =
-  "w-full appearance-none border-0 bg-transparent px-3 py-[0.85rem] text-base text-home-fg [font-family:inherit] outline-none placeholder:text-home-placeholder";
-
-const SEARCH_TRAIL_CLASS =
-  "pointer-events-none flex items-center pr-4 text-home-fg";
-
-const QUICK_LINK_CLASS =
-  "group flex flex-col items-center gap-[0.35rem] no-underline transition-opacity duration-150 ease-hover";
-
-const QUICK_LINK_ICON_CLASS =
-  "flex size-10 items-center justify-center rounded border border-overlay-edge bg-overlay transition-[background,border-color] duration-150 ease-hover group-hover:bg-overlay-hover group-hover:border-overlay-hover-edge";
-
-const QUICK_LINK_LABEL_CLASS =
-  "max-w-[4.5rem] overflow-hidden text-ellipsis whitespace-nowrap text-center text-[0.62rem] text-on-bg-ghost group-hover:text-on-bg-muted";
-
-const CARD_BASE_CLASS =
-  "relative min-h-[8.5rem] overflow-hidden rounded p-[0.86rem_1rem_0.72rem] bg-glass backdrop-blur-[20px] shadow-glass transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[rgba(226,128,103,0.82)] max-[768px]:min-h-[8.4rem] max-[480px]:min-h-[8.2rem] max-[480px]:p-[0.82rem_0.9rem_0.78rem]";
-
-const PICK_CARD_CLASS = "min-h-[8.9rem] cursor-pointer hover:bg-glass-hover";
-
-const CARD_CONTENT_CLASS =
-  "min-h-[7rem] translate-y-0 opacity-100 transition-[transform,opacity] duration-200 ease-[cubic-bezier(0.215,0.61,0.355,1)] motion-reduce:transition-none max-[768px]:min-h-[6.8rem] max-[480px]:min-h-[6.6rem]";
-
-const EYEBROW_CLASS = "text-[0.68rem] font-semibold uppercase tracking-[0.26em] text-accent";
-
-const CARD_TITLE_CLASS = "font-serif mt-4 line-clamp-2 min-h-[calc(1.28em*2)] text-balance text-[clamp(0.96rem,1.8vw,1.16rem)] font-normal leading-[1.28] text-home-fg-secondary max-[480px]:text-[0.92rem]";
-
-const CARD_DESCRIPTION_CLASS =
-  "mt-2.5 line-clamp-1 min-h-[calc(1.48em*1)] text-pretty text-[0.76rem] leading-[1.48] text-home-description";
-
-const CARD_META_CLASS = "text-[0.72rem] leading-[1.2] text-home-fg-muted";
-
-const ACTIONS_CLASS = "mt-8 flex items-center justify-between gap-[0.65rem] max-[480px]:gap-[0.55rem]";
-
-const CTA_BUTTON_CLASS =
-  "inline-flex items-center justify-center rounded text-[0.79rem] font-semibold leading-none transition-[opacity,color,border-color,background-color] duration-150 ease-hover disabled:cursor-default disabled:opacity-[0.56] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[rgba(226,128,103,0.82)]";
-
-const PRIMARY_BUTTON_CLASS =
-  "border-0 bg-home-accent px-4 py-2 text-white hover:opacity-90";
-
-const SECONDARY_BUTTON_CLASS =
-  "border border-home-secondary-border bg-home-secondary-bg px-[1.28rem] py-[0.68rem] text-home-secondary-text hover:bg-glass-hover";
-
-const HOTKEY_KBD_CLASS =
-  "ml-2 border-home-secondary-border bg-accent-tint text-home-fg-muted";
-
-const EMPTY_STATE_TEXT_CLASS =
-  "mt-4 text-pretty text-[0.95rem] text-home-empty";
-
 export function NewTabHome({
   bookmarks,
   syncState,
@@ -255,7 +192,7 @@ export function NewTabHome({
           alt=""
           onLoad={() => setImgLoaded(true)}
           onError={() => setImgError(true)}
-          className="pointer-events-none absolute inset-0 h-full w-full object-cover transition-opacity duration-[260ms] ease-[cubic-bezier(0.215,0.61,0.355,1)] [filter:brightness(0.72)] motion-reduce:transition-none"
+          className="pointer-events-none absolute inset-0 h-full w-full object-cover transition-opacity duration-300 ease-[cubic-bezier(0.215,0.61,0.355,1)] brightness-75 motion-reduce:transition-none"
           style={{ opacity: imgLoaded ? 0.6 : 0 }}
         />
       )}
@@ -268,11 +205,11 @@ export function NewTabHome({
           data-tour="settings-btn"
           type="button"
           onClick={onOpenSettings}
-          className={ICON_BUTTON_CLASS}
+          className="rounded border border-transparent bg-transparent p-2 text-on-bg-muted transition-colors duration-150 ease-hover hover:border-white/15 hover:bg-white/5 hover:text-on-bg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80"
           aria-label="Open settings"
           title="Settings"
         >
-          {SETTINGS_ICON}
+          <GearSixIcon className="size-5" />
         </button>
       </header>
 
@@ -281,7 +218,7 @@ export function NewTabHome({
           <section className="mx-auto w-full max-w-lg space-y-6">
             <div className="text-center">
               <h1
-                className={CLOCK_CLASS}
+                className="font-serif text-balance text-4xl font-light leading-none tracking-tight text-on-bg tabular-nums sm:text-5xl lg:text-6xl"
                 aria-label={`Current time: ${formatClock(now)}`}
               >
                 {formatClock(now)}
@@ -320,14 +257,14 @@ export function NewTabHome({
 
                 return (
                   <form
-                    className={SEARCH_FORM_CLASS}
+                    className="relative mx-auto flex max-w-xl items-center rounded bg-search-bg shadow-search backdrop-blur-md"
                     action={engineConfig?.searchUrl}
                     method={isDefault ? undefined : "GET"}
                     target={isDefault ? undefined : "_blank"}
                     role="search"
                     onSubmit={handleSubmit}
                   >
-                    <span className={SEARCH_LOGO_CLASS}>
+                    <span className="flex items-center pl-2">
                       <SearchEnginePicker
                         value={searchEngine}
                         onChange={onSearchEngineChange}
@@ -337,11 +274,13 @@ export function NewTabHome({
                       ref={searchRef}
                       type="text"
                       name={engineConfig?.queryParam ?? "q"}
-                      className={SEARCH_INPUT_CLASS}
+                      className="w-full appearance-none border-0 bg-transparent px-3 py-3.5 text-base text-home-fg [font-family:inherit] outline-none placeholder:text-home-placeholder"
                       placeholder="Search the web"
                       autoComplete="off"
                     />
-                    <span className={SEARCH_TRAIL_CLASS}>{SEARCH_ICON}</span>
+                    <span className="pointer-events-none flex items-center pr-4 text-home-fg">
+                      <MagnifyingGlassIcon className="size-4 opacity-50" />
+                    </span>
                   </form>
                 );
               })()}
@@ -355,10 +294,10 @@ export function NewTabHome({
                   <a
                     key={site.url}
                     href={site.url}
-                    className={QUICK_LINK_CLASS}
+                    className="group flex flex-col items-center gap-1.5 no-underline transition-opacity duration-150 ease-hover"
                     title={site.title}
                   >
-                    <span className={QUICK_LINK_ICON_CLASS}>
+                    <span className="flex size-10 items-center justify-center rounded border border-overlay-edge bg-overlay transition-colors duration-150 ease-hover group-hover:border-overlay-hover-edge group-hover:bg-overlay-hover">
                       <img
                         src={site.faviconUrl}
                         alt=""
@@ -368,7 +307,7 @@ export function NewTabHome({
                         className="rounded"
                       />
                     </span>
-                    <span className={QUICK_LINK_LABEL_CLASS}>
+                    <span className="max-w-18 overflow-hidden text-ellipsis whitespace-nowrap text-center text-xxs text-on-bg-ghost group-hover:text-on-bg-muted">
                       {site.hostname.replace(/^www\./, "")}
                     </span>
                   </a>
@@ -380,8 +319,8 @@ export function NewTabHome({
 
         <footer className="mx-auto w-full max-w-lg pb-6">
           {authPhase === "connecting" ? (
-            <article className={cn(CARD_BASE_CLASS, "text-center")}>
-              <p className={EYEBROW_CLASS}>Connecting to X&hellip;</p>
+            <article className="relative min-h-34 overflow-hidden rounded px-4 pt-3.5 pb-3 bg-glass shadow-glass backdrop-blur-lg transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 max-sm:min-h-32 max-sm:p-3 text-center">
+              <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">Connecting to X&hellip;</p>
               <div className="mt-4 flex justify-center">
                 <svg
                   viewBox="0 0 24 24"
@@ -393,14 +332,14 @@ export function NewTabHome({
                   <path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round" />
                 </svg>
               </div>
-              <p className={EMPTY_STATE_TEXT_CLASS}>
+              <p className="mt-4 text-pretty text-base text-home-empty">
                 Syncing your session in the background.
               </p>
             </article>
           ) : authPhase === "need_login" ? (
-            <article className={cn(CARD_BASE_CLASS, "text-center")}>
-              <p className={EYEBROW_CLASS}>Log in to see your bookmarks</p>
-              <p className={EMPTY_STATE_TEXT_CLASS}>
+            <article className="relative min-h-34 overflow-hidden rounded px-4 pt-3.5 pb-3 bg-glass shadow-glass backdrop-blur-lg transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 max-sm:min-h-32 max-sm:p-3 text-center">
+              <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">Log in to see your bookmarks</p>
+              <p className="mt-4 text-pretty text-base text-home-empty">
                 Sign in to your X account to sync and read your saved posts.
               </p>
               <a
@@ -410,11 +349,7 @@ export function NewTabHome({
                 onClick={() => {
                   onLogin?.().catch(() => {});
                 }}
-                className={cn(
-                  CTA_BUTTON_CLASS,
-                  PRIMARY_BUTTON_CLASS,
-                  "mt-6 inline-block",
-                )}
+                className="inline-block items-center justify-center rounded text-sm font-semibold leading-none transition-all duration-150 ease-hover disabled:cursor-default disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 border-0 bg-home-accent px-4 py-2 text-white hover:opacity-90 mt-6"
               >
                 Log in to X
               </a>
@@ -424,8 +359,7 @@ export function NewTabHome({
               <article
                 data-tour="bookmark-card"
                 className={cn(
-                  CARD_BASE_CLASS,
-                  PICK_CARD_CLASS,
+                  "relative min-h-36 overflow-hidden rounded px-4 pt-3.5 pb-3 bg-glass shadow-glass backdrop-blur-lg transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 max-sm:min-h-32 max-sm:p-3 cursor-pointer hover:bg-glass-hover",
                   cardEngaged && "bg-glass-hover",
                 )}
                 onMouseEnter={() => setCardEngaged(true)}
@@ -461,56 +395,56 @@ export function NewTabHome({
                     : ""
                 }`}
               >
-                <div className={CARD_CONTENT_CLASS}>
+                <div className="min-h-28 translate-y-0 opacity-100 transition-all duration-200 ease-[cubic-bezier(0.215,0.61,0.355,1)] motion-reduce:transition-none max-sm:min-h-26">
                   <div className="flex justify-between">
                     <div className="flex items-center gap-1.5">
-                      <p className={EYEBROW_CLASS}>recommended</p>
+                      <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">recommended</p>
                       {offlineMode && (
                         <span title="Not signed in — showing cached bookmarks">
                           <LinkBreakIcon
-                            className="size-3 animate-[offline-pulse_2s_ease-in-out_infinite] text-muted"
+                            className="size-3 animate-offline-pulse text-muted"
                           />
                         </span>
                       )}
                     </div>
-                    <kbd className={HOTKEY_KBD_CLASS}>O</kbd>
+                    <kbd className="ml-2 border-home-secondary-border bg-accent-tint text-home-fg-muted">O</kbd>
                   </div>
 
-                  <h2 className={CARD_TITLE_CLASS}>
+                  <h2 className="font-serif mt-4 line-clamp-2 min-h-[calc(1.25em*2)] text-balance text-base font-normal leading-tight text-home-fg-secondary max-sm:text-sm lg:text-lg">
                     {currentItem.title}
                   </h2>
-                  <p className={CARD_DESCRIPTION_CLASS}>
+                  <p className="mt-2.5 line-clamp-1 min-h-[calc(1.5em*1)] text-pretty text-xs leading-normal text-home-description">
                     {currentItem.excerpt}
                   </p>
                   <div className="mt-3 flex items-end justify-between gap-3">
-                    <p className={CARD_META_CLASS}>
+                    <p className="text-xs leading-tight text-home-fg-muted">
                       @{currentItem.bookmark.author.screenName}
                     </p>
                   </div>
                 </div>
               </article>
 
-              <div className={ACTIONS_CLASS}>
+              <div className="mt-8 flex items-center justify-between gap-2.5 max-sm:gap-2">
                 <button
                   data-tour="open-all-btn"
                   type="button"
-                  className={cn(CTA_BUTTON_CLASS, SECONDARY_BUTTON_CLASS)}
+                  className="inline-flex items-center justify-center rounded text-sm font-semibold leading-none transition-all duration-150 ease-hover disabled:cursor-default disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 border border-home-secondary-border bg-home-secondary-bg px-5 py-2.5 text-home-secondary-text hover:bg-glass-hover"
                   onClick={() => {
                     dismissTour();
                     onOpenReading();
                   }}
                 >
                   Open all bookmarks
-                  <kbd className={HOTKEY_KBD_CLASS}>L</kbd>
+                  <kbd className="ml-2 border-home-secondary-border bg-accent-tint text-home-fg-muted">L</kbd>
                 </button>
                 <button
                   data-tour="surprise-btn"
                   type="button"
-                  className={cn(CTA_BUTTON_CLASS, SECONDARY_BUTTON_CLASS)}
+                  className="inline-flex items-center justify-center rounded text-sm font-semibold leading-none transition-all duration-150 ease-hover disabled:cursor-default disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 border border-home-secondary-border bg-home-secondary-bg px-5 py-2.5 text-home-secondary-text hover:bg-glass-hover"
                   onClick={surpriseMe}
                 >
                   Surprise me
-                  <kbd className={HOTKEY_KBD_CLASS}>S</kbd>
+                  <kbd className="ml-2 border-home-secondary-border bg-accent-tint text-home-fg-muted">S</kbd>
                 </button>
               </div>
 
@@ -533,8 +467,8 @@ export function NewTabHome({
               )}
             </div>
           ) : syncState.phase === "syncing" ? (
-            <article className={cn(CARD_BASE_CLASS, "text-center")}>
-              <p className={EYEBROW_CLASS}>Syncing your bookmarks&hellip;</p>
+            <article className="relative min-h-34 overflow-hidden rounded px-4 pt-3.5 pb-3 bg-glass shadow-glass backdrop-blur-lg transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 max-sm:min-h-32 max-sm:p-3 text-center">
+              <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">Syncing your bookmarks&hellip;</p>
               <div className="mt-4 flex justify-center">
                 <svg
                   viewBox="0 0 24 24"
@@ -546,14 +480,14 @@ export function NewTabHome({
                   <path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round" />
                 </svg>
               </div>
-              <p className={EMPTY_STATE_TEXT_CLASS}>
+              <p className="mt-4 text-pretty text-base text-home-empty">
                 Fetching bookmarks from your account. This may take a moment.
               </p>
             </article>
           ) : syncState.phase === "error" ? (
-            <article className={cn(CARD_BASE_CLASS, "text-center")}>
-              <p className={EYEBROW_CLASS}>Something went wrong</p>
-              <p className={EMPTY_STATE_TEXT_CLASS}>
+            <article className="relative min-h-34 overflow-hidden rounded px-4 pt-3.5 pb-3 bg-glass shadow-glass backdrop-blur-lg transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 max-sm:min-h-32 max-sm:p-3 text-center">
+              <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">Something went wrong</p>
+              <p className="mt-4 text-pretty text-base text-home-empty">
                 {syncState.error === "reconnecting"
                   ? "Reconnecting to your account\u2026"
                   : "Could not sync your bookmarks. Check your connection and try again."}
@@ -562,23 +496,23 @@ export function NewTabHome({
                 <button
                   type="button"
                   onClick={onSync}
-                  className={cn(CTA_BUTTON_CLASS, PRIMARY_BUTTON_CLASS, "mt-6")}
+                  className="inline-flex items-center justify-center rounded text-sm font-semibold leading-none transition-all duration-150 ease-hover disabled:cursor-default disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 border-0 bg-home-accent px-4 py-2 text-white hover:opacity-90 mt-6"
                 >
                   Try again
                 </button>
               )}
             </article>
           ) : (
-            <article className={cn(CARD_BASE_CLASS, "text-center")}>
-              <p className={EYEBROW_CLASS}>Your reading list is quiet</p>
-              <p className={EMPTY_STATE_TEXT_CLASS}>
+            <article className="relative min-h-34 overflow-hidden rounded px-4 pt-3.5 pb-3 bg-glass shadow-glass backdrop-blur-lg transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 max-sm:min-h-32 max-sm:p-3 text-center">
+              <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">Your reading list is quiet</p>
+              <p className="mt-4 text-pretty text-base text-home-empty">
                 No bookmarks found. Bookmark some posts on X, then sync to see
                 them here.
               </p>
               <button
                 type="button"
                 onClick={onSync}
-                className={cn(CTA_BUTTON_CLASS, PRIMARY_BUTTON_CLASS, "mt-6")}
+                className="inline-flex items-center justify-center rounded text-sm font-semibold leading-none transition-all duration-150 ease-hover disabled:cursor-default disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 border-0 bg-home-accent px-4 py-2 text-white hover:opacity-90 mt-6"
               >
                 Sync bookmarks
               </button>
