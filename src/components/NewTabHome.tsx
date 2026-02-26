@@ -418,7 +418,7 @@ export function NewTabHome({
                       </p>
                       {offlineMode && (
                         <span title="Not signed in — showing cached bookmarks">
-                          <LinkBreakIcon className="size-3 animate-offline-pulse text-muted" />
+                          <LinkBreakIcon className="size-4 animate-offline-pulse text-muted" />
                         </span>
                       )}
                     </div>
@@ -456,7 +456,7 @@ export function NewTabHome({
                 <Button
                   variant="secondary"
                   data-tour="open-all-btn"
-                  className="border-home-secondary-border bg-home-secondary-bg px-5 py-2.5 font-semibold leading-none text-home-secondary-text transition-all duration-150 ease-hover hover:bg-main-bg-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80"
+                  className="bg-home-secondary-bg px-5 py-2.5 font-semibold leading-none text-home-secondary-text transition-all duration-150 ease-hover hover:bg-main-bg-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80"
                   onClick={() => {
                     dismissTour();
                     onOpenReading();
@@ -470,7 +470,7 @@ export function NewTabHome({
                 <Button
                   variant="secondary"
                   data-tour="surprise-btn"
-                  className="border-home-secondary-border bg-home-secondary-bg px-5 py-2.5 font-semibold leading-none text-home-secondary-text transition-all duration-150 ease-hover hover:bg-main-bg-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80"
+                  className="bg-home-secondary-bg px-5 py-2.5 font-semibold leading-none text-home-secondary-text transition-all duration-150 ease-hover hover:bg-main-bg-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80"
                   onClick={surpriseMe}
                 >
                   Surprise me
@@ -486,7 +486,7 @@ export function NewTabHome({
                   !offlineMode && "invisible",
                 )}
               >
-                Viewing cached bookmarks.{" "}
+                Offline mode.{" "}
                 <a
                   href="https://x.com/login"
                   target="_blank"
@@ -496,9 +496,9 @@ export function NewTabHome({
                   }}
                   className="underline hover:text-muted"
                 >
-                  Log in to X
+                  Log in
                 </a>{" "}
-                to sync new ones.
+                to sync new bookmarks.
               </p>
             </div>
           ) : syncState.phase === "hard_syncing" ? (
@@ -536,7 +536,8 @@ export function NewTabHome({
                 Something went wrong
               </p>
               <p className="mt-4 text-pretty text-base text-home-empty">
-                Could not sync your bookmarks. Check your connection and try again.
+                Could not sync your bookmarks. Check your connection and try
+                again.
               </p>
               <button
                 type="button"
