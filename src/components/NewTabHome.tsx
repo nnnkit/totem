@@ -218,7 +218,7 @@ export function NewTabHome({
         </button>
       </header>
 
-      <div className="relative z-10 mx-auto flex min-h-0 w-full max-w-4xl flex-1 flex-col px-5 py-6 sm:px-8">
+      <div className="relative z-10 mx-auto flex min-h-0 w-full max-w-4xl flex-1 flex-col gap-2 px-5 py-6 sm:px-8">
         <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col items-center justify-center">
           <section className="mx-auto w-full max-w-lg space-y-6">
             <div className="text-center">
