@@ -506,12 +506,15 @@ export function useBookmarks(isReady: boolean, loadCacheOnly = false): UseBookma
 
 const EMPTY_SET = new Set<string>();
 
-export function useDetailedTweetIds(refreshKey = 0): Set<string> {
+export function useDetailedTweetIds(refreshKey = 0): { ids: Set<string>; loaded: boolean } {
   const [ids, setIds] = useState<Set<string>>(EMPTY_SET);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    getDetailedTweetIds().then(setIds).catch(() => {});
+    getDetailedTweetIds()
+      .then((result) => { setIds(result); setLoaded(true); })
+      .catch(() => { setLoaded(true); });
   }, [refreshKey]);
 
-  return ids;
+  return { ids, loaded };
 }
