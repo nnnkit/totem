@@ -42,21 +42,8 @@ export const CS_SOFT_SYNC_NEEDED = "totem_light_sync_needed";
 //   totem_graphql_catalog    – captured GraphQL endpoint catalog
 //   totem_sw_cleanup_at      – weekly service worker cleanup timestamp
 //   totem_features           – captured Twitter feature flags JSON
-//   totem_last_mutation      – last bookmark mutation debug info
-//   totem_last_mutation_done – last completed mutation debug info
-//   totem_seen_display_types – seen tweetDisplayType values
-
-export const CHROME_LOCAL_KEYS = [
-  CS_DB_CLEANUP_AT,
-  CS_LAST_RECONCILE,
-  CS_LAST_SYNC,
-  CS_BOOKMARK_EVENTS,
-  CS_AUTH_HEADERS,
-  CS_AUTH_TIME,
-  CS_USER_ID,
-  CS_LAST_SOFT_SYNC,
-  CS_SOFT_SYNC_NEEDED,
-] as const;
+//   totem_last_mutation      – last bookmark mutation debug info (write-only debug)
+//   totem_last_mutation_done – last completed mutation debug info (write-only debug)
 
 // ── chrome.storage.sync ────────────────────────────────────────────
 export const SYNC_SETTINGS = "totem_settings";
@@ -91,7 +78,6 @@ export const LEGACY_CHROME_LOCAL_KEY_MAP = {
   xbt_features: "totem_features",
   xbt_last_mutation: "totem_last_mutation",
   xbt_last_mutation_done: "totem_last_mutation_done",
-  xbt_seen_display_types: "totem_seen_display_types",
   // legacy query-id keys (kept for cleanup/migration completeness)
   xbt_query_id: "totem_query_id",
   xbt_detail_query_id: "totem_detail_query_id",

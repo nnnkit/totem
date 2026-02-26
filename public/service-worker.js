@@ -128,10 +128,6 @@ async function readUserIdFromTwidCookie() {
   }
 }
 
-async function clearAuthSessionState() {
-  await chrome.storage.local.remove(AUTH_STATE_STORAGE_KEYS);
-}
-
 async function syncAuthSessionFromCookie(storedState = null) {
   const userId = await readUserIdFromTwidCookie();
   if (userId) {
@@ -246,10 +242,6 @@ function isQueryIdStale(json) {
   return json.errors.some(
     (e) => e?.extensions?.code === "GRAPHQL_VALIDATION_FAILED",
   );
-}
-
-function invalidateQueryIdCache(operationName) {
-  queryIdMemCache.delete(operationName);
 }
 
 async function discoverQueryIdFromBundles(operationName) {
@@ -611,19 +603,6 @@ async function pushBookmarkEvent(type, tweetId, source) {
   await chrome.storage.local.set({ [BOOKMARK_EVENTS_STORAGE_KEY]: next });
 }
 
-async function handleDrainBookmarkEvents() {
-  const stored = await chrome.storage.local.get([BOOKMARK_EVENTS_STORAGE_KEY]);
-  const events = Array.isArray(stored[BOOKMARK_EVENTS_STORAGE_KEY])
-    ? stored[BOOKMARK_EVENTS_STORAGE_KEY]
-    : [];
-
-  if (events.length > 0) {
-    await chrome.storage.local.set({ [BOOKMARK_EVENTS_STORAGE_KEY]: [] });
-  }
-
-  return { data: { events } };
-}
-
 async function handleGetBookmarkEvents() {
   const stored = await chrome.storage.local.get([BOOKMARK_EVENTS_STORAGE_KEY]);
   const events = Array.isArray(stored[BOOKMARK_EVENTS_STORAGE_KEY])
@@ -890,7 +869,6 @@ const TW_TO_TOTEM_KEY_MAP = {
   tw_bookmark_events: "totem_bookmark_events",
   current_user_id: "totem_user_id",
   tw_weekly_cleanup_at: "totem_sw_cleanup_at",
-  tw_seen_tweet_display_types: "totem_seen_display_types",
 };
 
 const XBT_TO_TOTEM_KEY_MAP = {
@@ -905,7 +883,6 @@ const XBT_TO_TOTEM_KEY_MAP = {
   xbt_bookmark_events: "totem_bookmark_events",
   xbt_user_id: "totem_user_id",
   xbt_sw_cleanup_at: "totem_sw_cleanup_at",
-  xbt_seen_display_types: "totem_seen_display_types",
   xbt_db_cleanup_at: "totem_db_cleanup_at",
   xbt_last_reconcile: "totem_last_reconcile",
   xbt_last_sync: "totem_last_sync",
@@ -1096,52 +1073,6 @@ function parseFeatureSet(raw) {
   return {};
 }
 
-function collectTweetDisplayTypes(payload) {
-  const found = new Set();
-  const stack = [payload];
-  const seen = new Set();
-
-  while (stack.length > 0) {
-    const current = stack.pop();
-    if (!current || typeof current !== "object") continue;
-    if (seen.has(current)) continue;
-    seen.add(current);
-
-    if (Array.isArray(current)) {
-      for (const item of current) stack.push(item);
-      continue;
-    }
-
-    for (const [key, value] of Object.entries(current)) {
-      if (key === "tweetDisplayType" && typeof value === "string") {
-        found.add(value);
-      }
-      if (value && typeof value === "object") {
-        stack.push(value);
-      }
-    }
-  }
-
-  return Array.from(found).sort();
-}
-
-async function persistSeenTweetDisplayTypes(payload) {
-  const incoming = collectTweetDisplayTypes(payload);
-  if (incoming.length === 0) return;
-
-  const stored = await chrome.storage.local.get(["totem_seen_display_types"]);
-  const existing = Array.isArray(stored.totem_seen_display_types)
-    ? stored.totem_seen_display_types.filter((item) => typeof item === "string")
-    : [];
-
-  const merged = Array.from(new Set([...existing, ...incoming])).sort();
-  if (merged.length === existing.length && merged.every((item, idx) => item === existing[idx])) {
-    return;
-  }
-
-  await chrome.storage.local.set({ totem_seen_display_types: merged });
-}
-
 async function handleFetchTweetDetail(tweetId, _retried = false, _queryIdRetried = false) {
   const stored = await chrome.storage.local.get([
     "totem_auth_headers",
@@ -1216,7 +1147,6 @@ async function handleFetchTweetDetail(tweetId, _retried = false, _queryIdRetried
     if (freshId) return handleFetchTweetDetail(tweetId, _retried, true);
   }
 
-  persistSeenTweetDisplayTypes(json).catch(() => {});
   return { data: json };
 }
 
@@ -1426,12 +1356,6 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   }
   if (message.type === "BOOKMARK_MUTATION") {
     handleBookmarkMutationMessage(message)
-      .then(sendResponse)
-      .catch((err) => sendResponse({ error: err.message }));
-    return true;
-  }
-  if (message.type === "DRAIN_BOOKMARK_EVENTS") {
-    handleDrainBookmarkEvents()
       .then(sendResponse)
       .catch((err) => sendResponse({ error: err.message }));
     return true;

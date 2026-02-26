@@ -1,5 +1,4 @@
 import { getTweetDetailCache, upsertTweetDetailCache } from "../../db";
-import type { ThreadTweet } from "../../types";
 import { parseTweetDetailPayload, type TweetDetailContent } from "../parsers";
 
 interface RuntimeResponse {
@@ -41,13 +40,4 @@ export async function fetchTweetDetail(
   }).catch(() => {});
 
   return detail;
-}
-
-export async function fetchThread(tweetId: string): Promise<ThreadTweet[]> {
-  try {
-    const detail = await fetchTweetDetail(tweetId);
-    return detail.thread;
-  } catch {
-    return [];
-  }
 }

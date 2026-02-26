@@ -11,8 +11,7 @@ export {
   deleteBookmark,
   getBookmarkEvents,
   ackBookmarkEvents,
-  type BookmarkChangeType,
   type BookmarkChangeEvent,
 } from "./bookmarks";
 
-export { fetchTweetDetail, fetchThread } from "./posts";
+export { fetchTweetDetail } from "./posts";

@@ -475,7 +475,7 @@ Deep linking:
 | Layer | Key | What | Survives reload |
 |---|---|---|---|
 | `chrome.storage.local` | `totem_auth_headers` | Captured auth headers | Yes |
-| `chrome.storage.local` | `totem_auth_time` | When auth was captured | Yes |
+| `chrome.storage.local` | `totem_auth_time` | When auth was captured (write-only, never read) | Yes |
 | `chrome.storage.local` | `totem_user_id` | X user ID from cookie | Yes |
 | `chrome.storage.local` | `totem_last_reconcile` | Last full reconcile time | Yes |
 | `chrome.storage.local` | `totem_last_sync` | Last hard sync time | Yes |

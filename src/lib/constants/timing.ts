@@ -41,5 +41,3 @@ export const FETCH_READ_PAUSE_JITTER_MS = 2000;
 // ── Prefetch ────────────────────────────────────────────────
 export const PREFETCH_INTERVAL_MS = 45_000;
 
-// ── Highlights ──────────────────────────────────────────────
-export const HIGHLIGHT_RETRY_MS = 100;
