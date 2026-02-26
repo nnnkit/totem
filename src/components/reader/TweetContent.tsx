@@ -23,6 +23,7 @@ import { TweetRecommendations } from "./TweetRecommendations";
 import type { ReaderTweet } from "./types";
 import { cn } from "../../lib/cn";
 import { Button } from "../ui/Button";
+import { OfflineBanner } from "../ui/OfflineBanner";
 
 interface TweetBodyProps {
   tweet: ReaderTweet;
@@ -316,6 +317,12 @@ export const TweetContent = memo(function TweetContent({
             <div className="size-4 rounded-full border-2 border-accent border-t-transparent" />
           </span>
           Loading details...
+        </div>
+      )}
+
+      {detailError && (
+        <div className="mt-8">
+          <OfflineBanner />
         </div>
       )}
 

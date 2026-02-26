@@ -37,18 +37,24 @@ export default function App() {
   const connectingWithCache = phase === "connecting" && hadBookmarks;
   const showCached = offlineMode || connectingWithCache;
   const { bookmarks, syncState, refresh, unbookmark } = useBookmarks(isReady, showCached);
-  const {
-    continueReading,
-    allUnread,
-    refresh: refreshContinueReading,
-  } = useContinueReading(bookmarks);
   const [view, setView] = useState<AppView>("home");
   const [selectedBookmark, setSelectedBookmark] = useState<Bookmark | null>(
     null,
   );
   const readerOpen = selectedBookmark !== null;
   const { prefetchedCount } = usePrefetchDetails(bookmarks, isReady, readerOpen);
-  const detailedTweetIds = useDetailedTweetIds(prefetchedCount);
+  const { ids: detailedTweetIds, loaded: detailedIdsLoaded } = useDetailedTweetIds(prefetchedCount);
+
+  const displayBookmarks = useMemo(() => {
+    if (!offlineMode) return bookmarks;
+    return bookmarks.filter((b) => detailedTweetIds.has(b.tweetId));
+  }, [bookmarks, detailedTweetIds, offlineMode]);
+
+  const {
+    continueReading,
+    allUnread,
+    refresh: refreshContinueReading,
+  } = useContinueReading(displayBookmarks);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [readingTab, setReadingTab] = useState<ReadingTab>(() => {
     const stored = localStorage.getItem(LS_READING_TAB);
@@ -67,7 +73,7 @@ export default function App() {
 
   if (
     selectedBookmark &&
-    !bookmarks.some(
+    !displayBookmarks.some(
       (bookmark) => bookmark.tweetId === selectedBookmark.tweetId,
     )
   ) {
@@ -75,8 +81,8 @@ export default function App() {
   }
 
   const relatedBookmarks = useMemo(
-    () => pickRelatedBookmarks(selectedBookmark, bookmarks, 3, shuffleSeed > 0),
-    [selectedBookmark, bookmarks, shuffleSeed],
+    () => pickRelatedBookmarks(selectedBookmark, displayBookmarks, 3, shuffleSeed > 0),
+    [selectedBookmark, displayBookmarks, shuffleSeed],
   );
 
   const openedTweetIds = useMemo(
@@ -93,13 +99,13 @@ export default function App() {
   );
 
   const selectedIndex = selectedBookmark
-    ? bookmarks.findIndex((b) => b.id === selectedBookmark.id)
+    ? displayBookmarks.findIndex((b) => b.id === selectedBookmark.id)
     : -1;
   const hasPrev = selectedIndex > 0;
-  const hasNext = selectedIndex >= 0 && selectedIndex < bookmarks.length - 1;
+  const hasNext = selectedIndex >= 0 && selectedIndex < displayBookmarks.length - 1;
 
-  const bookmarksRef = useRef(bookmarks);
-  bookmarksRef.current = bookmarks;
+  const bookmarksRef = useRef(displayBookmarks);
+  bookmarksRef.current = displayBookmarks;
   const selectedBookmarkRef = useRef(selectedBookmark);
   selectedBookmarkRef.current = selectedBookmark;
 
@@ -129,7 +135,7 @@ export default function App() {
 
   useKeyboardNavigation({
     selectedBookmark,
-    filteredBookmarks: bookmarks,
+    filteredBookmarks: displayBookmarks,
     closeReader,
     setSelectedBookmark,
   });
@@ -137,15 +143,15 @@ export default function App() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const readTweetId = params.get("read");
-    if (!readTweetId || bookmarks.length === 0) return;
-    const target = bookmarks.find((b) => b.tweetId === readTweetId);
+    if (!readTweetId || displayBookmarks.length === 0) return;
+    const target = displayBookmarks.find((b) => b.tweetId === readTweetId);
     if (target) {
       openBookmark(target);
       window.history.replaceState({}, "", window.location.pathname);
     }
-  }, [bookmarks, openBookmark]);
+  }, [displayBookmarks, openBookmark]);
 
-  if (phase === "loading" || ((isReady || showCached) && hadBookmarks && syncState.phase === "idle")) {
+  if (phase === "loading" || ((isReady || showCached) && hadBookmarks && syncState.phase === "idle") || (offlineMode && !detailedIdsLoaded)) {
     return (
       <div className="flex items-center justify-center min-h-dvh bg-surface">
         <div className="animate-logo-shine">
@@ -199,12 +205,13 @@ export default function App() {
           onOpenBookmark={openBookmark}
           onSync={refresh}
           onBack={() => setView("home")}
+          offlineMode={offlineMode}
         />
       );
     }
     return (
       <NewTabHome
-        bookmarks={bookmarks}
+        bookmarks={displayBookmarks}
         syncState={syncState}
         onSync={refresh}
         detailedTweetIds={detailedTweetIds}

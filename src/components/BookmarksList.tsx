@@ -27,6 +27,7 @@ import {
 import { Button } from "./ui/Button";
 import { Input } from "./ui/Input";
 import { Badge } from "./ui/Badge";
+import { OfflineBanner } from "./ui/OfflineBanner";
 
 export type ReadingTab = "continue" | "read" | "unread";
 
@@ -39,6 +40,7 @@ interface Props {
   onOpenBookmark: (bookmark: Bookmark) => void;
   onSync: () => void;
   onBack: () => void;
+  offlineMode?: boolean;
 }
 
 interface TabButtonProps {
@@ -93,6 +95,7 @@ export function BookmarksList({
   onOpenBookmark,
   onSync,
   onBack,
+  offlineMode,
 }: Props) {
   const containerWidthClass = "max-w-3xl";
   const [focusedIndex, setFocusedIndex] = useState(-1);
@@ -591,6 +594,11 @@ export function BookmarksList({
               </div>
             )}
           </>
+        )}
+        {offlineMode && (
+          <div className="mt-8">
+            <OfflineBanner />
+          </div>
         )}
       </main>
     </div>
