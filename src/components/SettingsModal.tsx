@@ -21,7 +21,7 @@ interface Props {
 }
 
 const toggleBase =
-  "flex items-center justify-center h-7 text-sm font-medium rounded transition-[color,background-color,box-shadow] text-muted hover:text-foreground data-[pressed]:bg-surface-card data-[pressed]:text-accent data-[pressed]:shadow-sm cursor-default";
+  "flex items-center justify-center h-7 text-sm font-medium rounded transition-colors transition-shadow text-muted hover:text-foreground data-[pressed]:bg-surface-card data-[pressed]:text-accent data-[pressed]:shadow-sm cursor-default";
 
 export function SettingsModal({
   open,

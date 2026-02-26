@@ -146,7 +146,7 @@ function ThreadTweets({ tweets }: ThreadTweetsProps) {
   if (tweets.length === 0) return null;
 
   return (
-    <section className="mt-10 rounded-lg bg-accent-surface/40 px-4 py-5">
+    <section className="mt-10 rounded-lg border border-border/60 px-4 py-5">
       <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-muted">
         Thread
       </p>
@@ -327,7 +327,6 @@ export const TweetContent = memo(function TweetContent({
           <OfflineBanner onLogin={onLogin} />
         </div>
       )}
-
 
       <div className="mt-10">
         <ActionBar

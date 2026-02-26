@@ -102,7 +102,7 @@ function HeroStaggerItem({
 }) {
   return (
     <div
-      className="animate-[hero-fade-up_600ms_cubic-bezier(0.23,1,0.32,1)_forwards] opacity-0"
+      className="animate-hero-fade-up opacity-0"
       style={{ animationDelay: `${delay}ms` }}
     >
       {children}

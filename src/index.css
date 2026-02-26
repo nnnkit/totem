@@ -67,11 +67,19 @@
 
     --shadow-glass: none;
     --shadow-search: none;
+    --shadow-kbd: 0 1px 0 0 rgba(255, 255, 255, 0.1);
 
     --ease-hover: ease;
+    --ease-entrance: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-overlay-in: cubic-bezier(0.215, 0.61, 0.355, 1);
+    --ease-tab: cubic-bezier(0.645, 0.045, 0.355, 1);
 
     --text-xxs: 0.625rem;
     --text-xxs--line-height: 1;
+    --text-2xs: 0.6875rem;
+    --text-2xs--line-height: 1.25;
+    --text-xs-plus: 0.8125rem;
+    --text-xs-plus--line-height: 1.4;
     --tracking-extra-wide: 0.25em;
     --animate-offline-pulse: offline-pulse 2s ease-in-out infinite;
     @keyframes offline-pulse {

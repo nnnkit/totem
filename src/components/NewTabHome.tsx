@@ -197,7 +197,7 @@ export function NewTabHome({
           alt=""
           onLoad={() => setImgLoaded(true)}
           onError={() => setImgError(true)}
-          className="pointer-events-none absolute inset-0 h-full w-full object-cover transition-opacity duration-300 ease-[cubic-bezier(0.215,0.61,0.355,1)] brightness-75 motion-reduce:transition-none"
+          className="pointer-events-none absolute inset-0 h-full w-full object-cover transition-opacity duration-300 ease-overlay-in brightness-75"
           style={{ opacity: imgLoaded ? 0.6 : 0 }}
         />
       )}
@@ -410,7 +410,7 @@ export function NewTabHome({
                     : ""
                 }`}
               >
-                <div className="flex min-h-32 flex-col translate-y-0 opacity-100 transition-all duration-200 ease-[cubic-bezier(0.215,0.61,0.355,1)] motion-reduce:transition-none max-sm:min-h-28">
+                <div className="flex min-h-32 flex-col translate-y-0 opacity-100 transition-all duration-200 ease-overlay-in max-sm:min-h-28">
                   <div className="flex justify-between">
                     <div className="flex items-center gap-1.5">
                       <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
@@ -422,7 +422,7 @@ export function NewTabHome({
                         </span>
                       )}
                     </div>
-                    <kbd className="ml-2 border-home-secondary-border bg-accent-tint text-home-fg-muted shadow-[0_1px_0_0_rgba(255,255,255,0.1)]">
+                    <kbd className="ml-2 border-home-secondary-border bg-accent-tint text-home-fg-muted shadow-kbd">
                       Space
                     </kbd>
                   </div>
@@ -463,7 +463,7 @@ export function NewTabHome({
                   }}
                 >
                   Open reading list
-                  <kbd className="ml-2 border-home-secondary-border bg-accent-tint text-home-fg-muted shadow-[0_1px_0_0_rgba(255,255,255,0.1)]">
+                  <kbd className="ml-2 border-home-secondary-border bg-accent-tint text-home-fg-muted shadow-kbd">
                     L
                   </kbd>
                 </Button>
@@ -474,7 +474,7 @@ export function NewTabHome({
                   onClick={surpriseMe}
                 >
                   Surprise me
-                  <kbd className="ml-2 border-home-secondary-border bg-accent-tint text-home-fg-muted shadow-[0_1px_0_0_rgba(255,255,255,0.1)]">
+                  <kbd className="ml-2 border-home-secondary-border bg-accent-tint text-home-fg-muted shadow-kbd">
                     S
                   </kbd>
                 </Button>

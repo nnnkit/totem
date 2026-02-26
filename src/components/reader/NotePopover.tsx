@@ -91,7 +91,7 @@ export function NotePopover({ highlight, anchorEl, onSaveNote, onDeleteNote, onC
         >
           <PopoverContent className="w-80">
           <div className="flex items-center justify-between px-4 pt-3">
-            <span className="text-[11px] font-medium uppercase tracking-wide text-muted/50">
+            <span className="text-2xs font-medium uppercase tracking-wide text-muted/50">
               Note
             </span>
             <button
@@ -138,7 +138,7 @@ export function NotePopover({ highlight, anchorEl, onSaveNote, onDeleteNote, onC
                   {highlight.note}
                 </p>
                 {highlight.createdAt && (
-                  <p className="mt-1.5 text-[11px] tabular-nums text-muted/50">
+                  <p className="mt-1.5 text-2xs tabular-nums text-muted/50">
                     {formatRelativeTime(highlight.createdAt)}
                   </p>
                 )}
