@@ -68,3 +68,10 @@ Totem — actually read what you saved on X.
 - `Decision / direction`: Totem operates local-first. All bookmark data, reading progress, highlights, and notes are stored in the browser (IndexedDB + chrome.storage). The only external call is to X.com to fetch bookmarks — there is no Totem backend server.
 - `What we explicitly avoid`: Building or depending on our own server infrastructure. No Totem API, no Totem database, no Totem accounts. The extension should work even if the developer disappears.
 - `How we know it is working`: The extension functions fully offline after initial sync. Users never see "server unavailable" errors from Totem.
+
+### 2026-02-26
+- `Context`: Removing auto-completion guessing from reading progress.
+- `What user pain we are solving`: Auto-marking articles as "read" based on scroll position or short content detection is unreliable — scrolling to the bottom doesn't mean you read it, and opening a short post doesn't mean you consumed it. False completions erode trust in the reading queue.
+- `Decision / direction`: We don't guess. The only way to mark something as read is the explicit "Mark as read" button. The reading progress hook becomes read-only: it loads saved state and restores scroll position, but never writes completion state automatically.
+- `What we explicitly avoid`: Any heuristic-based completion detection — scroll position thresholds, time-on-page timers, viewport-bottom checks, short-content auto-complete. If the user didn't click "Mark as read", it's not read.
+- `How we know it is working`: The "Read" tab only contains items the user consciously marked. No surprise completions, no "I didn't read that" moments.

@@ -20,9 +20,6 @@ export const REAUTH_POLL_MS = 2000;
 export const SEARCH_DEBOUNCE_MS = 150;
 
 // ── Reading progress ────────────────────────────────────────
-export const READING_SAVE_DEBOUNCE_MS = 3000;
-export const READING_SCROLL_THRESHOLD_PX = 50;
-export const READING_MIN_SCROLL_HEIGHT_PX = 10;
 export const READING_HEIGHT_CHANGE_RATIO = 0.15;
 
 // ── Product tour ────────────────────────────────────────────

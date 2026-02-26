@@ -20,8 +20,8 @@ interface Props {
   onResetLocalData: () => Promise<void>;
 }
 
-const toggleStyle =
-  "flex items-center justify-center px-3 py-1.5 text-sm font-medium rounded transition-[color,background-color,box-shadow] text-muted hover:text-foreground data-[pressed]:bg-surface-card data-[pressed]:text-accent data-[pressed]:shadow-sm cursor-default";
+const toggleBase =
+  "flex items-center justify-center h-7 text-sm font-medium rounded transition-[color,background-color,box-shadow] text-muted hover:text-foreground data-[pressed]:bg-surface-card data-[pressed]:text-accent data-[pressed]:shadow-sm cursor-default";
 
 export function SettingsModal({
   open,
@@ -60,7 +60,7 @@ export function SettingsModal({
         closing ? "animate-preview-out" : "animate-preview-in",
       )}>
         <div className="flex shrink-0 items-center justify-between px-6 pt-5 pb-3">
-          <h2 id="settings-title" className="text-lg font-semibold text-foreground">Settings</h2>
+          <h2 id="settings-title" className="text-lg font-semibold text-foreground text-balance">Settings</h2>
           <Button
             variant="ghost"
             size="icon"
@@ -73,42 +73,42 @@ export function SettingsModal({
           </Button>
         </div>
 
-        <div className="overflow-y-auto px-6 pb-6 space-y-5">
-          <section>
-            <h3 className="text-xs font-medium text-muted mb-2.5">
+        <div className="overflow-y-auto px-6 pb-6 divide-y divide-border">
+          <section className="py-4 first:pt-0 last:pb-0">
+            <h3 className="text-[13px] font-semibold text-muted mb-1.5">
               Appearance
             </h3>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-foreground">Colour mode</span>
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between min-h-10">
+                <span className="text-sm text-foreground/80">Colour mode</span>
                 <ToggleGroup
                   value={[themePreference]}
                   onValueChange={(values) => { if (values.length) onThemePreferenceChange(values[0] as ThemePreference); }}
                   className="flex gap-1 rounded bg-foreground/[0.06] p-1"
                 >
-                  <Toggle value="system" aria-label="Auto" className={cn(toggleStyle)}>
+                  <Toggle value="system" aria-label="Auto" className={cn(toggleBase, "px-2.5")}>
                     <MonitorIcon className="size-4" />
                   </Toggle>
-                  <Toggle value="light" aria-label="Light" className={cn(toggleStyle)}>
+                  <Toggle value="light" aria-label="Light" className={cn(toggleBase, "px-2.5")}>
                     <SunIcon className="size-4" />
                   </Toggle>
-                  <Toggle value="dark" aria-label="Dark" className={cn(toggleStyle)}>
+                  <Toggle value="dark" aria-label="Dark" className={cn(toggleBase, "px-2.5")}>
                     <MoonIcon className="size-4" />
                   </Toggle>
                 </ToggleGroup>
               </div>
 
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-foreground">Background</span>
+              <div className="flex items-center justify-between min-h-10">
+                <span className="text-sm text-foreground/80">Background</span>
                 <ToggleGroup
                   value={[settings.backgroundMode]}
                   onValueChange={(values) => { if (values.length) onUpdateSettings({ backgroundMode: values[0] as UserSettings["backgroundMode"] }); }}
                   className="flex gap-1 rounded bg-foreground/[0.06] p-1"
                 >
-                  <Toggle value="gradient" aria-label="Gradient" className={cn(toggleStyle)}>
+                  <Toggle value="gradient" aria-label="Gradient" className={cn(toggleBase, "px-3")}>
                     Gradient
                   </Toggle>
-                  <Toggle value="images" aria-label="Images" className={cn(toggleStyle)}>
+                  <Toggle value="images" aria-label="Images" className={cn(toggleBase, "px-3")}>
                     Images
                   </Toggle>
                 </ToggleGroup>
@@ -116,13 +116,13 @@ export function SettingsModal({
             </div>
           </section>
 
-          <section>
-            <h3 className="text-xs font-medium text-muted mb-2.5">
+          <section className="py-4 first:pt-0 last:pb-0">
+            <h3 className="text-[13px] font-semibold text-muted mb-1.5">
               New Tab
             </h3>
-            <div className="space-y-3">
-              <label className="flex items-center justify-between">
-                <span id="label-search-bar" className="text-sm text-foreground">
+            <div className="space-y-1.5">
+              <label className="flex items-center justify-between min-h-10">
+                <span id="label-search-bar" className="text-sm text-foreground/80">
                   Show search bar
                 </span>
                 <Switch
@@ -132,8 +132,8 @@ export function SettingsModal({
                 />
               </label>
 
-              <label className="flex items-center justify-between">
-                <span id="label-quick-links" className="text-sm text-foreground">
+              <label className="flex items-center justify-between min-h-10">
+                <span id="label-quick-links" className="text-sm text-foreground/80">
                   Show quick links
                 </span>
                 <Switch
@@ -156,7 +156,7 @@ export function SettingsModal({
               </label>
 
               {settings.showTopSites && (
-                <div className="flex items-center justify-between pl-4">
+                <div className="flex items-center justify-between pl-4 min-h-10">
                   <span className="text-sm text-muted">
                     Max quick links
                   </span>
@@ -179,8 +179,8 @@ export function SettingsModal({
             </div>
           </section>
 
-          <section>
-            <h3 className="text-xs font-medium text-muted mb-2.5">
+          <section className="py-4 first:pt-0 last:pb-0">
+            <h3 className="text-[13px] font-semibold text-muted mb-1.5">
               Data
             </h3>
             {confirmingReset ? (
