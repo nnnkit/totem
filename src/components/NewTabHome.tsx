@@ -372,7 +372,7 @@ export function NewTabHome({
               <article
                 data-tour="bookmark-card"
                 className={cn(
-                  "relative min-h-40 overflow-hidden rounded px-6 pt-5 pb-4 bg-main-bg shadow-glass backdrop-blur-lg transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 max-sm:min-h-36 max-sm:px-4 max-sm:py-3.5 cursor-pointer hover:bg-main-bg-hover",
+                  "relative min-h-40 overflow-hidden rounded p-4 bg-main-bg shadow-glass backdrop-blur-lg transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 max-sm:min-h-36 max-sm:px-4 max-sm:py-3.5 cursor-pointer hover:bg-main-bg-hover",
                   cardEngaged && "bg-main-bg-hover",
                 )}
                 onMouseEnter={() => setCardEngaged(true)}
@@ -428,7 +428,7 @@ export function NewTabHome({
                     <h2 className="capitalize font-serif line-clamp-2 text-balance text-lg font-medium leading-snug text-home-fg-secondary max-sm:text-base lg:text-xl">
                       {currentItem.title}
                     </h2>
-                    <p className="line-clamp-1 text-xs text-home-description/60">
+                    <p className="line-clamp-1 text-xs text-home-description/80">
                       {currentItem.excerpt}
                     </p>
                   </div>
@@ -478,21 +478,26 @@ export function NewTabHome({
                 </Button>
               </div>
 
-              <p className={cn("text-center text-xs text-gray-200/70", !offlineMode && "invisible")}>
-                  Viewing cached bookmarks.{" "}
-                  <a
-                    href="https://x.com/login"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={() => {
-                      onLogin?.().catch(() => {});
-                    }}
-                    className="underline hover:text-muted"
-                  >
-                    Log in to X
-                  </a>{" "}
-                  to sync new ones.
-                </p>
+              <p
+                className={cn(
+                  "text-center text-xs text-gray-200/70",
+                  !offlineMode && "invisible",
+                )}
+              >
+                Viewing cached bookmarks.{" "}
+                <a
+                  href="https://x.com/login"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => {
+                    onLogin?.().catch(() => {});
+                  }}
+                  className="underline hover:text-muted"
+                >
+                  Log in to X
+                </a>{" "}
+                to sync new ones.
+              </p>
             </div>
           ) : syncState.phase === "syncing" ? (
             <article className="relative min-h-40 overflow-hidden rounded px-6 py-6 bg-main-bg shadow-glass backdrop-blur-lg transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 max-sm:min-h-36 max-sm:px-4 max-sm:py-4 text-center">
