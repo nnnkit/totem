@@ -1,8 +1,8 @@
 import { cn } from "../../lib/cn";
 
 const variants = {
-  accent: "bg-accent px-2 py-0.5 text-xs font-medium text-white",
-  muted: "bg-border/50 px-1.5 py-0.5 text-xs uppercase",
+  accent: "bg-accent px-1.5 py-0.5 text-xxs font-medium text-white",
+  muted: "bg-border/50 px-1.5 py-0.5 text-xxs uppercase",
 } as const;
 
 interface Props {

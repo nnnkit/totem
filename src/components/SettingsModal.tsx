@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { MonitorIcon, MoonIcon, SunIcon, XIcon } from "@phosphor-icons/react";
+import { ToggleGroup } from "@base-ui/react/toggle-group";
+import { Toggle } from "@base-ui/react/toggle";
 import type { UserSettings } from "../types";
 import type { ThemePreference } from "../hooks/useTheme";
 import { cn } from "../lib/cn";
 import { Modal } from "./ui/Modal";
 import { Button } from "./ui/Button";
-import { ToggleGroup } from "./ui/ToggleGroup";
 import { Switch } from "./ui/Switch";
 import { Select } from "./ui/Select";
 
@@ -19,16 +20,8 @@ interface Props {
   onResetLocalData: () => Promise<void>;
 }
 
-const BACKGROUND_OPTIONS = [
-  { value: "gradient" as const, label: "Gradient" },
-  { value: "images" as const, label: "Images" },
-];
-
-const THEME_OPTIONS = [
-  { value: "system" as ThemePreference, label: "Auto", icon: <MonitorIcon className="size-4" /> },
-  { value: "light" as ThemePreference, label: "Light", icon: <SunIcon className="size-4" /> },
-  { value: "dark" as ThemePreference, label: "Dark", icon: <MoonIcon className="size-4" /> },
-];
+const toggleStyle =
+  "flex items-center justify-center px-3 py-1.5 text-sm font-medium rounded transition-[color,background-color,box-shadow] text-muted hover:text-foreground data-[pressed]:bg-surface-card data-[pressed]:text-accent data-[pressed]:shadow-sm cursor-default";
 
 export function SettingsModal({
   open,
@@ -85,22 +78,42 @@ export function SettingsModal({
             <h3 className="text-xs font-medium text-muted mb-2.5">
               Appearance
             </h3>
-            <ToggleGroup
-              items={THEME_OPTIONS}
-              value={themePreference}
-              onChange={onThemePreferenceChange}
-            />
-          </section>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-foreground">Colour mode</span>
+                <ToggleGroup
+                  value={[themePreference]}
+                  onValueChange={(values) => { if (values.length) onThemePreferenceChange(values[0] as ThemePreference); }}
+                  className="flex gap-1 rounded bg-foreground/[0.06] p-1"
+                >
+                  <Toggle value="system" aria-label="Auto" className={cn(toggleStyle)}>
+                    <MonitorIcon className="size-4" />
+                  </Toggle>
+                  <Toggle value="light" aria-label="Light" className={cn(toggleStyle)}>
+                    <SunIcon className="size-4" />
+                  </Toggle>
+                  <Toggle value="dark" aria-label="Dark" className={cn(toggleStyle)}>
+                    <MoonIcon className="size-4" />
+                  </Toggle>
+                </ToggleGroup>
+              </div>
 
-          <section>
-            <h3 className="text-xs font-medium text-muted mb-2.5">
-              Background
-            </h3>
-            <ToggleGroup
-              items={BACKGROUND_OPTIONS}
-              value={settings.backgroundMode}
-              onChange={(value) => onUpdateSettings({ backgroundMode: value })}
-            />
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-foreground">Background</span>
+                <ToggleGroup
+                  value={[settings.backgroundMode]}
+                  onValueChange={(values) => { if (values.length) onUpdateSettings({ backgroundMode: values[0] as UserSettings["backgroundMode"] }); }}
+                  className="flex gap-1 rounded bg-foreground/[0.06] p-1"
+                >
+                  <Toggle value="gradient" aria-label="Gradient" className={cn(toggleStyle)}>
+                    Gradient
+                  </Toggle>
+                  <Toggle value="images" aria-label="Images" className={cn(toggleStyle)}>
+                    Images
+                  </Toggle>
+                </ToggleGroup>
+              </div>
+            </div>
           </section>
 
           <section>

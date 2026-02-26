@@ -152,17 +152,17 @@
         --accent: #c25a41;
         --accent-surface: #fde8e2;
         --accent-surface-hover: #fcd5ca;
-        --surface: #fef9f7;
+        --surface: #fafafa;
         --surface-card: #ffffff;
-        --surface-hover: #f5efed;
-        --surface-link-card: #faf5f3;
+        --surface-hover: #f4f4f5;
+        --surface-link-card: #f7f7f8;
 
         /* Text */
-        --foreground: #1c1917;
-        --muted: #44403c;
+        --foreground: #171717;
+        --muted: #404044;
 
         /* Borders */
-        --border: #e7e5e4;
+        --border: #e5e5e7;
 
         /* Status */
         --success: #15803d;
@@ -191,21 +191,21 @@
         --tour-bg: rgba(255, 255, 255, 0.94);
         --tour-border: rgba(226, 128, 103, 0.12);
         --tour-shadow:
-            0 4px 24px rgba(11, 6, 5, 0.1), 0 1px 4px rgba(11, 6, 5, 0.06);
-        --tour-close: rgba(28, 25, 23, 0.32);
-        --tour-close-hover: rgba(28, 25, 23, 0.72);
-        --tour-close-hover-bg: rgba(28, 25, 23, 0.06);
-        --tour-description: rgba(28, 25, 23, 0.58);
-        --tour-kbd-border: rgba(28, 25, 23, 0.12);
-        --tour-kbd-bg: rgba(28, 25, 23, 0.05);
-        --tour-kbd-shadow: 0 1px 0 rgba(28, 25, 23, 0.06);
-        --tour-kbd-color: rgba(28, 25, 23, 0.72);
-        --tour-prev-border: rgba(28, 25, 23, 0.12);
-        --tour-prev-bg: rgba(28, 25, 23, 0.04);
-        --tour-prev-color: rgba(28, 25, 23, 0.62);
-        --tour-prev-hover-bg: rgba(28, 25, 23, 0.08);
-        --tour-prev-hover-border: rgba(28, 25, 23, 0.18);
-        --tour-progress: rgba(28, 25, 23, 0.36);
+            0 4px 24px rgba(0, 0, 0, 0.1), 0 1px 4px rgba(0, 0, 0, 0.06);
+        --tour-close: rgba(23, 23, 27, 0.32);
+        --tour-close-hover: rgba(23, 23, 27, 0.72);
+        --tour-close-hover-bg: rgba(23, 23, 27, 0.06);
+        --tour-description: rgba(23, 23, 27, 0.58);
+        --tour-kbd-border: rgba(23, 23, 27, 0.12);
+        --tour-kbd-bg: rgba(23, 23, 27, 0.05);
+        --tour-kbd-shadow: 0 1px 0 rgba(23, 23, 27, 0.06);
+        --tour-kbd-color: rgba(23, 23, 27, 0.72);
+        --tour-prev-border: rgba(23, 23, 27, 0.12);
+        --tour-prev-bg: rgba(23, 23, 27, 0.04);
+        --tour-prev-color: rgba(23, 23, 27, 0.62);
+        --tour-prev-hover-bg: rgba(23, 23, 27, 0.08);
+        --tour-prev-hover-border: rgba(23, 23, 27, 0.18);
+        --tour-progress: rgba(23, 23, 27, 0.36);
     }
 
     /* Dark values are defined twice: once for system preference, once for manual toggle.
@@ -216,17 +216,17 @@
             --accent: #e28067;
             --accent-surface: rgba(226, 128, 103, 0.1);
             --accent-surface-hover: rgba(226, 128, 103, 0.18);
-            --surface: #0b0605;
-            --surface-card: #151210;
-            --surface-hover: #201c1a;
-            --surface-link-card: #1a1614;
+            --surface: #0a0a0b;
+            --surface-card: #111113;
+            --surface-hover: #1a1a1d;
+            --surface-link-card: #151517;
 
             /* Text */
             --foreground: rgba(255, 255, 255, 0.92);
             --muted: rgba(255, 255, 255, 0.75);
 
             /* Borders */
-            --border: #262220;
+            --border: #232326;
 
             /* Status */
             --success: #22c55e;
@@ -252,7 +252,7 @@
             --highlight-underline: rgba(226, 128, 103, 0.75);
 
             /* Tour popover */
-            --tour-bg: rgba(24, 22, 20, 0.96);
+            --tour-bg: rgba(17, 17, 19, 0.96);
             --tour-border: rgba(226, 128, 103, 0.18);
             --tour-shadow:
                 0 4px 24px rgba(0, 0, 0, 0.4), 0 1px 4px rgba(0, 0, 0, 0.2);
@@ -278,17 +278,17 @@
         --accent: #e28067;
         --accent-surface: rgba(226, 128, 103, 0.1);
         --accent-surface-hover: rgba(226, 128, 103, 0.18);
-        --surface: #0b0605;
-        --surface-card: #151210;
-        --surface-hover: #201c1a;
-        --surface-link-card: #1a1614;
+        --surface: #0a0a0b;
+        --surface-card: #111113;
+        --surface-hover: #1a1a1d;
+        --surface-link-card: #151517;
 
         /* Text */
         --foreground: rgba(255, 255, 255, 0.92);
         --muted: rgba(255, 255, 255, 0.75);
 
         /* Borders */
-        --border: #262220;
+        --border: #232326;
 
         /* Status */
         --success: #22c55e;
@@ -314,7 +314,7 @@
         --highlight-underline: rgba(226, 128, 103, 0.75);
 
         /* Tour popover */
-        --tour-bg: rgba(24, 22, 20, 0.96);
+        --tour-bg: rgba(17, 17, 19, 0.96);
         --tour-border: rgba(226, 128, 103, 0.18);
         --tour-shadow:
             0 4px 24px rgba(0, 0, 0, 0.4), 0 1px 4px rgba(0, 0, 0, 0.2);
@@ -577,15 +577,15 @@
     --color-on-bg-ghost: rgba(255, 255, 255, 0.56);
 
     /* Main background (cards, search) */
-    --color-main-bg: rgba(254, 249, 247, 0.97);
-    --color-main-bg-hover: #fef9f7;
+    --color-main-bg: rgba(250, 250, 250, 0.97);
+    --color-main-bg-hover: #fafafa;
     --shadow-glass:
-        0 1px 3px rgba(11, 6, 5, 0.06), 0 6px 24px rgba(11, 6, 5, 0.06);
+        0 1px 3px rgba(0, 0, 0, 0.06), 0 6px 24px rgba(0, 0, 0, 0.06);
 
     /* Card text */
-    --color-home-fg: rgba(11, 6, 5, 0.92);
-    --color-home-fg-secondary: rgba(11, 6, 5, 0.82);
-    --color-home-fg-muted: rgba(11, 6, 5, 0.54);
+    --color-home-fg: rgba(10, 10, 12, 0.92);
+    --color-home-fg-secondary: rgba(10, 10, 12, 0.82);
+    --color-home-fg-muted: rgba(10, 10, 12, 0.54);
 
     /* Accent */
     --color-home-accent: #e28067;
@@ -593,13 +593,13 @@
 
     /* Search */
     --shadow-search:
-        0 1px 3px rgba(11, 6, 5, 0.06), 0 6px 24px rgba(11, 6, 5, 0.06);
-    --color-home-placeholder: rgba(11, 6, 5, 0.36);
+        0 1px 3px rgba(0, 0, 0, 0.06), 0 6px 24px rgba(0, 0, 0, 0.06);
+    --color-home-placeholder: rgba(10, 10, 12, 0.36);
 
     /* Secondary buttons */
-    --color-home-secondary-bg: rgba(254, 249, 247, 0.95);
-    --color-home-secondary-border: rgba(11, 6, 5, 0.1);
-    --color-home-secondary-text: rgba(11, 6, 5, 0.72);
+    --color-home-secondary-bg: rgba(250, 250, 250, 0.95);
+    --color-home-secondary-border: rgba(10, 10, 12, 0.1);
+    --color-home-secondary-text: rgba(10, 10, 12, 0.72);
 
     /* Overlay (translucent white on photo) */
     --color-overlay: rgba(255, 255, 255, 0.08);
@@ -608,8 +608,8 @@
     --color-overlay-hover-edge: rgba(255, 255, 255, 0.18);
 
     /* Description & empty state */
-    --color-home-description: rgba(11, 6, 5, 0.6);
-    --color-home-empty: rgba(11, 6, 5, 0.44);
+    --color-home-description: rgba(10, 10, 12, 0.6);
+    --color-home-empty: rgba(10, 10, 12, 0.44);
 }
 
 .totem-ambient {
@@ -617,12 +617,12 @@
         radial-gradient(
             ellipse 80% 70% at 50% 45%,
             transparent 30%,
-            rgba(11, 6, 5, 0.45) 100%
+            rgba(0, 0, 0, 0.45) 100%
         ),
         linear-gradient(
             to top,
-            rgba(11, 6, 5, 0.5) 0%,
-            rgba(11, 6, 5, 0.15) 40%,
+            rgba(0, 0, 0, 0.5) 0%,
+            rgba(0, 0, 0, 0.15) 40%,
             transparent 70%
         ),
         linear-gradient(
@@ -676,8 +676,8 @@
 /* Dark theme overrides for totem-home — system preference */
 @media (prefers-color-scheme: dark) {
     :root:not([data-theme]) .totem-home {
-        --color-main-bg: rgb(20, 16, 14);
-        --color-main-bg-hover: rgba(22, 17, 15, 0.92);
+        --color-main-bg: rgb(17, 17, 19);
+        --color-main-bg-hover: rgba(19, 19, 21, 0.92);
         --shadow-glass: none;
         --color-home-fg: rgba(255, 255, 255, 0.92);
         --color-home-fg-secondary: rgba(255, 255, 255, 0.86);
@@ -685,9 +685,9 @@
         --color-home-accent: #e28067;
         --color-accent-tint: rgba(226, 128, 103, 0.12);
         --shadow-search:
-            0 1px 6px rgba(11, 6, 5, 0.2), 0 4px 24px rgba(11, 6, 5, 0.12);
+            0 1px 6px rgba(0, 0, 0, 0.2), 0 4px 24px rgba(0, 0, 0, 0.12);
         --color-home-placeholder: rgba(255, 255, 255, 0.45);
-        --color-home-secondary-bg: rgb(32, 28, 26);
+        --color-home-secondary-bg: rgb(26, 26, 29);
         --color-home-secondary-border: rgba(255, 255, 255, 0.14);
         --color-home-secondary-text: rgba(255, 255, 255, 0.8);
         --color-home-description: rgba(255, 255, 255, 0.74);
@@ -697,8 +697,8 @@
 
 /* Dark theme overrides for totem-home — manual toggle */
 [data-theme="dark"] .totem-home {
-    --color-main-bg: rgb(20, 16, 14);
-    --color-main-bg-hover: rgba(22, 17, 15, 0.92);
+    --color-main-bg: rgb(17, 17, 19);
+    --color-main-bg-hover: rgba(19, 19, 21, 0.92);
     --shadow-glass: none;
     --color-home-fg: rgba(255, 255, 255, 0.92);
     --color-home-fg-secondary: rgba(255, 255, 255, 0.86);
@@ -706,9 +706,9 @@
     --color-home-accent: #e28067;
     --color-accent-tint: rgba(226, 128, 103, 0.12);
     --shadow-search:
-        0 1px 6px rgba(11, 6, 5, 0.2), 0 4px 24px rgba(11, 6, 5, 0.12);
+        0 1px 6px rgba(0, 0, 0, 0.2), 0 4px 24px rgba(0, 0, 0, 0.12);
     --color-home-placeholder: rgba(255, 255, 255, 0.45);
-    --color-home-secondary-bg: rgb(32, 28, 26);
+    --color-home-secondary-bg: rgb(26, 26, 29);
     --color-home-secondary-border: rgba(255, 255, 255, 0.14);
     --color-home-secondary-text: rgba(255, 255, 255, 0.8);
     --color-home-description: rgba(255, 255, 255, 0.74);

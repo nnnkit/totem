@@ -17,11 +17,9 @@ export function TweetRecommendations({
   if (relatedBookmarks.length === 0) return null;
 
   return (
-    <section className="mt-12 border-t border-border pt-8">
+    <section className="my-6">
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-balance text-foreground">
-          Read next
-        </h2>
+        <h2 className="text-lg text-balance text-foreground">Read next</h2>
         <div className="flex items-center gap-2">
           {onShuffle && (
             <Button

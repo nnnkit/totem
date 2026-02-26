@@ -58,7 +58,7 @@ const TabButton = forwardRef<HTMLButtonElement, TabButtonProps>(
       aria-selected={active}
       onClick={onClick}
       className={cn(
-        "px-4 py-2.5 text-sm font-medium transition-colors",
+        "px-4 py-2.5 text-sm font-medium transition-colors outline-none",
         active ? "text-foreground" : "text-muted hover:text-foreground",
       )}
     >
