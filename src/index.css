@@ -75,8 +75,13 @@
     --tracking-extra-wide: 0.25em;
     --animate-offline-pulse: offline-pulse 2s ease-in-out infinite;
     @keyframes offline-pulse {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.4; }
+        0%,
+        100% {
+            opacity: 1;
+        }
+        50% {
+            opacity: 0.4;
+        }
     }
 
     --animate-overlay-in: overlay-in 200ms cubic-bezier(0.215, 0.61, 0.355, 1)
@@ -520,6 +525,10 @@
     a[role="button"]:active:not(:disabled) {
         transform: scale(0.97);
     }
+}
+
+.rounded {
+    border-radius: 0.5rem;
 }
 
 /* Unlayered — wins over @tailwindcss/typography's components-layer rules */
