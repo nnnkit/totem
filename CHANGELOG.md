@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.4] - 2026-02-26
+
+### Added
+- feat: fix colors
+- feat: fix dewsign issues
+
+### Fixed
+- fix: border 0.5 rem
+- fix: change text
+
 ## [1.0.3] - 2026-02-26
 
 ### Added
