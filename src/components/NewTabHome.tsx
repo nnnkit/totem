@@ -154,7 +154,7 @@ export function NewTabHome({
   });
 
   useHotkeys(
-    "enter, o",
+    "enter, space",
     () => openItem(currentItem),
     {
       preventDefault: true,
@@ -327,7 +327,7 @@ export function NewTabHome({
 
         <footer className="mx-auto w-full max-w-lg pb-6">
           {authPhase === "connecting" ? (
-            <article className="relative min-h-34 overflow-hidden rounded px-4 pt-3.5 pb-3 bg-main-bg shadow-glass backdrop-blur-lg transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 max-sm:min-h-32 max-sm:p-3 text-center">
+            <article className="relative min-h-40 overflow-hidden rounded px-6 py-6 bg-main-bg shadow-glass backdrop-blur-lg transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 max-sm:min-h-36 max-sm:px-4 max-sm:py-4 text-center">
               <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
                 Connecting to X&hellip;
               </p>
@@ -347,7 +347,7 @@ export function NewTabHome({
               </p>
             </article>
           ) : authPhase === "need_login" ? (
-            <article className="relative min-h-34 overflow-hidden rounded px-4 pt-3.5 pb-3 bg-main-bg shadow-glass backdrop-blur-lg transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 max-sm:min-h-32 max-sm:p-3 text-center">
+            <article className="relative min-h-40 overflow-hidden rounded px-6 py-6 bg-main-bg shadow-glass backdrop-blur-lg transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 max-sm:min-h-36 max-sm:px-4 max-sm:py-4 text-center">
               <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
                 Log in to start reading
               </p>
@@ -371,7 +371,7 @@ export function NewTabHome({
               <article
                 data-tour="bookmark-card"
                 className={cn(
-                  "relative min-h-40 overflow-hidden rounded px-4 pt-3.5 pb-3 bg-main-bg shadow-glass backdrop-blur-lg transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 max-sm:min-h-36 max-sm:p-3 cursor-pointer hover:bg-main-bg-hover",
+                  "relative min-h-40 overflow-hidden rounded px-6 pt-5 pb-4 bg-main-bg shadow-glass backdrop-blur-lg transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 max-sm:min-h-36 max-sm:px-4 max-sm:py-3.5 cursor-pointer hover:bg-main-bg-hover",
                   cardEngaged && "bg-main-bg-hover",
                 )}
                 onMouseEnter={() => setCardEngaged(true)}
@@ -419,25 +419,26 @@ export function NewTabHome({
                         </span>
                       )}
                     </div>
-                    <kbd className="ml-2 border-home-secondary-border bg-accent-tint text-home-fg-muted">
-                      O
+                    <kbd className="ml-2 border-home-secondary-border bg-accent-tint text-home-fg-muted shadow-[0_1px_0_0_rgba(255,255,255,0.1)]">
+                      Space
                     </kbd>
                   </div>
-
-                  <h2 className="capitalize font-serif mt-3 line-clamp-2 text-balance text-lg font-medium leading-snug text-home-fg-secondary max-sm:text-base lg:text-xl">
-                    {currentItem.title}
-                  </h2>
-                  <p className="mt-2 line-clamp-1 text-xs text-home-description">
-                    {currentItem.excerpt}
-                  </p>
-                  <div className="mt-auto flex items-center gap-2.5 pt-3">
+                  <div className="flex flex-col gap-1 mt-4">
+                    <h2 className="capitalize font-serif line-clamp-2 text-balance text-lg font-medium leading-snug text-home-fg-secondary max-sm:text-base lg:text-xl">
+                      {currentItem.title}
+                    </h2>
+                    <p className="line-clamp-1 text-xs text-home-description/60">
+                      {currentItem.excerpt}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2.5 mt-auto pt-3">
                     <img
                       src={currentItem.bookmark.author.profileImageUrl}
                       alt=""
                       className="size-6 shrink-0 rounded-full"
                     />
-                    <div className="min-w-0">
-                      <p className="truncate text-xs font-medium text-home-fg-secondary">
+                    <div className="min-w-0 flex flex-col gap-1">
+                      <p className="truncate text-xxs font-medium text-home-fg-secondary">
                         {currentItem.bookmark.author.name}
                       </p>
                       <p className="truncate text-xxs text-home-fg-muted">
@@ -459,7 +460,7 @@ export function NewTabHome({
                   }}
                 >
                   Open reading list
-                  <kbd className="ml-2 border-home-secondary-border bg-accent-tint text-home-fg-muted">
+                  <kbd className="ml-2 border-home-secondary-border bg-accent-tint text-home-fg-muted shadow-[0_1px_0_0_rgba(255,255,255,0.1)]">
                     L
                   </kbd>
                 </button>
@@ -470,14 +471,13 @@ export function NewTabHome({
                   onClick={surpriseMe}
                 >
                   Surprise me
-                  <kbd className="ml-2 border-home-secondary-border bg-accent-tint text-home-fg-muted">
+                  <kbd className="ml-2 border-home-secondary-border bg-accent-tint text-home-fg-muted shadow-[0_1px_0_0_rgba(255,255,255,0.1)]">
                     S
                   </kbd>
                 </button>
               </div>
 
-              {offlineMode && (
-                <p className="text-center text-xs text-gray-200/70">
+              <p className={cn("text-center text-xs text-gray-200/70", !offlineMode && "invisible")}>
                   Viewing cached bookmarks.{" "}
                   <a
                     href="https://x.com/login"
@@ -492,10 +492,9 @@ export function NewTabHome({
                   </a>{" "}
                   to sync new ones.
                 </p>
-              )}
             </div>
           ) : syncState.phase === "syncing" ? (
-            <article className="relative min-h-34 overflow-hidden rounded px-4 pt-3.5 pb-3 bg-main-bg shadow-glass backdrop-blur-lg transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 max-sm:min-h-32 max-sm:p-3 text-center">
+            <article className="relative min-h-40 overflow-hidden rounded px-6 py-6 bg-main-bg shadow-glass backdrop-blur-lg transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 max-sm:min-h-36 max-sm:px-4 max-sm:py-4 text-center">
               <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
                 Syncing your bookmarks&hellip;
               </p>
@@ -515,7 +514,7 @@ export function NewTabHome({
               </p>
             </article>
           ) : syncState.phase === "error" ? (
-            <article className="relative min-h-34 overflow-hidden rounded px-4 pt-3.5 pb-3 bg-main-bg shadow-glass backdrop-blur-lg transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 max-sm:min-h-32 max-sm:p-3 text-center">
+            <article className="relative min-h-40 overflow-hidden rounded px-6 py-6 bg-main-bg shadow-glass backdrop-blur-lg transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 max-sm:min-h-36 max-sm:px-4 max-sm:py-4 text-center">
               <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
                 Something went wrong
               </p>
@@ -535,7 +534,7 @@ export function NewTabHome({
               )}
             </article>
           ) : (
-            <article className="relative min-h-34 overflow-hidden rounded px-4 pt-3.5 pb-3 bg-main-bg shadow-glass backdrop-blur-lg transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 max-sm:min-h-32 max-sm:p-3 text-center">
+            <article className="relative min-h-40 overflow-hidden rounded px-6 py-6 bg-main-bg shadow-glass backdrop-blur-lg transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 max-sm:min-h-36 max-sm:px-4 max-sm:py-4 text-center">
               <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
                 Your reading list is quiet
               </p>
