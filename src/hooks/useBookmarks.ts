@@ -61,6 +61,7 @@ type SyncAction =
   | { type: "REAUTH_TICK"; attempt: number }
   | { type: "REAUTH_OK" }
   | { type: "REAUTH_FAIL" }
+  | { type: "SYNC_SKIPPED" }
   | { type: "COUNT_CHANGED"; total: number }
   | { type: "RESET" };
 
@@ -100,6 +101,10 @@ function syncReducer(state: SyncState, action: SyncAction): SyncState {
       }
       return { phase: "error", total: totalFrom(state), error: action.error, isReconnecting: false };
     }
+
+    case "SYNC_SKIPPED":
+      if (state.phase !== "ready") return state;
+      return { phase: "synced", total: totalFrom(state) };
 
     case "SOFT_SYNC_START":
       if (state.phase !== "synced" && state.phase !== "ready") return state;
@@ -235,8 +240,8 @@ export function useBookmarks(isReady: boolean): UseBookmarksReturn {
       if (Date.now() - lastReconcile > RECONCILE_THROTTLE_MS) {
         dispatch({ type: "HARD_SYNC_START", isReconcile: true });
       } else {
-        // Recent enough — mark as synced
-        dispatch({ type: "HARD_SYNC_DONE", total: syncState.total });
+        // Recent enough — skip sync
+        dispatch({ type: "SYNC_SKIPPED" });
       }
     };
 
