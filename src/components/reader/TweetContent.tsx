@@ -231,7 +231,7 @@ function ActionBar({
             className="hover:text-red-500"
           >
             <BookmarkSimpleIcon weight="fill" className="size-3.5" />
-            Remove
+            Unbookmark
           </Button>
         )}
         {onToggleRead && (
