@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Totem",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Actually read what you saved on X.",
   "icons": {
     "16": "icons/icon-16.png",
