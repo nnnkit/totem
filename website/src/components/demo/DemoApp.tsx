@@ -106,12 +106,17 @@ export default function DemoApp() {
     return (
       <NewTabHome
         bookmarks={bookmarks}
-        syncState={{ phase: syncing ? "syncing" : "idle", total: bookmarks.length } satisfies SyncState}
+        syncState={syncing
+          ? { phase: "hard_syncing", total: bookmarks.length, pagesLoaded: 0, isReconcile: false } satisfies SyncState
+          : { phase: "synced", total: bookmarks.length } satisfies SyncState
+        }
         detailedTweetIds={new Set(bookmarks.map((b) => b.tweetId))}
         backgroundMode={settings.backgroundMode}
         openedTweetIds={openedTweetIds}
         showTopSites={settings.showTopSites}
         showSearchBar={settings.showSearchBar}
+        searchEngine={settings.searchEngine}
+        onSearchEngineChange={(engine) => updateSettings({ searchEngine: engine })}
         topSitesLimit={settings.topSitesLimit}
         onSync={handleSync}
         onOpenBookmark={openBookmark}
@@ -132,9 +137,9 @@ export default function DemoApp() {
         onUpdateSettings={updateSettings}
         themePreference={themePreference}
         onThemePreferenceChange={setThemePreference}
-        onResetLocalData={async () => {
+        onResetLocalData={() => {
           setBookmarks([]);
-          await deleteBookmarksByTweetIds(MOCK_BOOKMARKS.map((bookmark) => bookmark.tweetId));
+          deleteBookmarksByTweetIds(MOCK_BOOKMARKS.map((bookmark) => bookmark.tweetId));
         }}
       />
     </>

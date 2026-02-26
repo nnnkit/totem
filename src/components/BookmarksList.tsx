@@ -16,7 +16,7 @@ import {
 import type { Bookmark } from "../types";
 import type { ContinueReadingItem } from "../hooks/useContinueReading";
 import { useBookmarkSearch } from "../hooks/useBookmarkSearch";
-import { pickTitle } from "../lib/bookmark-utils";
+import { pickTitle, inferKindBadge } from "../lib/bookmark-utils";
 import { timeAgo, sortIndexToTimestamp } from "../lib/time";
 import { cn } from "../lib/cn";
 import { NEW_BADGE_CUTOFF_MS } from "../lib/constants";
@@ -41,6 +41,7 @@ interface Props {
   onSync: () => void;
   onBack: () => void;
   offlineMode?: boolean;
+  onLogin?: () => void;
 }
 
 interface TabButtonProps {
@@ -79,12 +80,6 @@ const TabButton = forwardRef<HTMLButtonElement, TabButtonProps>(
   ),
 );
 
-function inferKindBadge(bookmark: Bookmark): string {
-  if (bookmark.tweetKind === "article") return "Article";
-  if (bookmark.tweetKind === "thread" || bookmark.isThread) return "Thread";
-  if (bookmark.hasLink) return "Link";
-  return "Post";
-}
 
 export function BookmarksList({
   continueReadingItems,
@@ -96,6 +91,7 @@ export function BookmarksList({
   onSync,
   onBack,
   offlineMode,
+  onLogin,
 }: Props) {
   const containerWidthClass = "max-w-3xl";
   const [focusedIndex, setFocusedIndex] = useState(-1);
@@ -597,7 +593,7 @@ export function BookmarksList({
         )}
         {offlineMode && (
           <div className="mt-8">
-            <OfflineBanner />
+            <OfflineBanner onLogin={onLogin} />
           </div>
         )}
       </main>

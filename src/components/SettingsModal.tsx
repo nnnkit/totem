@@ -17,7 +17,7 @@ interface Props {
   onUpdateSettings: (patch: Partial<UserSettings>) => void;
   themePreference: ThemePreference;
   onThemePreferenceChange: (value: ThemePreference) => void;
-  onResetLocalData: () => Promise<void>;
+  onResetLocalData: () => void;
 }
 
 const toggleBase =
@@ -33,23 +33,12 @@ export function SettingsModal({
   onResetLocalData,
 }: Props) {
   const [resetting, setResetting] = useState(false);
-  const [resetError, setResetError] = useState<string | null>(null);
   const [confirmingReset, setConfirmingReset] = useState(false);
 
-  const handleResetLocalData = async () => {
+  const handleResetLocalData = () => {
     if (resetting) return;
-
-    setResetError(null);
     setResetting(true);
-
-    try {
-      await onResetLocalData();
-    } catch {
-      setResetError("Reset failed. Please try again.");
-    } finally {
-      setResetting(false);
-      setConfirmingReset(false);
-    }
+    onResetLocalData();
   };
 
   return (
@@ -211,11 +200,6 @@ export function SettingsModal({
                 Reset local data
               </Button>
             )}
-            {resetError ? (
-              <p className="text-xs text-red-400 mt-2">
-                {resetError}
-              </p>
-            ) : null}
           </section>
         </div>
       </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useReducer, useState, useEffect, useCallback, useRef } from "react";
 import type { Bookmark, SyncState } from "../types";
 import {
   checkReauthStatus,
@@ -25,7 +25,6 @@ import {
   CS_BOOKMARK_EVENTS,
   CS_LAST_SOFT_SYNC,
   CS_SOFT_SYNC_NEEDED,
-  LS_HAS_BOOKMARKS,
 } from "../lib/storage-keys";
 import {
   CREATE_EVENT_DELAY_MS,
@@ -41,9 +40,108 @@ import {
 interface UseBookmarksReturn {
   bookmarks: Bookmark[];
   syncState: SyncState;
+  dispatch: React.Dispatch<SyncAction>;
   refresh: () => void;
   unbookmark: (tweetId: string) => Promise<{ apiError?: string }>;
 }
+
+// ── Actions ──────────────────────────────────────────────────
+
+type SyncAction =
+  | { type: "DB_LOADED"; total: number; lastSyncAt: number }
+  | { type: "DB_FAILED"; error: string }
+  | { type: "HARD_SYNC_START"; isReconcile: boolean }
+  | { type: "HARD_SYNC_PAGE"; total: number; pagesLoaded: number }
+  | { type: "HARD_SYNC_DONE"; total: number }
+  | { type: "HARD_SYNC_ERROR"; error: string }
+  | { type: "SOFT_SYNC_START" }
+  | { type: "SOFT_SYNC_DONE"; total: number }
+  | { type: "SOFT_SYNC_FAIL" }
+  | { type: "REAUTH_START" }
+  | { type: "REAUTH_TICK"; attempt: number }
+  | { type: "REAUTH_OK" }
+  | { type: "REAUTH_FAIL" }
+  | { type: "COUNT_CHANGED"; total: number }
+  | { type: "RESET" };
+
+// ── Reducer ──────────────────────────────────────────────────
+
+function totalFrom(state: SyncState): number {
+  return "total" in state ? state.total : 0;
+}
+
+function syncReducer(state: SyncState, action: SyncAction): SyncState {
+  switch (action.type) {
+    case "DB_LOADED":
+      if (state.phase !== "booting") return state;
+      return { phase: "ready", total: action.total, lastSyncAt: action.lastSyncAt };
+
+    case "DB_FAILED":
+      if (state.phase !== "booting") return state;
+      // Transition to ready so auto-sync effect fires as fallback
+      return { phase: "ready", total: 0, lastSyncAt: 0 };
+
+    case "HARD_SYNC_START":
+      if (state.phase !== "ready" && state.phase !== "synced" && state.phase !== "error") return state;
+      return { phase: "hard_syncing", total: totalFrom(state), pagesLoaded: 0, isReconcile: action.isReconcile };
+
+    case "HARD_SYNC_PAGE":
+      if (state.phase !== "hard_syncing") return state;
+      return { ...state, total: action.total, pagesLoaded: action.pagesLoaded };
+
+    case "HARD_SYNC_DONE":
+      if (state.phase !== "hard_syncing") return state;
+      return { phase: "synced", total: action.total };
+
+    case "HARD_SYNC_ERROR": {
+      const isAuth = action.error === "AUTH_EXPIRED" || action.error === "NO_AUTH";
+      if (isAuth) {
+        return { phase: "reauthing", total: totalFrom(state), attempt: 0 };
+      }
+      return { phase: "error", total: totalFrom(state), error: action.error, isReconnecting: false };
+    }
+
+    case "SOFT_SYNC_START":
+      if (state.phase !== "synced" && state.phase !== "ready") return state;
+      return { phase: "soft_syncing", total: totalFrom(state) };
+
+    case "SOFT_SYNC_DONE":
+      return { phase: "synced", total: action.total };
+
+    case "SOFT_SYNC_FAIL":
+      return { phase: "synced", total: totalFrom(state) };
+
+    case "REAUTH_START":
+      return { phase: "reauthing", total: totalFrom(state), attempt: 0 };
+
+    case "REAUTH_TICK":
+      if (state.phase !== "reauthing") return state;
+      return { ...state, attempt: action.attempt };
+
+    case "REAUTH_OK":
+      if (state.phase !== "reauthing") return state;
+      // Go back to ready so auto-sync effect re-fires
+      return { phase: "ready", total: state.total, lastSyncAt: 0 };
+
+    case "REAUTH_FAIL":
+      if (state.phase !== "reauthing") return state;
+      return { phase: "error", total: state.total, error: "AUTH_EXPIRED", isReconnecting: false };
+
+    case "COUNT_CHANGED": {
+      // Update total in any phase that carries it
+      if (!("total" in state)) return state;
+      return { ...state, total: action.total } as SyncState;
+    }
+
+    case "RESET":
+      return { phase: "resetting" };
+
+    default:
+      return state;
+  }
+}
+
+// ── Helpers ──────────────────────────────────────────────────
 
 function hardSyncAbortTimeout(bookmarkCount: number): number {
   const base = 3 * 60 * 1000;
@@ -55,23 +153,19 @@ function compareSortIndexDesc(a: Bookmark, b: Bookmark): number {
   return b.sortIndex.localeCompare(a.sortIndex);
 }
 
-export function useBookmarks(isReady: boolean, loadCacheOnly = false): UseBookmarksReturn {
+// ── Hook ─────────────────────────────────────────────────────
+
+export function useBookmarks(isReady: boolean): UseBookmarksReturn {
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
-  const [syncState, setSyncState] = useState<SyncState>({
-    phase: "idle",
-    total: 0,
-  });
-  const hardSyncingRef = useRef(false);
-  const softSyncingRef = useRef(false);
-  const processingBookmarkEventsRef = useRef(false);
+  const [syncState, dispatch] = useReducer(syncReducer, { phase: "booting" });
   const bookmarksRef = useRef<Bookmark[]>([]);
-  const reauthPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const fetchQueueRef = useRef<FetchQueue | null>(null);
+  const processingBookmarkEventsRef = useRef(false);
 
   useEffect(() => {
     bookmarksRef.current = bookmarks;
   }, [bookmarks]);
 
+  // ── Effect: DB cleanup (runs once) ──
   useEffect(() => {
     const runCleanup = async () => {
       try {
@@ -89,211 +183,8 @@ export function useBookmarks(isReady: boolean, loadCacheOnly = false): UseBookma
     runCleanup().catch(() => {});
   }, []);
 
-  const handleSyncError = useCallback(
-    (err: unknown, retryFn: () => void) => {
-      const msg = err instanceof Error ? err.message : "Unknown error";
-
-      if (msg === "AUTH_EXPIRED" || msg === "NO_AUTH") {
-        setSyncState({
-          phase: "error",
-          total: bookmarksRef.current.length,
-          error: "reconnecting",
-        });
-
-        if (reauthPollRef.current !== null) {
-          clearInterval(reauthPollRef.current);
-        }
-
-        let attempts = 0;
-        reauthPollRef.current = setInterval(async () => {
-          attempts++;
-          try {
-            const status = await checkReauthStatus();
-            if (!status.inProgress) {
-              const auth = await checkAuth();
-              if (auth.hasAuth && auth.hasQueryId) {
-                clearInterval(reauthPollRef.current!);
-                reauthPollRef.current = null;
-                hardSyncingRef.current = false;
-                retryFn();
-                return;
-              }
-            }
-          } catch {}
-          if (attempts >= REAUTH_MAX_ATTEMPTS) {
-            clearInterval(reauthPollRef.current!);
-            reauthPollRef.current = null;
-            setSyncState({
-              phase: "error",
-              total: bookmarksRef.current.length,
-              error: msg,
-            });
-          }
-        }, REAUTH_POLL_MS);
-      } else {
-        setSyncState({
-          phase: "error",
-          total: bookmarksRef.current.length,
-          error: msg,
-        });
-      }
-    },
-    [],
-  );
-
-  const runHardSync = useCallback(
-    async (opts?: { fullReconcile?: boolean }) => {
-      if (hardSyncingRef.current) return;
-      hardSyncingRef.current = true;
-
-      const queue = new FetchQueue();
-      fetchQueueRef.current = queue;
-
-      const timeout = hardSyncAbortTimeout(bookmarksRef.current.length);
-      const syncTimer = setTimeout(() => queue.abort(), timeout);
-
-      setSyncState((prev) => ({
-        phase: "syncing",
-        total: prev.total || bookmarksRef.current.length,
-      }));
-
-      let doReconcile = opts?.fullReconcile === true;
-      if (doReconcile) {
-        const stored = await chrome.storage.local.get([CS_LAST_RECONCILE]);
-        const lastReconcile = Number(stored[CS_LAST_RECONCILE] || 0);
-        if (Date.now() - lastReconcile < RECONCILE_THROTTLE_MS) {
-          doReconcile = false;
-        }
-      }
-
-      try {
-        const existingIds = new Set(
-          bookmarksRef.current.map((b) => b.tweetId),
-        );
-
-        const result = await reconcileBookmarks({
-          localIds: existingIds,
-          fetchPage: (cursor) =>
-            queue.enqueue(() => fetchBookmarkPage(cursor)),
-          fullReconcile: doReconcile,
-          onPage: async (pageNew) => {
-            const currentIds = new Set(bookmarksRef.current.map((b) => b.tweetId));
-            const deduped = pageNew.filter((b) => !currentIds.has(b.tweetId));
-            if (deduped.length === 0) {
-              setSyncState({ phase: "syncing", total: bookmarksRef.current.length });
-              return;
-            }
-            const updated = [...bookmarksRef.current, ...deduped].toSorted(
-              compareSortIndexDesc,
-            );
-            bookmarksRef.current = updated;
-            setBookmarks(updated);
-            setSyncState({ phase: "syncing", total: updated.length });
-
-            try {
-              await upsertBookmarks(deduped);
-            } catch {
-              // DB write can fail if IndexedDB was cleared externally.
-              // State is already updated so bookmarks are visible this session.
-            }
-          },
-        });
-
-        if (!queue.isAborted) {
-          if (doReconcile && result.staleIds.length > 0) {
-            await deleteBookmarksByTweetIds(result.staleIds);
-            const staleSet = new Set(result.staleIds);
-            const filtered = bookmarksRef.current.filter(
-              (b) => !staleSet.has(b.tweetId),
-            );
-            bookmarksRef.current = filtered;
-            setBookmarks(filtered);
-          }
-
-          if (doReconcile) {
-            await chrome.storage.local.set({
-              [CS_LAST_RECONCILE]: Date.now(),
-            });
-          }
-
-          await chrome.storage.local.set({ [CS_LAST_SYNC]: Date.now() });
-          localStorage.setItem(LS_HAS_BOOKMARKS, bookmarksRef.current.length > 0 ? "1" : "");
-          setSyncState({ phase: "done", total: bookmarksRef.current.length });
-        }
-      } catch (err) {
-        if (!queue.isAborted) {
-          handleSyncError(err, runHardSync);
-        }
-      } finally {
-        clearTimeout(syncTimer);
-        hardSyncingRef.current = false;
-        fetchQueueRef.current = null;
-        setSyncState((prev) =>
-          prev.phase === "syncing"
-            ? { phase: "done", total: bookmarksRef.current.length }
-            : prev,
-        );
-      }
-    },
-    [handleSyncError],
-  );
-
-  const runSoftSync = useCallback(async () => {
-    if (hardSyncingRef.current || softSyncingRef.current) return;
-
-    const stored = await chrome.storage.local.get([CS_LAST_SOFT_SYNC]);
-    const lastSync = Number(stored[CS_LAST_SOFT_SYNC] || 0);
-    if (Date.now() - lastSync < SOFT_SYNC_THROTTLE_MS) return;
-
-    softSyncingRef.current = true;
-
-    try {
-      const existingIds = new Set(
-        bookmarksRef.current.map((b) => b.tweetId),
-      );
-
-      await reconcileBookmarks({
-        localIds: existingIds,
-        fetchPage: (cursor) => fetchBookmarkPage(cursor, 20),
-        fullReconcile: false,
-        onPage: async (pageNew) => {
-          const currentIds = new Set(bookmarksRef.current.map((b) => b.tweetId));
-          const deduped = pageNew.filter((b) => !currentIds.has(b.tweetId));
-          if (deduped.length === 0) return;
-          const updated = [...bookmarksRef.current, ...deduped].toSorted(
-            compareSortIndexDesc,
-          );
-          bookmarksRef.current = updated;
-          setBookmarks(updated);
-          setSyncState((prev) => ({ ...prev, total: updated.length }));
-
-          try {
-            await upsertBookmarks(deduped);
-          } catch {}
-        },
-      });
-
-      await chrome.storage.local.set({ [CS_LAST_SOFT_SYNC]: Date.now() });
-      await chrome.storage.local.remove(CS_SOFT_SYNC_NEEDED);
-    } catch {
-      // Swallow errors — hard sync catches up later
-    } finally {
-      softSyncingRef.current = false;
-    }
-  }, []);
-
-  const refresh = useCallback(async () => {
-    const stored = await chrome.storage.local.get([CS_LAST_RECONCILE]);
-    const lastReconcile = Number(stored[CS_LAST_RECONCILE] || 0);
-    if (Date.now() - lastReconcile > RECONCILE_THROTTLE_MS) {
-      runHardSync({ fullReconcile: true });
-    } else {
-      runSoftSync();
-    }
-  }, [runHardSync, runSoftSync]);
-
+  // ── Effect 1: DB Load (runs once on mount) ──
   useEffect(() => {
-    if (!isReady && !loadCacheOnly) return;
     let cancelled = false;
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
@@ -305,48 +196,185 @@ export function useBookmarks(isReady: boolean, loadCacheOnly = false): UseBookma
     ])
       .then(async (stored) => {
         if (cancelled) return;
-        localStorage.setItem(LS_HAS_BOOKMARKS, stored.length > 0 ? "1" : "");
         if (stored.length > 0) {
           setBookmarks(stored);
-          setSyncState({ phase: "done", total: stored.length });
-          if (isReady) {
-            const meta = await chrome.storage.local.get([CS_LAST_RECONCILE]);
-            const lastReconcile = Number(meta[CS_LAST_RECONCILE] || 0);
-            if (Date.now() - lastReconcile > RECONCILE_THROTTLE_MS) {
-              runHardSync({ fullReconcile: true });
-            }
-          }
-        } else {
-          if (isReady) {
-            const meta = await chrome.storage.local.get([CS_LAST_SYNC]);
-            if (!Number(meta[CS_LAST_SYNC])) {
-              runHardSync();
-            } else {
-              setSyncState({ phase: "done", total: 0 });
-            }
-          } else {
-            setSyncState({ phase: "done", total: 0 });
-          }
+          bookmarksRef.current = stored;
         }
+        const meta = await chrome.storage.local.get([CS_LAST_SYNC]);
+        const lastSyncAt = Number(meta[CS_LAST_SYNC] || 0);
+        dispatch({ type: "DB_LOADED", total: stored.length, lastSyncAt });
       })
       .catch(() => {
         if (cancelled) return;
-        setSyncState({ phase: "done", total: bookmarksRef.current.length });
+        dispatch({ type: "DB_FAILED", error: "DB_INIT_TIMEOUT" });
       })
       .finally(() => {
-        if (timeoutId !== null) {
-          clearTimeout(timeoutId);
-        }
+        if (timeoutId !== null) clearTimeout(timeoutId);
       });
 
     return () => {
       cancelled = true;
-      if (timeoutId !== null) {
-        clearTimeout(timeoutId);
+      if (timeoutId !== null) clearTimeout(timeoutId);
+    };
+  }, []);
+
+  // ── Effect 2: Auto-sync (reacts to phase === "ready" + isReady) ──
+  useEffect(() => {
+    if (syncState.phase !== "ready" || !isReady) return;
+
+    const autoSync = async () => {
+      if (syncState.total === 0) {
+        // Fresh user or empty DB — always hard sync
+        dispatch({ type: "HARD_SYNC_START", isReconcile: false });
+        return;
+      }
+
+      // Has bookmarks — check if reconcile is needed
+      const stored = await chrome.storage.local.get([CS_LAST_RECONCILE]);
+      const lastReconcile = Number(stored[CS_LAST_RECONCILE] || 0);
+      if (Date.now() - lastReconcile > RECONCILE_THROTTLE_MS) {
+        dispatch({ type: "HARD_SYNC_START", isReconcile: true });
+      } else {
+        // Recent enough — mark as synced
+        dispatch({ type: "HARD_SYNC_DONE", total: syncState.total });
       }
     };
-  }, [isReady, loadCacheOnly, runHardSync]);
 
+    autoSync().catch(() => {});
+  }, [syncState.phase, isReady]);
+
+  // ── Effect 3: Hard sync loop ──
+  const runningRef = useRef(false);
+
+  useEffect(() => {
+    if (syncState.phase !== "hard_syncing") return;
+    if (runningRef.current) return;
+    runningRef.current = true;
+
+    const queue = new FetchQueue();
+    const abortController = { aborted: false };
+    const timeout = hardSyncAbortTimeout(bookmarksRef.current.length);
+    const syncTimer = setTimeout(() => {
+      abortController.aborted = true;
+      queue.abort();
+    }, timeout);
+
+    const isReconcile = syncState.isReconcile;
+    let pagesLoaded = 0;
+
+    const run = async () => {
+      let doReconcile = isReconcile;
+      if (doReconcile) {
+        const stored = await chrome.storage.local.get([CS_LAST_RECONCILE]);
+        const lastReconcile = Number(stored[CS_LAST_RECONCILE] || 0);
+        if (Date.now() - lastReconcile < RECONCILE_THROTTLE_MS) {
+          doReconcile = false;
+        }
+      }
+
+      try {
+        const existingIds = new Set(bookmarksRef.current.map((b) => b.tweetId));
+
+        const result = await reconcileBookmarks({
+          localIds: existingIds,
+          fetchPage: (cursor) =>
+            queue.enqueue(() => fetchBookmarkPage(cursor)),
+          fullReconcile: doReconcile,
+          onPage: async (pageNew) => {
+            const currentIds = new Set(bookmarksRef.current.map((b) => b.tweetId));
+            const deduped = pageNew.filter((b) => !currentIds.has(b.tweetId));
+            pagesLoaded++;
+
+            if (deduped.length === 0) {
+              dispatch({ type: "HARD_SYNC_PAGE", total: bookmarksRef.current.length, pagesLoaded });
+              return;
+            }
+
+            const updated = [...bookmarksRef.current, ...deduped].toSorted(compareSortIndexDesc);
+            bookmarksRef.current = updated;
+            setBookmarks(updated);
+            dispatch({ type: "HARD_SYNC_PAGE", total: updated.length, pagesLoaded });
+
+            try {
+              await upsertBookmarks(deduped);
+            } catch {
+              // DB write can fail if IndexedDB was cleared externally.
+            }
+          },
+        });
+
+        if (!abortController.aborted) {
+          if (doReconcile && result.staleIds.length > 0) {
+            await deleteBookmarksByTweetIds(result.staleIds);
+            const staleSet = new Set(result.staleIds);
+            const filtered = bookmarksRef.current.filter((b) => !staleSet.has(b.tweetId));
+            bookmarksRef.current = filtered;
+            setBookmarks(filtered);
+          }
+
+          if (doReconcile) {
+            await chrome.storage.local.set({ [CS_LAST_RECONCILE]: Date.now() });
+          }
+
+          await chrome.storage.local.set({ [CS_LAST_SYNC]: Date.now() });
+          dispatch({ type: "HARD_SYNC_DONE", total: bookmarksRef.current.length });
+        }
+      } catch (err) {
+        if (!abortController.aborted) {
+          const msg = err instanceof Error ? err.message : "Unknown error";
+          dispatch({ type: "HARD_SYNC_ERROR", error: msg });
+        }
+      } finally {
+        clearTimeout(syncTimer);
+        runningRef.current = false;
+      }
+    };
+
+    run().catch(() => {
+      runningRef.current = false;
+    });
+
+    return () => {
+      abortController.aborted = true;
+      queue.abort();
+      clearTimeout(syncTimer);
+      runningRef.current = false;
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- runningRef guard prevents re-launch; we only trigger on phase entry
+  }, [syncState.phase]);
+
+  // ── Effect 4: Reauth poll ──
+  useEffect(() => {
+    if (syncState.phase !== "reauthing") return;
+
+    let attempts = 0;
+    const intervalId = setInterval(async () => {
+      attempts++;
+      dispatch({ type: "REAUTH_TICK", attempt: attempts });
+
+      try {
+        const status = await checkReauthStatus();
+        if (!status.inProgress) {
+          const auth = await checkAuth();
+          if (auth.hasAuth && auth.hasQueryId) {
+            clearInterval(intervalId);
+            dispatch({ type: "REAUTH_OK" });
+            return;
+          }
+        }
+      } catch {}
+
+      if (attempts >= REAUTH_MAX_ATTEMPTS) {
+        clearInterval(intervalId);
+        dispatch({ type: "REAUTH_FAIL" });
+      }
+    }, REAUTH_POLL_MS);
+
+    return () => clearInterval(intervalId);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- only trigger on phase entry
+  }, [syncState.phase]);
+
+  // ── Effect 5: Bookmark events ──
   const applyBookmarkEvents = useCallback(async () => {
     if (processingBookmarkEventsRef.current) return;
     processingBookmarkEventsRef.current = true;
@@ -375,95 +403,45 @@ export function useBookmarks(isReady: boolean, loadCacheOnly = false): UseBookma
         }
 
         await deleteBookmarksByTweetIds(plan.idsToDelete);
-        setSyncState((prev) => ({
-          ...prev,
-          phase: prev.phase === "idle" ? "done" : prev.phase,
-          total: filtered.length,
-        }));
+        dispatch({ type: "COUNT_CHANGED", total: filtered.length });
       }
 
-      // Ack delete events immediately — they don't depend on a page fetch.
+      // Ack delete events immediately
       if (deleteEventIds.length > 0) {
         await ackBookmarkEvents(deleteEventIds);
       }
 
       // ── Execute creates: fetch 1 small page and add what's missing ──
       if (plan.needsPageFetch) {
-        // Wait for x.com's backend to replicate the write before reading.
-        // onCompleted fires as soon as the CreateBookmark response arrives,
-        // but the Bookmarks list endpoint may read from a different replica.
         await new Promise((r) => setTimeout(r, CREATE_EVENT_DELAY_MS));
 
         try {
           const page = await fetchBookmarkPage(undefined, 20);
           const currentIds = new Set(bookmarksRef.current.map((b) => b.tweetId));
-          const newBookmarks = page.bookmarks.filter(
-            (b) => !currentIds.has(b.tweetId),
-          );
+          const newBookmarks = page.bookmarks.filter((b) => !currentIds.has(b.tweetId));
 
           if (newBookmarks.length > 0) {
-            const updated = [...newBookmarks, ...bookmarksRef.current].toSorted(
-              compareSortIndexDesc,
-            );
+            const updated = [...newBookmarks, ...bookmarksRef.current].toSorted(compareSortIndexDesc);
             bookmarksRef.current = updated;
             setBookmarks(updated);
-            setSyncState((prev) => ({
-              ...prev,
-              phase: prev.phase === "idle" ? "done" : prev.phase,
-              total: updated.length,
-            }));
+            dispatch({ type: "COUNT_CHANGED", total: updated.length });
             try {
               await upsertBookmarks(newBookmarks);
-            } catch {
-              // DB write failed — state is already updated for this session
-            }
+            } catch {}
           }
 
-          // Ack create events only after a successful page fetch.
           if (createEventIds.length > 0) {
             await ackBookmarkEvents(createEventIds);
           }
         } catch {
           // Page fetch failed — don't ack create events so they're retried
-          // on the next storage change or manual sync.
         }
       } else if (createEventIds.length > 0) {
-        // No page fetch needed but create events exist (shouldn't happen
-        // with current logic) — ack to prevent pileup.
         await ackBookmarkEvents(createEventIds);
       }
     } finally {
       processingBookmarkEventsRef.current = false;
     }
-  }, []);
-
-  const unbookmark = useCallback(async (tweetId: string): Promise<{ apiError?: string }> => {
-    if (!tweetId) return {};
-
-    const current = bookmarksRef.current;
-    const removed = current.find((bookmark) => bookmark.tweetId === tweetId) || null;
-    const filtered = current.filter((bookmark) => bookmark.tweetId !== tweetId);
-
-    if (filtered.length !== current.length) {
-      bookmarksRef.current = filtered;
-      setBookmarks(filtered);
-    }
-
-    await deleteBookmarksByTweetIds([tweetId]);
-
-    setSyncState((prev) => ({
-      ...prev,
-      phase: prev.phase === "idle" ? "done" : prev.phase,
-      total: Math.max(0, prev.total - (removed ? 1 : 0)),
-    }));
-
-    try {
-      await deleteBookmark(tweetId);
-    } catch (error) {
-      return { apiError: error instanceof Error ? error.message : "Unknown error" };
-    }
-
-    return {};
   }, []);
 
   useEffect(() => {
@@ -488,20 +466,80 @@ export function useBookmarks(isReady: boolean, loadCacheOnly = false): UseBookma
     return () => {
       chrome.storage.onChanged.removeListener(onStorageChange);
     };
-  }, [isReady, applyBookmarkEvents, runSoftSync]);
+  }, [isReady, applyBookmarkEvents]);
 
-  useEffect(() => {
-    return () => {
-      if (reauthPollRef.current !== null) {
-        clearInterval(reauthPollRef.current);
-      }
-      if (fetchQueueRef.current) {
-        fetchQueueRef.current.abort();
-      }
-    };
-  }, []);
+  // ── Effect 6: Soft sync ──
+  const runSoftSync = useCallback(async () => {
+    if (syncState.phase === "hard_syncing" || syncState.phase === "soft_syncing") return;
 
-  return { bookmarks, syncState, refresh, unbookmark };
+    const stored = await chrome.storage.local.get([CS_LAST_SOFT_SYNC]);
+    const lastSync = Number(stored[CS_LAST_SOFT_SYNC] || 0);
+    if (Date.now() - lastSync < SOFT_SYNC_THROTTLE_MS) return;
+
+    dispatch({ type: "SOFT_SYNC_START" });
+
+    try {
+      const existingIds = new Set(bookmarksRef.current.map((b) => b.tweetId));
+
+      await reconcileBookmarks({
+        localIds: existingIds,
+        fetchPage: (cursor) => fetchBookmarkPage(cursor, 20),
+        fullReconcile: false,
+        onPage: async (pageNew) => {
+          const currentIds = new Set(bookmarksRef.current.map((b) => b.tweetId));
+          const deduped = pageNew.filter((b) => !currentIds.has(b.tweetId));
+          if (deduped.length === 0) return;
+          const updated = [...bookmarksRef.current, ...deduped].toSorted(compareSortIndexDesc);
+          bookmarksRef.current = updated;
+          setBookmarks(updated);
+        },
+      });
+
+      await chrome.storage.local.set({ [CS_LAST_SOFT_SYNC]: Date.now() });
+      await chrome.storage.local.remove(CS_SOFT_SYNC_NEEDED);
+      dispatch({ type: "SOFT_SYNC_DONE", total: bookmarksRef.current.length });
+    } catch {
+      dispatch({ type: "SOFT_SYNC_FAIL" });
+    }
+  }, [syncState.phase]);
+
+  // ── Refresh (manual trigger) ──
+  const refresh = useCallback(async () => {
+    const stored = await chrome.storage.local.get([CS_LAST_RECONCILE]);
+    const lastReconcile = Number(stored[CS_LAST_RECONCILE] || 0);
+    if (Date.now() - lastReconcile > RECONCILE_THROTTLE_MS) {
+      dispatch({ type: "HARD_SYNC_START", isReconcile: true });
+    } else {
+      runSoftSync();
+    }
+  }, [runSoftSync]);
+
+  // ── Unbookmark ──
+  const unbookmark = useCallback(async (tweetId: string): Promise<{ apiError?: string }> => {
+    if (!tweetId) return {};
+
+    const current = bookmarksRef.current;
+    const removed = current.find((bookmark) => bookmark.tweetId === tweetId) || null;
+    const filtered = current.filter((bookmark) => bookmark.tweetId !== tweetId);
+
+    if (filtered.length !== current.length) {
+      bookmarksRef.current = filtered;
+      setBookmarks(filtered);
+    }
+
+    await deleteBookmarksByTweetIds([tweetId]);
+    dispatch({ type: "COUNT_CHANGED", total: Math.max(0, ("total" in syncState ? syncState.total : 0) - (removed ? 1 : 0)) });
+
+    try {
+      await deleteBookmark(tweetId);
+    } catch (error) {
+      return { apiError: error instanceof Error ? error.message : "Unknown error" };
+    }
+
+    return {};
+  }, [syncState]);
+
+  return { bookmarks, syncState, dispatch, refresh, unbookmark };
 }
 
 const EMPTY_SET = new Set<string>();

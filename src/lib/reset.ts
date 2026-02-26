@@ -1,4 +1,4 @@
-import { clearAllLocalData, closeDb } from "../db";
+import { closeDb } from "../db";
 import {
   IDB_DATABASE_NAME,
   LEGACY_IDB_DATABASE_NAME,
@@ -53,44 +53,35 @@ const CHROME_SYNC_RESET_KEYS = Array.from(
 );
 
 export async function resetLocalData(): Promise<void> {
-  // 0. Notify service worker to clear in-memory state (catalog cache, auth tab, etc.)
+  // 0. Notify service worker with hard 2s timeout — never hangs
   try {
-    await chrome.runtime.sendMessage({ type: "RESET_SW_STATE" });
-  } catch {
-    // Service worker may be unavailable — continue with reset
+    await Promise.race([
+      chrome.runtime.sendMessage({ type: "RESET_SW_STATE" }),
+      new Promise<void>((resolve) => setTimeout(resolve, 2000)),
+    ]);
+  } catch {}
+
+  // 1. Close DB connection first (prevents blocking transactions)
+  closeDb();
+
+  // 2. Delete databases entirely (skip clearAllLocalData — it needs an active connection)
+  for (const dbName of IDB_DATABASE_NAMES) {
+    try { indexedDB.deleteDatabase(dbName); } catch {}
   }
 
-  // 1. Clear all IndexedDB object stores, then delete the database entirely
+  // 3. Remove all known localStorage keys
+  for (const key of LOCAL_STORAGE_RESET_KEYS) {
+    localStorage.removeItem(key);
+  }
+
+  // 4. Clear chrome.storage (bounded with 3s timeout)
   try {
-    await clearAllLocalData();
-    closeDb();
-    for (const dbName of IDB_DATABASE_NAMES) {
-      indexedDB.deleteDatabase(dbName);
-    }
-  } catch {
-    try {
-      for (const dbName of IDB_DATABASE_NAMES) {
-        indexedDB.deleteDatabase(dbName);
-      }
-    } catch {
-      // best-effort
-    }
-  }
-
-  // 2. Remove all known localStorage keys
-  if (typeof localStorage !== "undefined") {
-    for (const key of LOCAL_STORAGE_RESET_KEYS) {
-      localStorage.removeItem(key);
-    }
-  }
-
-  // 3. Clear non-auth chrome.storage.local keys
-  if (typeof chrome !== "undefined" && chrome.storage?.local) {
-    await chrome.storage.local.remove(CHROME_LOCAL_RESET_KEYS_WITH_LEGACY);
-  }
-
-  // 4. Clear chrome.storage.sync (theme, settings)
-  if (typeof chrome !== "undefined" && chrome.storage?.sync) {
-    await chrome.storage.sync.remove(CHROME_SYNC_RESET_KEYS);
-  }
+    await Promise.race([
+      Promise.all([
+        chrome.storage.local.remove(CHROME_LOCAL_RESET_KEYS_WITH_LEGACY),
+        chrome.storage.sync.remove(CHROME_SYNC_RESET_KEYS),
+      ]),
+      new Promise<void>((resolve) => setTimeout(resolve, 3000)),
+    ]);
+  } catch {}
 }

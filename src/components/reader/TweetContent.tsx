@@ -265,6 +265,7 @@ interface Props {
   onToggleRead?: () => void;
   isMarkedRead?: boolean;
   onDeleteBookmark?: () => void;
+  onLogin?: () => void;
 }
 
 export const TweetContent = memo(function TweetContent({
@@ -280,6 +281,7 @@ export const TweetContent = memo(function TweetContent({
   onToggleRead,
   isMarkedRead,
   onDeleteBookmark,
+  onLogin,
 }: Props) {
   const viewOnXUrl = `https://x.com/${displayBookmark.author.screenName}/status/${displayBookmark.tweetId}`;
 
@@ -322,7 +324,7 @@ export const TweetContent = memo(function TweetContent({
 
       {detailError && (
         <div className="mt-8">
-          <OfflineBanner />
+          <OfflineBanner onLogin={onLogin} />
         </div>
       )}
 

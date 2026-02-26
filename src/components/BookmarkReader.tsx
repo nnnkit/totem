@@ -31,6 +31,7 @@ interface Props {
   onDeleteBookmark?: () => void;
   onMarkAsRead?: (tweetId: string) => void;
   onMarkAsUnread?: (tweetId: string) => void;
+  onLogin?: () => void;
 }
 
 interface NotePanelState {
@@ -50,6 +51,7 @@ export function BookmarkReader({
   onDeleteBookmark,
   onMarkAsRead,
   onMarkAsUnread,
+  onLogin,
 }: Props) {
   const articleRef = useRef<HTMLElement>(null);
   const { resolvedTheme, setThemePreference } = useTheme();
@@ -251,6 +253,7 @@ export function BookmarkReader({
           onToggleRead={onMarkAsRead ? handleToggleRead : undefined}
           isMarkedRead={effectiveMarkedRead}
           onDeleteBookmark={onDeleteBookmark}
+          onLogin={onLogin}
         />
       </article>
 

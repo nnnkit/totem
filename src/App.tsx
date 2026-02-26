@@ -8,12 +8,11 @@ import { useKeyboardNavigation } from "./hooks/useKeyboard";
 import { ensureReadingProgressExists, markReadingProgressCompleted, markReadingProgressUncompleted } from "./db";
 import { pickRelatedBookmarks } from "./lib/related";
 import { resetLocalData } from "./lib/reset";
-import { LS_READING_TAB, LS_HAS_BOOKMARKS } from "./lib/storage-keys";
+import { LS_READING_TAB } from "./lib/storage-keys";
 import { NewTabHome } from "./components/NewTabHome";
 import { BookmarkReader } from "./components/BookmarkReader";
 import { BookmarksList, type ReadingTab } from "./components/BookmarksList";
 import { SettingsModal } from "./components/SettingsModal";
-import { TotemLogo } from "./components/TotemLogo";
 import { Toast } from "./components/ui/Toast";
 import { useContinueReading } from "./hooks/useContinueReading";
 import type { Bookmark } from "./types";
@@ -31,17 +30,17 @@ export default function App() {
   const { themePreference, setThemePreference } = useTheme();
   const { settings, updateSettings } = useSettings();
   const isReady = phase === "ready";
-  const [hadBookmarks] = useState(() => localStorage.getItem(LS_HAS_BOOKMARKS) === "1");
   const isLoggedOut = phase === "need_login";
-  const offlineMode = isLoggedOut && hadBookmarks;
-  const connectingWithCache = phase === "connecting" && hadBookmarks;
+  const { bookmarks, syncState, dispatch, refresh, unbookmark } = useBookmarks(isReady);
+  const hasBookmarks = "total" in syncState && syncState.total > 0;
+  const offlineMode = isLoggedOut && hasBookmarks;
+  const connectingWithCache = phase === "connecting" && hasBookmarks;
   const showCached = offlineMode || connectingWithCache;
-  const { bookmarks, syncState, refresh, unbookmark } = useBookmarks(isReady, showCached);
   const [view, setView] = useState<AppView>("home");
-  const [selectedBookmark, setSelectedBookmark] = useState<Bookmark | null>(
+  const [selectedBookmarkRaw, setSelectedBookmark] = useState<Bookmark | null>(
     null,
   );
-  const readerOpen = selectedBookmark !== null;
+  const readerOpen = selectedBookmarkRaw !== null;
   const { prefetchedCount } = usePrefetchDetails(bookmarks, isReady, readerOpen);
   const { ids: detailedTweetIds, loaded: detailedIdsLoaded } = useDetailedTweetIds(prefetchedCount);
 
@@ -49,6 +48,14 @@ export default function App() {
     if (!offlineMode) return bookmarks;
     return bookmarks.filter((b) => detailedTweetIds.has(b.tweetId));
   }, [bookmarks, detailedTweetIds, offlineMode]);
+
+  const selectedBookmark = useMemo(() => {
+    if (!selectedBookmarkRaw) return null;
+    if (displayBookmarks.some((b) => b.tweetId === selectedBookmarkRaw.tweetId)) {
+      return selectedBookmarkRaw;
+    }
+    return null;
+  }, [selectedBookmarkRaw, displayBookmarks]);
 
   const {
     continueReading,
@@ -70,15 +77,6 @@ export default function App() {
   const handleShuffle = useCallback(() => {
     setShuffleSeed((s) => s + 1);
   }, []);
-
-  if (
-    selectedBookmark &&
-    !displayBookmarks.some(
-      (bookmark) => bookmark.tweetId === selectedBookmark.tweetId,
-    )
-  ) {
-    setSelectedBookmark(null);
-  }
 
   const relatedBookmarks = useMemo(
     () => pickRelatedBookmarks(selectedBookmark, displayBookmarks, 3, shuffleSeed > 0),
@@ -128,10 +126,10 @@ export default function App() {
     refreshContinueReading();
   }, [refreshContinueReading]);
 
-  const handleResetLocalData = useCallback(async () => {
-    await resetLocalData();
-    window.location.reload();
-  }, []);
+  const handleResetLocalData = useCallback(() => {
+    dispatch({ type: "RESET" });
+    resetLocalData().catch(() => {}).finally(() => window.location.reload());
+  }, [dispatch]);
 
   useKeyboardNavigation({
     selectedBookmark,
@@ -151,15 +149,10 @@ export default function App() {
     }
   }, [displayBookmarks, openBookmark]);
 
-  if (phase === "loading" || ((isReady || showCached) && hadBookmarks && syncState.phase === "idle") || (offlineMode && !detailedIdsLoaded)) {
-    return (
-      <div className="flex items-center justify-center min-h-dvh bg-surface">
-        <div className="animate-logo-shine">
-          <TotemLogo className="size-16" />
-        </div>
-      </div>
-    );
-  }
+  const bookmarksLoading =
+    phase === "loading" ||
+    syncState.phase === "booting" ||
+    (offlineMode && !detailedIdsLoaded);
 
   const needsLogin = !showCached && (phase === "need_login" || phase === "connecting");
 
@@ -191,6 +184,7 @@ export default function App() {
           }}
           onMarkAsRead={markReadingProgressCompleted}
           onMarkAsUnread={markReadingProgressUncompleted}
+          onLogin={offlineMode ? startLogin : undefined}
         />
       );
     }
@@ -199,13 +193,14 @@ export default function App() {
         <BookmarksList
           continueReadingItems={continueReading}
           unreadBookmarks={allUnread}
-          syncing={syncState.phase === "syncing"}
+          syncing={syncState.phase === "hard_syncing" || syncState.phase === "soft_syncing"}
           activeTab={readingTab}
           onTabChange={handleReadingTabChange}
           onOpenBookmark={openBookmark}
           onSync={refresh}
           onBack={() => setView("home")}
           offlineMode={offlineMode}
+          onLogin={offlineMode ? startLogin : undefined}
         />
       );
     }
@@ -228,6 +223,8 @@ export default function App() {
         offlineMode={offlineMode}
         authPhase={needsLogin ? phase : undefined}
         onLogin={needsLogin || offlineMode ? startLogin : undefined}
+        bookmarksLoading={bookmarksLoading}
+        isResetting={syncState.phase === "resetting"}
       />
     );
   })();

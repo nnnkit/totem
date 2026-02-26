@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import {
-  ClockIcon,
   GearSixIcon,
   LinkBreakIcon,
   MagnifyingGlassIcon,
@@ -30,13 +29,6 @@ import { useTopSites } from "../hooks/useTopSites";
 import { useProductTour } from "../hooks/useProductTour";
 import { CLOCK_UPDATE_MS } from "../lib/constants";
 
-function inferKindBadge(bookmark: Bookmark): string {
-  if (bookmark.tweetKind === "article") return "Article";
-  if (bookmark.tweetKind === "thread" || bookmark.isThread) return "Thread";
-  if (bookmark.hasLink) return "Link";
-  return "Post";
-}
-
 interface Props {
   bookmarks: Bookmark[];
   syncState: SyncState;
@@ -55,6 +47,8 @@ interface Props {
   offlineMode?: boolean;
   authPhase?: AuthPhase;
   onLogin?: () => Promise<void>;
+  bookmarksLoading?: boolean;
+  isResetting?: boolean;
 }
 
 interface DecoratedBookmark {
@@ -83,6 +77,8 @@ export function NewTabHome({
   offlineMode,
   authPhase,
   onLogin,
+  bookmarksLoading,
+  isResetting,
 }: Props) {
   const [now, setNow] = useState(() => new Date());
   const [imgLoaded, setImgLoaded] = useState(false);
@@ -327,7 +323,13 @@ export function NewTabHome({
         </main>
 
         <footer className="mx-auto w-full max-w-lg pb-6">
-          {authPhase === "connecting" ? (
+          {bookmarksLoading || isResetting ? (
+            <article className="relative min-h-40 overflow-hidden rounded px-6 py-6 bg-main-bg shadow-glass backdrop-blur-lg max-sm:min-h-36 max-sm:px-4 max-sm:py-4 flex items-center justify-center">
+              <div className="animate-logo-shine">
+                <TotemLogo className="size-10" />
+              </div>
+            </article>
+          ) : authPhase === "connecting" ? (
             <article className="relative min-h-40 overflow-hidden rounded px-6 py-6 bg-main-bg shadow-glass backdrop-blur-lg transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 max-sm:min-h-36 max-sm:px-4 max-sm:py-4 text-center">
               <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
                 Connecting to X&hellip;
@@ -499,7 +501,7 @@ export function NewTabHome({
                 to sync new ones.
               </p>
             </div>
-          ) : syncState.phase === "syncing" ? (
+          ) : syncState.phase === "hard_syncing" ? (
             <article className="relative min-h-40 overflow-hidden rounded px-6 py-6 bg-main-bg shadow-glass backdrop-blur-lg transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 max-sm:min-h-36 max-sm:px-4 max-sm:py-4 text-center">
               <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
                 Syncing your bookmarks&hellip;
@@ -519,25 +521,30 @@ export function NewTabHome({
                 Fetching bookmarks from your account. This may take a moment.
               </p>
             </article>
+          ) : syncState.phase === "reauthing" ? (
+            <article className="relative min-h-40 overflow-hidden rounded px-6 py-6 bg-main-bg shadow-glass backdrop-blur-lg transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 max-sm:min-h-36 max-sm:px-4 max-sm:py-4 text-center">
+              <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
+                Something went wrong
+              </p>
+              <p className="mt-4 text-pretty text-base text-home-empty">
+                Reconnecting to your account&hellip;
+              </p>
+            </article>
           ) : syncState.phase === "error" ? (
             <article className="relative min-h-40 overflow-hidden rounded px-6 py-6 bg-main-bg shadow-glass backdrop-blur-lg transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 max-sm:min-h-36 max-sm:px-4 max-sm:py-4 text-center">
               <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
                 Something went wrong
               </p>
               <p className="mt-4 text-pretty text-base text-home-empty">
-                {syncState.error === "reconnecting"
-                  ? "Reconnecting to your account\u2026"
-                  : "Could not sync your bookmarks. Check your connection and try again."}
+                Could not sync your bookmarks. Check your connection and try again.
               </p>
-              {syncState.error !== "reconnecting" && (
-                <button
-                  type="button"
-                  onClick={onSync}
-                  className="inline-flex items-center justify-center rounded text-sm font-semibold leading-none transition-all duration-150 ease-hover disabled:cursor-default disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 border-0 bg-home-accent px-4 py-2 text-white hover:opacity-90 mt-6"
-                >
-                  Try again
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={onSync}
+                className="inline-flex items-center justify-center rounded text-sm font-semibold leading-none transition-all duration-150 ease-hover disabled:cursor-default disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 border-0 bg-home-accent px-4 py-2 text-white hover:opacity-90 mt-6"
+              >
+                Try again
+              </button>
             </article>
           ) : (
             <article className="relative min-h-40 overflow-hidden rounded px-6 py-6 bg-main-bg shadow-glass backdrop-blur-lg transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 max-sm:min-h-36 max-sm:px-4 max-sm:py-4 text-center">

@@ -804,9 +804,16 @@ export function parseBookmarkPagePayload(payload: unknown): BookmarkPageResult {
 
   for (const entry of entries) {
     const entryId = asString(entry.entryId) || "";
+    const content = asRecord(entry.content);
 
     if (entryId.startsWith("cursor-bottom")) {
-      const content = asRecord(entry.content);
+      nextCursor = asString(content?.value);
+      stopOnEmptyResponse = content?.stopOnEmptyResponse === true;
+      continue;
+    }
+
+    // Fallback cursor extraction: check cursorType on any entry
+    if (!nextCursor && asString(content?.cursorType) === "Bottom") {
       nextCursor = asString(content?.value);
       stopOnEmptyResponse = content?.stopOnEmptyResponse === true;
       continue;
@@ -814,7 +821,6 @@ export function parseBookmarkPagePayload(payload: unknown): BookmarkPageResult {
 
     if (!entryId.startsWith("tweet-")) continue;
 
-    const content = asRecord(entry.content);
     const itemContent = asRecord(content?.itemContent);
     const tweetResult = asRecord(asRecord(itemContent?.tweet_results)?.result);
     if (!tweetResult) continue;

@@ -16,13 +16,12 @@ export const LEGACY_IDB_DATABASE_NAME = "xbt";
 export const LS_TOUR_COMPLETED = "totem_tour_completed";
 export const LS_READING_TAB = "totem_reading_tab";
 export const LS_WALLPAPER_INDEX = "totem_wallpaper_index";
-export const LS_HAS_BOOKMARKS = "totem_has_bookmarks";
 
 export const LOCAL_STORAGE_KEYS = [
   LS_TOUR_COMPLETED,
   LS_READING_TAB,
   LS_WALLPAPER_INDEX,
-  LS_HAS_BOOKMARKS,
+  "totem_has_bookmarks", // legacy — kept for reset cleanup
 ] as const;
 
 // ── chrome.storage.local (shared between app + service worker) ─────
@@ -59,7 +58,7 @@ export const LEGACY_LOCAL_STORAGE_KEY_MAP = {
   xbt_tour_completed: LS_TOUR_COMPLETED,
   xbt_reading_tab: LS_READING_TAB,
   xbt_wallpaper_index: LS_WALLPAPER_INDEX,
-  xbt_has_bookmarks: LS_HAS_BOOKMARKS,
+  xbt_has_bookmarks: "totem_has_bookmarks",
 } as const;
 
 export const LEGACY_CHROME_LOCAL_KEY_MAP = {

@@ -59,6 +59,11 @@ export async function reconcileBookmarks(
     cursor = nextCursor;
   }
 
+  if (pagesRequested === 1 && allNew.length > 0 && !cursor) {
+    console.warn("[totem] Sync stopped after 1 page (" + allNew.length +
+      " bookmarks) — no cursor in response. Check API response format.");
+  }
+
   let staleIds: string[] = [];
   if (fullReconcile) {
     staleIds = [...localIds].filter((id) => !remoteIds.has(id));

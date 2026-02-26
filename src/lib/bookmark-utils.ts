@@ -24,6 +24,13 @@ export function pickExcerpt(bookmark: Bookmark): string {
   return compactPreview(toSingleLine(bookmark.text), PICK_EXCERPT_MAX);
 }
 
+export function inferKindBadge(bookmark: Bookmark): string {
+  if (bookmark.tweetKind === "article") return "Article";
+  if (bookmark.tweetKind === "thread" || bookmark.isThread) return "Thread";
+  if (bookmark.hasLink) return "Link";
+  return "Post";
+}
+
 export function estimateReadingMinutes(bookmark: Bookmark): number {
   const tweetText = toSingleLine(bookmark.text);
   const articleText = toSingleLine(bookmark.article?.plainText ?? "");
