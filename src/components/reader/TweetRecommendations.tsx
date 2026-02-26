@@ -17,7 +17,7 @@ export function TweetRecommendations({
   if (relatedBookmarks.length === 0) return null;
 
   return (
-    <section className="mt-8 border-t border-border pt-6">
+    <section className="mt-12 border-t border-border pt-8">
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-lg font-semibold text-balance text-foreground">
           Recommended bookmarks
@@ -25,7 +25,7 @@ export function TweetRecommendations({
         <div className="flex items-center gap-2">
           {onShuffle && (
             <Button
-              variant="outline"
+              variant="secondary"
               size="sm"
               onClick={onShuffle}
               aria-label="Shuffle recommendations"

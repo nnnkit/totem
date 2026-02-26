@@ -184,21 +184,17 @@ export function BookmarkReader({
     };
   }, [displayBookmark.article?.title, displayBookmark.text]);
 
-  const containerWidthClass = "max-w-3xl";
+  const containerWidthClass = "max-w-2xl";
 
   return (
     <div className="reader-page min-h-dvh">
       <div className="sticky top-0 z-10 border-b border-border bg-surface/80 backdrop-blur-md">
         <div
-          className={cn("mx-auto flex items-center gap-3 px-4 py-3", containerWidthClass)}
+          className={cn("mx-auto flex items-center gap-3 px-6 py-2.5", containerWidthClass)}
         >
           <Button variant="ghost" size="icon" onClick={onBack} aria-label="Back to bookmarks" title="Back">
             <ArrowLeftIcon className="size-5" />
           </Button>
-
-          <span className="text-lg font-semibold text-foreground">Post</span>
-
-          <div className="ml-auto flex items-center gap-1" />
         </div>
       </div>
 
@@ -226,7 +222,7 @@ export function BookmarkReader({
 
       <article
         ref={articleRef}
-        className={cn(containerWidthClass, "reader-card relative mx-auto px-5 pb-16 pt-6")}
+        className={cn(containerWidthClass, "relative mx-auto px-6 pb-16 pt-8")}
       >
         <TweetContent
           displayBookmark={displayBookmark}

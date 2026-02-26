@@ -47,14 +47,13 @@
     --color-on-bg: transparent;
     --color-on-bg-muted: transparent;
     --color-on-bg-ghost: transparent;
-    --color-glass: transparent;
-    --color-glass-hover: transparent;
+    --color-main-bg: transparent;
+    --color-main-bg-hover: transparent;
     --color-home-fg: transparent;
     --color-home-fg-secondary: transparent;
     --color-home-fg-muted: transparent;
     --color-home-accent: transparent;
     --color-accent-tint: transparent;
-    --color-search-bg: transparent;
     --color-home-placeholder: transparent;
     --color-home-secondary-bg: transparent;
     --color-home-secondary-border: transparent;
@@ -568,9 +567,9 @@
     --color-on-bg-muted: rgba(255, 255, 255, 0.62);
     --color-on-bg-ghost: rgba(255, 255, 255, 0.56);
 
-    /* Glass card surface */
-    --color-glass: rgba(254, 249, 247, 0.97);
-    --color-glass-hover: #fef9f7;
+    /* Main background (cards, search) */
+    --color-main-bg: rgba(254, 249, 247, 0.97);
+    --color-main-bg-hover: #fef9f7;
     --shadow-glass:
         0 1px 3px rgba(11, 6, 5, 0.06), 0 6px 24px rgba(11, 6, 5, 0.06);
 
@@ -584,7 +583,6 @@
     --color-accent-tint: rgba(226, 128, 103, 0.08);
 
     /* Search */
-    --color-search-bg: rgba(254, 249, 247, 0.97);
     --shadow-search:
         0 1px 3px rgba(11, 6, 5, 0.06), 0 6px 24px rgba(11, 6, 5, 0.06);
     --color-home-placeholder: rgba(11, 6, 5, 0.36);
@@ -669,15 +667,14 @@
 /* Dark theme overrides for totem-home — system preference */
 @media (prefers-color-scheme: dark) {
     :root:not([data-theme]) .totem-home {
-        --color-glass: rgba(15, 11, 9, 0.92);
-        --color-glass-hover: rgba(22, 17, 15, 0.92);
+        --color-main-bg: rgb(20, 16, 14);
+        --color-main-bg-hover: rgba(22, 17, 15, 0.92);
         --shadow-glass: none;
         --color-home-fg: rgba(255, 255, 255, 0.92);
         --color-home-fg-secondary: rgba(255, 255, 255, 0.86);
         --color-home-fg-muted: rgba(255, 255, 255, 0.62);
         --color-home-accent: #e28067;
         --color-accent-tint: rgba(226, 128, 103, 0.12);
-        --color-search-bg: rgb(20, 16, 14);
         --shadow-search:
             0 1px 6px rgba(11, 6, 5, 0.2), 0 4px 24px rgba(11, 6, 5, 0.12);
         --color-home-placeholder: rgba(255, 255, 255, 0.45);
@@ -691,15 +688,14 @@
 
 /* Dark theme overrides for totem-home — manual toggle */
 [data-theme="dark"] .totem-home {
-    --color-glass: rgba(15, 11, 9, 0.92);
-    --color-glass-hover: rgba(22, 17, 15, 0.92);
+    --color-main-bg: rgb(20, 16, 14);
+    --color-main-bg-hover: rgba(22, 17, 15, 0.92);
     --shadow-glass: none;
     --color-home-fg: rgba(255, 255, 255, 0.92);
     --color-home-fg-secondary: rgba(255, 255, 255, 0.86);
     --color-home-fg-muted: rgba(255, 255, 255, 0.62);
     --color-home-accent: #e28067;
     --color-accent-tint: rgba(226, 128, 103, 0.12);
-    --color-search-bg: rgb(20, 16, 14);
     --shadow-search:
         0 1px 6px rgba(11, 6, 5, 0.2), 0 4px 24px rgba(11, 6, 5, 0.12);
     --color-home-placeholder: rgba(255, 255, 255, 0.45);

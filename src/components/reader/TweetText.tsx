@@ -17,7 +17,7 @@ export function RichTextBlock({ text, compact = false, style = "tweet", sectionI
 
   if (paragraphs.length === 0) return null;
 
-  const spacingClass = compact ? "space-y-3" : style === "article" ? "space-y-6" : "space-y-5";
+  const spacingClass = compact ? "space-y-3" : style === "article" ? "space-y-7" : "space-y-6";
 
   return (
     <div className={spacingClass}>

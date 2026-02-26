@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import type { Bookmark, TweetKind } from "../../types";
 import { KIND_LABEL } from "./types";
-import { kindPillClass, sanitizeUrl } from "./utils";
+import { sanitizeUrl } from "./utils";
 import { cn } from "../../lib/cn";
 import { formatCompactNumber } from "../../lib/text";
 import { CARD_CLOSE_MS } from "../../lib/constants";
@@ -12,12 +12,7 @@ interface TweetKindPillProps {
 
 function TweetKindPill({ kind }: TweetKindPillProps) {
   return (
-    <span
-      className={cn(
-        "inline-block rounded bg-surface-hover px-2 py-0.5 text-xs font-medium",
-        kindPillClass(kind),
-      )}
-    >
+    <span className="inline-block rounded bg-surface-hover px-2 py-0.5 text-xs font-medium text-muted">
       {KIND_LABEL[kind]}
     </span>
   );
@@ -29,6 +24,15 @@ function formatJoinDate(raw: string): string {
   const date = new Date(raw);
   if (Number.isNaN(date.getTime())) return raw;
   return date.toLocaleDateString("en", { month: "long", year: "numeric" });
+}
+
+function formatHeaderDate(ts: number): string {
+  if (!ts) return "";
+  return new Date(ts).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
 interface AuthorCardProps {
@@ -204,10 +208,11 @@ function AffiliateBadge({ affiliate }: AffiliateBadgeProps) {
 interface Props {
   author: Bookmark["author"];
   displayKind: TweetKind;
+  createdAt: number;
   readingMinutes?: number | null;
 }
 
-export function TweetHeader({ author, displayKind, readingMinutes }: Props) {
+export function TweetHeader({ author, displayKind, createdAt, readingMinutes }: Props) {
   const authorUrl = `https://x.com/${author.screenName}`;
   const [cardOpen, setCardOpen] = useState(false);
   const [cardClosing, setCardClosing] = useState(false);
@@ -230,75 +235,66 @@ export function TweetHeader({ author, displayKind, readingMinutes }: Props) {
 
   return (
     <>
-      <div className="mb-4 flex items-center gap-3">
-        <div className="flex min-w-0 flex-1 items-center gap-3">
-          <button
-            type="button"
-            onClick={toggleCard}
-            className="shrink-0 cursor-pointer"
-            title={`View ${author.name}'s profile`}
-          >
-            <img
-              src={author.profileImageUrl}
-              alt=""
-              className="size-12 rounded-full transition-opacity hover:opacity-80"
-              loading="lazy"
-            />
-          </button>
-          <div className="min-w-0">
-            <div className="flex items-center gap-1.5">
-              <a
-                href={authorUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="truncate text-base font-bold text-foreground hover:underline"
-              >
-                {author.name}
-              </a>
-              {author.verified && <VerifiedBadge />}
-              {author.affiliate && (
-                <AffiliateBadge affiliate={author.affiliate} />
-              )}
-            </div>
-            <div className="flex items-center gap-1 text-xs text-muted">
-              <a
-                href={authorUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:underline"
-              >
-                @{author.screenName}
-              </a>
-              {author.followersCount != null && (
-                <>
-                  <span>&middot;</span>
-                  <span>
-                    {formatCompactNumber(author.followersCount)} followers
-                  </span>
-                </>
-              )}
-            </div>
-            {author.bio && (
-              <p className="mt-0.5 max-w-xs truncate text-xs text-muted">
-                {author.bio}
-              </p>
+      {/* Author row */}
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={toggleCard}
+          className="shrink-0 cursor-pointer"
+          title={`View ${author.name}'s profile`}
+        >
+          <img
+            src={author.profileImageUrl}
+            alt=""
+            className="size-11 rounded-full transition-opacity hover:opacity-80"
+            loading="lazy"
+          />
+        </button>
+        <div className="min-w-0">
+          <div className="flex items-center gap-1.5">
+            <a
+              href={authorUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="truncate text-sm font-semibold text-foreground hover:underline"
+            >
+              {author.name}
+            </a>
+            {author.verified && <VerifiedBadge />}
+            {author.affiliate && (
+              <AffiliateBadge affiliate={author.affiliate} />
+            )}
+          </div>
+          <div className="flex items-center gap-1 text-xs text-muted">
+            {createdAt > 0 && (
+              <span>{formatHeaderDate(createdAt)}</span>
+            )}
+            {author.followersCount != null && (
+              <>
+                <span>&middot;</span>
+                <span>
+                  {formatCompactNumber(author.followersCount)} followers
+                </span>
+              </>
             )}
           </div>
         </div>
-
       </div>
 
       {cardOpen && (
-        <AuthorCard
-          author={author}
-          closing={cardClosing}
-          onClose={handleClose}
-        />
+        <div className="mt-3">
+          <AuthorCard
+            author={author}
+            closing={cardClosing}
+            onClose={handleClose}
+          />
+        </div>
       )}
 
-      <div className="mb-6 flex flex-wrap items-center gap-2">
+      {/* Meta row: kind pill + reading time */}
+      <div className="mt-4 flex flex-wrap items-center gap-2">
         <TweetKindPill kind={displayKind} />
-        {readingMinutes != null && (
+        {readingMinutes != null && readingMinutes > 1 && (
           <>
             <span className="text-xs text-muted">&middot;</span>
             <span className="text-xs tabular-nums text-muted">

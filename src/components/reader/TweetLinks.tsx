@@ -1,13 +1,6 @@
 import { useMemo } from "react";
-import {
-  ArrowSquareOutIcon,
-  BookmarkSimpleIcon,
-  CheckIcon,
-  LightningIcon,
-} from "@phosphor-icons/react";
 import type { LinkCard, TweetUrl } from "../../types";
-import { buildGrokUrl, sanitizeUrl } from "./utils";
-import { Button } from "../ui/Button";
+import { sanitizeUrl } from "./utils";
 
 type ResolvedUrl = {
   href: string;
@@ -52,15 +45,28 @@ function LinkPreviewCard({ url, card }: LinkPreviewCardProps) {
   );
 }
 
-interface LinkCardsProps {
-  urls: ResolvedUrl[];
+interface Props {
+  urls: TweetUrl[];
 }
 
-function LinkCards({ urls }: LinkCardsProps) {
-  if (urls.length === 0) return null;
+export function TweetLinks({ urls }: Props) {
+  const resolvedUrls = useMemo<ResolvedUrl[]>(
+    () =>
+      urls.flatMap((url) => {
+        const href = sanitizeUrl((url.expandedUrl || url.url || "").trim());
+        if (!href) return [];
+        return [
+          { href, displayUrl: (url.displayUrl || href).trim(), card: url.card },
+        ];
+      }),
+    [urls],
+  );
+
+  if (resolvedUrls.length === 0) return null;
+
   return (
-    <div className="mt-5 flex flex-col gap-2.5">
-      {urls.map((url, index) =>
+    <div className="mt-6 flex flex-col gap-2.5">
+      {resolvedUrls.map((url, index) =>
         url.card?.title ? (
           <LinkPreviewCard
             key={`${url.href}-${index}`}
@@ -85,115 +91,5 @@ function LinkCards({ urls }: LinkCardsProps) {
         ),
       )}
     </div>
-  );
-}
-
-interface ReadStatusButtonProps {
-  onToggle: () => void;
-  isRead: boolean;
-}
-
-function ReadStatusButton({ onToggle, isRead }: ReadStatusButtonProps) {
-  return (
-    <Button
-      variant={isRead ? "outline" : "outline"}
-      size="sm"
-      onClick={onToggle}
-      className={
-        isRead
-          ? "border-green-500/30 bg-green-500/10 text-success hover:border-green-500/50 hover:bg-green-500/20"
-          : ""
-      }
-    >
-      <CheckIcon weight="bold" className="size-3.5" />
-      {isRead ? "Read" : "Mark as read"}
-    </Button>
-  );
-}
-
-interface Props {
-  urls: TweetUrl[];
-  viewOnXUrl?: string;
-  onToggleRead?: () => void;
-  isMarkedRead?: boolean;
-  onDeleteBookmark?: () => void;
-}
-
-export function TweetLinks({
-  urls,
-  viewOnXUrl,
-  onToggleRead,
-  isMarkedRead,
-  onDeleteBookmark,
-}: Props) {
-  const resolvedUrls = useMemo<ResolvedUrl[]>(
-    () =>
-      urls.flatMap((url) => {
-        const href = sanitizeUrl((url.expandedUrl || url.url || "").trim());
-        if (!href) return [];
-        return [
-          { href, displayUrl: (url.displayUrl || href).trim(), card: url.card },
-        ];
-      }),
-    [urls],
-  );
-
-  const readStatusBtn = onToggleRead ? (
-    <ReadStatusButton
-      onToggle={onToggleRead}
-      isRead={isMarkedRead ?? false}
-    />
-  ) : null;
-
-  const viewOnXLink = viewOnXUrl ? (
-    <a
-      href={viewOnXUrl}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-foreground"
-    >
-      View on X
-      <ArrowSquareOutIcon className="size-3.5" />
-    </a>
-  ) : null;
-
-  const askGrokLink = viewOnXUrl ? (
-    <a
-      href={buildGrokUrl(viewOnXUrl)}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="inline-flex items-center gap-1.5 rounded border border-border bg-surface-card px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
-    >
-      <LightningIcon weight="bold" className="size-3.5" />
-      Ask Grok
-    </a>
-  ) : null;
-
-  const deleteBookmarkBtn = onDeleteBookmark ? (
-    <Button
-      variant="outline"
-      size="sm"
-      onClick={onDeleteBookmark}
-      className="hover:text-red-500 hover:border-red-500/30 hover:bg-red-500/10"
-    >
-      <BookmarkSimpleIcon weight="fill" className="size-3.5" />
-      Remove
-    </Button>
-  ) : null;
-
-  const hasActions = readStatusBtn || viewOnXLink || askGrokLink || deleteBookmarkBtn;
-
-  return (
-    <>
-      <LinkCards urls={resolvedUrls} />
-      {hasActions && (
-        <div className="mt-5 flex items-center justify-end gap-3">
-          {viewOnXLink}
-          {askGrokLink}
-          {deleteBookmarkBtn}
-          {readStatusBtn}
-        </div>
-      )}
-    </>
   );
 }

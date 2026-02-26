@@ -48,11 +48,7 @@ export function escapeHtml(text: string): string {
 export function textClassForMode(
   compact = false,
 ): string {
-  return cn(baseTweetTextClass, "text-foreground", compact ? "text-base leading-7" : "text-lg leading-relaxed");
-}
-
-export function kindPillClass(_kind: TweetKind): string {
-  return "text-muted";
+  return cn(baseTweetTextClass, "text-foreground", compact ? "text-base leading-7" : "text-lg leading-8");
 }
 
 export function resolveTweetKind(tweet: ReaderTweet): TweetKind {

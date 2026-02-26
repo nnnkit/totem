@@ -1,6 +1,13 @@
 import { memo } from "react";
+import {
+  ArrowSquareOutIcon,
+  BookmarkSimpleIcon,
+  CheckIcon,
+  LightningIcon,
+} from "@phosphor-icons/react";
 import type { Bookmark, ThreadTweet, TweetKind } from "../../types";
 import {
+  buildGrokUrl,
   normalizeText,
   resolveTweetKind,
   toEmbeddedReaderTweet,
@@ -12,10 +19,10 @@ import { TweetMedia } from "./TweetMedia";
 import { TweetQuote } from "./TweetQuote";
 import { TweetArticle } from "./TweetArticle";
 import { TweetLinks } from "./TweetLinks";
-
 import { TweetRecommendations } from "./TweetRecommendations";
 import type { ReaderTweet } from "./types";
 import { cn } from "../../lib/cn";
+import { Button } from "../ui/Button";
 
 interface TweetBodyProps {
   tweet: ReaderTweet;
@@ -140,8 +147,8 @@ function ThreadTweets({ tweets }: ThreadTweetsProps) {
   if (tweets.length === 0) return null;
 
   return (
-    <section className="mt-8">
-      <p className="mb-4 text-xs font-semibold uppercase text-muted">
+    <section className="mt-10">
+      <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-muted">
         Thread
       </p>
       <div>
@@ -187,6 +194,72 @@ function ThreadTweets({ tweets }: ThreadTweetsProps) {
   );
 }
 
+/* ── Action bar (Substack-style social bar) ── */
+
+interface ActionBarProps {
+  viewOnXUrl: string;
+  onToggleRead?: () => void;
+  isMarkedRead?: boolean;
+  onDeleteBookmark?: () => void;
+}
+
+const actionClass =
+  "inline-flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium text-muted transition-colors hover:bg-surface-hover hover:text-foreground";
+
+function ActionBar({ viewOnXUrl, onToggleRead, isMarkedRead, onDeleteBookmark }: ActionBarProps) {
+  return (
+    <div className="flex items-center gap-1 border-y border-border py-2">
+      <a
+        href={viewOnXUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={actionClass}
+      >
+        <ArrowSquareOutIcon className="size-3.5" />
+        View on X
+      </a>
+
+      <a
+        href={buildGrokUrl(viewOnXUrl)}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={actionClass}
+      >
+        <LightningIcon weight="bold" className="size-3.5" />
+        Grok
+      </a>
+
+      <div className="ml-auto flex items-center gap-1">
+        {onDeleteBookmark && (
+          <button
+            type="button"
+            onClick={onDeleteBookmark}
+            className={cn(actionClass, "hover:text-red-500")}
+          >
+            <BookmarkSimpleIcon weight="fill" className="size-3.5" />
+            Remove
+          </button>
+        )}
+        {onToggleRead && (
+          <button
+            type="button"
+            onClick={onToggleRead}
+            className={cn(
+              actionClass,
+              isMarkedRead && "text-success",
+            )}
+          >
+            <CheckIcon weight="bold" className="size-3.5" />
+            {isMarkedRead ? "Read" : "Mark read"}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ── Main component ── */
+
 interface Props {
   displayBookmark: Bookmark;
   displayKind: TweetKind;
@@ -223,19 +296,14 @@ export const TweetContent = memo(function TweetContent({
       <TweetHeader
         author={displayBookmark.author}
         displayKind={displayKind}
+        createdAt={displayBookmark.createdAt}
         readingMinutes={
           detailLoading ? null : estimateReadingMinutes(displayBookmark)
         }
       />
 
-      <div id="section-main-tweet" className="px-6">
-        <TweetBody
-          tweet={displayBookmark}
-          sectionIdPrefix={tweetSectionIdPrefix}
-        />
-        <ThreadTweets tweets={detailThread} />
-        <TweetLinks
-          urls={[]}
+      <div className="mt-5">
+        <ActionBar
           viewOnXUrl={viewOnXUrl}
           onToggleRead={onToggleRead}
           isMarkedRead={isMarkedRead}
@@ -243,26 +311,32 @@ export const TweetContent = memo(function TweetContent({
         />
       </div>
 
+      <div id="section-main-tweet" className="mt-10">
+        <TweetBody
+          tweet={displayBookmark}
+          sectionIdPrefix={tweetSectionIdPrefix}
+        />
+        <ThreadTweets tweets={detailThread} />
+      </div>
+
       {detailLoading && (
-        <div className="mt-6 flex items-center gap-3 px-6 py-4 text-sm text-muted">
+        <div className="mt-8 flex items-center gap-3 py-4 text-sm text-muted">
           <span className="animate-spin"><div className="size-4 rounded-full border-2 border-accent border-t-transparent" /></span>
           Loading details...
         </div>
       )}
 
       {detailError && (
-        <p className="mt-6 px-6 py-2 text-sm text-muted">
+        <p className="mt-8 py-2 text-sm text-muted">
           Could not load complete post details. Showing cached bookmark data.
         </p>
       )}
 
-      <div className="px-6 py-4">
-        <TweetRecommendations
-          relatedBookmarks={relatedBookmarks}
-          onOpenBookmark={onOpenBookmark}
-          onShuffle={onShuffle}
-        />
-      </div>
+      <TweetRecommendations
+        relatedBookmarks={relatedBookmarks}
+        onOpenBookmark={onOpenBookmark}
+        onShuffle={onShuffle}
+      />
     </div>
   );
 });

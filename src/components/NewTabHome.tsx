@@ -257,7 +257,7 @@ export function NewTabHome({
 
                 return (
                   <form
-                    className="relative mx-auto flex max-w-xl items-center rounded bg-search-bg shadow-search backdrop-blur-md"
+                    className="relative mx-auto flex max-w-xl items-center rounded bg-main-bg shadow-search backdrop-blur-md"
                     action={engineConfig?.searchUrl}
                     method={isDefault ? undefined : "GET"}
                     target={isDefault ? undefined : "_blank"}
@@ -319,7 +319,7 @@ export function NewTabHome({
 
         <footer className="mx-auto w-full max-w-lg pb-6">
           {authPhase === "connecting" ? (
-            <article className="relative min-h-34 overflow-hidden rounded px-4 pt-3.5 pb-3 bg-glass shadow-glass backdrop-blur-lg transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 max-sm:min-h-32 max-sm:p-3 text-center">
+            <article className="relative min-h-34 overflow-hidden rounded px-4 pt-3.5 pb-3 bg-main-bg shadow-glass backdrop-blur-lg transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 max-sm:min-h-32 max-sm:p-3 text-center">
               <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">Connecting to X&hellip;</p>
               <div className="mt-4 flex justify-center">
                 <svg
@@ -337,7 +337,7 @@ export function NewTabHome({
               </p>
             </article>
           ) : authPhase === "need_login" ? (
-            <article className="relative min-h-34 overflow-hidden rounded px-4 pt-3.5 pb-3 bg-glass shadow-glass backdrop-blur-lg transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 max-sm:min-h-32 max-sm:p-3 text-center">
+            <article className="relative min-h-34 overflow-hidden rounded px-4 pt-3.5 pb-3 bg-main-bg shadow-glass backdrop-blur-lg transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 max-sm:min-h-32 max-sm:p-3 text-center">
               <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">Log in to see your bookmarks</p>
               <p className="mt-4 text-pretty text-base text-home-empty">
                 Sign in to your X account to sync and read your saved posts.
@@ -359,8 +359,8 @@ export function NewTabHome({
               <article
                 data-tour="bookmark-card"
                 className={cn(
-                  "relative min-h-36 overflow-hidden rounded px-4 pt-3.5 pb-3 bg-glass shadow-glass backdrop-blur-lg transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 max-sm:min-h-32 max-sm:p-3 cursor-pointer hover:bg-glass-hover",
-                  cardEngaged && "bg-glass-hover",
+                  "relative min-h-36 overflow-hidden rounded px-4 pt-3.5 pb-3 bg-main-bg shadow-glass backdrop-blur-lg transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 max-sm:min-h-32 max-sm:p-3 cursor-pointer hover:bg-main-bg-hover",
+                  cardEngaged && "bg-main-bg-hover",
                 )}
                 onMouseEnter={() => setCardEngaged(true)}
                 onMouseLeave={() => setCardEngaged(false)}
@@ -428,7 +428,7 @@ export function NewTabHome({
                 <button
                   data-tour="open-all-btn"
                   type="button"
-                  className="inline-flex items-center justify-center rounded text-sm font-semibold leading-none transition-all duration-150 ease-hover disabled:cursor-default disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 border border-home-secondary-border bg-home-secondary-bg px-5 py-2.5 text-home-secondary-text hover:bg-glass-hover"
+                  className="inline-flex items-center justify-center rounded text-sm font-semibold leading-none transition-all duration-150 ease-hover disabled:cursor-default disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 border border-home-secondary-border bg-home-secondary-bg px-5 py-2.5 text-home-secondary-text hover:bg-main-bg-hover"
                   onClick={() => {
                     dismissTour();
                     onOpenReading();
@@ -440,7 +440,7 @@ export function NewTabHome({
                 <button
                   data-tour="surprise-btn"
                   type="button"
-                  className="inline-flex items-center justify-center rounded text-sm font-semibold leading-none transition-all duration-150 ease-hover disabled:cursor-default disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 border border-home-secondary-border bg-home-secondary-bg px-5 py-2.5 text-home-secondary-text hover:bg-glass-hover"
+                  className="inline-flex items-center justify-center rounded text-sm font-semibold leading-none transition-all duration-150 ease-hover disabled:cursor-default disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 border border-home-secondary-border bg-home-secondary-bg px-5 py-2.5 text-home-secondary-text hover:bg-main-bg-hover"
                   onClick={surpriseMe}
                 >
                   Surprise me
@@ -467,7 +467,7 @@ export function NewTabHome({
               )}
             </div>
           ) : syncState.phase === "syncing" ? (
-            <article className="relative min-h-34 overflow-hidden rounded px-4 pt-3.5 pb-3 bg-glass shadow-glass backdrop-blur-lg transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 max-sm:min-h-32 max-sm:p-3 text-center">
+            <article className="relative min-h-34 overflow-hidden rounded px-4 pt-3.5 pb-3 bg-main-bg shadow-glass backdrop-blur-lg transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 max-sm:min-h-32 max-sm:p-3 text-center">
               <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">Syncing your bookmarks&hellip;</p>
               <div className="mt-4 flex justify-center">
                 <svg
@@ -485,7 +485,7 @@ export function NewTabHome({
               </p>
             </article>
           ) : syncState.phase === "error" ? (
-            <article className="relative min-h-34 overflow-hidden rounded px-4 pt-3.5 pb-3 bg-glass shadow-glass backdrop-blur-lg transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 max-sm:min-h-32 max-sm:p-3 text-center">
+            <article className="relative min-h-34 overflow-hidden rounded px-4 pt-3.5 pb-3 bg-main-bg shadow-glass backdrop-blur-lg transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 max-sm:min-h-32 max-sm:p-3 text-center">
               <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">Something went wrong</p>
               <p className="mt-4 text-pretty text-base text-home-empty">
                 {syncState.error === "reconnecting"
@@ -503,7 +503,7 @@ export function NewTabHome({
               )}
             </article>
           ) : (
-            <article className="relative min-h-34 overflow-hidden rounded px-4 pt-3.5 pb-3 bg-glass shadow-glass backdrop-blur-lg transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 max-sm:min-h-32 max-sm:p-3 text-center">
+            <article className="relative min-h-34 overflow-hidden rounded px-4 pt-3.5 pb-3 bg-main-bg shadow-glass backdrop-blur-lg transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 max-sm:min-h-32 max-sm:p-3 text-center">
               <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">Your reading list is quiet</p>
               <p className="mt-4 text-pretty text-base text-home-empty">
                 No bookmarks found. Bookmark some posts on X, then sync to see
