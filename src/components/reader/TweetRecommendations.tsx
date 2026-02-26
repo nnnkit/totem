@@ -20,7 +20,7 @@ export function TweetRecommendations({
     <section className="mt-12 border-t border-border pt-8">
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-lg font-semibold text-balance text-foreground">
-          Recommended bookmarks
+          Read next
         </h2>
         <div className="flex items-center gap-2">
           {onShuffle && (
@@ -28,8 +28,8 @@ export function TweetRecommendations({
               variant="secondary"
               size="sm"
               onClick={onShuffle}
-              aria-label="Shuffle recommendations"
-              title="Shuffle recommendations"
+              aria-label="Shuffle"
+              title="Shuffle"
             >
               <ShuffleIcon className="size-4" />
             </Button>

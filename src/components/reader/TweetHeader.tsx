@@ -240,7 +240,7 @@ export function TweetHeader({ author, displayKind, createdAt, readingMinutes }: 
         <button
           type="button"
           onClick={toggleCard}
-          className="shrink-0 cursor-pointer"
+          className="shrink-0"
           title={`View ${author.name}'s profile`}
         >
           <img

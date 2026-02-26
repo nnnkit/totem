@@ -507,6 +507,15 @@
         }
     }
 
+    button,
+    [role="button"],
+    a[href],
+    label,
+    select,
+    summary {
+        cursor: pointer;
+    }
+
     button:active:not(:disabled):not([role="switch"]),
     a[role="button"]:active:not(:disabled) {
         transform: scale(0.97);

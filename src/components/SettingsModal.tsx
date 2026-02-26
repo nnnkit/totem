@@ -108,7 +108,7 @@ export function SettingsModal({
               New Tab
             </h3>
             <div className="space-y-3">
-              <label className="flex items-center justify-between cursor-pointer">
+              <label className="flex items-center justify-between">
                 <span id="label-search-bar" className="text-sm text-foreground">
                   Show search bar
                 </span>
@@ -119,7 +119,7 @@ export function SettingsModal({
                 />
               </label>
 
-              <label className="flex items-center justify-between cursor-pointer">
+              <label className="flex items-center justify-between">
                 <span id="label-quick-links" className="text-sm text-foreground">
                   Show quick links
                 </span>

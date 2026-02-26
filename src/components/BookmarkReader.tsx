@@ -3,6 +3,8 @@ import {
   ArrowLeftIcon,
   CaretLeftIcon,
   CaretRightIcon,
+  SunIcon,
+  MoonIcon,
 } from "@phosphor-icons/react";
 import type { Bookmark, Highlight, SelectionRange, ThreadTweet } from "../types";
 import { fetchTweetDetail } from "../api/core/posts";
@@ -14,6 +16,7 @@ import { SelectionToolbar } from "./reader/SelectionToolbar";
 import { HighlightPopover } from "./reader/HighlightPopover";
 import { NotePopover } from "./reader/NotePopover";
 import { useReadingProgress } from "../hooks/useReadingProgress";
+import { useTheme } from "../hooks/useTheme";
 import { useHighlights } from "../hooks/useHighlights";
 import { Button } from "./ui/Button";
 
@@ -49,6 +52,7 @@ export function BookmarkReader({
   onMarkAsUnread,
 }: Props) {
   const articleRef = useRef<HTMLElement>(null);
+  const { resolvedTheme, setThemePreference } = useTheme();
   const [readOverride, setReadOverride] = useState<boolean | null>(null);
   const [resolvedBookmark, setResolvedBookmark] = useState<Bookmark | null>(
     null,
@@ -194,6 +198,16 @@ export function BookmarkReader({
         >
           <Button variant="ghost" size="icon" onClick={onBack} aria-label="Back to bookmarks" title="Back">
             <ArrowLeftIcon className="size-5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="ml-auto"
+            onClick={() => setThemePreference(resolvedTheme === "dark" ? "light" : "dark")}
+            aria-label="Toggle theme"
+            title={resolvedTheme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          >
+            {resolvedTheme === "dark" ? <SunIcon className="size-5" /> : <MoonIcon className="size-5" />}
           </Button>
         </div>
       </div>

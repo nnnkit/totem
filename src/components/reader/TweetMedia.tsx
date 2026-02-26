@@ -88,7 +88,7 @@ export function TweetMedia({ items, bleed = false }: Props) {
                 onClick={closePreview}
                 aria-label="Close preview"
                 className={cn(
-                  "absolute right-4 top-4 z-10 flex size-10 cursor-pointer items-center justify-center rounded-full bg-black/60 text-white transition-colors hover:bg-black/80",
+                  "absolute right-4 top-4 z-10 flex size-10 items-center justify-center rounded-full bg-black/60 text-white transition-colors hover:bg-black/80",
                   closing ? "animate-overlay-out" : "animate-overlay-in",
                 )}
               >

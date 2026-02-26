@@ -320,7 +320,9 @@ export function NewTabHome({
         <footer className="mx-auto w-full max-w-lg pb-6">
           {authPhase === "connecting" ? (
             <article className="relative min-h-34 overflow-hidden rounded px-4 pt-3.5 pb-3 bg-main-bg shadow-glass backdrop-blur-lg transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 max-sm:min-h-32 max-sm:p-3 text-center">
-              <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">Connecting to X&hellip;</p>
+              <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
+                Connecting to X&hellip;
+              </p>
               <div className="mt-4 flex justify-center">
                 <svg
                   viewBox="0 0 24 24"
@@ -338,7 +340,9 @@ export function NewTabHome({
             </article>
           ) : authPhase === "need_login" ? (
             <article className="relative min-h-34 overflow-hidden rounded px-4 pt-3.5 pb-3 bg-main-bg shadow-glass backdrop-blur-lg transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 max-sm:min-h-32 max-sm:p-3 text-center">
-              <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">Log in to see your bookmarks</p>
+              <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
+                Log in to start reading
+              </p>
               <p className="mt-4 text-pretty text-base text-home-empty">
                 Sign in to your X account to sync and read your saved posts.
               </p>
@@ -398,19 +402,21 @@ export function NewTabHome({
                 <div className="min-h-28 translate-y-0 opacity-100 transition-all duration-200 ease-[cubic-bezier(0.215,0.61,0.355,1)] motion-reduce:transition-none max-sm:min-h-26">
                   <div className="flex justify-between">
                     <div className="flex items-center gap-1.5">
-                      <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">recommended</p>
+                      <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
+                        your next read
+                      </p>
                       {offlineMode && (
                         <span title="Not signed in — showing cached bookmarks">
-                          <LinkBreakIcon
-                            className="size-3 animate-offline-pulse text-muted"
-                          />
+                          <LinkBreakIcon className="size-3 animate-offline-pulse text-muted" />
                         </span>
                       )}
                     </div>
-                    <kbd className="ml-2 border-home-secondary-border bg-accent-tint text-home-fg-muted">O</kbd>
+                    <kbd className="ml-2 border-home-secondary-border bg-accent-tint text-home-fg-muted">
+                      O
+                    </kbd>
                   </div>
 
-                  <h2 className="font-serif mt-4 line-clamp-2 min-h-[calc(1.25em*2)] text-balance text-base font-normal leading-tight text-home-fg-secondary max-sm:text-sm lg:text-lg">
+                  <h2 className="capitalize font-serif mt-4 line-clamp-2 min-h-[calc(1.25em*2)] text-balance text-base font-normal leading-tight text-home-fg-secondary max-sm:text-sm lg:text-lg">
                     {currentItem.title}
                   </h2>
                   <p className="mt-2.5 line-clamp-1 min-h-[calc(1.5em*1)] text-pretty text-xs leading-normal text-home-description">
@@ -434,8 +440,10 @@ export function NewTabHome({
                     onOpenReading();
                   }}
                 >
-                  Open all bookmarks
-                  <kbd className="ml-2 border-home-secondary-border bg-accent-tint text-home-fg-muted">L</kbd>
+                  Open reading list
+                  <kbd className="ml-2 border-home-secondary-border bg-accent-tint text-home-fg-muted">
+                    L
+                  </kbd>
                 </button>
                 <button
                   data-tour="surprise-btn"
@@ -444,7 +452,9 @@ export function NewTabHome({
                   onClick={surpriseMe}
                 >
                   Surprise me
-                  <kbd className="ml-2 border-home-secondary-border bg-accent-tint text-home-fg-muted">S</kbd>
+                  <kbd className="ml-2 border-home-secondary-border bg-accent-tint text-home-fg-muted">
+                    S
+                  </kbd>
                 </button>
               </div>
 
@@ -468,7 +478,9 @@ export function NewTabHome({
             </div>
           ) : syncState.phase === "syncing" ? (
             <article className="relative min-h-34 overflow-hidden rounded px-4 pt-3.5 pb-3 bg-main-bg shadow-glass backdrop-blur-lg transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 max-sm:min-h-32 max-sm:p-3 text-center">
-              <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">Syncing your bookmarks&hellip;</p>
+              <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
+                Syncing your bookmarks&hellip;
+              </p>
               <div className="mt-4 flex justify-center">
                 <svg
                   viewBox="0 0 24 24"
@@ -486,7 +498,9 @@ export function NewTabHome({
             </article>
           ) : syncState.phase === "error" ? (
             <article className="relative min-h-34 overflow-hidden rounded px-4 pt-3.5 pb-3 bg-main-bg shadow-glass backdrop-blur-lg transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 max-sm:min-h-32 max-sm:p-3 text-center">
-              <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">Something went wrong</p>
+              <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
+                Something went wrong
+              </p>
               <p className="mt-4 text-pretty text-base text-home-empty">
                 {syncState.error === "reconnecting"
                   ? "Reconnecting to your account\u2026"
@@ -504,10 +518,12 @@ export function NewTabHome({
             </article>
           ) : (
             <article className="relative min-h-34 overflow-hidden rounded px-4 pt-3.5 pb-3 bg-main-bg shadow-glass backdrop-blur-lg transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 max-sm:min-h-32 max-sm:p-3 text-center">
-              <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">Your reading list is quiet</p>
+              <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
+                Your reading list is quiet
+              </p>
               <p className="mt-4 text-pretty text-base text-home-empty">
-                No bookmarks found. Bookmark some posts on X, then sync to see
-                them here.
+                No bookmarks yet. Bookmark posts on X, then sync to start
+                reading.
               </p>
               <button
                 type="button"

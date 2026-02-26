@@ -62,9 +62,7 @@ function TweetBody({
           <RichTextBlock text={repostComment} compact={compact} style="tweet" />
         )}
         <div className="mt-4 rounded border border-border p-4">
-          <p className="text-xs uppercase text-muted">
-            Reposted content
-          </p>
+          <p className="text-xs uppercase text-muted">Reposted content</p>
           <div className="mt-2 flex items-center gap-2 text-sm">
             <img
               src={tweet.retweetedTweet.author.profileImageUrl}
@@ -147,7 +145,7 @@ function ThreadTweets({ tweets }: ThreadTweetsProps) {
   if (tweets.length === 0) return null;
 
   return (
-    <section className="mt-10">
+    <section className="mt-10 rounded-lg bg-accent-surface/40 px-4 py-5">
       <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-muted">
         Thread
       </p>
@@ -203,55 +201,48 @@ interface ActionBarProps {
   onDeleteBookmark?: () => void;
 }
 
-const actionClass =
-  "inline-flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium text-muted transition-colors hover:bg-surface-hover hover:text-foreground";
+function ActionBar({
+  viewOnXUrl,
+  onToggleRead,
+  isMarkedRead,
+  onDeleteBookmark,
+}: ActionBarProps) {
+  const grokUrl = buildGrokUrl(viewOnXUrl);
 
-function ActionBar({ viewOnXUrl, onToggleRead, isMarkedRead, onDeleteBookmark }: ActionBarProps) {
   return (
     <div className="flex items-center gap-1 border-y border-border py-2">
-      <a
-        href={viewOnXUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        className={actionClass}
-      >
+      <Button variant="ghost" size="sm" href={viewOnXUrl}>
         <ArrowSquareOutIcon className="size-3.5" />
         View on X
-      </a>
+      </Button>
 
-      <a
-        href={buildGrokUrl(viewOnXUrl)}
-        target="_blank"
-        rel="noopener noreferrer"
-        className={actionClass}
-      >
+      <Button variant="ghost" size="sm" href={grokUrl}>
         <LightningIcon weight="bold" className="size-3.5" />
         Grok
-      </a>
+      </Button>
 
       <div className="ml-auto flex items-center gap-1">
         {onDeleteBookmark && (
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={onDeleteBookmark}
-            className={cn(actionClass, "hover:text-red-500")}
+            className="hover:text-red-500"
           >
             <BookmarkSimpleIcon weight="fill" className="size-3.5" />
             Remove
-          </button>
+          </Button>
         )}
         {onToggleRead && (
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={onToggleRead}
-            className={cn(
-              actionClass,
-              isMarkedRead && "text-success",
-            )}
+            className={isMarkedRead ? "text-success" : undefined}
           >
             <CheckIcon weight="bold" className="size-3.5" />
             {isMarkedRead ? "Read" : "Mark read"}
-          </button>
+          </Button>
         )}
       </div>
     </div>
@@ -321,7 +312,9 @@ export const TweetContent = memo(function TweetContent({
 
       {detailLoading && (
         <div className="mt-8 flex items-center gap-3 py-4 text-sm text-muted">
-          <span className="animate-spin"><div className="size-4 rounded-full border-2 border-accent border-t-transparent" /></span>
+          <span className="animate-spin">
+            <div className="size-4 rounded-full border-2 border-accent border-t-transparent" />
+          </span>
           Loading details...
         </div>
       )}
@@ -331,6 +324,15 @@ export const TweetContent = memo(function TweetContent({
           Could not load complete post details. Showing cached bookmark data.
         </p>
       )}
+
+      <div className="mt-10">
+        <ActionBar
+          viewOnXUrl={viewOnXUrl}
+          onToggleRead={onToggleRead}
+          isMarkedRead={isMarkedRead}
+          onDeleteBookmark={onDeleteBookmark}
+        />
+      </div>
 
       <TweetRecommendations
         relatedBookmarks={relatedBookmarks}

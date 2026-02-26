@@ -412,7 +412,7 @@ export function BookmarksList({
                     type="button"
                     onClick={() => onOpenBookmark(bookmark)}
                     className={cn(
-                      "bookmark-list-item flex w-full cursor-pointer items-center gap-3 rounded border p-3 text-left transition-colors hover:bg-surface-hover",
+                      "bookmark-list-item flex w-full items-center gap-3 rounded border p-3 text-left transition-colors hover:bg-surface-hover",
                       focusedIndex === idx
                         ? "border-accent ring-2 ring-accent/40 bg-surface-hover"
                         : "border-border bg-surface-card",
@@ -469,7 +469,7 @@ export function BookmarksList({
                       type="button"
                       onClick={() => onOpenBookmark(bookmark)}
                       className={cn(
-                        "bookmark-list-item flex w-full cursor-pointer items-center gap-3 rounded border p-3 text-left transition-colors hover:bg-surface-hover",
+                        "bookmark-list-item flex w-full items-center gap-3 rounded border p-3 text-left transition-colors hover:bg-surface-hover",
                         focusedIndex === idx
                           ? "border-accent ring-2 ring-accent/40 bg-surface-hover"
                           : "border-border bg-surface-card",
@@ -513,10 +513,10 @@ export function BookmarksList({
             ) : (
               <div className="flex flex-col items-center justify-center py-20 text-center">
                 <p className="text-muted text-lg text-pretty">
-                  No reading in progress. Open a bookmark to start tracking.
+                  No reading in progress. Pick something to read.
                 </p>
                 <Button onClick={() => onTabChange("unread")} className="mt-4">
-                  Browse unread
+                  Start reading
                 </Button>
               </div>
             )}
@@ -539,7 +539,7 @@ export function BookmarksList({
                       type="button"
                       onClick={() => onOpenBookmark(bookmark)}
                       className={cn(
-                        "bookmark-list-item flex w-full cursor-pointer items-center gap-3 rounded border p-3 text-left transition-colors hover:bg-surface-hover",
+                        "bookmark-list-item flex w-full items-center gap-3 rounded border p-3 text-left transition-colors hover:bg-surface-hover",
                         focusedIndex === idx
                           ? "border-accent ring-2 ring-accent/40 bg-surface-hover"
                           : "border-border bg-surface-card",
