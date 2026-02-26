@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import {
+  ClockIcon,
   GearSixIcon,
   LinkBreakIcon,
   MagnifyingGlassIcon,
@@ -27,6 +28,13 @@ import { useWallpaper } from "../hooks/useWallpaper";
 import { useTopSites } from "../hooks/useTopSites";
 import { useProductTour } from "../hooks/useProductTour";
 import { CLOCK_UPDATE_MS } from "../lib/constants";
+
+function inferKindBadge(bookmark: Bookmark): string {
+  if (bookmark.tweetKind === "article") return "Article";
+  if (bookmark.tweetKind === "thread" || bookmark.isThread) return "Thread";
+  if (bookmark.hasLink) return "Link";
+  return "Post";
+}
 
 interface Props {
   bookmarks: Bookmark[];
@@ -359,11 +367,11 @@ export function NewTabHome({
               </a>
             </article>
           ) : currentItem ? (
-            <div className="space-y-4">
+            <div className="space-y-6">
               <article
                 data-tour="bookmark-card"
                 className={cn(
-                  "relative min-h-36 overflow-hidden rounded px-4 pt-3.5 pb-3 bg-main-bg shadow-glass backdrop-blur-lg transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 max-sm:min-h-32 max-sm:p-3 cursor-pointer hover:bg-main-bg-hover",
+                  "relative min-h-40 overflow-hidden rounded px-4 pt-3.5 pb-3 bg-main-bg shadow-glass backdrop-blur-lg transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 max-sm:min-h-36 max-sm:p-3 cursor-pointer hover:bg-main-bg-hover",
                   cardEngaged && "bg-main-bg-hover",
                 )}
                 onMouseEnter={() => setCardEngaged(true)}
@@ -399,7 +407,7 @@ export function NewTabHome({
                     : ""
                 }`}
               >
-                <div className="min-h-28 translate-y-0 opacity-100 transition-all duration-200 ease-[cubic-bezier(0.215,0.61,0.355,1)] motion-reduce:transition-none max-sm:min-h-26">
+                <div className="flex min-h-32 flex-col translate-y-0 opacity-100 transition-all duration-200 ease-[cubic-bezier(0.215,0.61,0.355,1)] motion-reduce:transition-none max-sm:min-h-28">
                   <div className="flex justify-between">
                     <div className="flex items-center gap-1.5">
                       <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
@@ -416,21 +424,31 @@ export function NewTabHome({
                     </kbd>
                   </div>
 
-                  <h2 className="capitalize font-serif mt-4 line-clamp-2 min-h-[calc(1.25em*2)] text-balance text-base font-normal leading-tight text-home-fg-secondary max-sm:text-sm lg:text-lg">
+                  <h2 className="capitalize font-serif mt-3 line-clamp-2 text-balance text-lg font-medium leading-snug text-home-fg-secondary max-sm:text-base lg:text-xl">
                     {currentItem.title}
                   </h2>
-                  <p className="mt-2.5 line-clamp-1 min-h-[calc(1.5em*1)] text-pretty text-xs leading-normal text-home-description">
+                  <p className="mt-2 line-clamp-1 text-xs text-home-description">
                     {currentItem.excerpt}
                   </p>
-                  <div className="mt-3 flex items-end justify-between gap-3">
-                    <p className="text-xs leading-tight text-home-fg-muted">
-                      @{currentItem.bookmark.author.screenName}
-                    </p>
+                  <div className="mt-auto flex items-center gap-2.5 pt-3">
+                    <img
+                      src={currentItem.bookmark.author.profileImageUrl}
+                      alt=""
+                      className="size-6 shrink-0 rounded-full"
+                    />
+                    <div className="min-w-0">
+                      <p className="truncate text-xs font-medium text-home-fg-secondary">
+                        {currentItem.bookmark.author.name}
+                      </p>
+                      <p className="truncate text-xxs text-home-fg-muted">
+                        @{currentItem.bookmark.author.screenName}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </article>
 
-              <div className="mt-8 flex items-center justify-between gap-2.5 max-sm:gap-2">
+              <div className="flex items-center justify-between gap-2.5 max-sm:gap-2">
                 <button
                   data-tour="open-all-btn"
                   type="button"
@@ -459,7 +477,7 @@ export function NewTabHome({
               </div>
 
               {offlineMode && (
-                <p className="text-center text-xxs text-muted/50">
+                <p className="text-center text-xs text-gray-200/70">
                   Viewing cached bookmarks.{" "}
                   <a
                     href="https://x.com/login"
