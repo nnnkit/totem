@@ -53,6 +53,13 @@ const CHROME_SYNC_RESET_KEYS = Array.from(
 );
 
 export async function resetLocalData(): Promise<void> {
+  // 0. Notify service worker to clear in-memory state (catalog cache, auth tab, etc.)
+  try {
+    await chrome.runtime.sendMessage({ type: "RESET_SW_STATE" });
+  } catch {
+    // Service worker may be unavailable — continue with reset
+  }
+
   // 1. Clear all IndexedDB object stores, then delete the database entirely
   try {
     await clearAllLocalData();

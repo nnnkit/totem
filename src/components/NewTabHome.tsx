@@ -24,6 +24,7 @@ import {
   estimateReadingMinutes,
 } from "../lib/bookmark-utils";
 import { cn } from "../lib/cn";
+import { Button } from "./ui/Button";
 import { useWallpaper } from "../hooks/useWallpaper";
 import { useTopSites } from "../hooks/useTopSites";
 import { useProductTour } from "../hooks/useProductTour";
@@ -450,10 +451,10 @@ export function NewTabHome({
               </article>
 
               <div className="flex items-center justify-between gap-2.5 max-sm:gap-2">
-                <button
+                <Button
+                  variant="secondary"
                   data-tour="open-all-btn"
-                  type="button"
-                  className="inline-flex items-center justify-center rounded text-sm font-semibold leading-none transition-all duration-150 ease-hover disabled:cursor-default disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 border border-home-secondary-border bg-home-secondary-bg px-5 py-2.5 text-home-secondary-text hover:bg-main-bg-hover"
+                  className="border-home-secondary-border bg-home-secondary-bg px-5 py-2.5 font-semibold leading-none text-home-secondary-text transition-all duration-150 ease-hover hover:bg-main-bg-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80"
                   onClick={() => {
                     dismissTour();
                     onOpenReading();
@@ -463,18 +464,18 @@ export function NewTabHome({
                   <kbd className="ml-2 border-home-secondary-border bg-accent-tint text-home-fg-muted shadow-[0_1px_0_0_rgba(255,255,255,0.1)]">
                     L
                   </kbd>
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="secondary"
                   data-tour="surprise-btn"
-                  type="button"
-                  className="inline-flex items-center justify-center rounded text-sm font-semibold leading-none transition-all duration-150 ease-hover disabled:cursor-default disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 border border-home-secondary-border bg-home-secondary-bg px-5 py-2.5 text-home-secondary-text hover:bg-main-bg-hover"
+                  className="border-home-secondary-border bg-home-secondary-bg px-5 py-2.5 font-semibold leading-none text-home-secondary-text transition-all duration-150 ease-hover hover:bg-main-bg-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80"
                   onClick={surpriseMe}
                 >
                   Surprise me
                   <kbd className="ml-2 border-home-secondary-border bg-accent-tint text-home-fg-muted shadow-[0_1px_0_0_rgba(255,255,255,0.1)]">
                     S
                   </kbd>
-                </button>
+                </Button>
               </div>
 
               <p className={cn("text-center text-xs text-gray-200/70", !offlineMode && "invisible")}>

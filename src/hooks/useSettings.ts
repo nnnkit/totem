@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { BackgroundMode, SearchEngineId, UserSettings } from "../types";
 import { hasChromeStorageSync, hasChromeStorageOnChanged } from "../lib/chrome";
 import { SYNC_SETTINGS } from "../lib/storage-keys";
@@ -53,6 +53,7 @@ function normalizeSettings(value: unknown): UserSettings {
 
 export function useSettings() {
   const [settings, setSettings] = useState<UserSettings>(DEFAULT_SETTINGS);
+  const userPatchedRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -64,7 +65,7 @@ export function useSettings() {
         const stored = await chrome.storage.sync.get({
           [SYNC_SETTINGS]: DEFAULT_SETTINGS,
         });
-        if (!cancelled) {
+        if (!cancelled && !userPatchedRef.current) {
           setSettings(normalizeSettings(stored[SYNC_SETTINGS]));
         }
       } catch {
@@ -96,6 +97,7 @@ export function useSettings() {
   }, []);
 
   const updateSettings = (patch: Partial<UserSettings>) => {
+    userPatchedRef.current = true;
     setSettings((prev) => {
       const next = { ...prev, ...patch };
       if (hasChromeStorageSync()) {

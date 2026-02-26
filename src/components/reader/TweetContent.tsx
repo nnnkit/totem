@@ -319,11 +319,6 @@ export const TweetContent = memo(function TweetContent({
         </div>
       )}
 
-      {detailError && (
-        <p className="mt-8 py-2 text-sm text-muted">
-          Could not load complete post details. Showing cached bookmark data.
-        </p>
-      )}
 
       <div className="mt-10">
         <ActionBar

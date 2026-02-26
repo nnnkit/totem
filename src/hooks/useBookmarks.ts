@@ -177,7 +177,13 @@ export function useBookmarks(isReady: boolean, loadCacheOnly = false): UseBookma
             queue.enqueue(() => fetchBookmarkPage(cursor)),
           fullReconcile: doReconcile,
           onPage: async (pageNew) => {
-            const updated = [...bookmarksRef.current, ...pageNew].toSorted(
+            const currentIds = new Set(bookmarksRef.current.map((b) => b.tweetId));
+            const deduped = pageNew.filter((b) => !currentIds.has(b.tweetId));
+            if (deduped.length === 0) {
+              setSyncState({ phase: "syncing", total: bookmarksRef.current.length });
+              return;
+            }
+            const updated = [...bookmarksRef.current, ...deduped].toSorted(
               compareSortIndexDesc,
             );
             bookmarksRef.current = updated;
@@ -185,7 +191,7 @@ export function useBookmarks(isReady: boolean, loadCacheOnly = false): UseBookma
             setSyncState({ phase: "syncing", total: updated.length });
 
             try {
-              await upsertBookmarks(pageNew);
+              await upsertBookmarks(deduped);
             } catch {
               // DB write can fail if IndexedDB was cleared externally.
               // State is already updated so bookmarks are visible this session.
@@ -251,7 +257,10 @@ export function useBookmarks(isReady: boolean, loadCacheOnly = false): UseBookma
         fetchPage: (cursor) => fetchBookmarkPage(cursor, 20),
         fullReconcile: false,
         onPage: async (pageNew) => {
-          const updated = [...bookmarksRef.current, ...pageNew].toSorted(
+          const currentIds = new Set(bookmarksRef.current.map((b) => b.tweetId));
+          const deduped = pageNew.filter((b) => !currentIds.has(b.tweetId));
+          if (deduped.length === 0) return;
+          const updated = [...bookmarksRef.current, ...deduped].toSorted(
             compareSortIndexDesc,
           );
           bookmarksRef.current = updated;
@@ -259,7 +268,7 @@ export function useBookmarks(isReady: boolean, loadCacheOnly = false): UseBookma
           setSyncState((prev) => ({ ...prev, total: updated.length }));
 
           try {
-            await upsertBookmarks(pageNew);
+            await upsertBookmarks(deduped);
           } catch {}
         },
       });

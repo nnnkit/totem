@@ -267,7 +267,7 @@ export function BookmarksList({
   );
 
   useHotkeys(
-    "enter, o",
+    "enter, space",
     () => {
       if (focusedIndex >= 0 && focusedIndex < visibleBookmarks.length) {
         onOpenBookmark(visibleBookmarks[focusedIndex]);
