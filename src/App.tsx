@@ -31,8 +31,8 @@ export default function App() {
   const { settings, updateSettings } = useSettings();
   const isReady = phase === "ready";
   const isLoggedOut = phase === "need_login";
-  const { bookmarks, syncState, dispatch, refresh, unbookmark } = useBookmarks(isReady);
-  const hasBookmarks = "total" in syncState && syncState.total > 0;
+  const { bookmarks, syncStatus, refresh, reset, unbookmark } = useBookmarks(isReady);
+  const hasBookmarks = bookmarks.length > 0;
   const offlineMode = isLoggedOut && hasBookmarks;
   const connectingWithCache = phase === "connecting" && hasBookmarks;
   const showCached = offlineMode || connectingWithCache;
@@ -68,10 +68,27 @@ export default function App() {
     if (stored === "unread" || stored === "continue" || stored === "read") return stored;
     return "unread";
   });
+  const tabHasItems = useCallback((tab: ReadingTab) => {
+    if (tab === "unread") return allUnread.length > 0;
+    if (tab === "continue") return continueReading.some((item) => !item.progress.completed);
+    return continueReading.some((item) => item.progress.completed);
+  }, [allUnread, continueReading]);
+
+  const restoreReadingTab = useCallback(() => {
+    const stored = localStorage.getItem(LS_READING_TAB);
+    if (stored === "unread" || stored === "continue" || stored === "read") {
+      setReadingTab(stored);
+    } else {
+      setReadingTab("unread");
+    }
+  }, []);
+
   const handleReadingTabChange = useCallback((tab: ReadingTab) => {
     setReadingTab(tab);
-    localStorage.setItem(LS_READING_TAB, tab);
-  }, []);
+    if (tabHasItems(tab)) {
+      localStorage.setItem(LS_READING_TAB, tab);
+    }
+  }, [tabHasItems]);
   const [toast, setToast] = useState<ToastState | null>(null);
   const [shuffleSeed, setShuffleSeed] = useState(0);
   const handleShuffle = useCallback(() => {
@@ -126,10 +143,12 @@ export default function App() {
     refreshContinueReading();
   }, [refreshContinueReading]);
 
+  const [isResetting, setIsResetting] = useState(false);
   const handleResetLocalData = useCallback(() => {
-    dispatch({ type: "RESET" });
+    setIsResetting(true);
+    reset();
     resetLocalData().catch(() => {}).finally(() => window.location.reload());
-  }, [dispatch]);
+  }, [reset]);
 
   useKeyboardNavigation({
     selectedBookmark,
@@ -151,7 +170,7 @@ export default function App() {
 
   const bookmarksLoading =
     phase === "loading" ||
-    syncState.phase === "booting" ||
+    syncStatus === "loading" ||
     (offlineMode && !detailedIdsLoaded);
 
   const needsLogin = !showCached && (phase === "need_login" || phase === "connecting");
@@ -171,6 +190,7 @@ export default function App() {
           onDeleteBookmark={offlineMode ? undefined : async () => {
             const tweetId = selectedBookmark.tweetId;
             const tweetUrl = `https://x.com/i/web/status/${tweetId}`;
+            restoreReadingTab();
             setView("reading");
             closeReader();
             const { apiError } = await unbookmark(tweetId);
@@ -193,7 +213,7 @@ export default function App() {
         <BookmarksList
           continueReadingItems={continueReading}
           unreadBookmarks={allUnread}
-          syncing={syncState.phase === "hard_syncing" || syncState.phase === "soft_syncing"}
+          syncing={syncStatus === "syncing"}
           activeTab={readingTab}
           onTabChange={handleReadingTabChange}
           onOpenBookmark={openBookmark}
@@ -207,7 +227,7 @@ export default function App() {
     return (
       <NewTabHome
         bookmarks={displayBookmarks}
-        syncState={syncState}
+        syncStatus={syncStatus}
         onSync={refresh}
         detailedTweetIds={detailedTweetIds}
         showTopSites={settings.showTopSites}
@@ -219,12 +239,12 @@ export default function App() {
         openedTweetIds={openedTweetIds}
         onOpenBookmark={openBookmark}
         onOpenSettings={() => setSettingsOpen(true)}
-        onOpenReading={() => setView("reading")}
+        onOpenReading={() => { restoreReadingTab(); setView("reading"); }}
         offlineMode={offlineMode}
         authPhase={needsLogin ? phase : undefined}
         onLogin={needsLogin || offlineMode ? startLogin : undefined}
         bookmarksLoading={bookmarksLoading}
-        isResetting={syncState.phase === "resetting"}
+        isResetting={isResetting}
       />
     );
   })();
