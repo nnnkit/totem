@@ -26,7 +26,7 @@ import { cn } from "../lib/cn";
 import { Button } from "./ui/Button";
 import { useWallpaper } from "../hooks/useWallpaper";
 import { useTopSites } from "../hooks/useTopSites";
-import { useProductTour } from "../hooks/useProductTour";
+
 import { CLOCK_UPDATE_MS } from "../lib/constants";
 
 interface Props {
@@ -111,11 +111,6 @@ export function NewTabHome({
     return pool[index];
   }, [items, unreadItems, mountSeed]);
 
-  const { dismiss: dismissTour } = useProductTour({
-    enabled: true,
-    hasBookmarks: currentItem !== null,
-  });
-
   const [prevWallpaperUrl, setPrevWallpaperUrl] = useState(wallpaperUrl);
   if (wallpaperUrl !== prevWallpaperUrl) {
     setPrevWallpaperUrl(wallpaperUrl);
@@ -133,10 +128,9 @@ export function NewTabHome({
   const openItem = useCallback(
     (item: DecoratedBookmark | null) => {
       if (!item) return;
-      dismissTour();
       onOpenBookmark(item.bookmark);
     },
-    [onOpenBookmark, dismissTour],
+    [onOpenBookmark],
   );
 
   const surpriseMe = useCallback(() => {
@@ -161,14 +155,11 @@ export function NewTabHome({
 
   useHotkeys(
     "l",
-    () => {
-      dismissTour();
-      onOpenReading();
-    },
+    () => onOpenReading(),
     {
       preventDefault: true,
     },
-    [onOpenReading, dismissTour],
+    [onOpenReading],
   );
 
   useHotkeys(
@@ -207,7 +198,7 @@ export function NewTabHome({
       <header className="relative z-20 flex w-full items-center justify-between px-6 pt-5 sm:px-8">
         <TotemLogo className="size-8" />
         <button
-          data-tour="settings-btn"
+
           type="button"
           onClick={onOpenSettings}
           className="rounded border border-transparent bg-transparent p-2 text-on-bg-muted transition-colors duration-150 ease-hover hover:border-white/15 hover:bg-white/5 hover:text-on-bg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80"
@@ -372,7 +363,7 @@ export function NewTabHome({
           ) : currentItem ? (
             <div className="space-y-6">
               <article
-                data-tour="bookmark-card"
+                
                 className={cn(
                   "relative min-h-40 overflow-hidden rounded p-4 bg-main-bg shadow-glass backdrop-blur-lg transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 max-sm:min-h-36 max-sm:px-4 max-sm:py-3.5 cursor-pointer hover:bg-main-bg-hover",
                   cardEngaged && "bg-main-bg-hover",
@@ -455,12 +446,9 @@ export function NewTabHome({
               <div className="flex items-center justify-between gap-2.5 max-sm:gap-2">
                 <Button
                   variant="secondary"
-                  data-tour="open-all-btn"
+
                   className="bg-home-secondary-bg px-5 py-2.5 font-semibold leading-none text-home-secondary-text transition-all duration-150 ease-hover hover:bg-main-bg-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80"
-                  onClick={() => {
-                    dismissTour();
-                    onOpenReading();
-                  }}
+                  onClick={onOpenReading}
                 >
                   Open reading list
                   <kbd className="ml-2 border-home-secondary-border bg-accent-tint text-home-fg-muted shadow-kbd">
@@ -469,7 +457,7 @@ export function NewTabHome({
                 </Button>
                 <Button
                   variant="secondary"
-                  data-tour="surprise-btn"
+
                   className="bg-home-secondary-bg px-5 py-2.5 font-semibold leading-none text-home-secondary-text transition-all duration-150 ease-hover hover:bg-main-bg-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80"
                   onClick={surpriseMe}
                 >

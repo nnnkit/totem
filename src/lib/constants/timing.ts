@@ -22,9 +22,6 @@ export const SEARCH_DEBOUNCE_MS = 150;
 // ── Reading progress ────────────────────────────────────────
 export const READING_HEIGHT_CHANGE_RATIO = 0.15;
 
-// ── Product tour ────────────────────────────────────────────
-export const TOUR_DELAY_MS = 800;
-
 // ── UI transitions ──────────────────────────────────────────
 export const CARD_CLOSE_MS = 150;
 

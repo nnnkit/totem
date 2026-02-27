@@ -23,7 +23,6 @@
     "@base-ui/react": "^1.2.0",
     "@phosphor-icons/react": "^2.1.10",
     "clsx": "^2.1.1",
-    "driver.js": "^1.4.0",
     "idb": "^8.0.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
