@@ -144,15 +144,7 @@ export interface AuthStatus {
   userId: string | null;
 }
 
-export type SyncState =
-  | { phase: "booting" }
-  | { phase: "ready"; total: number; lastSyncAt: number }
-  | { phase: "hard_syncing"; total: number; pagesLoaded: number; isReconcile: boolean }
-  | { phase: "soft_syncing"; total: number }
-  | { phase: "reauthing"; total: number; attempt: number }
-  | { phase: "synced"; total: number }
-  | { phase: "error"; total: number; error: string; isReconnecting: boolean }
-  | { phase: "resetting" };
+export type SyncStatus = "loading" | "syncing" | "idle" | "error" | "reauthing";
 
 export interface ReadingProgress {
   tweetId: string;

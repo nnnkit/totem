@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useTheme } from "@ext/hooks/useTheme";
 import { useSettings } from "@ext/hooks/useSettings";
 import { useKeyboardNavigation } from "@ext/hooks/useKeyboard";
@@ -11,9 +11,28 @@ import { SettingsModal } from "@ext/components/SettingsModal";
 import { DemoBanner } from "./DemoBanner";
 import { MOCK_BOOKMARKS } from "../../mock/bookmarks";
 import { deleteBookmarksByTweetIds } from "@ext/db";
-import type { Bookmark, SyncState } from "@ext/types";
+import type { Bookmark } from "@ext/types";
 
 type AppView = "home" | "reading";
+
+function CoachingHint({ dismissed }: { dismissed: boolean }) {
+  if (dismissed) return null;
+  return (
+    <div className="pointer-events-none fixed inset-x-0 bottom-6 z-50 flex justify-center animate-fade-in">
+      <div className="pointer-events-auto rounded-full border border-border/50 bg-surface-card/95 px-4 py-2 text-sm text-muted shadow-lg backdrop-blur-sm">
+        Press{" "}
+        <kbd className="mx-1 inline-flex items-center rounded border border-border bg-background px-1.5 py-0.5 font-mono text-xs font-medium">
+          Space
+        </kbd>{" "}
+        to open a bookmark &middot;{" "}
+        <kbd className="mx-1 inline-flex items-center rounded border border-border bg-background px-1.5 py-0.5 font-mono text-xs font-medium">
+          L
+        </kbd>{" "}
+        for reading list
+      </div>
+    </div>
+  );
+}
 
 export default function DemoApp() {
   const [bookmarks, setBookmarks] = useState<Bookmark[]>(MOCK_BOOKMARKS);
@@ -33,6 +52,11 @@ export default function DemoApp() {
   const [syncing, setSyncing] = useState(false);
   const [readingTab, setReadingTab] = useState<ReadingTab>("unread");
   const [openedTweetIds, setOpenedTweetIds] = useState<Set<string>>(new Set());
+  const [hintDismissed, setHintDismissed] = useState(false);
+
+  const dismissHint = useCallback(() => {
+    if (!hintDismissed) setHintDismissed(true);
+  }, [hintDismissed]);
 
   if (
     selectedBookmark &&
@@ -47,9 +71,36 @@ export default function DemoApp() {
     [selectedBookmark, bookmarks, shuffleSeed],
   );
 
+  // Prev/next navigation
+  const bookmarksRef = useRef(bookmarks);
+  bookmarksRef.current = bookmarks;
+  const selectedRef = useRef(selectedBookmark);
+  selectedRef.current = selectedBookmark;
+
+  const selectedIndex = selectedBookmark
+    ? bookmarks.findIndex((b) => b.id === selectedBookmark.id)
+    : -1;
+  const hasPrev = selectedIndex > 0;
+  const hasNext = selectedIndex >= 0 && selectedIndex < bookmarks.length - 1;
+
+  const goToPrev = useCallback(() => {
+    const bk = bookmarksRef.current;
+    const sel = selectedRef.current;
+    const idx = bk.findIndex((b) => b.id === sel?.id);
+    if (idx > 0) setSelectedBookmark(bk[idx - 1]);
+  }, []);
+
+  const goToNext = useCallback(() => {
+    const bk = bookmarksRef.current;
+    const sel = selectedRef.current;
+    const idx = bk.findIndex((b) => b.id === sel?.id);
+    if (idx >= 0 && idx < bk.length - 1) setSelectedBookmark(bk[idx + 1]);
+  }, []);
+
   const openBookmark = useCallback((bookmark: Bookmark) => {
     setSelectedBookmark(bookmark);
     setOpenedTweetIds((prev) => new Set(prev).add(bookmark.tweetId));
+    setHintDismissed(true);
   }, []);
 
   const closeReader = useCallback(() => {
@@ -69,6 +120,13 @@ export default function DemoApp() {
     setSelectedBookmark,
   });
 
+  // Auto-dismiss coaching hint after 10s
+  useEffect(() => {
+    if (hintDismissed) return;
+    const timer = setTimeout(() => setHintDismissed(true), 10000);
+    return () => clearTimeout(timer);
+  }, [hintDismissed]);
+
   const mainContent = (() => {
     if (selectedBookmark) {
       return (
@@ -78,18 +136,19 @@ export default function DemoApp() {
           onOpenBookmark={openBookmark}
           onBack={closeReader}
           onShuffle={() => setShuffleSeed((s) => s + 1)}
+          onPrev={hasPrev ? goToPrev : undefined}
+          onNext={hasNext ? goToNext : undefined}
           onDeleteBookmark={() => {
             setBookmarks((prev) =>
               prev.filter((b) => b.tweetId !== selectedBookmark.tweetId),
             );
             closeReader();
           }}
-          themePreference={themePreference}
-          onThemeChange={setThemePreference}
         />
       );
     }
     if (view === "reading") {
+      dismissHint();
       return (
         <BookmarksList
           continueReadingItems={continueReading}
@@ -106,10 +165,7 @@ export default function DemoApp() {
     return (
       <NewTabHome
         bookmarks={bookmarks}
-        syncState={syncing
-          ? { phase: "hard_syncing", total: bookmarks.length, pagesLoaded: 0, isReconcile: false } satisfies SyncState
-          : { phase: "synced", total: bookmarks.length } satisfies SyncState
-        }
+        syncStatus={syncing ? "syncing" : "idle"}
         detailedTweetIds={new Set(bookmarks.map((b) => b.tweetId))}
         backgroundMode={settings.backgroundMode}
         openedTweetIds={openedTweetIds}
@@ -121,7 +177,10 @@ export default function DemoApp() {
         onSync={handleSync}
         onOpenBookmark={openBookmark}
         onOpenSettings={() => setSettingsOpen(true)}
-        onOpenReading={() => setView("reading")}
+        onOpenReading={() => {
+          setView("reading");
+          dismissHint();
+        }}
       />
     );
   })();
@@ -130,6 +189,7 @@ export default function DemoApp() {
     <>
       <DemoBanner />
       {mainContent}
+      <CoachingHint dismissed={hintDismissed || !!selectedBookmark || view === "reading"} />
       <SettingsModal
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}

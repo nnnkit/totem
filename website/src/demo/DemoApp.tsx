@@ -11,7 +11,7 @@ import { SettingsModal } from "@ext/components/SettingsModal";
 import { DemoBanner } from "./DemoBanner";
 import { MOCK_BOOKMARKS } from "../mock/bookmarks";
 import { deleteBookmarksByTweetIds } from "@ext/db";
-import type { Bookmark, SyncState } from "@ext/types";
+import type { Bookmark } from "@ext/types";
 
 type AppView = "home" | "reading";
 
@@ -96,10 +96,7 @@ export default function DemoApp() {
     return (
       <NewTabHome
         bookmarks={bookmarks}
-        syncState={syncing
-          ? { phase: "hard_syncing", total: bookmarks.length, pagesLoaded: 0, isReconcile: false } satisfies SyncState
-          : { phase: "synced", total: bookmarks.length } satisfies SyncState
-        }
+        syncStatus={syncing ? "syncing" : "idle"}
         detailedTweetIds={new Set(bookmarks.map((b) => b.tweetId))}
         showTopSites={settings.showTopSites}
         showSearchBar={settings.showSearchBar}

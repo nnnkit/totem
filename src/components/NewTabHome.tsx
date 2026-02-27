@@ -12,7 +12,7 @@ import type {
   BackgroundMode,
   Bookmark,
   SearchEngineId,
-  SyncState,
+  SyncStatus,
 } from "../types";
 import { SEARCH_ENGINES } from "../lib/search-engines";
 import { hasChromeSearch } from "../lib/chrome";
@@ -31,7 +31,7 @@ import { CLOCK_UPDATE_MS } from "../lib/constants";
 
 interface Props {
   bookmarks: Bookmark[];
-  syncState: SyncState;
+  syncStatus: SyncStatus;
   onSync: () => void;
   detailedTweetIds: Set<string>;
   showTopSites: boolean;
@@ -61,7 +61,7 @@ interface DecoratedBookmark {
 
 export function NewTabHome({
   bookmarks,
-  syncState,
+  syncStatus,
   onSync,
   detailedTweetIds,
   showTopSites,
@@ -447,7 +447,7 @@ export function NewTabHome({
                   </div>
                 </div>
               </article>
-          ) : syncState.phase === "hard_syncing" ? (
+          ) : syncStatus === "syncing" ? (
             <article className="relative min-h-40 overflow-hidden rounded px-6 py-6 bg-main-bg shadow-glass backdrop-blur-lg transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 max-sm:min-h-36 max-sm:px-4 max-sm:py-4 text-center">
               <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
                 Syncing your bookmarks&hellip;
@@ -467,7 +467,7 @@ export function NewTabHome({
                 Fetching bookmarks from your account. This may take a moment.
               </p>
             </article>
-          ) : syncState.phase === "reauthing" ? (
+          ) : syncStatus === "reauthing" ? (
             <article className="relative min-h-40 overflow-hidden rounded px-6 py-6 bg-main-bg shadow-glass backdrop-blur-lg transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 max-sm:min-h-36 max-sm:px-4 max-sm:py-4 text-center">
               <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
                 Something went wrong
@@ -476,7 +476,7 @@ export function NewTabHome({
                 Reconnecting to your account&hellip;
               </p>
             </article>
-          ) : syncState.phase === "error" ? (
+          ) : syncStatus === "error" ? (
             <article className="relative min-h-40 overflow-hidden rounded px-6 py-6 bg-main-bg shadow-glass backdrop-blur-lg transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 max-sm:min-h-36 max-sm:px-4 max-sm:py-4 text-center">
               <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
                 Something went wrong
