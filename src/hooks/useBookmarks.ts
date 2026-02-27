@@ -257,9 +257,10 @@ export function useBookmarks(isReady: boolean): UseBookmarksReturn {
     runningRef.current = true;
 
     const queue = new FetchQueue();
-    const abortController = { aborted: false };
+    const abortController = { aborted: false, isTimeout: false };
     const timeout = hardSyncAbortTimeout(bookmarksRef.current.length);
     const syncTimer = setTimeout(() => {
+      abortController.isTimeout = true;
       abortController.aborted = true;
       queue.abort();
     }, timeout);
@@ -317,17 +318,26 @@ export function useBookmarks(isReady: boolean): UseBookmarksReturn {
             setBookmarks(filtered);
           }
 
-          if (doReconcile) {
-            await chrome.storage.local.set({ [CS_LAST_RECONCILE]: Date.now() });
-          }
-
-          await chrome.storage.local.set({ [CS_LAST_SYNC]: Date.now() });
+          await chrome.storage.local.set({
+            [CS_LAST_RECONCILE]: Date.now(),
+            [CS_LAST_SYNC]: Date.now(),
+          });
           dispatch({ type: "HARD_SYNC_DONE", total: bookmarksRef.current.length });
         }
       } catch (err) {
         if (!abortController.aborted) {
           const msg = err instanceof Error ? err.message : "Unknown error";
           dispatch({ type: "HARD_SYNC_ERROR", error: msg });
+        } else if (abortController.isTimeout) {
+          // Timeout — save progress and treat as done so the phase
+          // doesn't get stuck at "hard_syncing" forever.
+          try {
+            await chrome.storage.local.set({
+              [CS_LAST_RECONCILE]: Date.now(),
+              [CS_LAST_SYNC]: Date.now(),
+            });
+          } catch {}
+          dispatch({ type: "HARD_SYNC_DONE", total: bookmarksRef.current.length });
         }
       } finally {
         clearTimeout(syncTimer);

@@ -145,7 +145,7 @@ export function NewTabHome({
   });
 
   useHotkeys(
-    "enter, space",
+    "space",
     () => openItem(currentItem),
     {
       preventDefault: true,
@@ -169,6 +169,12 @@ export function NewTabHome({
       preventDefault: true,
     },
     [surpriseMe],
+  );
+
+  const showCardButtons = Boolean(
+    currentItem &&
+      authPhase !== "connecting" &&
+      authPhase !== "need_login",
   );
 
   return (
@@ -313,8 +319,8 @@ export function NewTabHome({
           </section>
         </main>
 
-        <footer className="mx-auto w-full max-w-lg pb-6">
-          {bookmarksLoading || isResetting ? (
+        <footer className="mx-auto w-full max-w-lg space-y-6 pb-6">
+          {(bookmarksLoading || isResetting) && !currentItem ? (
             <article className="relative min-h-40 overflow-hidden rounded px-6 py-6 bg-main-bg shadow-glass backdrop-blur-lg max-sm:min-h-36 max-sm:px-4 max-sm:py-4 flex items-center justify-center">
               <div className="animate-logo-shine">
                 <TotemLogo className="size-10" />
@@ -361,7 +367,6 @@ export function NewTabHome({
               </a>
             </article>
           ) : currentItem ? (
-            <div className="space-y-6">
               <article
                 
                 className={cn(
@@ -385,7 +390,7 @@ export function NewTabHome({
                 }}
                 onClick={() => openItem(currentItem)}
                 onKeyDown={(event) => {
-                  if (event.key === "Enter" || event.key === " ") {
+                  if (event.key === " ") {
                     event.preventDefault();
                     event.stopPropagation();
                     openItem(currentItem);
@@ -442,53 +447,6 @@ export function NewTabHome({
                   </div>
                 </div>
               </article>
-
-              <div className="flex items-center justify-between gap-2.5 max-sm:gap-2">
-                <Button
-                  variant="secondary"
-
-                  className="bg-home-secondary-bg px-5 py-2.5 font-semibold leading-none text-home-secondary-text transition-all duration-150 ease-hover hover:bg-main-bg-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80"
-                  onClick={onOpenReading}
-                >
-                  Open reading list
-                  <kbd className="ml-2 border-home-secondary-border bg-accent-tint text-home-fg-muted shadow-kbd">
-                    L
-                  </kbd>
-                </Button>
-                <Button
-                  variant="secondary"
-
-                  className="bg-home-secondary-bg px-5 py-2.5 font-semibold leading-none text-home-secondary-text transition-all duration-150 ease-hover hover:bg-main-bg-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80"
-                  onClick={surpriseMe}
-                >
-                  Surprise me
-                  <kbd className="ml-2 border-home-secondary-border bg-accent-tint text-home-fg-muted shadow-kbd">
-                    S
-                  </kbd>
-                </Button>
-              </div>
-
-              <p
-                className={cn(
-                  "text-center text-xs text-gray-200/70",
-                  !offlineMode && "invisible",
-                )}
-              >
-                Offline mode.{" "}
-                <a
-                  href="https://x.com/login"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() => {
-                    onLogin?.().catch(() => {});
-                  }}
-                  className="underline hover:text-muted"
-                >
-                  Log in
-                </a>{" "}
-                to sync new bookmarks.
-              </p>
-            </div>
           ) : syncState.phase === "hard_syncing" ? (
             <article className="relative min-h-40 overflow-hidden rounded px-6 py-6 bg-main-bg shadow-glass backdrop-blur-lg transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 max-sm:min-h-36 max-sm:px-4 max-sm:py-4 text-center">
               <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
@@ -553,6 +511,56 @@ export function NewTabHome({
               </button>
             </article>
           )}
+
+          <div
+            className={cn(
+              "flex items-center justify-between gap-2.5 max-sm:gap-2",
+              !showCardButtons && "invisible pointer-events-none",
+            )}
+            aria-hidden={!showCardButtons || undefined}
+          >
+            <Button
+              variant="secondary"
+              className="bg-home-secondary-bg px-5 py-2.5 font-semibold leading-none text-home-secondary-text transition-all duration-150 ease-hover hover:bg-main-bg-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80"
+              onClick={onOpenReading}
+            >
+              Open reading list
+              <kbd className="ml-2 border-home-secondary-border bg-accent-tint text-home-fg-muted shadow-kbd">
+                L
+              </kbd>
+            </Button>
+            <Button
+              variant="secondary"
+              className="bg-home-secondary-bg px-5 py-2.5 font-semibold leading-none text-home-secondary-text transition-all duration-150 ease-hover hover:bg-main-bg-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80"
+              onClick={surpriseMe}
+            >
+              Surprise me
+              <kbd className="ml-2 border-home-secondary-border bg-accent-tint text-home-fg-muted shadow-kbd">
+                S
+              </kbd>
+            </Button>
+          </div>
+
+          <p
+            className={cn(
+              "text-center text-xs text-gray-200/70",
+              (!offlineMode || !showCardButtons) && "invisible",
+            )}
+          >
+            Offline mode.{" "}
+            <a
+              href="https://x.com/login"
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => {
+                onLogin?.().catch(() => {});
+              }}
+              className="underline hover:text-muted"
+            >
+              Log in
+            </a>{" "}
+            to sync new bookmarks.
+          </p>
         </footer>
 
         {showWallpaper && wallpaperCredit && (

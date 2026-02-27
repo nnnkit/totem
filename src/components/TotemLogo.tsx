@@ -12,10 +12,11 @@ export function TotemLogo({ className = "size-12" }: Props) {
           <stop offset="100%" stopColor="white" stopOpacity="0" />
         </linearGradient>
       </defs>
-      <path d="M10 90L90 90L90 10Z" fill="#e07a5f" />
-      <path d="M90 10L55 45L90 90Z" fill="#c96b50" />
-      <path d="M55 45L90 10" stroke="rgba(255,255,255,0.2)" strokeWidth="1.5" />
-      <path d="M10 90L90 90L90 10Z" fill="url(#totem-shine)" />
+      <rect width="100" height="100" rx="18" fill="#1c1c1e" />
+      <path d="M20 80L80 80L80 20Z" fill="#e07a5f" />
+      <path d="M80 20L52.5 47.5L80 80Z" fill="#c96b50" />
+      <path d="M52.5 47.5L80 20" stroke="rgba(255,255,255,0.2)" strokeWidth="1.5" />
+      <path d="M20 80L80 80L80 20Z" fill="url(#totem-shine)" />
     </svg>
   );
 }
