@@ -91,7 +91,7 @@
         operation,
         tweetId: tweetId || "",
       },
-      "*",
+      window.location.origin,
     );
   };
 
@@ -167,7 +167,7 @@
     function next() {
       if (idx >= queue.length) {
         if (Object.keys(found).length > 0) {
-          window.postMessage({ __source: SOURCE, type: "query_ids", ids: found }, "*");
+          window.postMessage({ __source: SOURCE, type: "query_ids", ids: found }, window.location.origin);
         }
         return;
       }
@@ -183,7 +183,7 @@
           }
           var allFound = targets.every(function (n) { return !!found[n]; });
           if (allFound) {
-            window.postMessage({ __source: SOURCE, type: "query_ids", ids: found }, "*");
+            window.postMessage({ __source: SOURCE, type: "query_ids", ids: found }, window.location.origin);
           } else {
             next();
           }
