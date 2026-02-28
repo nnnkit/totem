@@ -18,7 +18,7 @@ import {
   toTimestamp,
   parseMaybeJson,
 } from "../lib/json";
-import { compactText, expandText, profileImageUrl } from "../lib/text";
+import { compactText, decodeHtmlEntities, expandText, profileImageUrl } from "../lib/text";
 
 interface ParsedTweetRecord {
   bookmark: Bookmark;
@@ -145,7 +145,7 @@ function textFromArticleBlocks(contentState: UnknownRecord | null): string {
 
   for (const block of blocks) {
     const type = asString(block.type) || "";
-    const text = compactText(asString(block.text) || "");
+    const text = decodeHtmlEntities(compactText(asString(block.text) || ""));
     if (type === "atomic" || !text) continue;
 
     if (type === "unordered-list-item") {
@@ -263,7 +263,7 @@ function extractContentBlocks(
 
   const blocks: ArticleContentBlock[] = rawBlocks.map((block) => ({
     type: asString(block.type) || "unstyled",
-    text: asString(block.text) || "",
+    text: decodeHtmlEntities(asString(block.text) || ""),
     inlineStyleRanges: parseInlineStyleRanges(block.inlineStyleRanges),
     entityRanges: parseEntityRanges(block.entityRanges),
     depth: typeof block.depth === "number" ? block.depth : 0,
@@ -320,7 +320,7 @@ function extractContentBlocks(
 function articleTextFromNode(node: UnknownRecord): string {
   const contentState = asRecord(node.content_state);
   const body = asRecord(node.article_body);
-  return pickLongest([
+  return decodeHtmlEntities(pickLongest([
     asString(node.preview_text),
     asString(node.plain_text),
     asString(node.plainText),
@@ -329,7 +329,7 @@ function articleTextFromNode(node: UnknownRecord): string {
     asString(asRecord(node.body)?.plain_text),
     asString(asRecord(asRecord(node.content)?.article_body)?.plain_text),
     textFromArticleBlocks(contentState),
-  ]);
+  ]));
 }
 
 function articleCoverImageFromNode(node: UnknownRecord): string {
@@ -411,12 +411,12 @@ function extractArticle(tweet: UnknownRecord): ArticleContent | null {
     if (plainText && isLikelyArticleNode) {
       const normalized = normalizeArticleText(plainText);
       if (normalized) {
-        const title = pickLongest([
+        const title = decodeHtmlEntities(pickLongest([
           asString(node.title),
           asString(node.display_title),
           asString(articleBody?.title),
           asString(asRecord(asRecord(node.article_results)?.result)?.title),
-        ]);
+        ]));
 
         const candidate: ArticleContent = {
           plainText: normalized,
@@ -492,8 +492,8 @@ function parseCard(
   return {
     cardUrl,
     card: {
-      title,
-      description: str("description") || undefined,
+      title: decodeHtmlEntities(title),
+      description: decodeHtmlEntities(str("description")) || undefined,
       imageUrl: imageUrl || undefined,
       imageAlt: str("photo_image_full_size_alt_text") || undefined,
       domain: str("vanity_url") || str("domain") || undefined,
@@ -520,7 +520,7 @@ function parseTweetText(tweet: UnknownRecord, legacy: UnknownRecord) {
       const urls = parseUrls(noteEntities);
       attachCardToUrls(tweet, urls);
       return {
-        text: expandText(noteText, parseUrlMappings(noteEntities)),
+        text: decodeHtmlEntities(expandText(noteText, parseUrlMappings(noteEntities))),
         urls,
       };
     }
@@ -528,7 +528,7 @@ function parseTweetText(tweet: UnknownRecord, legacy: UnknownRecord) {
 
   const entities = asRecord(legacy.entities);
   const fullText = asString(legacy.full_text) || "";
-  const expanded = expandText(fullText, parseUrlMappings(entities));
+  const expanded = decodeHtmlEntities(expandText(fullText, parseUrlMappings(entities)));
   const urls = parseUrls(entities);
   attachCardToUrls(tweet, urls);
   const article = extractArticle(tweet);
@@ -558,11 +558,12 @@ function parseAuthor(core: UnknownRecord): Bookmark["author"] | null {
   const avatar = asRecord(userResult.avatar);
   const verification = asRecord(userResult.verification);
 
-  const name =
+  const name = decodeHtmlEntities(
     asString(userLegacy?.name) ||
     asString(userCore?.name) ||
     asString(userResult.name) ||
-    "Unknown";
+    "Unknown",
+  );
   const screenName =
     asString(userLegacy?.screen_name) ||
     asString(userCore?.screen_name) ||
@@ -575,9 +576,11 @@ function parseAuthor(core: UnknownRecord): Bookmark["author"] | null {
     "";
 
   const bio =
-    asString(asRecord(userResult.profile_bio)?.description) ||
-    asString(userLegacy?.description) ||
-    undefined;
+    decodeHtmlEntities(
+      asString(asRecord(userResult.profile_bio)?.description) ||
+      asString(userLegacy?.description) ||
+      "",
+    ) || undefined;
 
   const followersCount =
     typeof userLegacy?.followers_count === "number"

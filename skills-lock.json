@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "skills": {
+    "requesting-code-review": {
+      "source": "obra/superpowers",
+      "sourceType": "github",
+      "computedHash": "93a837ba79c3c3f0b3e503fd9d8b54c638337d73d200c1af3bca9607264bf0e0"
+    }
+  }
+}

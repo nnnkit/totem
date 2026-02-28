@@ -266,9 +266,7 @@ export function TweetHeader({ author, displayKind, createdAt, readingMinutes }: 
             )}
           </div>
           <div className="flex items-center gap-1 text-xs text-muted">
-            {createdAt > 0 && (
-              <span>{formatHeaderDate(createdAt)}</span>
-            )}
+            <span>@{author.screenName}</span>
             {author.followersCount != null && (
               <>
                 <span>&middot;</span>
@@ -294,6 +292,14 @@ export function TweetHeader({ author, displayKind, createdAt, readingMinutes }: 
       {/* Meta row: kind pill + reading time */}
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <TweetKindPill kind={displayKind} />
+        {createdAt > 0 && (
+          <>
+            <span className="text-xs text-muted">&middot;</span>
+            <span className="text-xs text-muted">
+              {formatHeaderDate(createdAt)}
+            </span>
+          </>
+        )}
         {readingMinutes != null && readingMinutes > 1 && (
           <>
             <span className="text-xs text-muted">&middot;</span>

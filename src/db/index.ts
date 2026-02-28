@@ -5,6 +5,7 @@ import type {
   ReadingProgress,
   Highlight,
 } from "../types";
+import { sanitizeBookmark } from "../lib/sanitize";
 import {
   DB_NAME,
   DB_VERSION,
@@ -243,7 +244,7 @@ export async function getAllBookmarks(): Promise<Bookmark[]> {
   }
 
   await tx.done;
-  return rows;
+  return rows.map(sanitizeBookmark);
 }
 
 export async function clearAllLocalData(): Promise<void> {

@@ -42,3 +42,26 @@ export function truncateLabel(text: string, maxLen = TRUNCATE_LABEL_MAX): string
 export function formatCompactNumber(n: number): string {
   return new Intl.NumberFormat("en", { notation: "compact" }).format(n);
 }
+
+const NAMED_ENTITIES: Record<string, string> = {
+  "&amp;": "&",
+  "&lt;": "<",
+  "&gt;": ">",
+  "&quot;": '"',
+  "&apos;": "'",
+  "&#39;": "'",
+};
+
+const NAMED_RE = /&(?:amp|lt|gt|quot|apos|#39);/g;
+
+export function decodeHtmlEntities(text: string): string {
+  if (!text || !/&/.test(text)) return text;
+  // Decode &amp; first to unwrap double-encoded entities like &amp;#39; → &#39;
+  return text
+    .replace(/&amp;/g, "&")
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) =>
+      String.fromCodePoint(parseInt(hex, 16)),
+    )
+    .replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(Number(dec)))
+    .replace(NAMED_RE, (match) => NAMED_ENTITIES[match] || match);
+}
