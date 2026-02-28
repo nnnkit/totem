@@ -49,10 +49,9 @@ const NAMED_ENTITIES: Record<string, string> = {
   "&gt;": ">",
   "&quot;": '"',
   "&apos;": "'",
-  "&#39;": "'",
 };
 
-const NAMED_RE = /&(?:amp|lt|gt|quot|apos|#39);/g;
+const NAMED_RE = /&(?:amp|lt|gt|quot|apos);/g;
 
 export function decodeHtmlEntities(text: string): string {
   if (!text || !/&/.test(text)) return text;

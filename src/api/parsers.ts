@@ -145,7 +145,7 @@ function textFromArticleBlocks(contentState: UnknownRecord | null): string {
 
   for (const block of blocks) {
     const type = asString(block.type) || "";
-    const text = decodeHtmlEntities(compactText(asString(block.text) || ""));
+    const text = compactText(asString(block.text) || "");
     if (type === "atomic" || !text) continue;
 
     if (type === "unordered-list-item") {

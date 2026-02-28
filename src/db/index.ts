@@ -244,7 +244,8 @@ export async function getAllBookmarks(): Promise<Bookmark[]> {
   }
 
   await tx.done;
-  return rows.map(sanitizeBookmark);
+  rows.forEach(sanitizeBookmark);
+  return rows;
 }
 
 export async function clearAllLocalData(): Promise<void> {

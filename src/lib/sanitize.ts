@@ -32,12 +32,11 @@ function sanitizeEmbeddedTweet(tweet: QuotedTweet): void {
   if (tweet.article) sanitizeArticle(tweet.article);
 }
 
-export function sanitizeBookmark(bookmark: Bookmark): Bookmark {
+export function sanitizeBookmark(bookmark: Bookmark): void {
   bookmark.text = decodeHtmlEntities(bookmark.text);
   sanitizeAuthor(bookmark.author);
   sanitizeUrls(bookmark.urls);
   if (bookmark.article) sanitizeArticle(bookmark.article);
   if (bookmark.quotedTweet) sanitizeEmbeddedTweet(bookmark.quotedTweet);
   if (bookmark.retweetedTweet) sanitizeEmbeddedTweet(bookmark.retweetedTweet);
-  return bookmark;
 }
