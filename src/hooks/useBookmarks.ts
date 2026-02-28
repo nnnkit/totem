@@ -156,10 +156,9 @@ export function useBookmarks(isReady: boolean): UseBookmarksReturn {
     runCleanup().catch(() => {});
   }, []);
 
-  // ── Effect 1: Init (once, when auth ready) ──
+  // ── Effect 1: Init local cache (always) + sync (when auth ready) ──
 
   useEffect(() => {
-    if (!isReady) return;
     let cancelled = false;
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
@@ -175,7 +174,14 @@ export function useBookmarks(isReady: boolean): UseBookmarksReturn {
           setBookmarks(stored);
           bookmarksRef.current = stored;
         }
+
+        if (!isReady) {
+          setSyncStatus("idle");
+          return;
+        }
+
         const meta = await chrome.storage.local.get([CS_LAST_SYNC]);
+        if (cancelled) return;
         const lastSyncAt = Number(meta[CS_LAST_SYNC] || 0);
 
         if (stored.length === 0 || isStale(lastSyncAt)) {
@@ -186,8 +192,12 @@ export function useBookmarks(isReady: boolean): UseBookmarksReturn {
       })
       .catch(() => {
         if (cancelled) return;
-        // DB failed — try syncing from API as fallback
-        sync();
+        if (isReady) {
+          // DB failed — try syncing from API as fallback
+          sync();
+        } else {
+          setSyncStatus("idle");
+        }
       })
       .finally(() => {
         if (timeoutId !== null) clearTimeout(timeoutId);
@@ -197,7 +207,7 @@ export function useBookmarks(isReady: boolean): UseBookmarksReturn {
       cancelled = true;
       if (timeoutId !== null) clearTimeout(timeoutId);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- sync is stable, only run on isReady
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- sync is stable, rerun when auth readiness changes
   }, [isReady]);
 
   // ── Effect 2: Reauth (when syncStatus === "reauthing") ──

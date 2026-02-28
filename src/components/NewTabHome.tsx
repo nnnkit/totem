@@ -559,7 +559,7 @@ export function NewTabHome({
             >
               Log in
             </a>{" "}
-            to sync new bookmarks.
+            to see all your bookmarks.
           </p>
         </footer>
 

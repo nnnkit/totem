@@ -20,7 +20,7 @@ export function OfflineBanner({ onLogin }: Props) {
             >
               Log in
             </a>{" "}
-            to sync new bookmarks.
+            to see all your bookmarks.
           </>
         )}
       </p>

@@ -39,7 +39,7 @@ A public privacy policy URL is **mandatory** given the permissions we request. M
 
 - [ ] What data is collected:
   - Twitter auth headers (authorization, cookies, CSRF token) — captured passively from existing x.com sessions
-  - Twitter user ID (from twid cookie)
+  - Twitter user ID (derived from twid value inside captured auth cookie header)
   - Bookmarked tweets and their content
   - Reading progress, highlights, and notes
   - User settings and theme preferences
@@ -82,11 +82,9 @@ A public privacy policy URL is **mandatory** given the permissions we request. M
 
 For the Web Store submission form, write a justification for each permission:
 
-- [ ] **cookies** — "Reads the twid cookie on x.com to identify the logged-in Twitter user. No cookies are created, modified, or sent anywhere."
 - [ ] **storage** — "Stores bookmark data, reading progress, highlights, and user settings locally. Uses chrome.storage.sync for cross-device settings only."
 - [ ] **webRequest** — "Passively observes x.com API requests to capture authentication headers needed to fetch the user's own bookmarks. No requests are blocked or modified via webRequest."
 - [ ] **declarativeNetRequest** — "Adds required headers to API requests made to x.com so bookmark fetch requests are properly authenticated."
-- [ ] **tabs** — "Opens a single x.com tab when re-authentication is needed (auth headers expired). No tab content is read or modified beyond this."
 - [ ] **https://x.com/*** — "Needed to run content scripts that detect the logged-in user and capture bookmark create/delete events in real-time. The extension only interacts with x.com."
 - [ ] **topSites (optional)** — "Displays the user's most visited sites on the new tab page, only when the user enables this feature."
 - [ ] **favicon (optional)** — "Shows website favicons next to top sites and links in the new tab page."

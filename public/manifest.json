@@ -8,7 +8,7 @@
     "48": "icons/icon-48.png",
     "128": "icons/icon-128.png"
   },
-  "permissions": ["cookies", "storage", "webRequest", "declarativeNetRequest"],
+  "permissions": ["storage", "webRequest", "declarativeNetRequest"],
   "optional_permissions": ["topSites", "favicon", "search"],
   "host_permissions": ["https://x.com/*"],
   "content_security_policy": {

@@ -40,8 +40,6 @@
 
   if (currentUserId) {
     chrome.storage.local.set({ totem_user_id: currentUserId });
-  } else {
-    chrome.storage.local.remove(["totem_user_id"]);
   }
 
   function handleBookmarkMutationMessage(event) {

@@ -170,7 +170,7 @@ export default function App() {
 
   const bookmarksLoading =
     phase === "loading" ||
-    syncStatus === "loading" ||
+    (isReady && syncStatus === "loading") ||
     (offlineMode && !detailedIdsLoaded);
 
   const needsLogin = !showCached && (phase === "need_login" || phase === "connecting");

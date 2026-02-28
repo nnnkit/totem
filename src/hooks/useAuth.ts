@@ -67,6 +67,16 @@ type AuthAction =
 function authReducer(state: AuthState, action: AuthAction): AuthState {
   switch (action.type) {
     case "CHECK_RESULT": {
+      if (action.hasAuth && action.hasQueryId) {
+        return {
+          ...state,
+          phase: "ready",
+          captureStarted: false,
+          triedNoUserCapture: false,
+          pendingRetry: null,
+        };
+      }
+
       if (!action.hasUser) {
         if (!state.triedNoUserCapture) {
           return {
@@ -82,16 +92,6 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
           ...state,
           phase: "need_login",
           captureStarted: false,
-          pendingRetry: null,
-        };
-      }
-
-      if (action.hasAuth && action.hasQueryId) {
-        return {
-          ...state,
-          phase: "ready",
-          captureStarted: false,
-          triedNoUserCapture: false,
           pendingRetry: null,
         };
       }

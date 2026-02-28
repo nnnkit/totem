@@ -84,7 +84,7 @@ const DETAIL_FEATURE_OVERRIDES = {
 
 
 // ═══════════════════════════════════════════════════════════
-// AUTH & COOKIE HELPERS
+// AUTH HELPERS
 // ═══════════════════════════════════════════════════════════
 
 // NOTE: parseTwidUserId is intentionally duplicated in detect-user.js.
@@ -116,35 +116,17 @@ function parseTwidUserId(rawValue) {
   return null;
 }
 
-async function readUserIdFromTwidCookie() {
-  try {
-    const twidCookie = await chrome.cookies.get({
-      url: "https://x.com",
-      name: "twid",
-    });
-    return parseTwidUserId(twidCookie?.value || "");
-  } catch {
-    return null;
-  }
-}
-
-async function syncAuthSessionFromCookie(storedState = null) {
-  const userId = await readUserIdFromTwidCookie();
-  if (userId) {
-    if (storedState?.totem_user_id !== userId) {
-      await chrome.storage.local.set({ totem_user_id: userId });
+function getCookieHeaderValue(cookieHeader, name) {
+  if (typeof cookieHeader !== "string" || !cookieHeader) return "";
+  const prefix = `${name}=`;
+  const parts = cookieHeader.split(";");
+  for (const part of parts) {
+    const trimmed = part.trim();
+    if (trimmed.startsWith(prefix)) {
+      return trimmed.slice(prefix.length);
     }
-    return userId;
   }
-
-  // Avoid clearing stored auth state here: cookie reads can be unavailable
-  // transiently in service worker context even when the user is signed in.
-  const storedUserId =
-    typeof storedState?.totem_user_id === "string" &&
-    storedState.totem_user_id
-      ? storedState.totem_user_id
-      : null;
-  return storedUserId;
+  return "";
 }
 
 let authTabId = null;
@@ -935,7 +917,10 @@ async function handleCheckAuth() {
     "totem_auth_time",
   ]);
 
-  const userId = await syncAuthSessionFromCookie(stored);
+  const userId =
+    typeof stored.totem_user_id === "string" && stored.totem_user_id
+      ? stored.totem_user_id
+      : null;
   const hasAuthHeader = !!stored.totem_auth_headers?.authorization;
   const hasUser = Boolean(userId || hasAuthHeader);
 
@@ -1186,6 +1171,12 @@ chrome.webRequest.onSendHeaders.addListener(
       }
     }
 
+    const twidRaw = getCookieHeaderValue(headers["cookie"], "twid");
+    const userIdFromHeader = parseTwidUserId(twidRaw);
+    if (userIdFromHeader) {
+      chrome.storage.local.set({ totem_user_id: userIdFromHeader }).catch(() => {});
+    }
+
     if (headers["authorization"] && headers["cookie"] && headers["x-csrf-token"]) {
       chrome.storage.local.set({
         totem_auth_headers: headers,
@@ -1412,23 +1403,8 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 });
 
 // ═══════════════════════════════════════════════════════════
-// COOKIE LISTENER & STARTUP
+// STARTUP
 // ═══════════════════════════════════════════════════════════
-
-chrome.cookies.onChanged.addListener((changeInfo) => {
-  const cookie = changeInfo?.cookie;
-  if (!cookie || cookie.name !== "twid") return;
-
-  const domain = String(cookie.domain || "")
-    .replace(/^\./, "")
-    .toLowerCase();
-  if (!domain.endsWith("x.com")) return;
-
-  // Ignore remove events caused by overwrite to avoid flicker while the new value is set.
-  if (changeInfo.removed && changeInfo.cause === "overwrite") return;
-
-  syncAuthSessionFromCookie().catch(() => {});
-});
 
 runWeeklyServiceWorkerCleanup().catch(() => {});
 
