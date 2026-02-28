@@ -8,41 +8,21 @@
     "48": "icons/icon-48.png",
     "128": "icons/icon-128.png"
   },
-  "permissions": [
-    "cookies",
-    "storage",
-    "webRequest",
-    "declarativeNetRequest",
-    "tabs"
-  ],
-  "optional_permissions": [
-    "topSites",
-    "favicon",
-    "search"
-  ],
-  "host_permissions": [
-    "https://x.com/*"
-  ],
+  "permissions": ["cookies", "storage", "webRequest", "declarativeNetRequest"],
+  "optional_permissions": ["topSites", "favicon", "search"],
+  "host_permissions": ["https://x.com/*"],
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; img-src 'self' https://pbs.twimg.com https://*.twimg.com data:; media-src 'self' https://video.twimg.com https://*.twimg.com"
   },
   "content_scripts": [
     {
-      "matches": [
-        "https://x.com/*"
-      ],
-      "js": [
-        "content/detect-user.js"
-      ],
+      "matches": ["https://x.com/*"],
+      "js": ["content/detect-user.js"],
       "run_at": "document_start"
     },
     {
-      "matches": [
-        "https://x.com/*"
-      ],
-      "js": [
-        "content/mutation-hook.js"
-      ],
+      "matches": ["https://x.com/*"],
+      "js": ["content/mutation-hook.js"],
       "run_at": "document_start",
       "world": "MAIN"
     }
