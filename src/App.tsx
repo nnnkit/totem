@@ -5,7 +5,13 @@ import { usePrefetchDetails } from "./hooks/usePrefetchDetails";
 import { useTheme } from "./hooks/useTheme";
 import { useSettings } from "./hooks/useSettings";
 import { useKeyboardNavigation } from "./hooks/useKeyboard";
-import { ensureReadingProgressExists, markReadingProgressCompleted, markReadingProgressUncompleted } from "./db";
+import {
+  ensureReadingProgressExists,
+  markReadingProgressCompleted,
+  markReadingProgressUncompleted,
+  getTweetDetailCache,
+  getAllReadingProgress,
+} from "./db";
 import { pickRelatedBookmarks } from "./lib/related";
 import { resetLocalData } from "./lib/reset";
 import { LS_READING_TAB } from "./lib/storage-keys";
@@ -15,7 +21,47 @@ import { BookmarksList, type ReadingTab } from "./components/BookmarksList";
 import { SettingsModal } from "./components/SettingsModal";
 import { Toast } from "./components/ui/Toast";
 import { useContinueReading } from "./hooks/useContinueReading";
-import type { Bookmark } from "./types";
+import type { Bookmark, ThreadTweet } from "./types";
+
+interface DemoExportPayload {
+  generatedAt: string;
+  source: "totem-extension-newtab";
+  bookmarks: Bookmark[];
+  detailByTweetId: Record<string, {
+    focalTweet: Bookmark | null;
+    thread: ThreadTweet[];
+    fetchedAt: number;
+  }>;
+  threadByTweetId: Record<string, ThreadTweet[]>;
+  readingProgress: Array<{
+    tweetId: string;
+    openedAt: number;
+    lastReadAt: number;
+    scrollY: number;
+    scrollHeight: number;
+    completed: boolean;
+  }>;
+  settings: {
+    showTopSites: boolean;
+    showSearchBar: boolean;
+    topSitesLimit: number;
+    backgroundMode: "gradient" | "images";
+    searchEngine: "google" | "bing" | "duckduckgo" | "yahoo" | "brave" | "ecosia" | "default";
+  };
+  themePreference: "system" | "light" | "dark";
+  stats: {
+    bookmarkCount: number;
+    detailCount: number;
+    threadCount: number;
+    progressCount: number;
+  };
+}
+
+declare global {
+  interface Window {
+    totemExportDemoData?: () => Promise<DemoExportPayload>;
+  }
+}
 
 interface ToastState {
   message: string;
@@ -167,6 +213,87 @@ export default function App() {
       window.history.replaceState({}, "", window.location.pathname);
     }
   }, [displayBookmarks, openBookmark]);
+
+  useEffect(() => {
+    window.totemExportDemoData = async () => {
+      const detailEntries = await Promise.all(
+        bookmarks.map(async (bookmark) => {
+          const detail = await getTweetDetailCache(bookmark.tweetId).catch(() => null);
+          return [bookmark.tweetId, detail] as const;
+        }),
+      );
+
+      const detailByTweetId: DemoExportPayload["detailByTweetId"] = {};
+      const threadByTweetId: DemoExportPayload["threadByTweetId"] = {};
+      let detailCount = 0;
+      let threadCount = 0;
+
+      for (const [tweetId, detail] of detailEntries) {
+        if (!detail) continue;
+        detailCount += 1;
+        if (detail.thread.length > 0) {
+          threadByTweetId[tweetId] = detail.thread;
+          threadCount += 1;
+        }
+        detailByTweetId[tweetId] = {
+          focalTweet: detail.focalTweet,
+          thread: detail.thread,
+          fetchedAt: detail.fetchedAt,
+        };
+      }
+
+      const readingProgress = await getAllReadingProgress().catch(() => []);
+
+      const payload: DemoExportPayload = {
+        generatedAt: new Date().toISOString(),
+        source: "totem-extension-newtab",
+        bookmarks,
+        detailByTweetId,
+        threadByTweetId,
+        readingProgress,
+        settings,
+        themePreference,
+        stats: {
+          bookmarkCount: bookmarks.length,
+          detailCount,
+          threadCount,
+          progressCount: readingProgress.length,
+        },
+      };
+
+      const json = JSON.stringify(payload, null, 2);
+      const snippet = [
+        "// Copy into website/src/demo/fixtures.ts and adapt as needed",
+        `export const DEMO_BOOKMARKS = ${JSON.stringify(payload.bookmarks, null, 2)};`,
+        `export const DEMO_THREAD_LOOKUP = ${JSON.stringify(payload.threadByTweetId, null, 2)};`,
+      ].join("\n\n");
+
+      // eslint-disable-next-line no-console
+      console.log("[Totem] Demo export JSON (copy this):");
+      // eslint-disable-next-line no-console
+      console.log(json);
+      // eslint-disable-next-line no-console
+      console.log("[Totem] Demo fixture snippet:");
+      // eslint-disable-next-line no-console
+      console.log(snippet);
+
+      if (navigator.clipboard?.writeText) {
+        try {
+          await navigator.clipboard.writeText(json);
+          // eslint-disable-next-line no-console
+          console.log("[Totem] Copied JSON to clipboard.");
+        } catch {
+          // Clipboard may be blocked by browser policy; JSON is still logged.
+        }
+      }
+
+      return payload;
+    };
+
+    return () => {
+      delete window.totemExportDemoData;
+    };
+  }, [bookmarks, settings, themePreference]);
 
   const bookmarksLoading =
     phase === "loading" ||

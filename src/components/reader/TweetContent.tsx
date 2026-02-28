@@ -78,12 +78,6 @@ function TweetBody({
               @{tweet.retweetedTweet.author.screenName}
             </span>
           </div>
-          <div className="mt-3">
-            <TweetBody
-              tweet={toEmbeddedReaderTweet(tweet.retweetedTweet)}
-              compact
-            />
-          </div>
         </div>
       </>
     );

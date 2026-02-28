@@ -1,20 +1,31 @@
 import type { Bookmark } from "../../types";
-import { normalizeText } from "./utils";
-import { RichTextBlock } from "./TweetText";
 import { TweetMedia } from "./TweetMedia";
 import { TweetLinks } from "./TweetLinks";
+import { RichTextBlock } from "./TweetText";
+import { normalizeText } from "./utils";
 
 interface Props {
   quotedTweet: Bookmark["quotedTweet"];
 }
 
+const EXCERPT_LENGTH = 140;
+
 export function TweetQuote({ quotedTweet }: Props) {
   if (!quotedTweet) return null;
 
-  const articleText = quotedTweet.article?.plainText?.trim() || "";
-  const showArticle =
-    articleText.length > 0 &&
-    normalizeText(articleText) !== normalizeText(quotedTweet.text);
+  const twitterUrl = `https://x.com/${quotedTweet.author.screenName}/status/${quotedTweet.tweetId}`;
+  const article = quotedTweet.article ?? null;
+  const articleText = article?.plainText?.trim() ?? "";
+
+  // Suppress the tweet text when it's just the article intro (same content)
+  const textMatchesArticle =
+    article != null && normalizeText(articleText) === normalizeText(quotedTweet.text);
+  const showTweetText = article == null || !textMatchesArticle;
+
+  const excerpt =
+    articleText.length > EXCERPT_LENGTH
+      ? articleText.slice(0, EXCERPT_LENGTH).trimEnd() + "…"
+      : articleText;
 
   return (
     <div className="mt-5 rounded border border-border p-4">
@@ -33,33 +44,45 @@ export function TweetQuote({ quotedTweet }: Props) {
         </span>
       </div>
 
-      <RichTextBlock
-        text={quotedTweet.text}
-        compact
-        style="tweet"
-      />
+      {showTweetText && (
+        <RichTextBlock text={quotedTweet.text} compact style="tweet" />
+      )}
 
       <TweetMedia items={quotedTweet.media} />
 
-      {showArticle && (
-        <section className="mt-5 rounded border border-border bg-surface-link-card px-4 py-3">
-          {quotedTweet.article?.title && (
-            <h3 className="text-base font-semibold text-balance text-foreground">
-              {quotedTweet.article.title}
-            </h3>
-          )}
-          <div className="mt-2">
-            <RichTextBlock
-              text={articleText}
-              compact
-              style="article"
+      {article != null ? (
+        <a
+          href={twitterUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-3 block overflow-hidden rounded border border-border bg-surface-link-card no-underline transition-colors hover:bg-surface-hover"
+        >
+          {article.coverImageUrl && (
+            <img
+              src={article.coverImageUrl}
+              alt=""
+              className="h-36 w-full object-cover"
+              loading="lazy"
             />
+          )}
+          <div className="px-3 py-2.5">
+            <p className="text-[11px] font-medium uppercase tracking-wide text-muted">
+              X Article
+            </p>
+            {article.title && (
+              <p className="mt-0.5 text-sm font-semibold text-foreground">
+                {article.title}
+              </p>
+            )}
+            {excerpt && (
+              <p className="mt-1 line-clamp-2 text-xs text-muted">{excerpt}</p>
+            )}
           </div>
-        </section>
-      )}
-
-      {quotedTweet.urls && quotedTweet.urls.length > 0 && (
-        <TweetLinks urls={quotedTweet.urls} />
+        </a>
+      ) : (
+        quotedTweet.urls && quotedTweet.urls.length > 0 && (
+          <TweetLinks urls={quotedTweet.urls} />
+        )
       )}
     </div>
   );
