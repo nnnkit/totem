@@ -72,17 +72,15 @@ interface ToastState {
 type AppView = "home" | "reading";
 
 export default function App() {
-  const { phase, startLogin } = useAuth();
+  const { phase, capability, startLogin } = useAuth();
   const { themePreference, setThemePreference } = useTheme();
   const { settings, updateSettings } = useSettings();
   const isReady = phase === "ready";
   const { bookmarks, syncStatus, refresh, reset, unbookmark } = useBookmarks(isReady);
   const hasBookmarks = bookmarks.length > 0;
-  const authUnavailable =
-    phase === "need_login" ||
-    phase === "connecting" ||
-    syncStatus === "reauthing";
+  const authUnavailable = phase === "need_login" || syncStatus === "reauthing";
   const offlineMode = hasBookmarks && authUnavailable;
+  const bookmarksApiReady = capability.bookmarksApi === "ready";
   const [view, setView] = useState<AppView>("home");
   const [selectedBookmarkRaw, setSelectedBookmark] = useState<Bookmark | null>(
     null,
@@ -308,14 +306,18 @@ export default function App() {
     (isReady && syncStatus === "loading") ||
     (offlineMode && !detailedIdsLoaded);
   const hasDisplayBookmarks = displayBookmarks.length > 0;
-  const canSync = isReady && syncStatus !== "reauthing" && !isResetting;
+  const canSync = isReady && bookmarksApiReady && syncStatus !== "reauthing" && !isResetting;
   const syncDisabledReason = !canSync
     ? (
         isResetting
           ? "Reset in progress..."
-          : phase === "loading" || phase === "connecting"
-            ? "Connecting to X..."
-            : "Log in to X to sync bookmarks"
+          : !isReady
+            ? phase === "connecting"
+              ? "Connecting to X..."
+              : "Log in to X to sync bookmarks"
+            : !bookmarksApiReady
+              ? "Preparing X API..."
+              : "Reconnect to X to sync bookmarks"
       )
     : undefined;
 

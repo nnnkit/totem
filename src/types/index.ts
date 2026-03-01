@@ -138,6 +138,13 @@ export interface TweetDetailCache {
 }
 
 export type AuthState = "authenticated" | "stale" | "logged_out";
+export type SessionState = "unknown" | "logged_in" | "logged_out";
+export type ApiCapabilityState = "unknown" | "ready" | "blocked";
+
+export interface ApiCapability {
+  bookmarksApi: ApiCapabilityState;
+  detailApi: ApiCapabilityState;
+}
 
 export interface AuthStatus {
   hasUser: boolean;
@@ -145,6 +152,8 @@ export interface AuthStatus {
   hasQueryId: boolean;
   userId: string | null;
   authState: AuthState;
+  sessionState: SessionState;
+  capability: ApiCapability;
 }
 
 export type SyncStatus = "loading" | "syncing" | "idle" | "error" | "reauthing";

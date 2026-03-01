@@ -1108,20 +1108,34 @@ async function handleCheckAuth(options = {}) {
     }
   }
 
-  const hasUser = authState !== AUTH_STATE_LOGGED_OUT && Boolean(userId || hasAuthHeader);
+  const sessionState = authState === AUTH_STATE_LOGGED_OUT
+    ? "logged_out"
+    : hasAuthHeader || authState === AUTH_STATE_AUTHENTICATED
+      ? "logged_in"
+      : "unknown";
+
+  const hasUser = sessionState !== "logged_out" && Boolean(userId || hasAuthHeader);
 
   // Query IDs are resolved on-demand from in-memory cache / bundles.
   // Check if we already have one cached, or try to resolve it now.
-  const bookmarksQid = hasAuthHeader
+  const bookmarksQid = sessionState === "logged_in"
     ? await resolveQueryId("Bookmarks").catch(() => null)
     : null;
+  const capability = {
+    bookmarksApi: sessionState === "logged_in"
+      ? (bookmarksQid ? "ready" : "blocked")
+      : "unknown",
+    detailApi: "unknown",
+  };
 
   return {
     hasUser,
-    hasAuth: authState === AUTH_STATE_AUTHENTICATED && hasAuthHeader,
-    hasQueryId: !!bookmarksQid,
+    hasAuth: sessionState === "logged_in" && hasAuthHeader,
+    hasQueryId: capability.bookmarksApi === "ready",
     userId,
     authState,
+    sessionState,
+    capability,
   };
 }
 

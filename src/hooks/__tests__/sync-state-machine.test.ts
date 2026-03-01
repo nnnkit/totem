@@ -67,6 +67,18 @@ describe("sync-state-machine", () => {
     });
     expect(error.syncStatus).toBe("error");
     expect(error.syncing).toBe(false);
+
+    const syncingThird = reduceSyncMachine(error, {
+      type: "SYNC_REQUEST",
+      isReady: true,
+      mode: "full",
+    });
+    const capabilityBlocked = reduceSyncMachine(syncingThird, {
+      type: "SYNC_FAILURE",
+      message: "NO_QUERY_ID",
+    });
+    expect(capabilityBlocked.syncStatus).toBe("error");
+    expect(capabilityBlocked.syncing).toBe(false);
   });
 
   it("ensures reset always returns to idle and ignores late sync completions", () => {
@@ -115,4 +127,3 @@ describe("sync-state-machine", () => {
     expect(next.initRunId).toBe(initial.initRunId + 3);
   });
 });
-
