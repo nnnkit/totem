@@ -6,11 +6,7 @@ import {
   LightningIcon,
 } from "@phosphor-icons/react";
 import type { Bookmark, ThreadTweet, TweetKind } from "../../types";
-import {
-  buildGrokUrl,
-  normalizeText,
-  resolveTweetKind,
-} from "./utils";
+import { buildGrokUrl, normalizeText, resolveTweetKind } from "./utils";
 import { estimateReadingMinutes } from "../../lib/bookmark-utils";
 import { TweetHeader } from "./TweetHeader";
 import { RichTextBlock } from "./TweetText";
@@ -28,6 +24,37 @@ interface TweetBodyProps {
   tweet: ReaderTweet;
   compact?: boolean;
   sectionIdPrefix?: string;
+}
+
+function normalizeArticleFingerprint(value: string | null | undefined): string {
+  if (!value) return "";
+  return normalizeText(value).replace(/\s+/g, " ").toLowerCase().trim();
+}
+
+function hasDuplicatedQuotedArticle(tweet: ReaderTweet): boolean {
+  const article = tweet.article;
+  const quotedArticle = tweet.quotedTweet?.article;
+  if (!article || !quotedArticle) return false;
+
+  const articleText = normalizeArticleFingerprint(article.plainText);
+  const quotedArticleText = normalizeArticleFingerprint(quotedArticle.plainText);
+  if (articleText && quotedArticleText && articleText === quotedArticleText) {
+    return true;
+  }
+
+  const articleTitle = normalizeArticleFingerprint(article.title);
+  const quotedArticleTitle = normalizeArticleFingerprint(quotedArticle.title);
+  const articleCover = normalizeArticleFingerprint(article.coverImageUrl);
+  const quotedArticleCover = normalizeArticleFingerprint(quotedArticle.coverImageUrl);
+
+  return Boolean(
+    articleTitle &&
+      quotedArticleTitle &&
+      articleTitle === quotedArticleTitle &&
+      articleCover &&
+      quotedArticleCover &&
+      articleCover === quotedArticleCover,
+  );
 }
 
 function stripCardUrls(
@@ -89,9 +116,12 @@ function TweetBody({
 
   const isArticleKind = kind === "article" && hasArticle;
   const hasArticleBlocks = Boolean(tweet.article?.contentBlocks?.length);
+  const suppressDuplicateQuotedArticle = hasDuplicatedQuotedArticle(tweet);
 
   const showArticle =
-    hasArticle && (isArticleKind || !textMatchesArticle || hasArticleBlocks);
+    hasArticle &&
+    !suppressDuplicateQuotedArticle &&
+    (isArticleKind || !textMatchesArticle || hasArticleBlocks);
   const showText = !((isArticleKind || hasArticleBlocks) && textMatchesArticle);
 
   const displayText = stripCardUrls(tweet.text, tweet.urls);
