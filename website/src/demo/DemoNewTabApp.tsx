@@ -117,14 +117,9 @@ function buildRuntimeSeed(payload: DemoPayload): RuntimeSeed {
     const focal = detail?.focalTweet ?? fallbackBookmark;
     if (!focal) continue;
 
-    const normalizedSortIndex =
-      typeof focal.sortIndex === "string" && focal.sortIndex.length > 0
-        ? focal.sortIndex
-        : String(focal.createdAt || Date.now());
-
     const normalizedFocal: Bookmark = {
       ...focal,
-      sortIndex: normalizedSortIndex,
+      sortIndex: focal.tweetId, // Force sortIndex = tweetId to suppress "New" badge in demo
     };
 
     detailByTweetId[tweetId] = {

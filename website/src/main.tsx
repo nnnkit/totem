@@ -10,7 +10,8 @@ if (!root) {
 }
 
 const pageAttr = root.dataset.page;
-const page: SitePage = pageAttr === "privacy" ? "privacy" : "landing";
+const page: SitePage =
+  pageAttr === "privacy" ? "privacy" : pageAttr === "demo" ? "demo" : "landing";
 
 createRoot(root).render(
   <StrictMode>

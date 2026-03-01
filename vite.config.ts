@@ -30,6 +30,7 @@ export default defineConfig({
       input: {
         website: resolve(__dirname, "website/index.html"),
         privacy: resolve(__dirname, "website/privacy.html"),
+        "demo-page": resolve(__dirname, "website/demo-page.html"),
         demo: resolve(__dirname, "website/demo.html"),
         newtab: resolve(__dirname, "newtab.html"),
       },
