@@ -34,7 +34,7 @@ export const FETCH_JITTER_MS = 1300;
 export const FETCH_READ_PAUSE_CHANCE = 0.15;
 export const FETCH_READ_PAUSE_MIN_MS = 1000;
 export const FETCH_READ_PAUSE_JITTER_MS = 2000;
+export const PAGE_FETCH_TIMEOUT_MS = 45_000;
 
 // ── Prefetch ────────────────────────────────────────────────
 export const PREFETCH_INTERVAL_MS = 45_000;
-

@@ -15,10 +15,12 @@ export const LEGACY_IDB_DATABASE_NAME = "xbt";
 // ── localStorage ───────────────────────────────────────────────────
 export const LS_READING_TAB = "totem_reading_tab";
 export const LS_WALLPAPER_INDEX = "totem_wallpaper_index";
+export const LS_MANUAL_SYNC_REQUIRED = "totem_manual_sync_required";
 
 export const LOCAL_STORAGE_KEYS = [
   LS_READING_TAB,
   LS_WALLPAPER_INDEX,
+  LS_MANUAL_SYNC_REQUIRED,
   "totem_has_bookmarks", // legacy — kept for reset cleanup
 ] as const;
 

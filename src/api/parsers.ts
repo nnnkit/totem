@@ -793,14 +793,17 @@ export function parseBookmarkPagePayload(payload: unknown): BookmarkPageResult {
     return { bookmarks: [], cursor: null, stopOnEmptyResponse: false };
   }
 
-  const addEntries = asRecords(timelineRecord.instructions).find(
-    (instruction) => instruction.type === "TimelineAddEntries",
-  );
-  if (!addEntries) {
+  const instructions = asRecords(timelineRecord.instructions);
+  const entries = instructions.flatMap((instruction) => {
+    const list = asRecords(instruction.entries);
+    const single = asRecord(instruction.entry);
+    if (single) list.push(single);
+    return list;
+  });
+  if (entries.length === 0) {
     return { bookmarks: [], cursor: null, stopOnEmptyResponse: false };
   }
 
-  const entries = asRecords(addEntries.entries);
   const bookmarks: Bookmark[] = [];
   let nextCursor: string | null = null;
   let stopOnEmptyResponse = false;

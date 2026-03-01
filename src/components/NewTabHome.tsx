@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import {
+  ArrowsClockwiseIcon,
   GearSixIcon,
   LinkBreakIcon,
   MagnifyingGlassIcon,
@@ -49,6 +50,8 @@ interface Props {
   onLogin?: () => Promise<void>;
   bookmarksLoading?: boolean;
   isResetting?: boolean;
+  canSync?: boolean;
+  syncDisabledReason?: string;
 }
 
 interface DecoratedBookmark {
@@ -79,6 +82,8 @@ export function NewTabHome({
   onLogin,
   bookmarksLoading,
   isResetting,
+  canSync = true,
+  syncDisabledReason,
 }: Props) {
   const [now, setNow] = useState(() => new Date());
   const [imgLoaded, setImgLoaded] = useState(false);
@@ -176,6 +181,12 @@ export function NewTabHome({
       authPhase !== "connecting" &&
       authPhase !== "need_login",
   );
+  const syncing = syncStatus === "syncing";
+  const syncDisabled = syncing || !canSync;
+  const syncTitle =
+    syncing
+      ? "Syncing bookmarks..."
+      : syncDisabledReason || "Sync bookmarks";
 
   return (
     <div className="totem-home relative flex h-dvh flex-col overflow-hidden bg-surface text-home-fg">
@@ -203,16 +214,31 @@ export function NewTabHome({
 
       <header className="relative z-20 flex w-full items-center justify-between px-6 pt-5 sm:px-8">
         <TotemLogo className="size-8" />
-        <button
-
-          type="button"
-          onClick={onOpenSettings}
-          className="rounded border border-transparent bg-transparent p-2 text-on-bg-muted transition-colors duration-150 ease-hover hover:border-white/15 hover:bg-white/5 hover:text-on-bg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80"
-          aria-label="Open settings"
-          title="Settings"
-        >
-          <GearSixIcon className="size-5" />
-        </button>
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={onSync}
+            disabled={syncDisabled}
+            className="border border-transparent bg-transparent text-on-bg-muted hover:border-white/15 hover:bg-white/5 hover:text-on-bg disabled:cursor-default disabled:opacity-60"
+            aria-label="Sync bookmarks"
+            title={syncTitle}
+          >
+            <span className={cn(syncing && "animate-spin")}>
+              <ArrowsClockwiseIcon className="size-5" />
+            </span>
+          </Button>
+          <button
+            type="button"
+            onClick={onOpenSettings}
+            className="rounded border border-transparent bg-transparent p-2 text-on-bg-muted transition-colors duration-150 ease-hover hover:border-white/15 hover:bg-white/5 hover:text-on-bg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80"
+            aria-label="Open settings"
+            title="Settings"
+          >
+            <GearSixIcon className="size-5" />
+          </button>
+        </div>
       </header>
 
       <div className="relative z-10 mx-auto flex min-h-0 w-full max-w-4xl flex-1 flex-col gap-2 px-5 py-6 sm:px-8">
@@ -488,6 +514,7 @@ export function NewTabHome({
               <button
                 type="button"
                 onClick={onSync}
+                disabled={syncDisabled}
                 className="inline-flex items-center justify-center rounded text-sm font-semibold leading-none transition-all duration-150 ease-hover disabled:cursor-default disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 border-0 bg-home-accent px-4 py-2 text-white hover:opacity-90 mt-6"
               >
                 Try again
@@ -505,6 +532,7 @@ export function NewTabHome({
               <button
                 type="button"
                 onClick={onSync}
+                disabled={syncDisabled}
                 className="inline-flex items-center justify-center rounded text-sm font-semibold leading-none transition-all duration-150 ease-hover disabled:cursor-default disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 border-0 bg-home-accent px-4 py-2 text-white hover:opacity-90 mt-6"
               >
                 Sync bookmarks

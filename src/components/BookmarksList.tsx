@@ -8,11 +8,7 @@ import {
   useState,
 } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
-import {
-  ArrowLeftIcon,
-  ArrowsClockwiseIcon,
-  MagnifyingGlassIcon,
-} from "@phosphor-icons/react";
+import { ArrowLeftIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
 import type { Bookmark } from "../types";
 import type { ContinueReadingItem } from "../hooks/useContinueReading";
 import { useBookmarkSearch } from "../hooks/useBookmarkSearch";
@@ -20,10 +16,7 @@ import { pickTitle, inferKindBadge } from "../lib/bookmark-utils";
 import { timeAgo, sortIndexToTimestamp } from "../lib/time";
 import { cn } from "../lib/cn";
 import { NEW_BADGE_CUTOFF_MS } from "../lib/constants";
-import {
-  getHighlightCountsByTweetIds,
-  type HighlightCounts,
-} from "../db";
+import { getHighlightCountsByTweetIds, type HighlightCounts } from "../db";
 import { Button } from "./ui/Button";
 import { Input } from "./ui/Input";
 import { Badge } from "./ui/Badge";
@@ -35,6 +28,7 @@ interface Props {
   continueReadingItems: ContinueReadingItem[];
   unreadBookmarks: Bookmark[];
   syncing: boolean;
+  syncDisabled?: boolean;
   activeTab: ReadingTab;
   onTabChange: (tab: ReadingTab) => void;
   onOpenBookmark: (bookmark: Bookmark) => void;
@@ -80,11 +74,11 @@ const TabButton = forwardRef<HTMLButtonElement, TabButtonProps>(
   ),
 );
 
-
 export function BookmarksList({
   continueReadingItems,
   unreadBookmarks,
   syncing,
+  syncDisabled = false,
   activeTab,
   onTabChange,
   onOpenBookmark,
@@ -215,20 +209,27 @@ export function BookmarksList({
     };
   }, [continueReadingItems]);
 
-  const { filteredUnread, filteredInProgress, filteredCompleted } = useMemo(() => {
-    if (!matchingIds) {
+  const { filteredUnread, filteredInProgress, filteredCompleted } =
+    useMemo(() => {
+      if (!matchingIds) {
+        return {
+          filteredUnread: unreadBookmarks,
+          filteredInProgress: inProgress,
+          filteredCompleted: completed,
+        };
+      }
       return {
-        filteredUnread: unreadBookmarks,
-        filteredInProgress: inProgress,
-        filteredCompleted: completed,
+        filteredUnread: unreadBookmarks.filter((b) =>
+          matchingIds.has(b.tweetId),
+        ),
+        filteredInProgress: inProgress.filter((item) =>
+          matchingIds.has(item.bookmark.tweetId),
+        ),
+        filteredCompleted: completed.filter((item) =>
+          matchingIds.has(item.bookmark.tweetId),
+        ),
       };
-    }
-    return {
-      filteredUnread: unreadBookmarks.filter((b) => matchingIds.has(b.tweetId)),
-      filteredInProgress: inProgress.filter((item) => matchingIds.has(item.bookmark.tweetId)),
-      filteredCompleted: completed.filter((item) => matchingIds.has(item.bookmark.tweetId)),
-    };
-  }, [unreadBookmarks, inProgress, completed, matchingIds]);
+    }, [unreadBookmarks, inProgress, completed, matchingIds]);
 
   const visibleBookmarks = useMemo(() => {
     if (activeTab === "continue") {
@@ -327,12 +328,18 @@ export function BookmarksList({
             containerWidthClass,
           )}
         >
-          <Button variant="ghost" size="icon" onClick={onBack} aria-label="Back to home" title="Back">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onBack}
+            aria-label="Back to home"
+            title="Back"
+          >
             <ArrowLeftIcon className="size-5" />
           </Button>
           <span className="text-lg font-semibold text-foreground">Reading</span>
-          <div className="relative ml-auto mr-2 max-w-xs flex-1">
-            <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
+          <div className="relative ml-auto mr-1 w-40 shrink-0 transition-transform duration-150 ease-out focus-within:-translate-y-px sm:w-52 md:w-60">
+            <MagnifyingGlassIcon className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted/65" />
             <Input
               ref={searchInputRef}
               type="text"
@@ -344,21 +351,10 @@ export function BookmarksList({
                   searchInputRef.current?.blur();
                 }
               }}
+              aria-label="Filter bookmarks"
               placeholder="Search bookmarks..."
-              className="pl-9 pr-3"
+              className="h-8 border-border/70 bg-surface/45 pl-8 pr-2 text-xs-plus placeholder:text-muted/50 transition-[border-color,background-color] duration-150 ease-out focus:border-foreground/20 focus:bg-surface/55"
             />
-          </div>
-          <div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onSync}
-              disabled={syncing}
-              aria-label="Sync bookmarks"
-              title="Sync bookmarks"
-            >
-              <span className={cn(syncing && "animate-spin")}><ArrowsClockwiseIcon className="size-5" /></span>
-            </Button>
           </div>
         </div>
         <div
@@ -444,7 +440,11 @@ export function BookmarksList({
                 <p className="text-muted text-lg text-pretty">
                   All caught up! No unread bookmarks.
                 </p>
-                <Button onClick={onSync} className="mt-4">
+                <Button
+                  onClick={onSync}
+                  disabled={syncing || syncDisabled}
+                  className="mt-4"
+                >
                   Sync new bookmarks
                 </Button>
               </div>
@@ -493,13 +493,17 @@ export function BookmarksList({
                           {timeAgo(progress.lastReadAt)}
                           {counts && counts.highlights > 0 && (
                             <>
-                              {" "}&middot; {counts.highlights}{" "}
-                              {counts.highlights === 1 ? "Highlight" : "Highlights"}
+                              {" "}
+                              &middot; {counts.highlights}{" "}
+                              {counts.highlights === 1
+                                ? "Highlight"
+                                : "Highlights"}
                             </>
                           )}
                           {counts && counts.notes > 0 && (
                             <>
-                              {" "}&middot; {counts.notes}{" "}
+                              {" "}
+                              &middot; {counts.notes}{" "}
                               {counts.notes === 1 ? "Note" : "Notes"}
                             </>
                           )}
@@ -563,13 +567,17 @@ export function BookmarksList({
                           {timeAgo(progress.lastReadAt)}
                           {counts && counts.highlights > 0 && (
                             <>
-                              {" "}&middot; {counts.highlights}{" "}
-                              {counts.highlights === 1 ? "Highlight" : "Highlights"}
+                              {" "}
+                              &middot; {counts.highlights}{" "}
+                              {counts.highlights === 1
+                                ? "Highlight"
+                                : "Highlights"}
                             </>
                           )}
                           {counts && counts.notes > 0 && (
                             <>
-                              {" "}&middot; {counts.notes}{" "}
+                              {" "}
+                              &middot; {counts.notes}{" "}
                               {counts.notes === 1 ? "Note" : "Notes"}
                             </>
                           )}
@@ -584,7 +592,10 @@ export function BookmarksList({
                 <p className="text-muted text-lg text-pretty">
                   Nothing finished yet. Keep reading!
                 </p>
-                <Button onClick={() => onTabChange("continue")} className="mt-4">
+                <Button
+                  onClick={() => onTabChange("continue")}
+                  className="mt-4"
+                >
                   Continue reading
                 </Button>
               </div>

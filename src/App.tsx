@@ -14,7 +14,7 @@ import {
 } from "./db";
 import { pickRelatedBookmarks } from "./lib/related";
 import { resetLocalData } from "./lib/reset";
-import { LS_READING_TAB } from "./lib/storage-keys";
+import { LS_MANUAL_SYNC_REQUIRED, LS_READING_TAB } from "./lib/storage-keys";
 import { NewTabHome } from "./components/NewTabHome";
 import { BookmarkReader } from "./components/BookmarkReader";
 import { BookmarksList, type ReadingTab } from "./components/BookmarksList";
@@ -193,7 +193,14 @@ export default function App() {
   const handleResetLocalData = useCallback(() => {
     setIsResetting(true);
     reset();
-    resetLocalData().catch(() => {}).finally(() => window.location.reload());
+    resetLocalData()
+      .catch(() => {})
+      .finally(() => {
+        try {
+          localStorage.setItem(LS_MANUAL_SYNC_REQUIRED, "1");
+        } catch {}
+        window.location.reload();
+      });
   }, [reset]);
 
   useKeyboardNavigation({
@@ -299,6 +306,16 @@ export default function App() {
     phase === "loading" ||
     (isReady && syncStatus === "loading") ||
     (offlineMode && !detailedIdsLoaded);
+  const canSync = isReady && !isResetting;
+  const syncDisabledReason = !canSync
+    ? (
+        isResetting
+          ? "Reset in progress..."
+          : phase === "loading" || phase === "connecting"
+            ? "Connecting to X..."
+            : "Log in to X to sync bookmarks"
+      )
+    : undefined;
 
   const needsLogin = !showCached && (phase === "need_login" || phase === "connecting");
 
@@ -341,6 +358,7 @@ export default function App() {
           continueReadingItems={continueReading}
           unreadBookmarks={allUnread}
           syncing={syncStatus === "syncing"}
+          syncDisabled={!canSync}
           activeTab={readingTab}
           onTabChange={handleReadingTabChange}
           onOpenBookmark={openBookmark}
@@ -372,6 +390,8 @@ export default function App() {
         onLogin={needsLogin || offlineMode ? startLogin : undefined}
         bookmarksLoading={bookmarksLoading}
         isResetting={isResetting}
+        canSync={canSync}
+        syncDisabledReason={syncDisabledReason}
       />
     );
   })();

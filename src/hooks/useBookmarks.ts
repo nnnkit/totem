@@ -4,8 +4,6 @@ import {
   checkReauthStatus,
   checkAuth,
   deleteBookmark,
-  getBookmarkEvents,
-  ackBookmarkEvents,
   fetchBookmarkPage,
 } from "../api/core";
 import {
@@ -17,22 +15,24 @@ import {
 } from "../db";
 import { FetchQueue } from "../lib/fetch-queue";
 import { reconcileBookmarks } from "../lib/reconcile";
-import { resolveBookmarkEventPlan } from "../lib/bookmark-event-plan";
 import {
   CS_DB_CLEANUP_AT,
   CS_LAST_SYNC,
-  CS_BOOKMARK_EVENTS,
-  CS_SOFT_SYNC_NEEDED,
+  LS_MANUAL_SYNC_REQUIRED,
 } from "../lib/storage-keys";
 import {
-  CREATE_EVENT_DELAY_MS,
   WEEK_MS,
   DETAIL_CACHE_RETENTION_MS,
-  RECONCILE_THROTTLE_MS,
   DB_INIT_TIMEOUT_MS,
+  PAGE_FETCH_TIMEOUT_MS,
   REAUTH_MAX_ATTEMPTS,
   REAUTH_POLL_MS,
 } from "../lib/constants";
+import {
+  createSyncMachineState,
+  reduceSyncMachine,
+  type SyncMode,
+} from "./sync-state-machine";
 
 interface UseBookmarksReturn {
   bookmarks: Bookmark[];
@@ -42,20 +42,56 @@ interface UseBookmarksReturn {
   unbookmark: (tweetId: string) => Promise<{ apiError?: string }>;
 }
 
+interface SyncOptions {
+  mode?: SyncMode;
+}
+
+interface ActiveSyncController {
+  abort: (markTimeout?: boolean) => void;
+}
+
 // ── Helpers ──────────────────────────────────────────────────
 
-function syncAbortTimeout(bookmarkCount: number): number {
-  const base = 3 * 60 * 1000;
+function syncAbortTimeout(bookmarkCount: number, mode: SyncMode): number {
+  const base = mode === "full" ? 8 * 60 * 1000 : 3 * 60 * 1000;
   const extra = Math.floor(bookmarkCount / 1000) * 30_000;
-  return Math.min(base + extra, 10 * 60 * 1000);
+  return Math.min(base + extra, 12 * 60 * 1000);
 }
 
 function compareSortIndexDesc(a: Bookmark, b: Bookmark): number {
   return b.sortIndex.localeCompare(a.sortIndex);
 }
 
-function isStale(lastSyncAt: number): boolean {
-  return Date.now() - lastSyncAt > RECONCILE_THROTTLE_MS;
+function isManualSyncRequired(): boolean {
+  try {
+    return localStorage.getItem(LS_MANUAL_SYNC_REQUIRED) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function clearManualSyncRequired(): void {
+  try {
+    localStorage.removeItem(LS_MANUAL_SYNC_REQUIRED);
+  } catch {}
+}
+
+async function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  timeoutError: Error,
+): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timer = setTimeout(() => reject(timeoutError), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timer !== null) clearTimeout(timer);
+  }
 }
 
 // ── Hook ─────────────────────────────────────────────────────
@@ -64,27 +100,46 @@ export function useBookmarks(isReady: boolean): UseBookmarksReturn {
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>("loading");
   const bookmarksRef = useRef<Bookmark[]>([]);
-  const syncingRef = useRef(false);
-  const processingBookmarkEventsRef = useRef(false);
+  const activeSyncRef = useRef<ActiveSyncController | null>(null);
+  const syncMachineRef = useRef(createSyncMachineState("loading"));
 
   useEffect(() => {
     bookmarksRef.current = bookmarks;
   }, [bookmarks]);
 
+  const applySyncEvent = useCallback(
+    (
+      event: Parameters<typeof reduceSyncMachine>[1],
+    ): ReturnType<typeof reduceSyncMachine> => {
+      const next = reduceSyncMachine(syncMachineRef.current, event);
+      syncMachineRef.current = next;
+      setSyncStatus(next.syncStatus);
+      return next;
+    },
+    [],
+  );
+
   // ── Core: sync() ──────────────────────────────────────────
 
-  const sync = useCallback(async () => {
-    if (syncingRef.current) return;
-    syncingRef.current = true;
-    setSyncStatus("syncing");
+  const sync = useCallback(async (options: SyncOptions = {}) => {
+    const mode = options.mode ?? "incremental";
+    const started = applySyncEvent({ type: "SYNC_REQUEST", isReady, mode });
+    if (!started.syncing || started.syncStatus !== "syncing") {
+      return;
+    }
 
     const queue = new FetchQueue();
     const abortController = { aborted: false, isTimeout: false };
-    const timeout = syncAbortTimeout(bookmarksRef.current.length);
-    const syncTimer = setTimeout(() => {
-      abortController.isTimeout = true;
+    const timeout = syncAbortTimeout(bookmarksRef.current.length, mode);
+    const abortSync = (markTimeout = false) => {
+      if (abortController.aborted) return;
+      if (markTimeout) abortController.isTimeout = true;
       abortController.aborted = true;
       queue.abort();
+    };
+    activeSyncRef.current = { abort: abortSync };
+    const syncTimer = setTimeout(() => {
+      abortSync(true);
     }, timeout);
 
     try {
@@ -92,9 +147,17 @@ export function useBookmarks(isReady: boolean): UseBookmarksReturn {
 
       await reconcileBookmarks({
         localIds: existingIds,
-        fetchPage: (cursor) => queue.enqueue(() => fetchBookmarkPage(cursor)),
-        fullReconcile: false,
+        fetchPage: (cursor) =>
+          queue.enqueue(() =>
+            withTimeout(
+              fetchBookmarkPage(cursor),
+              PAGE_FETCH_TIMEOUT_MS,
+              new Error("PAGE_FETCH_TIMEOUT"),
+            ),
+          ),
+        fullReconcile: mode === "full",
         onPage: async (pageNew) => {
+          if (abortController.aborted) return;
           const currentIds = new Set(bookmarksRef.current.map((b) => b.tweetId));
           const deduped = pageNew.filter((b) => !currentIds.has(b.tweetId));
           if (deduped.length === 0) return;
@@ -113,29 +176,30 @@ export function useBookmarks(isReady: boolean): UseBookmarksReturn {
 
       if (!abortController.aborted) {
         await chrome.storage.local.set({ [CS_LAST_SYNC]: Date.now() });
-        setSyncStatus("idle");
+        if (mode === "full") {
+          clearManualSyncRequired();
+        }
+        applySyncEvent({ type: "SYNC_SUCCESS" });
       }
     } catch (err) {
       if (!abortController.aborted) {
         const msg = err instanceof Error ? err.message : "Unknown error";
-        if (msg === "AUTH_EXPIRED" || msg === "NO_AUTH") {
-          setSyncStatus("reauthing");
-        } else {
-          setSyncStatus("error");
-        }
+        applySyncEvent({ type: "SYNC_FAILURE", message: msg });
       }
     } finally {
       clearTimeout(syncTimer);
+      if (activeSyncRef.current?.abort === abortSync) {
+        activeSyncRef.current = null;
+      }
       // Timeout — save progress and go idle (never stuck)
       if (abortController.isTimeout) {
         try {
           await chrome.storage.local.set({ [CS_LAST_SYNC]: Date.now() });
         } catch {}
-        setSyncStatus("idle");
+        applySyncEvent({ type: "SYNC_TIMEOUT" });
       }
-      syncingRef.current = false;
     }
-  }, []);
+  }, [applySyncEvent, isReady]);
 
   // ── Effect: DB cleanup (runs once) ──
 
@@ -156,9 +220,17 @@ export function useBookmarks(isReady: boolean): UseBookmarksReturn {
     runCleanup().catch(() => {});
   }, []);
 
-  // ── Effect 1: Init local cache (always) + sync (when auth ready) ──
+  // ── Effect 1: Init local cache only (manual sync model) ──
 
   useEffect(() => {
+    if (isManualSyncRequired()) {
+      applySyncEvent({ type: "RESET" });
+      bookmarksRef.current = [];
+      setBookmarks([]);
+      return;
+    }
+
+    const runId = applySyncEvent({ type: "INIT_INVALIDATE" }).initRunId;
     let cancelled = false;
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
@@ -169,35 +241,22 @@ export function useBookmarks(isReady: boolean): UseBookmarksReturn {
       }),
     ])
       .then(async (stored) => {
-        if (cancelled) return;
+        if (cancelled || runId !== syncMachineRef.current.initRunId) return;
         if (stored.length > 0) {
           setBookmarks(stored);
           bookmarksRef.current = stored;
         }
 
         if (!isReady) {
-          setSyncStatus("idle");
+          applySyncEvent({ type: "MARK_IDLE" });
           return;
         }
 
-        const meta = await chrome.storage.local.get([CS_LAST_SYNC]);
-        if (cancelled) return;
-        const lastSyncAt = Number(meta[CS_LAST_SYNC] || 0);
-
-        if (stored.length === 0 || isStale(lastSyncAt)) {
-          sync();
-        } else {
-          setSyncStatus("idle");
-        }
+        applySyncEvent({ type: "MARK_IDLE" });
       })
       .catch(() => {
-        if (cancelled) return;
-        if (isReady) {
-          // DB failed — try syncing from API as fallback
-          sync();
-        } else {
-          setSyncStatus("idle");
-        }
+        if (cancelled || runId !== syncMachineRef.current.initRunId) return;
+        applySyncEvent({ type: "MARK_IDLE" });
       })
       .finally(() => {
         if (timeoutId !== null) clearTimeout(timeoutId);
@@ -207,13 +266,12 @@ export function useBookmarks(isReady: boolean): UseBookmarksReturn {
       cancelled = true;
       if (timeoutId !== null) clearTimeout(timeoutId);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- sync is stable, rerun when auth readiness changes
-  }, [isReady]);
+  }, [applySyncEvent, isReady]);
 
   // ── Effect 2: Reauth (when syncStatus === "reauthing") ──
 
   useEffect(() => {
-    if (syncStatus !== "reauthing") return;
+    if (syncStatus !== "reauthing" || !isReady) return;
 
     let attempts = 0;
     const intervalId = setInterval(async () => {
@@ -225,7 +283,7 @@ export function useBookmarks(isReady: boolean): UseBookmarksReturn {
           const auth = await checkAuth();
           if (auth.hasAuth && auth.hasQueryId) {
             clearInterval(intervalId);
-            sync();
+            sync({ mode: syncMachineRef.current.lastSyncMode });
             return;
           }
         }
@@ -233,118 +291,28 @@ export function useBookmarks(isReady: boolean): UseBookmarksReturn {
 
       if (attempts >= REAUTH_MAX_ATTEMPTS) {
         clearInterval(intervalId);
-        setSyncStatus("error");
+        applySyncEvent({ type: "MARK_ERROR" });
       }
     }, REAUTH_POLL_MS);
 
     return () => clearInterval(intervalId);
   // eslint-disable-next-line react-hooks/exhaustive-deps -- only trigger on status entry
-  }, [syncStatus]);
-
-  // ── Effect 3: Events listener (service worker mutations) ──
-
-  const applyBookmarkEvents = useCallback(async () => {
-    if (processingBookmarkEventsRef.current) return;
-    processingBookmarkEventsRef.current = true;
-
-    try {
-      const events = await getBookmarkEvents();
-      if (events.length === 0) return;
-
-      const plan = resolveBookmarkEventPlan(events);
-      const deleteEventIds = events
-        .filter((e) => e.type === "DeleteBookmark")
-        .map((e) => e.id);
-      const createEventIds = events
-        .filter((e) => e.type === "CreateBookmark")
-        .map((e) => e.id);
-
-      // ── Execute deletes ──
-      if (plan.idsToDelete.length > 0) {
-        const toDelete = new Set(plan.idsToDelete);
-        const current = bookmarksRef.current;
-        const filtered = current.filter((b) => !toDelete.has(b.tweetId));
-
-        if (filtered.length !== current.length) {
-          bookmarksRef.current = filtered;
-          setBookmarks(filtered);
-        }
-
-        await deleteBookmarksByTweetIds(plan.idsToDelete);
-      }
-
-      // Ack delete events immediately
-      if (deleteEventIds.length > 0) {
-        await ackBookmarkEvents(deleteEventIds);
-      }
-
-      // ── Execute creates: fetch 1 small page and add what's missing ──
-      if (plan.needsPageFetch) {
-        await new Promise((r) => setTimeout(r, CREATE_EVENT_DELAY_MS));
-
-        try {
-          const page = await fetchBookmarkPage(undefined, 20);
-          const currentIds = new Set(bookmarksRef.current.map((b) => b.tweetId));
-          const newBookmarks = page.bookmarks.filter((b) => !currentIds.has(b.tweetId));
-
-          if (newBookmarks.length > 0) {
-            const updated = [...newBookmarks, ...bookmarksRef.current].toSorted(compareSortIndexDesc);
-            bookmarksRef.current = updated;
-            setBookmarks(updated);
-            try {
-              await upsertBookmarks(newBookmarks);
-            } catch {}
-          }
-
-          if (createEventIds.length > 0) {
-            await ackBookmarkEvents(createEventIds);
-          }
-        } catch {
-          // Page fetch failed — don't ack create events so they're retried
-        }
-      } else if (createEventIds.length > 0) {
-        await ackBookmarkEvents(createEventIds);
-      }
-    } finally {
-      processingBookmarkEventsRef.current = false;
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!isReady) return;
-
-    const onStorageChange = (
-      changes: Record<string, chrome.storage.StorageChange>,
-      areaName: string,
-    ) => {
-      if (areaName !== "local") return;
-      if (changes[CS_BOOKMARK_EVENTS]) {
-        applyBookmarkEvents().catch(() => {});
-      }
-      if (changes[CS_SOFT_SYNC_NEEDED]?.newValue) {
-        sync();
-      }
-    };
-
-    chrome.storage.onChanged.addListener(onStorageChange);
-    applyBookmarkEvents().catch(() => {});
-
-    return () => {
-      chrome.storage.onChanged.removeListener(onStorageChange);
-    };
-  }, [isReady, applyBookmarkEvents, sync]);
+  }, [applySyncEvent, syncStatus, isReady]);
 
   // ── refresh (manual trigger) ──
 
   const refresh = useCallback(() => {
-    sync();
+    sync({ mode: "full" });
   }, [sync]);
 
   // ── reset ──
 
   const reset = useCallback(() => {
-    // Caller handles the actual data reset + page reload
-  }, []);
+    applySyncEvent({ type: "RESET" });
+    activeSyncRef.current?.abort();
+    bookmarksRef.current = [];
+    setBookmarks([]);
+  }, [applySyncEvent]);
 
   // ── unbookmark ──
 
