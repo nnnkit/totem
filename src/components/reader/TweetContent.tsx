@@ -146,34 +146,61 @@ function ThreadTweets({ tweets }: ThreadTweetsProps) {
       <div>
         {tweets.map((tweet, index) => {
           const isLast = index === tweets.length - 1;
+          const previousTweet = index > 0 ? tweets[index - 1] : null;
+          const isConsecutiveFromSameAuthor =
+            previousTweet?.author.screenName === tweet.author.screenName;
+          const showAuthorProfile = !isConsecutiveFromSameAuthor;
+
           return (
             <article
               key={tweet.tweetId}
               id={`section-thread-${index + 1}`}
               className="relative flex gap-3"
             >
-              <div className="flex flex-col items-center">
-                <img
-                  src={tweet.author.profileImageUrl}
-                  alt=""
-                  className="size-10 shrink-0 rounded-full"
-                  loading="lazy"
-                />
-                {!isLast && <div className="mt-1 w-0.5 flex-1 bg-border" />}
+              <div className="flex w-10 shrink-0 flex-col items-center">
+                {showAuthorProfile ? (
+                  <img
+                    src={tweet.author.profileImageUrl}
+                    alt=""
+                    className="size-10 shrink-0 rounded-full"
+                    loading="lazy"
+                  />
+                ) : (
+                  <div
+                    aria-hidden="true"
+                    className="mt-2 size-1.5 rounded-full bg-border"
+                  />
+                )}
+                {!isLast && (
+                  <div
+                    className={cn(
+                      "w-0.5 flex-1 bg-border",
+                      showAuthorProfile ? "mt-1" : "mt-2",
+                    )}
+                  />
+                )}
               </div>
               <div className={cn("min-w-0 flex-1", !isLast && "pb-5")}>
-                <div className="flex items-center gap-1.5 text-sm">
-                  <span className="truncate font-bold text-foreground">
-                    {tweet.author.name}
-                  </span>
-                  <span className="truncate text-muted">
-                    @{tweet.author.screenName}
-                  </span>
-                  <span className="text-muted">&middot;</span>
-                  <span className="shrink-0 text-muted">
-                    {formatThreadDate(tweet.createdAt)}
-                  </span>
-                </div>
+                {showAuthorProfile ? (
+                  <div className="flex items-center gap-1.5 text-sm">
+                    <span className="truncate font-bold text-foreground">
+                      {tweet.author.name}
+                    </span>
+                    <span className="truncate text-muted">
+                      @{tweet.author.screenName}
+                    </span>
+                    <span className="text-muted">&middot;</span>
+                    <span className="shrink-0 text-muted">
+                      {formatThreadDate(tweet.createdAt)}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex items-center text-xs text-muted/75">
+                    <span className="shrink-0">
+                      {formatThreadDate(tweet.createdAt)}
+                    </span>
+                  </div>
+                )}
                 <div className="mt-1">
                   <TweetBody tweet={tweet} compact />
                 </div>
