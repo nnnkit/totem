@@ -1,7 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { SiteApp, type SitePage } from "./SiteApp";
-import "./site.css";
+import "../../src/index.css";
 
 const root = document.getElementById("root");
 
@@ -10,8 +10,7 @@ if (!root) {
 }
 
 const pageAttr = root.dataset.page;
-const page: SitePage =
-  pageAttr === "privacy" || pageAttr === "support" ? pageAttr : "landing";
+const page: SitePage = pageAttr === "privacy" ? "privacy" : "landing";
 
 createRoot(root).render(
   <StrictMode>

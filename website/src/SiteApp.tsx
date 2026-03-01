@@ -1,454 +1,478 @@
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
-export type SitePage = "landing" | "privacy" | "support";
+export type SitePage = "landing" | "privacy";
 
 interface SiteAppProps {
   page: SitePage;
 }
 
-interface SiteLayoutProps {
+// ─── Layout ───────────────────────────────────────────────────────────────────
+
+function SiteLayout({
+  page,
+  children,
+}: {
   page: SitePage;
   children: React.ReactNode;
-}
+}) {
+  const [scrolled, setScrolled] = useState(false);
 
-interface LinkProps {
-  href: string;
-  label: string;
-  active?: boolean;
-}
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
-function NavLink({ href, label, active }: LinkProps) {
   return (
-    <a
-      href={href}
-      className={`site-nav-link${active ? " is-active" : ""}`}
-    >
-      {label}
-    </a>
-  );
-}
-
-function SiteLayout({ page, children }: SiteLayoutProps) {
-  return (
-    <div className="site-page">
-      <div className="site-radial site-radial-a" aria-hidden />
-      <div className="site-radial site-radial-b" aria-hidden />
-      <header className="site-header">
-        <a className="site-brand" href="index.html" aria-label="Totem homepage">
-          <span className="site-brand-mark" aria-hidden>
-            T
-          </span>
-          <span className="site-brand-name">Totem</span>
-        </a>
-        <nav className="site-nav" aria-label="Primary">
-          <NavLink href="index.html" label="Home" active={page === "landing"} />
-          <NavLink href="privacy.html" label="Privacy" active={page === "privacy"} />
-          <NavLink href="support.html" label="Support" active={page === "support"} />
-        </nav>
+    <div className="min-h-dvh bg-white text-neutral-900 font-[Space_Grotesk,sans-serif]">
+      {/* ── Header ─────────────────────────────────────────────────── */}
+      <header
+        className={`sticky top-0 z-50 transition-all duration-200 ${
+          scrolled
+            ? "bg-white/90 backdrop-blur-lg border-b border-neutral-200"
+            : "border-b border-transparent"
+        }`}
+      >
+        <div className="max-w-5xl mx-auto flex items-center justify-between px-6 h-14">
+          <a
+            href="index.html"
+            className="flex items-center gap-2.5 no-underline"
+            aria-label="Totem homepage"
+          >
+            <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-[#f4a259] text-white text-sm font-extrabold shrink-0">
+              T
+            </span>
+            <span className="font-bold text-neutral-900 text-[0.95rem] tracking-tight">
+              Totem
+            </span>
+          </a>
+          <nav className="flex items-center gap-1" aria-label="Primary">
+            <a
+              href="privacy.html"
+              className={`px-3 py-1.5 rounded-full text-sm font-medium no-underline transition-colors ${
+                page === "privacy"
+                  ? "text-neutral-900 bg-neutral-100"
+                  : "text-neutral-500 hover:text-neutral-900 hover:bg-neutral-50"
+              }`}
+            >
+              Privacy
+            </a>
+            <a
+              href="#install"
+              className="ml-2 inline-flex items-center px-4 py-1.5 rounded-full bg-[#f4a259] text-white text-sm font-semibold no-underline transition-all hover:bg-[#c97b30] active:scale-[0.97]"
+            >
+              Add to Chrome
+            </a>
+          </nav>
+        </div>
       </header>
 
       {children}
 
-      <footer className="site-footer">
-        <p>Totem - Actually read what you saved on X.</p>
-        <div className="site-footer-links">
-          <a href="privacy.html">Privacy Policy</a>
-          <a href="support.html">Support</a>
-          <a href="index.html#install">Install Guide</a>
+      {/* ── Footer ─────────────────────────────────────────────────── */}
+      <footer className="border-t border-neutral-200">
+        <div className="max-w-5xl mx-auto px-6 py-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-sm text-neutral-400">
+          <div className="flex flex-col gap-1">
+            <a
+              href="index.html"
+              className="flex items-center gap-2 no-underline"
+              aria-label="Totem homepage"
+            >
+              <span className="inline-flex items-center justify-center w-5 h-5 rounded-md bg-[#f4a259] text-white text-[0.6rem] font-extrabold">
+                T
+              </span>
+              <span className="font-bold text-neutral-500 text-xs tracking-tight">
+                Totem
+              </span>
+            </a>
+            <p className="text-neutral-400 text-xs mt-0.5">
+              Actually read what you saved on X.
+            </p>
+          </div>
+          <nav
+            className="flex items-center gap-5 text-xs"
+            aria-label="Footer links"
+          >
+            <a
+              href="privacy.html"
+              className="no-underline text-neutral-400 hover:text-neutral-600 transition-colors"
+            >
+              Privacy Policy
+            </a>
+            <a
+              href="mailto:support@usetotem.app"
+              className="no-underline text-neutral-400 hover:text-neutral-600 transition-colors"
+            >
+              Contact
+            </a>
+          </nav>
+          <p className="text-xs text-neutral-300">&copy; 2026 Totem</p>
         </div>
       </footer>
     </div>
   );
 }
 
+// ─── Data ─────────────────────────────────────────────────────────────────────
+
+const FEATURES = [
+  {
+    title: "Distraction-free reader",
+    body: "A clean reading surface for threads, articles, and linked posts.",
+  },
+  {
+    title: "Unread / Continue / Read",
+    body: "Three queue states. Never lose track of where you left off.",
+  },
+  {
+    title: "Highlights & notes",
+    body: "Select any passage to highlight it. Add notes. Everything stays local.",
+  },
+  {
+    title: "Explicit mark-as-read",
+    body: "You decide when something is done. No scroll-based guessing.",
+  },
+  {
+    title: "Offline-friendly",
+    body: "Cached content and progress keep working without a connection.",
+  },
+  {
+    title: "Keyboard-first",
+    body: "Navigate, read, and finish with shortcuts built for daily use.",
+  },
+];
+
+const STEPS = [
+  {
+    n: "1",
+    title: "Bookmark on X",
+    body: "Save posts normally. Totem syncs them automatically.",
+  },
+  {
+    n: "2",
+    title: "Open a new tab",
+    body: "Your reading queue replaces the new tab. No feed.",
+  },
+  {
+    n: "3",
+    title: "Read, highlight, done",
+    body: "Work through posts. Highlight, annotate, mark complete.",
+  },
+];
+
+// ─── Landing Page ─────────────────────────────────────────────────────────────
+
 function LandingPage() {
-  const [demoTab, setDemoTab] = useState<"article" | "newtab">("article");
-
-  const principles = useMemo(
-    () => [
-      {
-        title: "Visibility Over Friction",
-        body: "Bookmarks stay in front of you in every new tab so reading starts before distraction does.",
-      },
-      {
-        title: "Reading Over Scrolling",
-        body: "One focused queue and a calm reader interface. No algorithmic feed, no infinite noise.",
-      },
-      {
-        title: "Local-First Reliability",
-        body: "Data lives in your browser with no Totem backend dependency. Your workflow does not depend on our servers.",
-      },
-    ],
-    [],
-  );
-
-  const features = useMemo(
-    () => [
-      {
-        title: "Distraction-free reader",
-        body: "Substack-style reading surface for threads, links, and long-form posts.",
-      },
-      {
-        title: "Unread / Continue / Read",
-        body: "Intentional queue states keep your backlog manageable and completion visible.",
-      },
-      {
-        title: "Highlights and notes",
-        body: "Capture what matters while reading, without leaving the page.",
-      },
-      {
-        title: "Explicit mark as read",
-        body: "No auto-completion guesses. If you did not click it, it is not marked done.",
-      },
-      {
-        title: "Offline-friendly",
-        body: "Cached bookmark details and reading progress keep working when network is unstable.",
-      },
-      {
-        title: "Fast keyboard workflow",
-        body: "Open, navigate, and finish reading with shortcuts designed for everyday use.",
-      },
-    ],
-    [],
-  );
-
-  const permissions = useMemo(
-    () => [
-      {
-        title: "storage",
-        body: "Stores bookmarks, highlights, notes, and progress locally in your browser.",
-      },
-      {
-        title: "webRequest + declarativeNetRequest",
-        body: "Uses your existing X session to fetch your own bookmarks.",
-      },
-      {
-        title: "topSites / favicon / search (optional)",
-        body: "Only used when you enable quick links or browser-default search integration.",
-      },
-    ],
-    [],
-  );
-
   return (
     <SiteLayout page="landing">
       <main>
-        <section className="site-hero" id="top">
-          <p className="site-eyebrow">Chrome Extension for Focused Reading</p>
-          <h1>Actually read what you saved on X.</h1>
-          <p className="site-hero-copy">
-            Totem turns your new tab into a calm reading surface so bookmarked posts stop disappearing in the feed loop.
+        {/* ── Hero ──────────────────────────────────────────────── */}
+        <section className="max-w-5xl mx-auto px-6 pt-20 pb-16 sm:pt-28 sm:pb-20">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#f4a259] mb-4">
+            Free Chrome Extension
           </p>
-          <div className="site-hero-actions">
-            <a className="site-btn site-btn-primary" href="#demo">
-              Try Interactive Demo
+          <h1 className="font-[Newsreader,serif] text-[clamp(2.5rem,6vw,4.5rem)] leading-[1.05] tracking-tight text-neutral-900 mb-5 max-w-[18ch] text-balance">
+            Actually read what you saved on X.
+          </h1>
+          <p className="text-neutral-500 text-lg leading-relaxed max-w-[48ch] mb-8">
+            Totem turns every new tab into a calm reading queue for your X
+            bookmarks. No feed. No noise.
+          </p>
+          <div className="flex flex-wrap gap-3 mb-8">
+            <a
+              href="#install"
+              className="inline-flex items-center h-11 px-6 rounded-xl bg-[#f4a259] text-white font-semibold text-[0.95rem] no-underline shadow-[0_4px_14px_rgba(244,162,89,0.3)] transition-all hover:bg-[#c97b30] hover:shadow-[0_6px_20px_rgba(244,162,89,0.4)] active:scale-[0.97]"
+            >
+              Add to Chrome &mdash; free
             </a>
-            <a className="site-btn site-btn-secondary" href="#install">
-              Installation Guide
+            <a
+              href="#demo"
+              className="inline-flex items-center h-11 px-6 rounded-xl border border-neutral-200 bg-white text-neutral-700 font-semibold text-[0.95rem] no-underline transition-all hover:bg-neutral-50 active:scale-[0.97]"
+            >
+              See the demo &darr;
             </a>
           </div>
-          <div className="site-hero-stats" role="list" aria-label="Product highlights">
-            <div role="listitem">
-              <strong>Local-first</strong>
-              <span>No Totem backend required</span>
-            </div>
-            <div role="listitem">
-              <strong>Calm UX</strong>
-              <span>One queue, one reader, no feed recreation</span>
-            </div>
-            <div role="listitem">
-              <strong>Reader tools</strong>
-              <span>Highlights, notes, and completion tracking</span>
-            </div>
+          <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-neutral-400 font-medium">
+            <span>No backend</span>
+            <span className="text-neutral-200">|</span>
+            <span>No account</span>
+            <span className="text-neutral-200">|</span>
+            <span>100% local</span>
           </div>
         </section>
 
-        <section className="site-section" aria-labelledby="principles-title">
-          <div className="site-section-head">
-            <p>Product soul</p>
-            <h2 id="principles-title">Built for focused completion, not passive scrolling.</h2>
-          </div>
-          <div className="site-grid site-grid-3">
-            {principles.map((item) => (
-              <article className="site-card" key={item.title}>
-                <h3>{item.title}</h3>
-                <p>{item.body}</p>
-              </article>
-            ))}
-          </div>
-        </section>
+        {/* ── Demo ──────────────────────────────────────────────── */}
+        <section
+          id="demo"
+          className="w-full bg-[#0b1118] py-16 sm:py-20"
+        >
+          <div className="max-w-5xl mx-auto px-6">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#f4a259] mb-3">
+              Live preview
+            </p>
+            <h2 className="font-[Newsreader,serif] text-[clamp(1.8rem,3.5vw,2.8rem)] leading-tight tracking-tight text-white mb-3 max-w-[22ch]">
+              Try it. Open a new tab.
+            </h2>
+            <p className="text-white/50 text-sm mb-8 max-w-[52ch]">
+              Interactive demo below &mdash; same UI components as the extension,
+              running on fixture data.
+            </p>
 
-        <section className="site-section" aria-labelledby="features-title">
-          <div className="site-section-head">
-            <p>Core features</p>
-            <h2 id="features-title">Everything users need to move from saved to read.</h2>
-          </div>
-          <div className="site-grid site-grid-3">
-            {features.map((item) => (
-              <article className="site-card" key={item.title}>
-                <h3>{item.title}</h3>
-                <p>{item.body}</p>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="site-section" id="demo" aria-labelledby="demo-title">
-          <div className="site-section-head">
-            <p>Live preview</p>
-            <h2 id="demo-title">Switch tabs and open a real Totem New Tab demo.</h2>
-          </div>
-
-          <div className="site-browser" role="region" aria-label="Interactive browser preview">
-            <div className="site-browser-top">
-              <div className="site-browser-dots" aria-hidden>
-                <span />
-                <span />
-                <span />
-              </div>
-              <div className="site-browser-tabs" role="tablist" aria-label="Preview tabs">
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={demoTab === "article"}
-                  className={`site-browser-tab${demoTab === "article" ? " is-active" : ""}`}
-                  onClick={() => setDemoTab("article")}
-                >
-                  Regular Website
-                </button>
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={demoTab === "newtab"}
-                  className={`site-browser-tab${demoTab === "newtab" ? " is-active" : ""}`}
-                  onClick={() => setDemoTab("newtab")}
-                >
-                  New Tab
-                </button>
-              </div>
-            </div>
-
-            <div className="site-browser-view">
-              {demoTab === "article" ? (
-                <div className="site-feed-mock">
-                  <aside>
-                    <h3>Trending distractions</h3>
-                    <ul>
-                      <li>14 threads you never planned to read</li>
-                      <li>Breaking takes every 3 minutes</li>
-                      <li>Recommended accounts you did not ask for</li>
-                    </ul>
-                  </aside>
-                  <article>
-                    <h3>Your intent before opening X</h3>
-                    <p>
-                      "Read my saved posts on systems design and product thinking." Totem protects this intent by opening a queue-first reading space in your new tab.
-                    </p>
-                    <p>
-                      Click <strong>New Tab</strong> above to see the interactive experience with dummy data, including list view, reader view, and settings.
-                    </p>
-                  </article>
+            {/* Browser chrome */}
+            <div className="rounded-2xl overflow-hidden border border-white/[0.08] bg-[#0f1c2d] shadow-[0_24px_60px_rgba(2,10,18,0.45)]">
+              <div className="flex items-center gap-3 px-4 h-11 border-b border-white/[0.07] bg-black/20">
+                <div className="flex gap-1.5" aria-hidden="true">
+                  <span className="w-2.5 h-2.5 rounded-full bg-white/15" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-white/15" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-white/15" />
                 </div>
-              ) : (
-                <iframe
-                  title="Totem New Tab demo"
-                  src="demo.html"
-                  className="site-demo-frame"
-                  loading="lazy"
-                />
-              )}
+                <div className="flex-1 text-center text-[0.7rem] text-white/30 bg-white/[0.06] rounded-md py-1 px-3">
+                  New Tab &mdash; Totem
+                </div>
+              </div>
+              <iframe
+                title="Totem New Tab demo"
+                src="demo.html"
+                className="block w-full border-0 bg-[#0a0f16]"
+                style={{ minHeight: "clamp(480px, 60vh, 680px)" }}
+                loading="lazy"
+              />
             </div>
-          </div>
 
-          <p className="site-note">
-            Demo note: preview uses fixture data, but renders the same core UI components as the extension.
+            <p className="text-white/30 text-xs mt-4">
+              Demo uses fixture data. Same core components as the real extension.
+            </p>
+          </div>
+        </section>
+
+        {/* ── Features ──────────────────────────────────────────── */}
+        <section className="max-w-5xl mx-auto px-6 py-16 sm:py-20">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#f4a259] mb-3">
+            What you get
           </p>
-        </section>
-
-        <section className="site-section" id="install" aria-labelledby="install-title">
-          <div className="site-section-head">
-            <p>Install and trust</p>
-            <h2 id="install-title">What users and Chrome reviewers need to see.</h2>
-          </div>
-
-          <div className="site-grid site-grid-2">
-            <article className="site-card site-card-tall">
-              <h3>Installation flow</h3>
-              <ol>
-                <li>Install Totem from the Chrome Web Store.</li>
-                <li>Keep your existing X login session active in Chrome.</li>
-                <li>Open a new tab to launch Totem.</li>
-                <li>Start reading from Unread, Continue, or Read tabs.</li>
-              </ol>
-            </article>
-
-            <article className="site-card site-card-tall">
-              <h3>Chrome Web Store pages</h3>
-              <ul>
-                <li>
-                  <a href="privacy.html">Privacy Policy</a>
-                  <span>Complete disclosure of data collection, storage, and retention.</span>
-                </li>
-                <li>
-                  <a href="support.html">Support</a>
-                  <span>Contact, troubleshooting, and usage guidance.</span>
-                </li>
-              </ul>
-            </article>
-          </div>
-        </section>
-
-        <section className="site-section" aria-labelledby="permissions-title">
-          <div className="site-section-head">
-            <p>Permission transparency</p>
-            <h2 id="permissions-title">Why each permission exists.</h2>
-          </div>
-
-          <div className="site-grid site-grid-3">
-            {permissions.map((item) => (
-              <article className="site-card" key={item.title}>
-                <h3>{item.title}</h3>
-                <p>{item.body}</p>
+          <h2 className="font-[Newsreader,serif] text-[clamp(1.8rem,3.5vw,2.8rem)] leading-tight tracking-tight text-neutral-900 mb-10 max-w-[20ch]">
+            Save. Open. Read.
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {FEATURES.map((f) => (
+              <article
+                key={f.title}
+                className="border border-neutral-100 rounded-xl p-5 bg-neutral-50/50"
+              >
+                <h3 className="text-[0.95rem] font-semibold text-neutral-900 mb-1.5">
+                  {f.title}
+                </h3>
+                <p className="text-sm text-neutral-500 leading-relaxed m-0">
+                  {f.body}
+                </p>
               </article>
             ))}
+          </div>
+        </section>
+
+        {/* ── How it works ──────────────────────────────────────── */}
+        <section className="border-t border-neutral-100">
+          <div className="max-w-5xl mx-auto px-6 py-16 sm:py-20">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#f4a259] mb-3">
+              Three steps
+            </p>
+            <h2 className="font-[Newsreader,serif] text-[clamp(1.8rem,3.5vw,2.8rem)] leading-tight tracking-tight text-neutral-900 mb-10 max-w-[26ch]">
+              From saved to read in 60 seconds.
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
+              {STEPS.map((step) => (
+                <div key={step.n} className="flex flex-col gap-3">
+                  <div className="w-10 h-10 rounded-full bg-[#f4a259] text-white text-sm font-bold flex items-center justify-center shrink-0">
+                    {step.n}
+                  </div>
+                  <h3 className="text-[0.95rem] font-semibold text-neutral-900 m-0">
+                    {step.title}
+                  </h3>
+                  <p className="text-sm text-neutral-500 leading-relaxed m-0">
+                    {step.body}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── CTA Band ──────────────────────────────────────────── */}
+        <section id="install" className="w-full bg-[#0b1118] py-16 sm:py-20">
+          <div className="max-w-xl mx-auto px-6 text-center">
+            <h2 className="font-[Newsreader,serif] text-[clamp(1.8rem,3.5vw,2.8rem)] leading-tight tracking-tight text-white mb-4">
+              Start reading what you saved.
+            </h2>
+            <p className="text-white/50 text-sm mb-8">
+              Free. No account. No backend.
+            </p>
+            <a
+              href="#install"
+              className="inline-flex items-center h-11 px-7 rounded-xl bg-white text-[#0b1118] font-semibold text-[0.95rem] no-underline shadow-[0_4px_14px_rgba(0,0,0,0.2)] transition-all hover:bg-neutral-100 active:scale-[0.97]"
+            >
+              Add to Chrome
+            </a>
+            <p className="text-white/25 text-xs mt-5 tracking-wide">
+              Local-first &middot; 0 servers &middot; No feed recreation
+            </p>
           </div>
         </section>
       </main>
     </SiteLayout>
   );
 }
+
+// ─── Privacy Page ─────────────────────────────────────────────────────────────
 
 function PrivacyPage() {
   return (
     <SiteLayout page="privacy">
-      <main className="site-doc">
-        <header>
-          <p>Totem Legal</p>
-          <h1>Privacy Policy</h1>
-          <p>Last updated: February 28, 2026</p>
-        </header>
-
-        <section>
-          <h2>1. What Totem collects</h2>
-          <ul>
-            <li>X authentication headers from your active browser session (authorization, cookie, CSRF token).</li>
-            <li>X user ID derived from your existing session cookie.</li>
-            <li>Your bookmarked posts and related content needed for reading.</li>
-            <li>Reading progress, highlights, and notes created inside Totem.</li>
-            <li>Local user preferences such as theme and new tab settings.</li>
-          </ul>
-        </section>
-
-        <section>
-          <h2>2. Where data is stored</h2>
-          <ul>
-            <li>Primary storage: local browser storage (IndexedDB + chrome.storage.local).</li>
-            <li>Settings sync: chrome.storage.sync when available in Chrome.</li>
-            <li>Totem does not operate a backend database for user content.</li>
-          </ul>
-        </section>
-
-        <section>
-          <h2>3. What Totem does not collect</h2>
-          <ul>
-            <li>No analytics or behavioral telemetry sent to a Totem server.</li>
-            <li>No sale of personal data.</li>
-            <li>No sharing with third-party ad or tracking platforms.</li>
-          </ul>
-        </section>
-
-        <section>
-          <h2>4. Why permissions are used</h2>
-          <ul>
-            <li><strong>storage</strong>: saves bookmarks, progress, notes, and settings locally.</li>
-            <li><strong>webRequest / declarativeNetRequest</strong>: enables authenticated calls to X on your behalf.</li>
-            <li><strong>host permission (x.com)</strong>: required to read your own bookmark data and detect account context.</li>
-            <li><strong>optional permissions</strong> (`topSites`, `favicon`, `search`) only apply when you enable those features.</li>
-          </ul>
-        </section>
-
-        <section>
-          <h2>5. Data retention</h2>
-          <ul>
-            <li>Tweet detail cache: up to 30 days, then removed by cleanup logic.</li>
-            <li>Bookmark mutation event cache: up to 14 days.</li>
-            <li>Local data persists until you clear browser storage or remove Totem.</li>
-          </ul>
-        </section>
-
-        <section>
-          <h2>6. Your control</h2>
-          <ul>
-            <li>You can remove the extension at any time.</li>
-            <li>You can reset Totem local data from settings.</li>
-            <li>You can disable optional permissions by toggling related features off.</li>
-          </ul>
-        </section>
-
-        <section>
-          <h2>7. Contact</h2>
-          <p>
-            For privacy questions, visit <a href="support.html">Support</a> and use the contact channel listed there.
+      <main className="max-w-3xl mx-auto px-6 py-16 sm:py-20">
+        {/* Header */}
+        <div className="mb-10">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#f4a259] mb-2">
+            Totem Legal
           </p>
-        </section>
+          <h1 className="font-[Newsreader,serif] text-[clamp(2rem,4vw,3rem)] leading-none tracking-tight text-neutral-900 mb-2">
+            Privacy Policy
+          </h1>
+          <p className="text-sm text-neutral-400">
+            Last updated: February 28, 2026
+          </p>
+        </div>
+
+        {/* Sections */}
+        <div className="flex flex-col gap-5">
+          <PolicySection title="1. What Totem collects">
+            <ul>
+              <li>
+                X authentication headers from your active browser session
+                (authorization, cookie, CSRF token).
+              </li>
+              <li>X user ID derived from your existing session cookie.</li>
+              <li>
+                Your bookmarked posts and related content needed for reading.
+              </li>
+              <li>
+                Reading progress, highlights, and notes created inside Totem.
+              </li>
+              <li>
+                Local user preferences such as theme and new tab settings.
+              </li>
+            </ul>
+          </PolicySection>
+
+          <PolicySection title="2. Where data is stored">
+            <ul>
+              <li>
+                Primary storage: local browser storage (IndexedDB +
+                chrome.storage.local).
+              </li>
+              <li>
+                Settings sync: chrome.storage.sync when available in Chrome.
+              </li>
+              <li>
+                Totem does not operate a backend database for user content.
+              </li>
+            </ul>
+          </PolicySection>
+
+          <PolicySection title="3. What Totem does not collect">
+            <ul>
+              <li>
+                No analytics or behavioral telemetry sent to a Totem server.
+              </li>
+              <li>No sale of personal data.</li>
+              <li>No sharing with third-party ad or tracking platforms.</li>
+            </ul>
+          </PolicySection>
+
+          <PolicySection title="4. Why permissions are used">
+            <ul>
+              <li>
+                <strong>storage</strong>: saves bookmarks, progress, notes, and
+                settings locally.
+              </li>
+              <li>
+                <strong>webRequest / declarativeNetRequest</strong>: enables
+                authenticated calls to X on your behalf.
+              </li>
+              <li>
+                <strong>host permission (x.com)</strong>: required to read your
+                own bookmark data and detect account context.
+              </li>
+              <li>
+                <strong>optional permissions</strong> (topSites, favicon, search)
+                only apply when you enable those features.
+              </li>
+            </ul>
+          </PolicySection>
+
+          <PolicySection title="5. Data retention">
+            <ul>
+              <li>
+                Tweet detail cache: up to 30 days, then removed by cleanup
+                logic.
+              </li>
+              <li>Bookmark mutation event cache: up to 14 days.</li>
+              <li>
+                Local data persists until you clear browser storage or remove
+                Totem.
+              </li>
+            </ul>
+          </PolicySection>
+
+          <PolicySection title="6. Your control">
+            <ul>
+              <li>You can remove the extension at any time.</li>
+              <li>You can reset Totem local data from settings.</li>
+              <li>
+                You can disable optional permissions by toggling related features
+                off.
+              </li>
+            </ul>
+          </PolicySection>
+
+          <PolicySection title="7. Contact">
+            <p>
+              For privacy questions, email{" "}
+              <a
+                href="mailto:support@usetotem.app"
+                className="text-[#c97b30] underline underline-offset-2"
+              >
+                support@usetotem.app
+              </a>
+              .
+            </p>
+          </PolicySection>
+        </div>
       </main>
     </SiteLayout>
   );
 }
 
-function SupportPage() {
+function PolicySection({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
   return (
-    <SiteLayout page="support">
-      <main className="site-doc">
-        <header>
-          <p>Totem Help</p>
-          <h1>Support</h1>
-          <p>Guides for installation, troubleshooting, and reporting issues.</p>
-        </header>
-
-        <section>
-          <h2>1. Getting started</h2>
-          <ol>
-            <li>Install Totem from the Chrome Web Store.</li>
-            <li>Log in to X in the same Chrome profile.</li>
-            <li>Open a new tab to launch Totem.</li>
-            <li>Use Sync if your bookmark list is not yet populated.</li>
-          </ol>
-        </section>
-
-        <section>
-          <h2>2. Common issues</h2>
-          <ul>
-            <li><strong>No bookmarks appear:</strong> confirm your X session is active, then click Sync.</li>
-            <li><strong>Re-auth prompts:</strong> open X in a normal tab, refresh session, and return to Totem.</li>
-            <li><strong>Missing highlights:</strong> check if local browser storage was cleared.</li>
-            <li><strong>Top sites not visible:</strong> enable quick links in settings and allow optional permission.</li>
-          </ul>
-        </section>
-
-        <section>
-          <h2>3. Reporting a bug</h2>
-          <p>
-            Please include your Chrome version, Totem version, and exact reproduction steps.
-          </p>
-          <p>
-            Preferred channel: <a href="mailto:support@usetotem.app">support@usetotem.app</a>.
-          </p>
-        </section>
-
-        <section>
-          <h2>4. Security and privacy questions</h2>
-          <p>
-            Read the <a href="privacy.html">Privacy Policy</a> for full data handling details.
-          </p>
-        </section>
-      </main>
-    </SiteLayout>
+    <section className="border border-neutral-100 rounded-xl bg-neutral-50/50 p-5">
+      <h2 className="font-[Newsreader,serif] text-xl tracking-tight text-neutral-900 mb-3 mt-0">
+        {title}
+      </h2>
+      <div className="text-sm text-neutral-500 leading-relaxed [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:flex [&_ul]:flex-col [&_ul]:gap-2 [&_ul]:m-0 [&_p]:m-0 [&_strong]:text-neutral-700">
+        {children}
+      </div>
+    </section>
   );
 }
+
+// ─── Entry ────────────────────────────────────────────────────────────────────
 
 export function SiteApp({ page }: SiteAppProps) {
   if (page === "privacy") return <PrivacyPage />;
-  if (page === "support") return <SupportPage />;
   return <LandingPage />;
 }

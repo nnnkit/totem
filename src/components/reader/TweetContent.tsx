@@ -10,7 +10,6 @@ import {
   buildGrokUrl,
   normalizeText,
   resolveTweetKind,
-  toEmbeddedReaderTweet,
 } from "./utils";
 import { estimateReadingMinutes } from "../../lib/bookmark-utils";
 import { TweetHeader } from "./TweetHeader";
