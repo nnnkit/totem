@@ -6,6 +6,7 @@ import {
   migrateLegacyLocalStorageKeys,
   migrateLegacyChromeStorageKeys,
 } from "./lib/storage-migration";
+import { RuntimeProvider } from "./runtime/RuntimeProvider";
 import "./index.css";
 
 migrateLegacyLocalStorageKeys();
@@ -14,7 +15,9 @@ migrateLegacyChromeStorageKeys().catch(() => {});
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <ErrorBoundary>
-      <App />
+      <RuntimeProvider>
+        <App />
+      </RuntimeProvider>
     </ErrorBoundary>
   </StrictMode>,
 );

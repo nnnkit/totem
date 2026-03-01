@@ -40,10 +40,24 @@ Implementation progress in this pass:
 - UI auth reducer now uses session truth separate from query-id capability.
 - `connecting` has a watchdog timeout fallback.
 - `NO_QUERY_ID` now maps to sync `error` (capability issue), not `reauthing`.
+- Runtime derivation is centralized in `RuntimeProvider` (single source for mode/canSync/offline).
 
 ## 2. Current Runtime State Model
 
-There are 4 independently-owned state layers.
+There are 5 layers, with runtime derivation now centralized through context.
+
+## 2.0 Runtime Provider (centralized selector layer)
+
+Source:
+
+- `src/runtime/RuntimeProvider.tsx`
+
+Responsibilities:
+
+- Owns canonical runtime mode derivation (`booting`, `online_ready`, `online_degraded`, `offline_cached`, `offline_empty`).
+- Centralizes sync eligibility (`canSync`) and disabled-reason logic.
+- Exposes unified runtime state to UI via `useRuntime()`.
+- Ensures `useBookmarks` receives `syncReady` (`phase=ready && bookmarksApi=ready`) so sync/event wiring does not run while capability is blocked.
 
 ## 2.1 Worker session/auth state (source of auth truth today)
 
@@ -112,11 +126,10 @@ Key behavior:
 
 Current derived flags:
 
-- `isReady = phase === ready`
-- `authUnavailable = phase === need_login OR syncStatus === reauthing`
-- `offlineMode = hasBookmarks && authUnavailable`
+- `runtimeMode` is sourced from `RuntimeProvider` (not ad-hoc in `App.tsx`)
+- `offlineMode = runtimeMode === offline_cached`
 - `displayBookmarks = offlineMode ? bookmarks filtered by cached-detail-id : bookmarks`
-- `needsLogin = (phase in {need_login, connecting}) && displayBookmarks.length === 0`
+- `needsLogin = (runtimeMode === offline_empty OR phase === connecting) && displayBookmarks.length === 0`
 
 Critical UI gate for stuck screen:
 
@@ -131,7 +144,7 @@ Critical UI gate for stuck screen:
 1. `useAuth` calls `CHECK_AUTH(probe=true)`.
 2. Worker probe succeeds (`runAuthProbeRequest` -> 200) and sets `authenticated`.
 3. `useAuth` enters `ready`.
-4. `useBookmarks(isReady=true)` initializes local DB list and stays `idle` until user sync/soft-sync event.
+4. `useBookmarks(syncReady=true)` initializes local DB list and stays `idle` until user sync/soft-sync event.
 5. Home shows sync button and normal content.
 
 ## 3.2 Extension opens, user logged in, query IDs not resolvable yet
@@ -140,7 +153,7 @@ Critical UI gate for stuck screen:
 2. Probe may mark auth state stale due `probe_no_query_id`.
 3. Worker still reports `sessionState=logged_in` when headers/session are present.
 4. `useAuth` stays `ready`, while `capability.bookmarksApi=blocked` until query IDs are available.
-5. Sync remains disabled with a capability message instead of trapping in connecting.
+5. Runtime mode becomes `online_degraded`; sync stays disabled with capability message instead of trapping in connecting.
 
 Why this is fragile:
 
@@ -187,7 +200,7 @@ Auth failures:
 ## 3.7 Soft sync from worker mutation activity
 
 1. Worker sees non-extension GraphQL activity and sets `totem_light_sync_needed` with debounce/throttle.
-2. `useBookmarks` storage listener (only when `isReady`) runs incremental sync.
+2. `useBookmarks` storage listener runs only when `syncReady` (`ready + bookmarks capability ready`) and then performs incremental sync.
 
 Constraint:
 
@@ -288,7 +301,7 @@ Severity legend:
 
 ### Findings status after this pass
 
-- Mitigated: F1, F2, F3, F4 (session/capability split, `NO_QUERY_ID` classification, connecting watchdog).
+- Mitigated: F1, F2, F3, F4 (session/capability split, `NO_QUERY_ID` classification, connecting watchdog, centralized runtime selector layer).
 - Still open: F5, F6, F7, F8, F9, F10.
 
 ## 6. Root Cause of "Connecting to X..." Stuck Screen (Pre-Fix)
@@ -503,10 +516,20 @@ The refactor is complete only if all conditions hold:
 6. Reader shows precise error messaging per error class.
 7. Verification matrix scenarios 7.1-7.12 pass.
 
-## 11. Immediate Next Work (for the actual refactor PR)
+## 11. Immediate Next Work (next implementation slice)
 
-1. Introduce typed runtime contract and normalization utility.
-2. Update worker `CHECK_AUTH` payload shape to session/capability split.
-3. Update `useAuth` reducer to consume split contract and add watchdog.
-4. Adjust sync machine error taxonomy (`NO_QUERY_ID` class).
-5. Add targeted tests for the stuck-connecting regression and fallback behavior.
+Done in current code:
+
+1. Typed runtime contract (`sessionState`, `capability`) added.
+2. Worker `CHECK_AUTH` payload split by session/capability.
+3. `useAuth` reducer updated with connecting watchdog.
+4. `NO_QUERY_ID` sync classification adjusted.
+5. Runtime selector centralized in `RuntimeProvider`.
+
+Next items:
+
+1. Replace hidden-tab worker `reAuthSilently()` with explicit user-driven recovery path.
+2. Add reader-level error taxonomy (`auth` vs `capability` vs `network/server`) and precise UX states.
+3. Make detailed-id index refresh deterministic after any successful detail fetch.
+4. Make prefetch resilient (continue after transient failures with bounded backoff).
+5. Update `src/lib/api-rules.md` to remove stale/legacy behavior notes.

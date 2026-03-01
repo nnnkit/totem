@@ -1,10 +1,10 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
-import { useAuth } from "./hooks/useAuth";
-import { useBookmarks, useDetailedTweetIds } from "./hooks/useBookmarks";
+import { useDetailedTweetIds } from "./hooks/useBookmarks";
 import { usePrefetchDetails } from "./hooks/usePrefetchDetails";
 import { useTheme } from "./hooks/useTheme";
 import { useSettings } from "./hooks/useSettings";
 import { useKeyboardNavigation } from "./hooks/useKeyboard";
+import { useRuntime } from "./runtime/RuntimeProvider";
 import {
   ensureReadingProgressExists,
   markReadingProgressCompleted,
@@ -72,15 +72,22 @@ interface ToastState {
 type AppView = "home" | "reading";
 
 export default function App() {
-  const { phase, capability, startLogin } = useAuth();
+  const {
+    phase,
+    isReady,
+    offlineMode,
+    canSync: runtimeCanSync,
+    syncDisabledReason: runtimeSyncDisabledReason,
+    bookmarks,
+    syncStatus,
+    refresh,
+    reset,
+    unbookmark,
+    runtimeMode,
+    startLogin,
+  } = useRuntime();
   const { themePreference, setThemePreference } = useTheme();
   const { settings, updateSettings } = useSettings();
-  const isReady = phase === "ready";
-  const { bookmarks, syncStatus, refresh, reset, unbookmark } = useBookmarks(isReady);
-  const hasBookmarks = bookmarks.length > 0;
-  const authUnavailable = phase === "need_login" || syncStatus === "reauthing";
-  const offlineMode = hasBookmarks && authUnavailable;
-  const bookmarksApiReady = capability.bookmarksApi === "ready";
   const [view, setView] = useState<AppView>("home");
   const [selectedBookmarkRaw, setSelectedBookmark] = useState<Bookmark | null>(
     null,
@@ -306,23 +313,17 @@ export default function App() {
     (isReady && syncStatus === "loading") ||
     (offlineMode && !detailedIdsLoaded);
   const hasDisplayBookmarks = displayBookmarks.length > 0;
-  const canSync = isReady && bookmarksApiReady && syncStatus !== "reauthing" && !isResetting;
+  const canSync = runtimeCanSync && !isResetting;
   const syncDisabledReason = !canSync
     ? (
         isResetting
           ? "Reset in progress..."
-          : !isReady
-            ? phase === "connecting"
-              ? "Connecting to X..."
-              : "Log in to X to sync bookmarks"
-            : !bookmarksApiReady
-              ? "Preparing X API..."
-              : "Reconnect to X to sync bookmarks"
+          : runtimeSyncDisabledReason
       )
     : undefined;
 
   const needsLogin =
-    (phase === "need_login" || phase === "connecting") &&
+    (runtimeMode === "offline_empty" || phase === "connecting") &&
     !hasDisplayBookmarks;
 
   const mainContent = (() => {
