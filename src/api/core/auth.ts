@@ -4,8 +4,12 @@ export interface ReauthStatus {
   inProgress: boolean;
 }
 
-export async function checkAuth(): Promise<AuthStatus> {
-  return chrome.runtime.sendMessage({ type: "CHECK_AUTH" });
+interface CheckAuthOptions {
+  probe?: boolean;
+}
+
+export async function checkAuth(options: CheckAuthOptions = {}): Promise<AuthStatus> {
+  return chrome.runtime.sendMessage({ type: "CHECK_AUTH", probe: options.probe === true });
 }
 
 export async function startAuthCapture(): Promise<{ tabId?: number }> {

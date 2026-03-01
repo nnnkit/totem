@@ -76,12 +76,13 @@ export default function App() {
   const { themePreference, setThemePreference } = useTheme();
   const { settings, updateSettings } = useSettings();
   const isReady = phase === "ready";
-  const isLoggedOut = phase === "need_login";
   const { bookmarks, syncStatus, refresh, reset, unbookmark } = useBookmarks(isReady);
   const hasBookmarks = bookmarks.length > 0;
-  const offlineMode = isLoggedOut && hasBookmarks;
-  const connectingWithCache = phase === "connecting" && hasBookmarks;
-  const showCached = offlineMode || connectingWithCache;
+  const authUnavailable =
+    phase === "need_login" ||
+    phase === "connecting" ||
+    syncStatus === "reauthing";
+  const offlineMode = hasBookmarks && authUnavailable;
   const [view, setView] = useState<AppView>("home");
   const [selectedBookmarkRaw, setSelectedBookmark] = useState<Bookmark | null>(
     null,
@@ -306,7 +307,8 @@ export default function App() {
     phase === "loading" ||
     (isReady && syncStatus === "loading") ||
     (offlineMode && !detailedIdsLoaded);
-  const canSync = isReady && !isResetting;
+  const hasDisplayBookmarks = displayBookmarks.length > 0;
+  const canSync = isReady && syncStatus !== "reauthing" && !isResetting;
   const syncDisabledReason = !canSync
     ? (
         isResetting
@@ -317,7 +319,9 @@ export default function App() {
       )
     : undefined;
 
-  const needsLogin = !showCached && (phase === "need_login" || phase === "connecting");
+  const needsLogin =
+    (phase === "need_login" || phase === "connecting") &&
+    !hasDisplayBookmarks;
 
   const mainContent = (() => {
     if (selectedBookmark) {

@@ -16,6 +16,7 @@ import { TweetArticle } from "./TweetArticle";
 import { TweetLinks } from "./TweetLinks";
 import { TweetRecommendations } from "./TweetRecommendations";
 import type { ReaderTweet } from "./types";
+import { resolveTweetBodyVisibility } from "./tweet-body-visibility";
 import { cn } from "../../lib/cn";
 import { Button } from "../ui/Button";
 import { OfflineBanner } from "../ui/OfflineBanner";
@@ -24,37 +25,6 @@ interface TweetBodyProps {
   tweet: ReaderTweet;
   compact?: boolean;
   sectionIdPrefix?: string;
-}
-
-function normalizeArticleFingerprint(value: string | null | undefined): string {
-  if (!value) return "";
-  return normalizeText(value).replace(/\s+/g, " ").toLowerCase().trim();
-}
-
-function hasDuplicatedQuotedArticle(tweet: ReaderTweet): boolean {
-  const article = tweet.article;
-  const quotedArticle = tweet.quotedTweet?.article;
-  if (!article || !quotedArticle) return false;
-
-  const articleText = normalizeArticleFingerprint(article.plainText);
-  const quotedArticleText = normalizeArticleFingerprint(quotedArticle.plainText);
-  if (articleText && quotedArticleText && articleText === quotedArticleText) {
-    return true;
-  }
-
-  const articleTitle = normalizeArticleFingerprint(article.title);
-  const quotedArticleTitle = normalizeArticleFingerprint(quotedArticle.title);
-  const articleCover = normalizeArticleFingerprint(article.coverImageUrl);
-  const quotedArticleCover = normalizeArticleFingerprint(quotedArticle.coverImageUrl);
-
-  return Boolean(
-    articleTitle &&
-      quotedArticleTitle &&
-      articleTitle === quotedArticleTitle &&
-      articleCover &&
-      quotedArticleCover &&
-      articleCover === quotedArticleCover,
-  );
 }
 
 function stripCardUrls(
@@ -109,20 +79,7 @@ function TweetBody({
     );
   }
 
-  const articleText = tweet.article?.plainText?.trim() || "";
-  const hasArticle = articleText.length > 0 && tweet.article;
-  const textMatchesArticle =
-    hasArticle && normalizeText(articleText) === normalizeText(tweet.text);
-
-  const isArticleKind = kind === "article" && hasArticle;
-  const hasArticleBlocks = Boolean(tweet.article?.contentBlocks?.length);
-  const suppressDuplicateQuotedArticle = hasDuplicatedQuotedArticle(tweet);
-
-  const showArticle =
-    hasArticle &&
-    !suppressDuplicateQuotedArticle &&
-    (isArticleKind || !textMatchesArticle || hasArticleBlocks);
-  const showText = !((isArticleKind || hasArticleBlocks) && textMatchesArticle);
+  const { showArticle, showText } = resolveTweetBodyVisibility(tweet, kind);
 
   const displayText = stripCardUrls(tweet.text, tweet.urls);
 
@@ -138,7 +95,7 @@ function TweetBody({
       )}
 
       <TweetMedia items={tweet.media} bleed={!compact} />
-      <TweetQuote quotedTweet={tweet.quotedTweet || null} />
+      <TweetQuote quotedTweet={tweet.quotedTweet || null} variant="compact" />
 
       {showArticle && (
         <TweetArticle

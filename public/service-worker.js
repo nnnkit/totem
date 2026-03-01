@@ -28,7 +28,28 @@ const AUTH_STATE_STORAGE_KEYS = [
   "totem_user_id",
   "totem_auth_headers",
   "totem_auth_time",
+  "totem_auth_state",
+  "totem_auth_state_at",
+  "totem_auth_state_reason",
 ];
+const AUTH_STATE_LOGGED_OUT = "logged_out";
+const AUTH_STATE_STALE = "stale";
+const AUTH_STATE_AUTHENTICATED = "authenticated";
+const AUTH_STATE_VALUES = new Set([
+  AUTH_STATE_LOGGED_OUT,
+  AUTH_STATE_STALE,
+  AUTH_STATE_AUTHENTICATED,
+]);
+const AUTH_PROTECTED_OPERATIONS = new Set([
+  "Bookmarks",
+  "TweetDetail",
+  "DeleteBookmark",
+  "CreateBookmark",
+]);
+const AUTH_WEAK_NEGATIVE_WINDOW_MS = 10_000;
+const AUTH_WEAK_NEGATIVE_THRESHOLD = 2;
+const AUTH_PROBE_MIN_INTERVAL_MS = 30_000;
+const AUTH_PROBE_STALE_AFTER_MS = 90_000;
 const WEEKLY_SW_CLEANUP_KEY = "totem_sw_cleanup_at";
 const WEEKLY_SW_CLEANUP_INTERVAL_MS = 1000 * 60 * 60 * 24 * 7;
 const BOOKMARK_EVENT_RETENTION_MS = 1000 * 60 * 60 * 24 * 14;
@@ -131,6 +152,69 @@ function getCookieHeaderValue(cookieHeader, name) {
 
 let authTabId = null;
 let reauthInProgress = false;
+let authWeakNegativeHits = [];
+let lastAuthProbeAt = 0;
+let authProbePromise = null;
+
+function normalizeAuthState(state, hasAuthHeader) {
+  if (AUTH_STATE_VALUES.has(state)) return state;
+  return hasAuthHeader ? AUTH_STATE_STALE : AUTH_STATE_LOGGED_OUT;
+}
+
+async function setAuthState(state, reason, options = {}) {
+  const now = Date.now();
+  const safeReason = typeof reason === "string" && reason ? reason.slice(0, 120) : "";
+  const updates = {
+    totem_auth_state: state,
+    totem_auth_state_at: now,
+    totem_auth_state_reason: safeReason,
+  };
+  if (options.clearAuth) {
+    await Promise.all([
+      chrome.storage.local.set(updates),
+      chrome.storage.local.remove(["totem_auth_headers", "totem_auth_time"]),
+    ]);
+    return;
+  }
+  await chrome.storage.local.set(updates);
+}
+
+function resetWeakAuthSignals() {
+  authWeakNegativeHits = [];
+}
+
+function extractGraphqlOperationName(urlString) {
+  const match = String(urlString || "").match(/\/i\/api\/graphql\/[^/]+\/([^/?]+)/);
+  return match?.[1] || "";
+}
+
+function isAuthProtectedGraphqlOperation(urlString) {
+  const operation = extractGraphqlOperationName(urlString);
+  return AUTH_PROTECTED_OPERATIONS.has(operation);
+}
+
+async function markAuthAuthenticated(reason = "auth_signal") {
+  resetWeakAuthSignals();
+  await setAuthState(AUTH_STATE_AUTHENTICATED, reason);
+}
+
+async function markAuthLoggedOut(reason = "auth_missing", clearAuth = true) {
+  resetWeakAuthSignals();
+  await setAuthState(AUTH_STATE_LOGGED_OUT, reason, { clearAuth });
+}
+
+function recordWeakAuthNegativeSignal(reason) {
+  const now = Date.now();
+  authWeakNegativeHits = authWeakNegativeHits.filter(
+    (ts) => now - ts <= AUTH_WEAK_NEGATIVE_WINDOW_MS,
+  );
+  authWeakNegativeHits.push(now);
+  if (authWeakNegativeHits.length < AUTH_WEAK_NEGATIVE_THRESHOLD) {
+    return Promise.resolve();
+  }
+  authWeakNegativeHits = [];
+  return markAuthLoggedOut(reason, true).catch(() => {});
+}
 
 function incrementTransactionId(str) {
   if (!str) return str;
@@ -163,7 +247,13 @@ function reAuthSilently() {
     };
 
     const onChange = (changes) => {
-      if (changes.totem_auth_headers && !resolved) {
+      const authHeaders = changes.totem_auth_headers?.newValue;
+      const hasAuth = Boolean(
+        authHeaders &&
+        typeof authHeaders === "object" &&
+        authHeaders.authorization,
+      );
+      if (hasAuth && !resolved) {
         resolved = true;
         cleanup();
         resolve(true);
@@ -210,6 +300,82 @@ async function buildHeaders() {
   }
 
   return headers;
+}
+
+async function runAuthProbeRequest() {
+  const stored = await chrome.storage.local.get([
+    "totem_auth_headers",
+    "totem_features",
+  ]);
+
+  if (!stored.totem_auth_headers?.authorization) {
+    await markAuthLoggedOut("probe_no_auth", true);
+    return AUTH_STATE_LOGGED_OUT;
+  }
+
+  const queryId = await resolveQueryId("Bookmarks").catch(() => null);
+  if (!queryId) {
+    await setAuthState(AUTH_STATE_STALE, "probe_no_query_id");
+    return AUTH_STATE_STALE;
+  }
+
+  const pageCount = 1;
+  const variables = { count: pageCount, includePromotedContent: true };
+  const features = stored.totem_features || JSON.stringify(DEFAULT_FEATURES);
+  const params = new URLSearchParams({
+    variables: JSON.stringify(variables),
+    features,
+  });
+  const url = `https://x.com/i/api/graphql/${queryId}/Bookmarks?${params}`;
+
+  let requestHeaders;
+  try {
+    requestHeaders = await buildHeaders();
+  } catch {
+    await markAuthLoggedOut("probe_headers_missing", true);
+    return AUTH_STATE_LOGGED_OUT;
+  }
+
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      credentials: "include",
+      headers: requestHeaders,
+    });
+
+    if (response.status === 401 || response.status === 403) {
+      await markAuthLoggedOut(`probe_${response.status}`, true);
+      return AUTH_STATE_LOGGED_OUT;
+    }
+    if (response.ok) {
+      await markAuthAuthenticated("probe_ok");
+      return AUTH_STATE_AUTHENTICATED;
+    }
+
+    await setAuthState(AUTH_STATE_STALE, `probe_http_${response.status}`);
+    return AUTH_STATE_STALE;
+  } catch {
+    await setAuthState(AUTH_STATE_STALE, "probe_network_error");
+    return AUTH_STATE_STALE;
+  }
+}
+
+async function probeAuthState(force = false) {
+  const now = Date.now();
+  if (!force && now - lastAuthProbeAt < AUTH_PROBE_MIN_INTERVAL_MS) {
+    return null;
+  }
+  if (authProbePromise) return authProbePromise;
+
+  lastAuthProbeAt = now;
+  authProbePromise = runAuthProbeRequest()
+    .then((state) => ({ authState: state }))
+    .catch(() => ({ authState: AUTH_STATE_STALE }))
+    .finally(() => {
+      authProbePromise = null;
+    });
+
+  return authProbePromise;
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -843,6 +1009,7 @@ const TW_TO_TOTEM_KEY_MAP = {
   tw_graphql_catalog: "totem_graphql_catalog",
   tw_auth_headers: "totem_auth_headers",
   tw_auth_time: "totem_auth_time",
+  tw_auth_state: "totem_auth_state",
   tw_query_id: "totem_query_id",
   tw_features: "totem_features",
   tw_detail_query_id: "totem_detail_query_id",
@@ -857,6 +1024,7 @@ const XBT_TO_TOTEM_KEY_MAP = {
   xbt_graphql_catalog: "totem_graphql_catalog",
   xbt_auth_headers: "totem_auth_headers",
   xbt_auth_time: "totem_auth_time",
+  xbt_auth_state: "totem_auth_state",
   xbt_query_id: "totem_query_id",
   xbt_features: "totem_features",
   xbt_detail_query_id: "totem_detail_query_id",
@@ -910,11 +1078,13 @@ migrateOldStorageKeys().catch(() => {});
 // API REQUEST HANDLERS
 // ═══════════════════════════════════════════════════════════
 
-async function handleCheckAuth() {
+async function handleCheckAuth(options = {}) {
   const stored = await chrome.storage.local.get([
     "totem_user_id",
     "totem_auth_headers",
     "totem_auth_time",
+    "totem_auth_state",
+    "totem_auth_state_at",
   ]);
 
   const userId =
@@ -922,7 +1092,23 @@ async function handleCheckAuth() {
       ? stored.totem_user_id
       : null;
   const hasAuthHeader = !!stored.totem_auth_headers?.authorization;
-  const hasUser = Boolean(userId || hasAuthHeader);
+  let authState = normalizeAuthState(stored.totem_auth_state, hasAuthHeader);
+
+  const authStateAt = Number(stored.totem_auth_state_at || 0);
+  const authStateAgeMs = Date.now() - authStateAt;
+  const shouldProbe =
+    options.probe === true ||
+    (authState === AUTH_STATE_STALE && hasAuthHeader) ||
+    (authState === AUTH_STATE_AUTHENTICATED && authStateAgeMs > AUTH_PROBE_STALE_AFTER_MS);
+
+  if (shouldProbe) {
+    const probeResult = await probeAuthState(options.probe === true).catch(() => null);
+    if (probeResult?.authState) {
+      authState = probeResult.authState;
+    }
+  }
+
+  const hasUser = authState !== AUTH_STATE_LOGGED_OUT && Boolean(userId || hasAuthHeader);
 
   // Query IDs are resolved on-demand from in-memory cache / bundles.
   // Check if we already have one cached, or try to resolve it now.
@@ -932,9 +1118,10 @@ async function handleCheckAuth() {
 
   return {
     hasUser,
-    hasAuth: hasAuthHeader,
+    hasAuth: authState === AUTH_STATE_AUTHENTICATED && hasAuthHeader,
     hasQueryId: !!bookmarksQid,
     userId,
+    authState,
   };
 }
 
@@ -975,6 +1162,7 @@ async function handleFetchBookmarks(cursor, count, _retried = false, _queryIdRet
       const success = await reAuthSilently();
       if (success) return handleFetchBookmarks(cursor, count, true, _queryIdRetried);
     }
+    await markAuthLoggedOut(`bookmarks_${response.status}`, true);
     throw new Error("AUTH_EXPIRED");
   }
 
@@ -988,6 +1176,7 @@ async function handleFetchBookmarks(cursor, count, _retried = false, _queryIdRet
   }
 
   const json = await response.json();
+  await markAuthAuthenticated("bookmarks_ok");
 
   if (!_queryIdRetried && isQueryIdStale(json)) {
     const freshId = await forceRediscoverQueryId("Bookmarks");
@@ -1024,6 +1213,7 @@ async function handleDeleteBookmark(tweetId, _retried = false, _queryIdRetried =
       const success = await reAuthSilently();
       if (success) return handleDeleteBookmark(tweetId, true, _queryIdRetried);
     }
+    await markAuthLoggedOut(`delete_${response.status}`, true);
     throw new Error("AUTH_EXPIRED");
   }
 
@@ -1038,6 +1228,7 @@ async function handleDeleteBookmark(tweetId, _retried = false, _queryIdRetried =
   }
 
   const json = await response.json().catch(() => null);
+  await markAuthAuthenticated("delete_ok");
 
   if (!_queryIdRetried && isQueryIdStale(json)) {
     const freshId = await forceRediscoverQueryId("DeleteBookmark");
@@ -1113,6 +1304,7 @@ async function handleFetchTweetDetail(tweetId, _retried = false, _queryIdRetried
       const success = await reAuthSilently();
       if (success) return handleFetchTweetDetail(tweetId, true, _queryIdRetried);
     }
+    await markAuthLoggedOut(`detail_${response.status}`, true);
     throw new Error("AUTH_EXPIRED");
   }
 
@@ -1126,6 +1318,7 @@ async function handleFetchTweetDetail(tweetId, _retried = false, _queryIdRetried
   }
 
   const json = await response.json();
+  await markAuthAuthenticated("detail_ok");
 
   if (!_queryIdRetried && isQueryIdStale(json)) {
     const freshId = await forceRediscoverQueryId("TweetDetail");
@@ -1175,6 +1368,20 @@ chrome.webRequest.onSendHeaders.addListener(
     const userIdFromHeader = parseTwidUserId(twidRaw);
     if (userIdFromHeader) {
       chrome.storage.local.set({ totem_user_id: userIdFromHeader }).catch(() => {});
+    }
+
+    const protectedOperation = isAuthProtectedGraphqlOperation(details.url);
+    const hasAuthTrio = Boolean(
+      headers["authorization"] &&
+      headers["cookie"] &&
+      headers["x-csrf-token"],
+    );
+    if (protectedOperation) {
+      if (hasAuthTrio) {
+        markAuthAuthenticated("headers_trio").catch(() => {});
+      } else if (!isExtensionInitiated(details)) {
+        recordWeakAuthNegativeSignal("headers_missing_auth_trio").catch(() => {});
+      }
     }
 
     if (headers["authorization"] && headers["cookie"] && headers["x-csrf-token"]) {
@@ -1300,13 +1507,29 @@ chrome.webRequest.onCompleted.addListener(
   },
 );
 
+chrome.webRequest.onCompleted.addListener(
+  (details) => {
+    if (!isAuthProtectedGraphqlOperation(details.url)) return;
+    if (details.statusCode === 401 || details.statusCode === 403) {
+      markAuthLoggedOut(`completed_${details.statusCode}`, true).catch(() => {});
+      return;
+    }
+    if (details.statusCode >= 200 && details.statusCode < 300) {
+      markAuthAuthenticated("completed_ok").catch(() => {});
+    }
+  },
+  {
+    urls: ["https://x.com/i/api/graphql/*"],
+  },
+);
+
 // ═══════════════════════════════════════════════════════════
 // MESSAGE HANDLER
 // ═══════════════════════════════════════════════════════════
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message.type === "CHECK_AUTH") {
-    handleCheckAuth().then(sendResponse);
+    handleCheckAuth({ probe: message.probe === true }).then(sendResponse);
     return true;
   }
   if (message.type === "START_AUTH_CAPTURE") {
@@ -1394,6 +1617,9 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       authTabId = null;
     }
     reauthInProgress = false;
+    authWeakNegativeHits = [];
+    authProbePromise = null;
+    lastAuthProbeAt = 0;
     lastLightSyncSignalAt = 0;
     discoveryInProgress = false;
     sendResponse({ ok: true });
@@ -1410,9 +1636,18 @@ runWeeklyServiceWorkerCleanup().catch(() => {});
 
 // On startup, proactively discover query IDs into in-memory cache.
 // Nothing is persisted — IDs are always fresh per service worker session.
-chrome.storage.local.get(["totem_auth_headers"], (stored) => {
-  if (stored.totem_auth_headers?.authorization) {
+chrome.storage.local.get(["totem_auth_headers", "totem_auth_state"], (stored) => {
+  const hasAuthHeader = Boolean(stored.totem_auth_headers?.authorization);
+  const state = normalizeAuthState(stored.totem_auth_state, hasAuthHeader);
+  if (hasAuthHeader) {
+    if (state !== AUTH_STATE_AUTHENTICATED && state !== AUTH_STATE_STALE) {
+      setAuthState(AUTH_STATE_STALE, "startup_has_auth").catch(() => {});
+    }
     discoverAllMissingQueryIds().catch(() => {});
+    return;
+  }
+  if (state !== AUTH_STATE_LOGGED_OUT) {
+    setAuthState(AUTH_STATE_LOGGED_OUT, "startup_no_auth", { clearAuth: false }).catch(() => {});
   }
 });
 

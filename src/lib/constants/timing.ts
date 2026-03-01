@@ -5,6 +5,8 @@ export const AUTH_QUICK_CHECK_MS = 500;
 export const AUTH_RETRY_MS = 1000;
 export const AUTH_POLL_MS = 1000;
 export const AUTH_CONNECTING_TIMEOUT_MS = 15_000;
+export const AUTH_HEARTBEAT_MS = 45_000;
+export const AUTH_STALE_RECHECK_MS = 15_000;
 
 // ── Bookmarks sync ──────────────────────────────────────────
 export const CREATE_EVENT_DELAY_MS = 1500;

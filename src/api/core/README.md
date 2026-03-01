@@ -3,7 +3,7 @@
 This folder contains the extension's primary API-call entrypoints so core data flows can be verified in one place.
 
 ## Auth
-- `checkAuth()` -> runtime message `CHECK_AUTH`
+- `checkAuth({ probe? })` -> runtime message `CHECK_AUTH` (optional lightweight auth probe)
 - `startAuthCapture()` -> runtime message `START_AUTH_CAPTURE`
 - `closeAuthTab()` -> runtime message `CLOSE_AUTH_TAB`
 - `checkReauthStatus()` -> runtime message `REAUTH_STATUS`

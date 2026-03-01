@@ -137,11 +137,14 @@ export interface TweetDetailCache {
   thread: ThreadTweet[];
 }
 
+export type AuthState = "authenticated" | "stale" | "logged_out";
+
 export interface AuthStatus {
   hasUser: boolean;
   hasAuth: boolean;
   hasQueryId: boolean;
   userId: string | null;
+  authState: AuthState;
 }
 
 export type SyncStatus = "loading" | "syncing" | "idle" | "error" | "reauthing";

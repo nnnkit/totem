@@ -8,7 +8,13 @@ const prefersReducedMotion =
   typeof window !== "undefined" &&
   window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
-function mediaHeightClass(total: number, index: number): string {
+function mediaHeightClass(total: number, index: number, compact: boolean): string {
+  if (compact) {
+    if (total === 1) return "h-36";
+    if (total === 3 && index === 0) return "h-32";
+    return "h-24";
+  }
+
   if (total === 1) return "max-h-[72vh]";
   if (total === 3 && index === 0) return "h-60";
   return "h-44";
@@ -17,9 +23,10 @@ function mediaHeightClass(total: number, index: number): string {
 interface Props {
   items: Media[];
   bleed?: boolean;
+  compact?: boolean;
 }
 
-export function TweetMedia({ items, bleed = false }: Props) {
+export function TweetMedia({ items, bleed = false, compact = false }: Props) {
   const [previewImage, setPreviewImage] = useState<{ src: string; alt: string } | null>(null);
   const previewRef = useRef<{ src: string; alt: string } | null>(null);
   if (previewImage) previewRef.current = previewImage;
@@ -36,7 +43,7 @@ export function TweetMedia({ items, bleed = false }: Props) {
       <div className={cn("mt-5 overflow-hidden rounded border border-border bg-border", bleed && "-mx-6")}>
         <div className={cn("grid gap-px", columns)}>
           {visible.map((item, index) => {
-            const heightClass = mediaHeightClass(visible.length, index);
+            const heightClass = mediaHeightClass(visible.length, index, compact);
             const spanClass = visible.length === 3 && index === 0 ? "col-span-2" : "";
 
             if (item.type === "video" || item.type === "animated_gif") {

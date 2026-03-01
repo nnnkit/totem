@@ -1,14 +1,14 @@
 import { useReducer, useEffect, useCallback } from "react";
-import { checkAuth, startAuthCapture, closeAuthTab } from "../api/core/auth";
-import { CS_USER_ID, CS_AUTH_HEADERS } from "../lib/storage-keys";
+import { checkAuth } from "../api/core/auth";
+import { CS_USER_ID, CS_AUTH_HEADERS, CS_AUTH_STATE } from "../lib/storage-keys";
 import {
   AUTH_TIMEOUT_MS,
-  AUTH_RECHECK_MS,
   AUTH_QUICK_CHECK_MS,
   AUTH_RETRY_MS,
-  AUTH_POLL_MS,
-  AUTH_CONNECTING_TIMEOUT_MS,
+  AUTH_HEARTBEAT_MS,
+  AUTH_STALE_RECHECK_MS,
 } from "../lib/constants";
+import type { AuthState as SessionAuthState } from "../types";
 
 export type AuthPhase = "loading" | "need_login" | "connecting" | "ready";
 
@@ -37,133 +37,91 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
 
 interface AuthState {
   phase: AuthPhase;
-  connectingSince: number;
-  gaveUp: boolean;
-  captureStarted: boolean;
-  triedNoUserCapture: boolean;
+  authState: SessionAuthState;
   pendingRetry: { delayMs: number } | null;
 }
 
 const INITIAL_STATE: AuthState = {
   phase: "loading",
-  connectingSince: 0,
-  gaveUp: false,
-  captureStarted: false,
-  triedNoUserCapture: false,
+  authState: "stale",
   pendingRetry: null,
 };
 
 type AuthAction =
-  | { type: "CHECK_RESULT"; hasUser: boolean; hasAuth: boolean; hasQueryId: boolean; now: number }
-  | { type: "CHECK_ERROR"; now: number }
+  | {
+    type: "CHECK_RESULT";
+    hasUser: boolean;
+    hasAuth: boolean;
+    hasQueryId: boolean;
+    authState: SessionAuthState;
+  }
+  | { type: "CHECK_ERROR" }
   | { type: "RETRY_TICK" }
-  | { type: "CAPTURE_STARTED" }
-  | { type: "STORAGE_CHANGED"; hasAuthData: boolean }
-  | { type: "USER_LOGIN" }
-  | { type: "CONNECTING_TIMEOUT" };
+  | { type: "USER_LOGIN" };
 
 // ── Reducer ──────────────────────────────────────────────────
 
 function authReducer(state: AuthState, action: AuthAction): AuthState {
   switch (action.type) {
     case "CHECK_RESULT": {
+      if (action.authState === "logged_out") {
+        return {
+          ...state,
+          authState: action.authState,
+          phase: "need_login",
+          pendingRetry: null,
+        };
+      }
+
+      if (action.authState === "stale") {
+        return {
+          ...state,
+          authState: action.authState,
+          phase: "connecting",
+          pendingRetry: { delayMs: AUTH_STALE_RECHECK_MS },
+        };
+      }
+
       if (action.hasAuth && action.hasQueryId) {
         return {
           ...state,
+          authState: action.authState,
           phase: "ready",
-          captureStarted: false,
-          triedNoUserCapture: false,
           pendingRetry: null,
         };
       }
 
-      if (!action.hasUser) {
-        if (!state.triedNoUserCapture) {
-          return {
-            ...state,
-            phase: "connecting",
-            triedNoUserCapture: true,
-            captureStarted: true,
-            connectingSince: action.now,
-            pendingRetry: { delayMs: AUTH_RECHECK_MS },
-          };
-        }
+      // Backward-compat fallback for older worker payloads.
+      if (!action.hasUser && !action.hasAuth) {
         return {
           ...state,
+          authState: "logged_out",
           phase: "need_login",
-          captureStarted: false,
-          pendingRetry: null,
-        };
-      }
-
-      const since = state.connectingSince || action.now;
-      if (state.connectingSince > 0 && action.now - state.connectingSince > AUTH_CONNECTING_TIMEOUT_MS) {
-        return {
-          ...state,
-          phase: "need_login",
-          captureStarted: false,
-          gaveUp: true,
           pendingRetry: null,
         };
       }
 
       return {
         ...state,
+        authState: action.authState,
         phase: "connecting",
-        connectingSince: since,
-        triedNoUserCapture: false,
-        pendingRetry: state.captureStarted ? null : { delayMs: AUTH_QUICK_CHECK_MS },
+        pendingRetry: { delayMs: AUTH_QUICK_CHECK_MS },
       };
     }
 
-    case "CHECK_ERROR": {
-      if (
-        state.connectingSince > 0 &&
-        action.now - state.connectingSince > AUTH_CONNECTING_TIMEOUT_MS
-      ) {
-        return {
-          ...state,
-          phase: "need_login",
-          captureStarted: false,
-          gaveUp: true,
-          pendingRetry: null,
-        };
-      }
-      const since = state.connectingSince || action.now;
+    case "CHECK_ERROR":
       return {
         ...state,
+        authState: state.phase === "ready" ? "stale" : state.authState,
         phase: "connecting",
-        connectingSince: since,
-        captureStarted: false,
         pendingRetry: { delayMs: AUTH_RETRY_MS },
       };
-    }
 
     case "RETRY_TICK":
       return { ...state, pendingRetry: null };
 
-    case "CAPTURE_STARTED":
-      return { ...state, captureStarted: true };
-
-    case "STORAGE_CHANGED": {
-      if (state.gaveUp && !action.hasAuthData) return state;
-      if (state.gaveUp && action.hasAuthData) {
-        return { ...state, gaveUp: false, connectingSince: 0 };
-      }
-      return state;
-    }
-
     case "USER_LOGIN":
-      return { ...INITIAL_STATE };
-
-    case "CONNECTING_TIMEOUT":
-      return {
-        ...state,
-        phase: "need_login",
-        captureStarted: false,
-        gaveUp: true,
-        pendingRetry: null,
-      };
+      return { ...state, phase: "connecting", pendingRetry: null };
   }
 }
 
@@ -172,82 +130,60 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
 export function useAuth(): UseAuthReturn {
   const [state, dispatch] = useReducer(authReducer, INITIAL_STATE);
 
-  const performCheck = useCallback(async () => {
+  const performCheck = useCallback(async (probe = false) => {
     try {
-      const status = await withTimeout(checkAuth(), AUTH_TIMEOUT_MS);
+      const status = await withTimeout(checkAuth({ probe }), AUTH_TIMEOUT_MS);
+      const authState: SessionAuthState = status.authState ??
+        (status.hasAuth ? "authenticated" : "logged_out");
 
       dispatch({
         type: "CHECK_RESULT",
         hasUser: status.hasUser,
         hasAuth: status.hasAuth,
         hasQueryId: status.hasQueryId,
-        now: Date.now(),
+        authState,
       });
     } catch {
-      dispatch({ type: "CHECK_ERROR", now: Date.now() });
+      dispatch({ type: "CHECK_ERROR" });
     }
   }, []);
 
   // 1. Initial check on mount
   useEffect(() => {
-    performCheck();
+    performCheck(true);
   }, [performCheck]);
 
-  // 2. Side effects on phase change — start/stop auth capture
-  useEffect(() => {
-    if (state.phase === "connecting" && !state.captureStarted) {
-      dispatch({ type: "CAPTURE_STARTED" });
-      startAuthCapture().catch(() => {});
-    }
-  }, [state.phase, state.captureStarted]);
-
-  useEffect(() => {
-    if (state.phase !== "connecting" && state.phase !== "loading") {
-      closeAuthTab();
-    }
-  }, [state.phase]);
-
-  // 3. Single retry timer — manages one setTimeout at a time
+  // 2. Single retry timer — manages one setTimeout at a time
   useEffect(() => {
     if (!state.pendingRetry) return;
+    const shouldProbe = state.authState !== "logged_out";
     const id = setTimeout(() => {
       dispatch({ type: "RETRY_TICK" });
-      performCheck();
+      performCheck(shouldProbe);
     }, state.pendingRetry.delayMs);
     return () => clearTimeout(id);
-  }, [state.pendingRetry, performCheck]);
+  }, [state.pendingRetry, state.authState, performCheck]);
 
-  // 4. Polling while connecting with capture started
+  // 3. Lightweight auth heartbeat while online
   useEffect(() => {
-    if (state.phase !== "connecting" || !state.captureStarted) return;
-    const id = setInterval(performCheck, AUTH_POLL_MS);
+    if (state.phase !== "ready") return;
+    const id = setInterval(() => {
+      performCheck(true);
+    }, AUTH_HEARTBEAT_MS);
     return () => clearInterval(id);
-  }, [state.phase, state.captureStarted, performCheck]);
+  }, [state.phase, performCheck]);
 
-  // 5. Connecting timeout watchdog
-  useEffect(() => {
-    if (state.phase !== "connecting" || state.connectingSince === 0) return;
-    const elapsed = Date.now() - state.connectingSince;
-    const remaining = AUTH_CONNECTING_TIMEOUT_MS - elapsed;
-    if (remaining <= 0) {
-      dispatch({ type: "CONNECTING_TIMEOUT" });
-      return;
-    }
-    const id = setTimeout(() => dispatch({ type: "CONNECTING_TIMEOUT" }), remaining);
-    return () => clearTimeout(id);
-  }, [state.phase, state.connectingSince]);
-
-  // 6. Storage listener — recheck on relevant changes
+  // 4. Storage listener — recheck on relevant changes
   useEffect(() => {
     const listener = (changes: Record<string, chrome.storage.StorageChange>) => {
-      const hasAuthData = Boolean(changes[CS_AUTH_HEADERS]);
+      const authChange = changes[CS_AUTH_HEADERS];
+      const authStateChange = changes[CS_AUTH_STATE];
       const isRelevant =
-        hasAuthData ||
+        Boolean(authChange) ||
+        Boolean(authStateChange) ||
         Boolean(changes[CS_USER_ID]);
 
       if (!isRelevant) return;
-
-      dispatch({ type: "STORAGE_CHANGED", hasAuthData });
       performCheck();
     };
     chrome.storage.local.onChanged.addListener(listener);
@@ -256,7 +192,7 @@ export function useAuth(): UseAuthReturn {
 
   const startLogin = useCallback(async () => {
     dispatch({ type: "USER_LOGIN" });
-    await performCheck();
+    await performCheck(true);
   }, [performCheck]);
 
   return { phase: state.phase, startLogin };

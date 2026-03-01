@@ -30,7 +30,9 @@ function findSectionForNode(node: Node): Element | null {
 }
 
 function isWordChar(ch: string): boolean {
-  return /\w/.test(ch) || ch.charCodeAt(0) > 127;
+  // Treat only letters as "word" chars for boundary snapping.
+  // This avoids expanding across adjacent numeric metadata (e.g. thread dates like "2018").
+  return /[A-Za-z]/.test(ch) || ch.charCodeAt(0) > 127;
 }
 
 function snapToWordBoundaries(

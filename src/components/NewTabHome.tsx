@@ -215,20 +215,22 @@ export function NewTabHome({
       <header className="relative z-20 flex w-full items-center justify-between px-6 pt-5 sm:px-8">
         <TotemLogo className="size-8" />
         <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={onSync}
-            disabled={syncDisabled}
-            className="border border-transparent bg-transparent text-on-bg-muted hover:border-white/15 hover:bg-white/5 hover:text-on-bg disabled:cursor-default disabled:opacity-60"
-            aria-label="Sync bookmarks"
-            title={syncTitle}
-          >
-            <span className={cn(syncing && "animate-spin")}>
-              <ArrowsClockwiseIcon className="size-5" />
-            </span>
-          </Button>
+          {!offlineMode && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={onSync}
+              disabled={syncDisabled}
+              className="border border-transparent bg-transparent text-on-bg-muted hover:border-white/15 hover:bg-white/5 hover:text-on-bg disabled:cursor-default disabled:opacity-60"
+              aria-label="Sync bookmarks"
+              title={syncTitle}
+            >
+              <span className={cn(syncing && "animate-spin")}>
+                <ArrowsClockwiseIcon className="size-5" />
+              </span>
+            </Button>
+          )}
           <button
             type="button"
             onClick={onOpenSettings}

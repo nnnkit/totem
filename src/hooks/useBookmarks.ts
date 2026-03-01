@@ -4,6 +4,8 @@ import {
   checkReauthStatus,
   checkAuth,
   deleteBookmark,
+  getBookmarkEvents,
+  ackBookmarkEvents,
   fetchBookmarkPage,
 } from "../api/core";
 import {
@@ -15,12 +17,17 @@ import {
 } from "../db";
 import { FetchQueue } from "../lib/fetch-queue";
 import { reconcileBookmarks } from "../lib/reconcile";
+import { resolveBookmarkEventPlan } from "../lib/bookmark-event-plan";
 import {
   CS_DB_CLEANUP_AT,
+  CS_BOOKMARK_EVENTS,
+  CS_LAST_SOFT_SYNC,
   CS_LAST_SYNC,
+  CS_SOFT_SYNC_NEEDED,
   LS_MANUAL_SYNC_REQUIRED,
 } from "../lib/storage-keys";
 import {
+  CREATE_EVENT_DELAY_MS,
   WEEK_MS,
   DETAIL_CACHE_RETENTION_MS,
   DB_INIT_TIMEOUT_MS,
@@ -101,6 +108,7 @@ export function useBookmarks(isReady: boolean): UseBookmarksReturn {
   const [syncStatus, setSyncStatus] = useState<SyncStatus>("loading");
   const bookmarksRef = useRef<Bookmark[]>([]);
   const activeSyncRef = useRef<ActiveSyncController | null>(null);
+  const processingBookmarkEventsRef = useRef(false);
   const syncMachineRef = useRef(createSyncMachineState("loading"));
 
   useEffect(() => {
@@ -175,7 +183,16 @@ export function useBookmarks(isReady: boolean): UseBookmarksReturn {
       });
 
       if (!abortController.aborted) {
-        await chrome.storage.local.set({ [CS_LAST_SYNC]: Date.now() });
+        const now = Date.now();
+        if (mode === "incremental") {
+          await chrome.storage.local.set({
+            [CS_LAST_SYNC]: now,
+            [CS_LAST_SOFT_SYNC]: now,
+          });
+        } else {
+          await chrome.storage.local.set({ [CS_LAST_SYNC]: now });
+        }
+        await chrome.storage.local.remove(CS_SOFT_SYNC_NEEDED);
         if (mode === "full") {
           clearManualSyncRequired();
         }
@@ -200,6 +217,77 @@ export function useBookmarks(isReady: boolean): UseBookmarksReturn {
       }
     }
   }, [applySyncEvent, isReady]);
+
+  // ── Effect: bookmark mutation events (service worker) ──
+
+  const applyBookmarkEvents = useCallback(async () => {
+    if (processingBookmarkEventsRef.current) return;
+    processingBookmarkEventsRef.current = true;
+
+    try {
+      const events = await getBookmarkEvents();
+      if (events.length === 0) return;
+
+      const plan = resolveBookmarkEventPlan(events);
+      const deleteEventIds = events
+        .filter((e) => e.type === "DeleteBookmark")
+        .map((e) => e.id);
+      const createEventIds = events
+        .filter((e) => e.type === "CreateBookmark")
+        .map((e) => e.id);
+
+      if (plan.idsToDelete.length > 0) {
+        const toDelete = new Set(plan.idsToDelete);
+        const current = bookmarksRef.current;
+        const filtered = current.filter((bookmark) => !toDelete.has(bookmark.tweetId));
+
+        if (filtered.length !== current.length) {
+          bookmarksRef.current = filtered;
+          setBookmarks(filtered);
+        }
+
+        await deleteBookmarksByTweetIds(plan.idsToDelete);
+      }
+
+      if (deleteEventIds.length > 0) {
+        await ackBookmarkEvents(deleteEventIds);
+      }
+
+      if (plan.needsPageFetch) {
+        await new Promise((resolve) => setTimeout(resolve, CREATE_EVENT_DELAY_MS));
+
+        try {
+          const page = await withTimeout(
+            fetchBookmarkPage(undefined, 20),
+            PAGE_FETCH_TIMEOUT_MS,
+            new Error("PAGE_FETCH_TIMEOUT"),
+          );
+          const currentIds = new Set(bookmarksRef.current.map((bookmark) => bookmark.tweetId));
+          const newBookmarks = page.bookmarks.filter((bookmark) => !currentIds.has(bookmark.tweetId));
+
+          if (newBookmarks.length > 0) {
+            const updated = [...newBookmarks, ...bookmarksRef.current].toSorted(compareSortIndexDesc);
+            bookmarksRef.current = updated;
+            setBookmarks(updated);
+
+            try {
+              await upsertBookmarks(newBookmarks);
+            } catch {}
+          }
+
+          if (createEventIds.length > 0) {
+            await ackBookmarkEvents(createEventIds);
+          }
+        } catch {
+          // Keep create events unacked so they are retried.
+        }
+      } else if (createEventIds.length > 0) {
+        await ackBookmarkEvents(createEventIds);
+      }
+    } finally {
+      processingBookmarkEventsRef.current = false;
+    }
+  }, []);
 
   // ── Effect: DB cleanup (runs once) ──
 
@@ -298,6 +386,32 @@ export function useBookmarks(isReady: boolean): UseBookmarksReturn {
     return () => clearInterval(intervalId);
   // eslint-disable-next-line react-hooks/exhaustive-deps -- only trigger on status entry
   }, [applySyncEvent, syncStatus, isReady]);
+
+  // ── Effect 3: service-worker signals ──
+
+  useEffect(() => {
+    if (!isReady) return;
+
+    const onStorageChange = (
+      changes: Record<string, chrome.storage.StorageChange>,
+      areaName: string,
+    ) => {
+      if (areaName !== "local") return;
+      if (changes[CS_BOOKMARK_EVENTS]) {
+        applyBookmarkEvents().catch(() => {});
+      }
+      if (changes[CS_SOFT_SYNC_NEEDED]?.newValue) {
+        sync().catch(() => {});
+      }
+    };
+
+    chrome.storage.onChanged.addListener(onStorageChange);
+    applyBookmarkEvents().catch(() => {});
+
+    return () => {
+      chrome.storage.onChanged.removeListener(onStorageChange);
+    };
+  }, [isReady, applyBookmarkEvents, sync]);
 
   // ── refresh (manual trigger) ──
 
