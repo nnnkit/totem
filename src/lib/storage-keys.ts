@@ -33,6 +33,7 @@ export const CS_BOOKMARK_EVENTS = "totem_bookmark_events";
 export const CS_AUTH_HEADERS = "totem_auth_headers";
 export const CS_AUTH_TIME = "totem_auth_time";
 export const CS_USER_ID = "totem_user_id";
+export const CS_ACCOUNT_CONTEXT_ID = "totem_account_context_id";
 export const CS_AUTH_STATE = "totem_auth_state";
 export const CS_LAST_SOFT_SYNC = "totem_last_light_sync";
 export const CS_SOFT_SYNC_NEEDED = "totem_light_sync_needed";
@@ -74,6 +75,8 @@ export const LEGACY_CHROME_LOCAL_KEY_MAP = {
   xbt_auth_headers: CS_AUTH_HEADERS,
   xbt_auth_time: CS_AUTH_TIME,
   xbt_user_id: CS_USER_ID,
+  // no dedicated legacy key existed for account context. It is derived and
+  // persisted by current runtime flows.
   xbt_auth_state: CS_AUTH_STATE,
   xbt_last_light_sync: CS_LAST_SOFT_SYNC,
   xbt_light_sync_needed: CS_SOFT_SYNC_NEEDED,

@@ -26,10 +26,15 @@ This document is the canonical rule set. Behavior should be implemented from the
 `activeAccountId`
 - Account context used to select account-scoped IndexedDB.
 - While logged out, we preserve account context for offline cache reading.
+- Persisted in `chrome.storage.local["totem_account_context_id"]` so logout does not erase cache routing.
 
 `displayBookmarks`
 - In online mode: all bookmarks from active account DB.
 - In offline mode: only bookmarks that also have `tweet_details` cached.
+
+`runtime state v2` (`chrome.storage.local["totem_runtime_state_v2"]`)
+- Backward-compatible top-level snapshot plus normalized slices:
+  `auth`, `accountContext`, `sync`, `cacheSummary`, `jobs`, `auditLog`.
 
 ## 2) Non-Negotiable Invariants
 
@@ -79,13 +84,13 @@ On logout
 4. If cached details exist for account DB, UI remains usable in offline cached mode.
 
 `SESSION_USER_MISSING` handling
-- If auth headers still exist: mark auth `stale` (soft), do not hard logout immediately.
-- If auth headers absent: mark hard `logged_out`.
+- Missing `twid` on `x.com` is treated as a strong logout signal.
+- Runtime moves to `logged_out` even if stale auth headers are still present (headers are kept only as diagnostics until next valid capture).
 
 ## 5) Sync Policy Rules (Worker Orchestrator)
 
 State key
-- `chrome.storage.local["totem_sync_orchestrator_state"]`
+- `chrome.storage.local["toreview each line of copy used on the home page, each line, review it, make it in a table. What would you do to optimize it for better and subtle readability for humans to just tell them, okay, this is what it is, period, simple. tem_sync_orchestrator_state"]`
 
 Reservation inputs
 - `accountId`, `trigger` (`auto` or `manual`), `localCount`, `requestedMode`.
@@ -118,7 +123,7 @@ Mount/refresh trigger
 - Refresh must cause zero bookmark fetches unless user explicitly clicks sync.
 
 Phase 2 optional auto refresh
-- Controlled by `chrome.storage.local["totem_sync_auto_enabled"]` (default `true` in current build).
+- Controlled by `chrome.storage.local["totem_sync_auto_enabled"]` (default `false` in current build).
 - When new tab opens and runtime is ready, app sends one `trigger="auto"` reservation with local count hint.
 - Worker policy decides whether to run network fetch (`bootstrap_empty`, `background_stale`) or block (`fresh_cache`, `auto_backoff`, etc.).
 - No `chrome.alarms`; no background sync while new tab is closed.
@@ -165,6 +170,7 @@ Reset data from settings
 2. Switching account changes active DB context.
 3. Existing DB connections are not force-closed mid-flight (avoid `database connection is closing` race).
 4. Sync lock/cooldown are isolated per account in orchestrator state.
+5. Explicit switch intent uses runtime message `SET_ACCOUNT_CONTEXT` (Phase 4 scaffold).
 
 ## 9) Failure Handling Rules
 

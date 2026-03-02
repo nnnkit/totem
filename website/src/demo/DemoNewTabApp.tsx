@@ -150,7 +150,7 @@ function buildRuntimeSeed(payload: DemoPayload): RuntimeSeed {
 
 async function loadPayloadFromFile(): Promise<DemoPayload | null> {
   try {
-    const response = await fetch(DEMO_DATA_URL, { cache: "no-store" });
+    const response = await fetch(DEMO_DATA_URL);
     if (!response.ok) return null;
 
     const data = (await response.json()) as Partial<DemoPayload>;

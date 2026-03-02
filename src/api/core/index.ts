@@ -1,6 +1,7 @@
 export {
   checkAuth,
   getRuntimeSnapshot,
+  setAccountContext,
   startAuthCapture,
   closeAuthTab,
   checkReauthStatus,

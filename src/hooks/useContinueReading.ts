@@ -15,14 +15,19 @@ interface UseContinueReadingReturn {
 
 export function useContinueReading(
   bookmarks: Bookmark[],
+  refreshKey: unknown = 0,
 ): UseContinueReadingReturn {
   const [allProgress, setAllProgress] = useState<ReadingProgress[]>([]);
 
   const refresh = useCallback(() => {
-    getAllReadingProgress().then(setAllProgress);
+    getAllReadingProgress()
+      .then(setAllProgress)
+      .catch(() => setAllProgress([]));
   }, []);
 
-  useEffect(refresh, [refresh]);
+  useEffect(() => {
+    refresh();
+  }, [refresh, refreshKey]);
 
   const { continueReading, allUnread } = useMemo(() => {
     const bookmarkMap = new Map(bookmarks.map((b) => [b.tweetId, b]));

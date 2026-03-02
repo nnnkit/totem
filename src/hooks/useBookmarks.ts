@@ -64,8 +64,7 @@ interface ActiveSyncController {
   abort: (markTimeout?: boolean) => void;
 }
 
-const FALLBACK_SESSION_ACCOUNT_ID = "__session__";
-const DEFAULT_SYNC_AUTO_ENABLED = true;
+const DEFAULT_SYNC_AUTO_ENABLED = false;
 const SYNC_BLOCKED_REASONS = new Set<SyncBlockedReason>([
   "in_flight",
   "cooldown",
@@ -143,6 +142,7 @@ export function useBookmarks(
   const syncMachineRef = useRef(createSyncMachineState("loading"));
   const activeAccountRef = useRef<string | null>(null);
   const accountContextInitializedRef = useRef(false);
+  const autoSyncAttemptRef = useRef<string | null>(null);
 
   useEffect(() => {
     bookmarksRef.current = bookmarks;
@@ -163,7 +163,7 @@ export function useBookmarks(
   // ── Core: sync() ──────────────────────────────────────────
 
   const sync = useCallback(async (options: SyncOptions = {}): Promise<SyncRequestResult> => {
-    const accountId = activeAccountId || FALLBACK_SESSION_ACCOUNT_ID;
+    const accountId = activeAccountId;
 
     const trigger = options.trigger ?? "manual";
     const requestedMode =
@@ -204,11 +204,12 @@ export function useBookmarks(
 
     const mode = policy.mode;
     const leaseId = policy.leaseId;
+    const completionAccountId = policy.accountKey || accountId;
     setSyncBlockedReason(null);
     const started = applySyncEvent({ type: "SYNC_REQUEST", isReady, mode });
     if (!started.syncing || started.syncStatus !== "syncing") {
       await completeSyncRun({
-        accountId,
+        accountId: completionAccountId,
         leaseId,
         mode,
         status: "skipped",
@@ -314,7 +315,7 @@ export function useBookmarks(
         completionStatus = "timeout";
       }
       await completeSyncRun({
-        accountId,
+        accountId: completionAccountId,
         leaseId,
         mode,
         status: completionStatus,
@@ -354,6 +355,7 @@ export function useBookmarks(
     processingBookmarkEventsRef.current = false;
     applySyncEvent({ type: "RESET" });
     setSyncBlockedReason(null);
+    autoSyncAttemptRef.current = null;
     bookmarksRef.current = [];
     setBookmarks([]);
 
@@ -430,7 +432,7 @@ export function useBookmarks(
     runCleanup().catch(() => {});
   }, []);
 
-  // ── Effect 1: Init local cache (manual-first, no implicit network sync) ──
+  // ── Effect 1: Init local cache + optional tab-open auto sync ──
 
   useEffect(() => {
     if (isManualSyncRequired()) {
@@ -457,9 +459,10 @@ export function useBookmarks(
           bookmarksRef.current = stored;
         }
 
-        if (isReady) {
+        if (isReady && activeAccountId) {
           const autoEnabled = await isAutoSyncEnabled();
-          if (autoEnabled) {
+          if (autoEnabled && autoSyncAttemptRef.current !== activeAccountId) {
+            autoSyncAttemptRef.current = activeAccountId;
             sync({
               trigger: "auto",
               localCountHint: stored.length,
@@ -536,6 +539,7 @@ export function useBookmarks(
     applySyncEvent({ type: "RESET" });
     activeSyncRef.current?.abort();
     setSyncBlockedReason(null);
+    autoSyncAttemptRef.current = null;
     bookmarksRef.current = [];
     setBookmarks([]);
   }, [applySyncEvent]);

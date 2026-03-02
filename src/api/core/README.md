@@ -5,6 +5,7 @@ This folder contains the extension's primary API-call entrypoints so core data f
 ## Auth
 - `checkAuth({ probe? })` -> runtime message `CHECK_AUTH` (optional lightweight auth probe)
 - `getRuntimeSnapshot()` -> runtime message `GET_RUNTIME_SNAPSHOT` (canonical runtime state, no network probe)
+- `setAccountContext(accountId)` -> runtime message `SET_ACCOUNT_CONTEXT` (explicit account context switch intent)
 - `startAuthCapture()` -> runtime message `START_AUTH_CAPTURE`
 - `closeAuthTab()` -> runtime message `CLOSE_AUTH_TAB`
 - `checkReauthStatus()` -> runtime message `REAUTH_STATUS`

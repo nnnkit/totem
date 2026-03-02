@@ -76,6 +76,7 @@ export default function App() {
     phase,
     isReady,
     offlineMode,
+    activeAccountId,
     canSync: runtimeCanSync,
     syncDisabledReason: runtimeSyncDisabledReason,
     bookmarks,
@@ -93,7 +94,10 @@ export default function App() {
   );
   const readerOpen = selectedBookmarkRaw !== null;
   const { prefetchedCount } = usePrefetchDetails(bookmarks, isReady, readerOpen);
-  const { ids: detailedTweetIds, loaded: detailedIdsLoaded } = useDetailedTweetIds(prefetchedCount);
+  const detailIdsRefreshKey = `${activeAccountId || "__none__"}:${prefetchedCount}:${bookmarks.length}:${syncStatus}`;
+  const { ids: detailedTweetIds, loaded: detailedIdsLoaded } = useDetailedTweetIds(
+    detailIdsRefreshKey,
+  );
 
   const displayBookmarks = useMemo(() => {
     if (!offlineMode) return bookmarks;
@@ -112,18 +116,16 @@ export default function App() {
     continueReading,
     allUnread,
     refresh: refreshContinueReading,
-  } = useContinueReading(displayBookmarks);
+  } = useContinueReading(
+    displayBookmarks,
+    `${activeAccountId || "__none__"}:${displayBookmarks.length}:${offlineMode ? "offline" : "online"}`,
+  );
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [readingTab, setReadingTab] = useState<ReadingTab>(() => {
     const stored = localStorage.getItem(LS_READING_TAB);
     if (stored === "unread" || stored === "continue" || stored === "read") return stored;
     return "unread";
   });
-  const tabHasItems = useCallback((tab: ReadingTab) => {
-    if (tab === "unread") return allUnread.length > 0;
-    if (tab === "continue") return continueReading.some((item) => !item.progress.completed);
-    return continueReading.some((item) => item.progress.completed);
-  }, [allUnread, continueReading]);
 
   const restoreReadingTab = useCallback(() => {
     const stored = localStorage.getItem(LS_READING_TAB);
@@ -136,10 +138,8 @@ export default function App() {
 
   const handleReadingTabChange = useCallback((tab: ReadingTab) => {
     setReadingTab(tab);
-    if (tabHasItems(tab)) {
-      localStorage.setItem(LS_READING_TAB, tab);
-    }
-  }, [tabHasItems]);
+    localStorage.setItem(LS_READING_TAB, tab);
+  }, []);
   const [toast, setToast] = useState<ToastState | null>(null);
   const notifySyncBlocked = useCallback((reason?: string) => {
     const code = reason as SyncBlockedReason | undefined;
@@ -186,7 +186,9 @@ export default function App() {
 
   const openBookmark = useCallback(
     (bookmark: Bookmark) => {
-      ensureReadingProgressExists(bookmark.tweetId).then(refreshContinueReading);
+      ensureReadingProgressExists(bookmark.tweetId)
+        .then(refreshContinueReading)
+        .catch(() => {});
       setSelectedBookmark(bookmark);
     },
     [refreshContinueReading],

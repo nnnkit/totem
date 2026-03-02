@@ -34,16 +34,33 @@ function SiteLayout({
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 20);
+    let rafId = 0;
+    let ticking = false;
+    const updateScrollState = () => {
+      ticking = false;
+      setScrolled((current) => {
+        const next = window.scrollY > 20;
+        return current === next ? current : next;
+      });
+    };
+    const handleScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      rafId = window.requestAnimationFrame(updateScrollState);
+    };
+    handleScroll();
     window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      if (rafId) window.cancelAnimationFrame(rafId);
+    };
   }, []);
 
   return (
     <div className="min-h-dvh bg-white text-neutral-900 font-[Space_Grotesk,sans-serif]">
       {/* ── Header ─────────────────────────────────────────────────── */}
       <header
-        className={`sticky top-0 z-50 transition-all duration-200 ${
+        className={`sticky top-0 z-50 transition-colors duration-200 ${
           scrolled
             ? "bg-white/90 backdrop-blur-lg border-b border-neutral-200"
             : "border-b border-transparent"
@@ -138,6 +155,7 @@ function SiteLayout({
 
 function DemoBrowser() {
   const [opened, setOpened] = useState(false);
+  const [frameReady, setFrameReady] = useState(false);
   const [tabTitle, setTabTitle] = useState("Totem");
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
@@ -145,6 +163,7 @@ function DemoBrowser() {
   useEffect(() => {
     if (!opened) {
       setTabTitle("Totem");
+      setFrameReady(false);
       return;
     }
 
@@ -310,14 +329,32 @@ function DemoBrowser() {
           </p>
         </div>
       ) : (
-        <iframe
-          ref={iframeRef}
-          title="Totem New Tab demo"
-          src="demo.html"
-          className="block w-full border-0 bg-[#0a0f16] animate-fade-in"
+        <div
+          className="relative block w-full overflow-hidden bg-[#0a0f16]"
           style={{ minHeight: "clamp(540px, 65vh, 760px)" }}
-          loading="eager"
-        />
+        >
+          {!frameReady && (
+            <div className="absolute inset-0 z-10 grid place-items-center bg-[#0a0f16]">
+              <div className="text-center px-6">
+                <p className="text-[11px] uppercase tracking-[0.16em] text-white/45">
+                  Totem Demo
+                </p>
+                <p className="mt-2 text-sm text-white/80">Loading preview...</p>
+              </div>
+            </div>
+          )}
+          <iframe
+            ref={iframeRef}
+            title="Totem New Tab demo"
+            src="demo.html"
+            onLoad={() => setFrameReady(true)}
+            className={`block w-full border-0 bg-[#0a0f16] animate-fade-in transition-opacity duration-200 ${
+              frameReady ? "opacity-100" : "opacity-0"
+            }`}
+            style={{ minHeight: "clamp(540px, 65vh, 760px)" }}
+            loading="eager"
+          />
+        </div>
       )}
     </div>
   );
@@ -335,8 +372,8 @@ const FEATURES = [
     body: "Three queue states. Never lose track of where you left off.",
   },
   {
-    title: "Highlights & notes",
-    body: "Select any passage to highlight it. Add notes. Everything stays local.",
+    title: "Highlights & notes (researched)",
+    body: "Research-backed workflow: select passages, attach notes, and keep everything local.",
   },
   {
     title: "Explicit mark-as-read",
@@ -349,6 +386,21 @@ const FEATURES = [
   {
     title: "Keyboard-first",
     body: "Navigate, read, and finish with shortcuts built for daily use.",
+  },
+];
+
+const HIGHLIGHT_NOTE_RESEARCH = [
+  {
+    title: "Research already completed",
+    body: "We have already done extension research for highlight and note flows, including core read, revisit, and context workflows.",
+  },
+  {
+    title: "Built for active reading",
+    body: "Highlight key lines while reading, then add lightweight notes so important context is easy to return to later.",
+  },
+  {
+    title: "Local-first data model",
+    body: "Highlights and notes stay in your browser storage with your reading progress and do not require a backend account.",
   },
 ];
 
@@ -460,6 +512,36 @@ function LandingPage() {
                 </p>
               </article>
             ))}
+          </div>
+        </section>
+
+        {/* ── Highlight & Note ─────────────────────────────────── */}
+        <section className="border-y border-neutral-100 bg-neutral-50/70">
+          <div className="max-w-5xl mx-auto px-6 py-16 sm:py-20">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-400 mb-3">
+              Highlight & note
+            </p>
+            <h2 className="font-[Newsreader,serif] text-[clamp(1.8rem,3.5vw,2.8rem)] leading-tight tracking-tight text-neutral-900 mb-4 max-w-[24ch]">
+              We already have research for highlights and notes in Totem.
+            </h2>
+            <p className="text-sm sm:text-base text-neutral-500 leading-relaxed max-w-[62ch] mb-10">
+              This extension capability is now represented on the homepage so users can understand how highlight and note support fits into the reading flow before installation.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {HIGHLIGHT_NOTE_RESEARCH.map((item) => (
+                <article
+                  key={item.title}
+                  className="rounded-xl border border-neutral-200 bg-white p-5"
+                >
+                  <h3 className="text-[0.95rem] font-semibold text-neutral-900 mb-1.5">
+                    {item.title}
+                  </h3>
+                  <p className="text-sm text-neutral-500 leading-relaxed m-0">
+                    {item.body}
+                  </p>
+                </article>
+              ))}
+            </div>
           </div>
         </section>
 
@@ -666,13 +748,30 @@ function PolicySection({
 // ─── Demo Page ────────────────────────────────────────────────────────────────
 
 function DemoPage() {
+  const [frameReady, setFrameReady] = useState(false);
+
   return (
-    <iframe
-      title="Totem New Tab demo"
-      src="demo.html"
-      className="fixed inset-0 block w-full h-full border-0"
-      loading="eager"
-    />
+    <div className="fixed inset-0 bg-[#0a0f16]">
+      {!frameReady && (
+        <div className="absolute inset-0 z-10 grid place-items-center bg-[#0a0f16]">
+          <div className="text-center px-6">
+            <p className="text-[11px] uppercase tracking-[0.16em] text-white/45">
+              Totem Demo
+            </p>
+            <p className="mt-2 text-sm text-white/80">Loading preview...</p>
+          </div>
+        </div>
+      )}
+      <iframe
+        title="Totem New Tab demo"
+        src="demo.html"
+        onLoad={() => setFrameReady(true)}
+        className={`absolute inset-0 block w-full h-full border-0 transition-opacity duration-200 ${
+          frameReady ? "opacity-100" : "opacity-0"
+        }`}
+        loading="eager"
+      />
+    </div>
   );
 }
 

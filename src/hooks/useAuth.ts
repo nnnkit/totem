@@ -1,6 +1,11 @@
 import { useReducer, useEffect, useCallback } from "react";
 import { checkAuth, getRuntimeSnapshot } from "../api/core/auth";
-import { CS_USER_ID, CS_AUTH_HEADERS, CS_AUTH_STATE } from "../lib/storage-keys";
+import {
+  CS_USER_ID,
+  CS_AUTH_HEADERS,
+  CS_AUTH_STATE,
+  CS_ACCOUNT_CONTEXT_ID,
+} from "../lib/storage-keys";
 import {
   AUTH_TIMEOUT_MS,
   AUTH_QUICK_CHECK_MS,
@@ -356,7 +361,8 @@ export function useAuth(): UseAuthReturn {
       const isRelevant =
         Boolean(authChange) ||
         Boolean(authStateChange) ||
-        Boolean(changes[CS_USER_ID]);
+        Boolean(changes[CS_USER_ID]) ||
+        Boolean(changes[CS_ACCOUNT_CONTEXT_ID]);
 
       if (!isRelevant) return;
       performCheck(false);

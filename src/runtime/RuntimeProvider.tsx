@@ -152,7 +152,7 @@ export function RuntimeProvider({ children }: PropsWithChildren) {
       syncBlockedReason,
       syncDisabledReason: canSync
         ? undefined
-        : deriveSyncDisabledReason(runtimeMode, phase, null),
+        : deriveSyncDisabledReason(runtimeMode, phase, syncBlockedReason),
       startLogin,
       refresh,
       reset,

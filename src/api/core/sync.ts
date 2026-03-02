@@ -25,7 +25,7 @@ function runtimeError(response: RuntimeResponse): string {
 }
 
 export async function reserveSyncRun(input: {
-  accountId: string;
+  accountId: string | null;
   trigger: SyncTrigger;
   localCount: number;
   requestedMode?: SyncMode;
@@ -53,7 +53,7 @@ export async function reserveSyncRun(input: {
 }
 
 export async function completeSyncRun(input: {
-  accountId: string;
+  accountId: string | null;
   leaseId: string;
   mode: SyncMode;
   status: SyncCompletionStatus;

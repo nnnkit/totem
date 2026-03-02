@@ -24,8 +24,10 @@ const MAX_CAPTURED_PARAM_LENGTH = 12000;
 const CATALOG_FLUSH_DELAY_MS = 600;
 const BOOKMARK_EVENTS_STORAGE_KEY = "totem_bookmark_events";
 const MAX_BOOKMARK_EVENTS = 400;
+const ACCOUNT_CONTEXT_STORAGE_KEY = "totem_account_context_id";
 const AUTH_STATE_STORAGE_KEYS = [
   "totem_user_id",
+  ACCOUNT_CONTEXT_STORAGE_KEY,
   "totem_auth_headers",
   "totem_auth_time",
   "totem_auth_state",
@@ -376,6 +378,7 @@ async function hasCachedQueryIdNoNetwork(operationName) {
 async function getSessionSnapshot() {
   const stored = await chrome.storage.local.get([
     "totem_user_id",
+    ACCOUNT_CONTEXT_STORAGE_KEY,
     "totem_auth_headers",
     "totem_auth_state",
     "totem_auth_state_at",
@@ -391,8 +394,22 @@ async function getSessionSnapshot() {
     const parsedUserId = parseTwidUserId(twidRaw);
     if (parsedUserId) {
       userId = parsedUserId;
-      chrome.storage.local.set({ totem_user_id: parsedUserId }).catch(() => {});
+      chrome.storage.local
+        .set({
+          totem_user_id: parsedUserId,
+          [ACCOUNT_CONTEXT_STORAGE_KEY]: parsedUserId,
+        })
+        .catch(() => {});
     }
+  }
+  const storedAccountContextId =
+    typeof stored[ACCOUNT_CONTEXT_STORAGE_KEY] === "string" &&
+    stored[ACCOUNT_CONTEXT_STORAGE_KEY]
+      ? stored[ACCOUNT_CONTEXT_STORAGE_KEY]
+      : null;
+  const accountContextId = userId || storedAccountContextId;
+  if (userId && storedAccountContextId !== userId) {
+    chrome.storage.local.set({ [ACCOUNT_CONTEXT_STORAGE_KEY]: userId }).catch(() => {});
   }
 
   const authState = normalizeAuthState(stored.totem_auth_state, hasAuthHeader);
@@ -408,7 +425,7 @@ async function getSessionSnapshot() {
 
   return {
     userId,
-    accountContextId: userId || null,
+    accountContextId,
     authState,
     sessionState,
     capability: {
@@ -456,10 +473,11 @@ function getSyncBlockedReason(sessionSnapshot, account, accountKey, now) {
   return null;
 }
 
-async function buildRuntimeSnapshot(stateOverride = null) {
+async function buildRuntimeSnapshot(stateOverride = null, accountContextOverride = null) {
   const now = Date.now();
   const sessionSnapshot = await getSessionSnapshot();
-  const accountContextId = sessionSnapshot.accountContextId;
+  const requestedAccountContextId = normalizeSyncAccountId(accountContextOverride);
+  const accountContextId = requestedAccountContextId || sessionSnapshot.accountContextId;
   const accountKey = normalizeSyncAccountId(accountContextId);
   const state = stateOverride || (await readSyncOrchestratorState());
   const account = accountKey
@@ -508,13 +526,88 @@ async function buildRuntimeSnapshot(stateOverride = null) {
 
 async function persistRuntimeStateV2(snapshot) {
   const payload = snapshot && typeof snapshot === "object" ? snapshot : {};
+  const safeCapability =
+    payload.capability && typeof payload.capability === "object"
+      ? payload.capability
+      : { bookmarksApi: "unknown", detailApi: "unknown" };
+  const safeSyncPolicy =
+    payload.syncPolicy && typeof payload.syncPolicy === "object"
+      ? payload.syncPolicy
+      : {
+          accountKey: null,
+          inFlight: null,
+          lastAttemptAt: 0,
+          lastSuccessAt: 0,
+          blockedReason: null,
+        };
+  const safeCacheSummary =
+    payload.cacheSummary && typeof payload.cacheSummary === "object"
+      ? payload.cacheSummary
+      : {
+          lastSyncAt: 0,
+          lastSoftSyncAt: 0,
+          lightSyncNeededAt: 0,
+          pendingBookmarkEventCount: 0,
+        };
+
   await chrome.storage.local.set({
     [RUNTIME_STATE_V2_STORAGE_KEY]: {
       version: 2,
       updatedAt: Date.now(),
       ...payload,
+      auth: {
+        sessionState: payload.sessionState || "unknown",
+        authPhase: payload.authPhase || "connecting",
+        capability: safeCapability,
+      },
+      accountContext: {
+        id: payload.accountContextId || null,
+      },
+      sync: {
+        policy: safeSyncPolicy,
+        blockedReason:
+          typeof payload.blockedReason === "string" ? payload.blockedReason : null,
+      },
+      cacheSummary: safeCacheSummary,
+      // Jobs registry scaffold: add future jobs here without changing auth/sync
+      // reducers that consume the top-level compatibility payload.
+      jobs: {
+        bookmark_sync: {
+          kind: "bookmark_sync",
+          accountKey:
+            typeof safeSyncPolicy.accountKey === "string"
+              ? safeSyncPolicy.accountKey
+              : null,
+          inFlight: safeSyncPolicy.inFlight || null,
+          lastAttemptAt: Number(safeSyncPolicy.lastAttemptAt || 0),
+          lastSuccessAt: Number(safeSyncPolicy.lastSuccessAt || 0),
+        },
+      },
+      auditLog: {
+        storageKey: RUNTIME_AUDIT_STORAGE_KEY,
+        limit: RUNTIME_AUDIT_LIMIT,
+      },
     },
   });
+}
+
+async function normalizeRuntimeStateV2OnStartup() {
+  const stored = await chrome.storage.local.get([RUNTIME_STATE_V2_STORAGE_KEY]);
+  const existing = stored[RUNTIME_STATE_V2_STORAGE_KEY];
+  if (
+    existing &&
+    typeof existing === "object" &&
+    !Array.isArray(existing) &&
+    existing.version === 2 &&
+    typeof existing.sessionState === "string"
+  ) {
+    return;
+  }
+
+  const snapshot = await buildRuntimeSnapshot().catch(() => null);
+  if (snapshot) {
+    await persistRuntimeStateV2(snapshot).catch(() => {});
+  }
 }
 
 async function handleSyncPolicyReserve(message = {}) {
@@ -1611,10 +1704,30 @@ async function handleCheckAuth() {
   };
 }
 
-async function handleGetRuntimeSnapshot() {
-  const snapshot = await buildRuntimeSnapshot();
-  await persistRuntimeStateV2(snapshot).catch(() => {});
+async function handleGetRuntimeSnapshot(message = {}) {
+  const requestedAccountId =
+    typeof message.accountId === "string" ? message.accountId : null;
+  const snapshot = await buildRuntimeSnapshot(null, requestedAccountId);
+  if (!requestedAccountId) {
+    await persistRuntimeStateV2(snapshot).catch(() => {});
+  }
   return { ok: true, data: snapshot };
+}
+
+async function handleSetAccountContext(message = {}) {
+  const accountContextId = normalizeSyncAccountId(message.accountId);
+  if (!accountContextId) {
+    return { ok: false, error: "INVALID_ACCOUNT_CONTEXT" };
+  }
+
+  await chrome.storage.local.set({
+    [ACCOUNT_CONTEXT_STORAGE_KEY]: accountContextId,
+  });
+  const snapshot = await buildRuntimeSnapshot(null, accountContextId).catch(() => null);
+  if (snapshot) {
+    await persistRuntimeStateV2(snapshot).catch(() => {});
+  }
+  return { ok: true, accountContextId };
 }
 
 async function handleFetchBookmarks(cursor, count, _retried = false, _queryIdRetried = false) {
@@ -1863,7 +1976,12 @@ chrome.webRequest.onSendHeaders.addListener(
     const twidRaw = getCookieHeaderValue(headers["cookie"], "twid");
     const userIdFromHeader = parseTwidUserId(twidRaw);
     if (userIdFromHeader) {
-      chrome.storage.local.set({ totem_user_id: userIdFromHeader }).catch(() => {});
+      chrome.storage.local
+        .set({
+          totem_user_id: userIdFromHeader,
+          [ACCOUNT_CONTEXT_STORAGE_KEY]: userIdFromHeader,
+        })
+        .catch(() => {});
     }
 
     const protectedOperation = isAuthProtectedGraphqlOperation(details.url);
@@ -2035,7 +2153,13 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     return true;
   }
   if (message.type === "GET_RUNTIME_SNAPSHOT") {
-    handleGetRuntimeSnapshot()
+    handleGetRuntimeSnapshot(message)
+      .then(sendResponse)
+      .catch((err) => sendResponse({ error: err.message }));
+    return true;
+  }
+  if (message.type === "SET_ACCOUNT_CONTEXT") {
+    handleSetAccountContext(message)
       .then(sendResponse)
       .catch((err) => sendResponse({ error: err.message }));
     return true;
@@ -2127,7 +2251,9 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       .then((stored) => {
         const hasAuthHeader = Boolean(stored.totem_auth_headers?.authorization);
         if (hasAuthHeader) {
-          return setAuthState(AUTH_STATE_STALE, "content_no_twid", { clearAuth: false });
+          // Missing twid on x.com is a strong logout signal. Keep captured
+          // headers for diagnostics but move runtime session to logged_out.
+          return setAuthState(AUTH_STATE_LOGGED_OUT, "content_no_twid", { clearAuth: false });
         }
         return markAuthLoggedOut("content_no_twid", true);
       })
@@ -2175,6 +2301,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 // ═══════════════════════════════════════════════════════════
 
 runWeeklyServiceWorkerCleanup().catch(() => {});
+normalizeRuntimeStateV2OnStartup().catch(() => {});
 
 // On startup, proactively discover query IDs into in-memory cache.
 // Nothing is persisted — IDs are always fresh per service worker session.

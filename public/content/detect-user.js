@@ -3,6 +3,7 @@
 // mutation messages from the MAIN world hook to the service worker.
 (function () {
   const MESSAGE_SOURCE = "totem-bookmark-mutation";
+  const ACCOUNT_CONTEXT_STORAGE_KEY = "totem_account_context_id";
 
   function parseTwidUserId(rawValue) {
     if (typeof rawValue !== "string" || !rawValue) return null;
@@ -39,8 +40,13 @@
   const currentUserId = parseTwidUserId(twidRawValue);
 
   if (currentUserId) {
-    chrome.storage.local.set({ totem_user_id: currentUserId });
+    chrome.storage.local.set({
+      totem_user_id: currentUserId,
+      [ACCOUNT_CONTEXT_STORAGE_KEY]: currentUserId,
+    });
   } else {
+    // User identity can disappear on logout; keep account context so the new tab
+    // can still restore offline cache for the last active account.
     chrome.storage.local.remove("totem_user_id");
     chrome.runtime.sendMessage({
       type: "SESSION_USER_MISSING",

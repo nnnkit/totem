@@ -32,6 +32,27 @@ export async function getRuntimeSnapshot(): Promise<RuntimeSnapshot> {
   return response.data;
 }
 
+interface SetAccountContextResponse {
+  ok?: boolean;
+  accountContextId?: string;
+  error?: string;
+}
+
+export async function setAccountContext(accountId: string): Promise<string> {
+  const response = (await chrome.runtime.sendMessage({
+    type: "SET_ACCOUNT_CONTEXT",
+    accountId,
+  })) as SetAccountContextResponse;
+
+  if (response?.error) {
+    throw new Error(response.error);
+  }
+  if (!response?.ok || typeof response.accountContextId !== "string") {
+    throw new Error("SET_ACCOUNT_CONTEXT_FAILED");
+  }
+  return response.accountContextId;
+}
+
 export async function startAuthCapture(): Promise<{ tabId?: number }> {
   return chrome.runtime.sendMessage({ type: "START_AUTH_CAPTURE" });
 }
