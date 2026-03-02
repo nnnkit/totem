@@ -87,6 +87,17 @@ function mergeTheme(value?: ThemePreference): ThemePreference {
   return value === "light" || value === "dark" || value === "system" ? value : "system";
 }
 
+function hasVisualPreview(bookmark: Bookmark): boolean {
+  const hasMedia =
+    Array.isArray(bookmark.media) &&
+    bookmark.media.some((item) => Boolean(item?.url || item?.videoUrl));
+  const hasCardImage =
+    Array.isArray(bookmark.urls) &&
+    bookmark.urls.some((item) => Boolean(item?.card?.imageUrl));
+  const hasArticleCover = Boolean(bookmark.article?.coverImageUrl);
+  return hasMedia || hasCardImage || hasArticleCover;
+}
+
 function buildRuntimeSeed(payload: DemoPayload): RuntimeSeed {
   const bookmarkByTweetId = new Map(
     (Array.isArray(payload.bookmarks) ? payload.bookmarks : []).map((bookmark) => [
@@ -129,6 +140,32 @@ function buildRuntimeSeed(payload: DemoPayload): RuntimeSeed {
     };
 
     bookmarks.push(normalizedFocal);
+  }
+
+  // If supplied detail entries are text-only, enrich demo with visual bookmarks
+  // so media rendering can be previewed without requiring fresh network calls.
+  if (bookmarks.length > 0 && !bookmarks.some(hasVisualPreview)) {
+    const visualSupplements = (Array.isArray(payload.bookmarks) ? payload.bookmarks : [])
+      .filter(
+        (bookmark) =>
+          Boolean(bookmark?.tweetId) &&
+          !detailByTweetId[bookmark.tweetId] &&
+          hasVisualPreview(bookmark),
+      )
+      .slice(0, 24);
+
+    for (const bookmark of visualSupplements) {
+      const normalizedBookmark: Bookmark = {
+        ...bookmark,
+        sortIndex: bookmark.tweetId,
+      };
+      detailByTweetId[bookmark.tweetId] = {
+        focalTweet: normalizedBookmark,
+        thread: [],
+        fetchedAt: Date.now(),
+      };
+      bookmarks.push(normalizedBookmark);
+    }
   }
 
   bookmarks.sort((a, b) => b.sortIndex.localeCompare(a.sortIndex));
@@ -235,12 +272,15 @@ export function DemoNewTabApp() {
       setSeedVersion((value) => value + 1);
 
       if (payload !== DEMO_FALLBACK_PAYLOAD) {
+        const count = seed.bookmarks.length;
+        const tweetLabel = count === 1 ? "tweet" : "tweets";
+        const sourceLabel = seed.source || "data.json";
         setToast({
-          message: `Loaded ${seed.bookmarks.length} detailed tweets from ${seed.source || "data.json"}.`,
+          message: `Demo ready: ${count} ${tweetLabel} loaded from ${sourceLabel}.`,
         });
       } else {
         setToast({
-          message: "Could not load website/data.json. Using fallback demo data.",
+          message: "Could not load website/data.json, so we loaded fallback demo data.",
         });
       }
     };
@@ -256,7 +296,7 @@ export function DemoNewTabApp() {
       setDataReady(true);
       setSeedVersion((value) => value + 1);
       setToast({
-        message: "Demo load failed. Using fallback fixtures.",
+        message: "Demo data failed to load, so fallback fixtures were used.",
       });
     });
 

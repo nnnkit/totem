@@ -23,9 +23,9 @@ export function Onboarding({ phase, onLogin }: Props) {
     <div className="flex flex-col items-center justify-center min-h-dvh bg-surface text-foreground">
       <TotemLogo className="size-14 mb-8" />
 
-      <h1 className="text-2xl font-bold mb-2 text-balance">A calm reader for your X bookmarks.</h1>
+      <h1 className="text-2xl font-bold mb-2 text-balance">Read your X bookmarks, not the feed.</h1>
       <p className="text-muted text-lg mb-8 max-w-sm text-center text-pretty">
-        Read your saved posts in a clean, distraction-free view.
+        Open a clean reading queue in every new tab.
       </p>
 
       <a

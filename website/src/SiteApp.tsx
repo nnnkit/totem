@@ -60,10 +60,10 @@ function SiteLayout({
     <div className="min-h-dvh bg-white text-neutral-900 font-[Space_Grotesk,sans-serif]">
       {/* ── Header ─────────────────────────────────────────────────── */}
       <header
-        className={`sticky top-0 z-50 transition-colors duration-200 ${
+        className={`sticky top-0 z-50 border-b border-neutral-200 transition-colors duration-200 ${
           scrolled
-            ? "bg-white/90 backdrop-blur-lg border-b border-neutral-200"
-            : "border-b border-transparent"
+            ? "bg-white/90 backdrop-blur-lg"
+            : "bg-white"
         }`}
       >
         <div className="max-w-5xl mx-auto flex items-center justify-between px-6 h-14">
@@ -115,7 +115,7 @@ function SiteLayout({
               </span>
             </a>
             <p className="text-neutral-500 text-xs">
-              Actually read what you saved on X.
+              Read your X bookmarks, not the feed.
             </p>
           </div>
           <nav
@@ -172,7 +172,8 @@ function DemoBrowser() {
         const raw = iframeRef.current?.contentDocument?.title;
         if (!raw) return;
         // BookmarkReader resets to "New Tab" on unmount — show "Totem" instead
-        const display = raw === "New Tab" || raw.startsWith("Totem Demo") ? "Totem" : raw;
+        const display =
+          raw === "New Tab" || raw.startsWith("Totem Demo") ? "Totem" : raw;
         setTabTitle(display);
       } catch {
         // cross-origin — ignore
@@ -183,50 +184,50 @@ function DemoBrowser() {
   }, [opened]);
 
   return (
-    <div className="rounded-xl sm:rounded-2xl overflow-hidden border border-white/[0.06] bg-[#202124] shadow-2xl">
-      {/* ── Tab bar (traffic lights + tabs in one row) ─────── */}
-      <div className="flex items-end px-3 pt-3 bg-[#202124]">
-        {/* macOS traffic lights — vertically centered */}
-        <div className="flex items-center gap-2 pb-2 pr-4" aria-hidden="true">
+    <div className="overflow-hidden rounded-[28px] border border-white/[0.08] bg-[#20232b] shadow-[0_32px_90px_rgba(0,0,0,0.48)]">
+      {/* ── Tab strip ─────────────────────────────────────────── */}
+      <div className="flex items-end gap-4 px-5 pt-3 bg-[#242730] border-b border-white/[0.04]">
+        <div className="flex items-center gap-2.5 pb-2.5" aria-hidden="true">
           <span className="size-3 rounded-full bg-[#ff5f57]" />
           <span className="size-3 rounded-full bg-[#febc2e]" />
           <span className="size-3 rounded-full bg-[#28c840]" />
         </div>
 
-        {/* Totem tab — only when opened */}
-        {opened && (
-          <div className="flex items-center gap-2 px-4 h-[34px] rounded-t-lg bg-[#292a2d] text-white/90 text-[11px] font-medium min-w-[160px] max-w-[220px] -mb-px">
-            <TotemLogo className="size-3.5 shrink-0" />
+        {opened ? (
+          <div className="flex items-center gap-2 px-3.5 h-[42px] rounded-t-xl bg-[#343843] text-white/85 text-[12px] font-medium min-w-[170px] max-w-[260px] -mb-px border border-white/[0.08] border-b-transparent">
+            <TotemLogo className="size-4 shrink-0" />
             <span className="truncate">{tabTitle}</span>
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 setOpened(false);
               }}
-              className="ml-auto size-4 flex items-center justify-center rounded-sm text-white/30 hover:text-white/70 hover:bg-white/10 transition-colors cursor-pointer"
+              className="ml-auto size-5 flex items-center justify-center rounded-md text-white/35 hover:text-white/75 hover:bg-white/10 transition-colors cursor-pointer"
               aria-label="Close tab"
             >
-              <svg viewBox="0 0 12 12" className="size-2.5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+              <svg
+                viewBox="0 0 12 12"
+                className="size-3"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              >
                 <line x1="2" y1="2" x2="10" y2="10" />
                 <line x1="10" y1="2" x2="2" y2="10" />
               </svg>
             </button>
           </div>
-        )}
-
-        {/* "+" new tab button */}
-        {!opened && (
-          <div className="relative flex items-center h-[34px] -mb-px">
-            {/* Pulse ring */}
-            <span className="absolute inset-0 m-auto size-8 rounded-lg bg-white/20 animate-demo-pulse pointer-events-none" />
+        ) : (
+          <div className="relative -mb-px flex items-center">
             <button
               onClick={() => setOpened(true)}
-              className="relative flex items-center gap-1.5 h-8 pl-2.5 pr-3 rounded-lg bg-white/[0.12] text-white/70 hover:text-white hover:bg-white/[0.2] transition-colors cursor-pointer text-[11px] font-medium"
+              className="relative inline-flex items-center gap-2.5 h-[42px] px-5 rounded-t-xl bg-[#3a3f4a] text-white/80 hover:text-white hover:bg-[#454b58] transition-colors cursor-pointer text-[12px] font-medium border border-white/[0.08] border-b-transparent"
               aria-label="Open new tab"
             >
               <svg
                 viewBox="0 0 12 12"
-                className="size-3"
+                className="size-4"
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="2"
@@ -235,17 +236,13 @@ function DemoBrowser() {
                 <line x1="6" y1="1" x2="6" y2="11" />
                 <line x1="1" y1="6" x2="11" y2="6" />
               </svg>
-              <span className="hidden sm:inline">New tab</span>
+              <span>New tab</span>
             </button>
-
-            {/* Animated cursor pointing at this button */}
-            <div className="absolute -bottom-5 left-1/2 pointer-events-none animate-demo-cursor">
-              <svg
-                width="24"
-                height="30"
-                viewBox="0 0 24 30"
-                fill="none"
-              >
+            <div
+              className="absolute -right-3 top-[20px] pointer-events-none animate-bounce"
+              style={{ animationDuration: "1.6s" }}
+            >
+              <svg width="18" height="22" viewBox="0 0 24 30" fill="none">
                 <path
                   d="M7 1L7 19L11.5 15.5L15 23L17.5 22L14 14.5L19.5 13.5L7 1Z"
                   fill="white"
@@ -257,75 +254,67 @@ function DemoBrowser() {
             </div>
           </div>
         )}
-
-        {/* Spacer */}
-        <div className="flex-1" />
-      </div>
-
-      {/* ── Toolbar (address bar + nav) ────────────────────── */}
-      <div className="flex items-center gap-2 px-3 h-10 bg-[#292a2d] border-b border-white/[0.05]">
-        {/* Nav buttons */}
-        <div className="flex items-center gap-0.5" aria-hidden="true">
-          <span className="flex items-center justify-center size-7 rounded text-white/20">
-            <svg viewBox="0 0 20 20" className="size-3.5" fill="currentColor">
-              <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-            </svg>
-          </span>
-          <span className="flex items-center justify-center size-7 rounded text-white/20">
-            <svg viewBox="0 0 20 20" className="size-3.5" fill="currentColor">
-              <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-            </svg>
-          </span>
-          <span className="flex items-center justify-center size-7 rounded text-white/20">
-            <svg viewBox="0 0 20 20" className="size-3.5" fill="currentColor">
-              <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
-            </svg>
-          </span>
-        </div>
-
-        {/* Address bar */}
-        <div className="flex-1 flex items-center justify-center text-[11px] text-white/30 bg-[#202124] rounded-full py-1.5 px-4 border border-white/[0.04]">
-          <svg viewBox="0 0 16 16" className="size-3 mr-1.5 text-white/15" fill="currentColor">
-            <path fillRule="evenodd" d="M8 1a4.5 4.5 0 00-4.5 4.5V7H3a1 1 0 00-1 1v6a1 1 0 001 1h10a1 1 0 001-1V8a1 1 0 00-1-1h-.5V5.5A4.5 4.5 0 008 1zm2.5 6V5.5a2.5 2.5 0 10-5 0V7h5z" clipRule="evenodd" />
+        <button
+          type="button"
+          onClick={() => {
+            window.open("demo-page.html", "_blank", "noopener,noreferrer");
+          }}
+          className="ml-auto mb-2.5 flex items-center justify-center size-6 rounded-md text-white/45 hover:text-white/80 hover:bg-white/8 transition-colors cursor-pointer"
+          aria-label="Open full-page demo"
+          title="Open full-page demo"
+        >
+          <svg
+            viewBox="0 0 20 20"
+            className="size-3.5"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.7"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M8 12L3 17" />
+            <path d="M6 17H3v-3" />
+            <path d="M12 8l5-5" />
+            <path d="M14 3h3v3" />
           </svg>
-          chrome://newtab
-        </div>
+        </button>
+      </div>
 
-        {/* Right side icons */}
-        <div className="flex items-center gap-1" aria-hidden="true">
-          <span className="flex items-center justify-center size-7 rounded text-white/20">
+      {/* ── Toolbar ───────────────────────────────────────────── */}
+      <div className="flex items-center gap-2.5 px-5 h-9 bg-[#2b2f38] border-b border-white/[0.06]">
+        <div className="flex items-center gap-1.5" aria-hidden="true">
+          <span className="flex items-center justify-center size-6 rounded-md text-white/25">
             <svg viewBox="0 0 20 20" className="size-3.5" fill="currentColor">
-              <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+              <path
+                fillRule="evenodd"
+                d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z"
+                clipRule="evenodd"
+              />
+            </svg>
+          </span>
+          <span className="flex items-center justify-center size-6 rounded-md text-white/25">
+            <svg viewBox="0 0 20 20" className="size-3.5" fill="currentColor">
+              <path
+                fillRule="evenodd"
+                d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
+                clipRule="evenodd"
+              />
             </svg>
           </span>
         </div>
+        <div className="flex-1 h-7 rounded-full bg-[#1f222b] border border-white/[0.05]" />
       </div>
 
-      {/* ── Content area ───────────────────────────────────── */}
+      {/* ── Content area ─────────────────────────────────────── */}
       {!opened ? (
         <div
-          className="flex flex-col items-center justify-center text-center px-6 cursor-pointer select-none group bg-[#202124]"
+          className="relative cursor-pointer bg-[#1f222b]"
           style={{ minHeight: "clamp(540px, 65vh, 760px)" }}
           onClick={() => setOpened(true)}
         >
-          <div className="mb-5 size-14 rounded-2xl bg-white/[0.04] border border-white/[0.06] flex items-center justify-center group-hover:bg-white/[0.08] transition-colors">
-            <svg
-              viewBox="0 0 24 24"
-              className="size-6 text-white/25 group-hover:text-white/45 transition-colors"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-            >
-              <line x1="12" y1="5" x2="12" y2="19" />
-              <line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
-          </div>
-          <p className="text-white/40 text-sm font-medium mb-1 text-pretty">
-            Open a new tab
-          </p>
-          <p className="text-white/20 text-xs text-pretty">
-            Click the <span className="text-white/40 font-medium">+</span> button above or anywhere here
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_10%,rgba(255,255,255,0.03),transparent_58%)]" />
+          <p className="absolute left-5 bottom-4 text-[11px] tracking-[0.08em] uppercase text-white/28">
+            Click &quot;New tab&quot; above
           </p>
         </div>
       ) : (
@@ -364,61 +353,46 @@ function DemoBrowser() {
 
 const FEATURES = [
   {
-    title: "Distraction-free reader",
-    body: "A clean reading surface for threads, articles, and linked posts.",
+    title: "Clean reader",
+    body: "Read threads, articles, and links without feed clutter.",
   },
   {
-    title: "Unread / Continue / Read",
-    body: "Three queue states. Never lose track of where you left off.",
+    title: "Simple reading states",
+    body: "Track what is unread, in progress, and done.",
   },
   {
-    title: "Highlights & notes (researched)",
-    body: "Research-backed workflow: select passages, attach notes, and keep everything local.",
+    title: "Highlights & notes",
+    body: "Highlight lines and add notes while you read.",
   },
   {
-    title: "Explicit mark-as-read",
-    body: "You decide when something is done. No scroll-based guessing.",
+    title: "Manual mark as read",
+    body: "Nothing auto-completes. You choose when an item is done.",
   },
   {
-    title: "Offline-friendly",
-    body: "Cached content and progress keep working without a connection.",
+    title: "Works offline",
+    body: "Cached content and progress stay available without internet.",
   },
   {
-    title: "Keyboard-first",
-    body: "Navigate, read, and finish with shortcuts built for daily use.",
-  },
-];
-
-const HIGHLIGHT_NOTE_RESEARCH = [
-  {
-    title: "Research already completed",
-    body: "We have already done extension research for highlight and note flows, including core read, revisit, and context workflows.",
-  },
-  {
-    title: "Built for active reading",
-    body: "Highlight key lines while reading, then add lightweight notes so important context is easy to return to later.",
-  },
-  {
-    title: "Local-first data model",
-    body: "Highlights and notes stay in your browser storage with your reading progress and do not require a backend account.",
+    title: "Keyboard shortcuts",
+    body: "Move faster with shortcuts for navigation and reading actions.",
   },
 ];
 
 const STEPS = [
   {
     n: "1",
-    title: "Bookmark on X",
-    body: "Save posts normally. Totem syncs them automatically.",
+    title: "Save on X",
+    body: "Bookmark any post on X. Totem syncs it.",
   },
   {
     n: "2",
     title: "Open a new tab",
-    body: "Your reading queue replaces the new tab. No feed.",
+    body: "Your reading queue appears instantly.",
   },
   {
     n: "3",
-    title: "Read, highlight, done",
-    body: "Work through posts. Highlight, annotate, mark complete.",
+    title: "Read and finish",
+    body: "Read, highlight, add notes, then mark as read.",
   },
 ];
 
@@ -433,12 +407,12 @@ function LandingPage() {
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-400 mb-4">
             Chrome Extension
           </p>
-          <h1 className="font-[Newsreader,serif] text-[clamp(2.5rem,6vw,4.5rem)] leading-[1.05] tracking-tight text-neutral-900 mb-5 max-w-[18ch] text-balance">
-            Actually read what you saved on X.
+          <h1 className="font-[Newsreader,serif] text-[clamp(2.25rem,5vw,3.125rem)] leading-[1.05] tracking-tight text-neutral-900 mb-5 max-w-[18ch] text-balance">
+            Read your X bookmarks, not the feed.
           </h1>
           <p className="text-neutral-500 text-lg leading-relaxed max-w-[48ch] mb-8">
-            Totem turns every new tab into a calm reading queue for your X
-            bookmarks. No feed. No noise.
+            Totem replaces your Chrome new tab with a focused reading queue, so
+            you can read saved posts without getting pulled back into X.
           </p>
           <div className="flex flex-wrap gap-3 mb-8">
             <a
@@ -449,11 +423,11 @@ function LandingPage() {
             </a>
           </div>
           <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-neutral-400 font-medium">
-            <span>No backend</span>
-            <span className="text-neutral-200">|</span>
             <span>No account</span>
             <span className="text-neutral-200">|</span>
-            <span>100% local</span>
+            <span>No backend</span>
+            <span className="text-neutral-200">|</span>
+            <span>Local-first</span>
           </div>
         </section>
 
@@ -461,19 +435,18 @@ function LandingPage() {
         <section id="demo" className="w-full bg-neutral-950 py-16 sm:py-20">
           <div className="max-w-5xl mx-auto px-6 mb-8">
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500 mb-3">
-              Live preview
+              Live demo
             </p>
             <h2 className="font-[Newsreader,serif] text-[clamp(1.8rem,3.5vw,2.8rem)] leading-tight tracking-tight text-white mb-3 max-w-[22ch]">
-              Try it. Open a new tab.
+              See Totem in action.
             </h2>
             <p className="text-neutral-500 text-sm max-w-[52ch]">
-              Click the + tab to see exactly what Totem looks like when you open
-              a new tab.{" "}
+              Click the New tab button in the mock browser to open Totem.{" "}
               <a
                 href="demo-page.html"
                 className="text-white/70 underline underline-offset-2 hover:text-white transition-colors"
               >
-                Try the full-page experience &rarr;
+                Open full-page demo &rarr;
               </a>
             </p>
           </div>
@@ -485,7 +458,7 @@ function LandingPage() {
 
           <div className="max-w-5xl mx-auto px-6">
             <p className="text-neutral-600 text-xs mt-4">
-              Demo uses fixture data. Same core components as the real extension.
+              Demo uses fixture data and the same core UI as the extension.
             </p>
           </div>
         </section>
@@ -496,7 +469,7 @@ function LandingPage() {
             What you get
           </p>
           <h2 className="font-[Newsreader,serif] text-[clamp(1.8rem,3.5vw,2.8rem)] leading-tight tracking-tight text-neutral-900 mb-10 max-w-[20ch]">
-            Save. Open. Read.
+            Clear workflow. Less noise.
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {FEATURES.map((f) => (
@@ -515,44 +488,14 @@ function LandingPage() {
           </div>
         </section>
 
-        {/* ── Highlight & Note ─────────────────────────────────── */}
-        <section className="border-y border-neutral-100 bg-neutral-50/70">
-          <div className="max-w-5xl mx-auto px-6 py-16 sm:py-20">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-400 mb-3">
-              Highlight & note
-            </p>
-            <h2 className="font-[Newsreader,serif] text-[clamp(1.8rem,3.5vw,2.8rem)] leading-tight tracking-tight text-neutral-900 mb-4 max-w-[24ch]">
-              We already have research for highlights and notes in Totem.
-            </h2>
-            <p className="text-sm sm:text-base text-neutral-500 leading-relaxed max-w-[62ch] mb-10">
-              This extension capability is now represented on the homepage so users can understand how highlight and note support fits into the reading flow before installation.
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {HIGHLIGHT_NOTE_RESEARCH.map((item) => (
-                <article
-                  key={item.title}
-                  className="rounded-xl border border-neutral-200 bg-white p-5"
-                >
-                  <h3 className="text-[0.95rem] font-semibold text-neutral-900 mb-1.5">
-                    {item.title}
-                  </h3>
-                  <p className="text-sm text-neutral-500 leading-relaxed m-0">
-                    {item.body}
-                  </p>
-                </article>
-              ))}
-            </div>
-          </div>
-        </section>
-
         {/* ── How it works ──────────────────────────────────────── */}
         <section className="border-t border-neutral-100">
           <div className="max-w-5xl mx-auto px-6 py-16 sm:py-20">
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-400 mb-3">
-              Three steps
+              How it works
             </p>
             <h2 className="font-[Newsreader,serif] text-[clamp(1.8rem,3.5vw,2.8rem)] leading-tight tracking-tight text-neutral-900 mb-10 max-w-[26ch]">
-              From saved to read in 60 seconds.
+              From bookmark to done in three steps.
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
               {STEPS.map((step) => (
@@ -576,10 +519,10 @@ function LandingPage() {
         <section id="install" className="w-full bg-neutral-950 py-16 sm:py-20">
           <div className="max-w-xl mx-auto px-6 text-center">
             <h2 className="font-[Newsreader,serif] text-[clamp(1.8rem,3.5vw,2.8rem)] leading-tight tracking-tight text-white mb-4">
-              Start reading what you saved.
+              Start reading your saved posts.
             </h2>
             <p className="text-neutral-500 text-sm mb-8">
-              No account. No backend.
+              Free. Local-first. No account.
             </p>
             <a
               href="#install"
@@ -588,7 +531,7 @@ function LandingPage() {
               Add to Chrome
             </a>
             <p className="text-neutral-700 text-xs mt-5 tracking-wide">
-              Local-first &middot; 0 servers &middot; No feed recreation
+              Local-first &middot; 0 servers &middot; No feed
             </p>
           </div>
         </section>
@@ -612,27 +555,37 @@ function PrivacyPage() {
             Privacy Policy
           </h1>
           <p className="text-sm text-neutral-400">
-            Last updated: February 28, 2026
+            Last updated: March 2, 2026
           </p>
         </div>
 
         {/* Sections */}
         <div className="flex flex-col gap-5">
-          <PolicySection title="1. What Totem collects">
+          <PolicySection title="1. Data Totem accesses and stores">
             <ul>
               <li>
-                X authentication headers from your active browser session
-                (authorization, cookie, CSRF token).
+                X authentication headers captured from your own authenticated
+                x.com GraphQL requests (including authorization, cookie,
+                x-csrf-token, and related X client headers when present).
               </li>
               <li>X user ID derived from your existing session cookie.</li>
               <li>
-                Your bookmarked posts and related content needed for reading.
+                Bookmark data and tweet detail content fetched from X so you can
+                read saved posts in Totem.
               </li>
               <li>
-                Reading progress, highlights, and notes created inside Totem.
+                Bookmark mutation signals from x.com (CreateBookmark /
+                DeleteBookmark events, and tweet IDs when available) to keep
+                local data in sync.
               </li>
               <li>
-                Local user preferences such as theme and new tab settings.
+                Reading progress, highlights, notes, and local preferences (for
+                example theme, search engine choice, quick-link settings, and
+                other new-tab UI state).
+              </li>
+              <li>
+                If you enable quick links: top-site URLs from Chrome's topSites
+                API and favicon URLs generated by Chrome.
               </li>
             </ul>
           </PolicySection>
@@ -640,45 +593,72 @@ function PrivacyPage() {
           <PolicySection title="2. Where data is stored">
             <ul>
               <li>
-                Primary storage: local browser storage (IndexedDB +
-                chrome.storage.local).
+                IndexedDB stores bookmarks, tweet detail cache, reading
+                progress, and highlights/notes.
               </li>
               <li>
-                Settings sync: chrome.storage.sync when available in Chrome.
+                chrome.storage.local stores runtime/auth state (including
+                captured auth headers), mutation event queue, and GraphQL
+                endpoint catalog metadata.
               </li>
               <li>
-                Totem does not operate a backend database for user content.
+                chrome.storage.sync stores theme and settings (when sync storage
+                is available).
+              </li>
+              <li>
+                localStorage stores small local UI keys (for example selected
+                reading tab and wallpaper index).
+              </li>
+              <li>
+                Totem does not operate a backend database for your extension
+                data.
               </li>
             </ul>
           </PolicySection>
 
-          <PolicySection title="3. What Totem does not collect">
+          <PolicySection title="3. Network use and sharing">
             <ul>
               <li>
-                No analytics or behavioral telemetry sent to a Totem server.
+                Totem sends authenticated API requests to x.com to fetch
+                bookmarks and tweet details, and to delete bookmarks when you
+                choose to unbookmark in Totem.
               </li>
-              <li>No sale of personal data.</li>
-              <li>No sharing with third-party ad or tracking platforms.</li>
+              <li>
+                Totem may fetch x.com / abs.twimg.com bundles to discover
+                GraphQL query IDs when needed for compatibility.
+              </li>
+              <li>
+                Search queries are sent directly to your chosen search provider
+                (or browser default search) when you submit a search.
+              </li>
+              <li>
+                Totem does not send analytics or behavioral telemetry to a
+                Totem-operated server, does not sell personal data, and does
+                not share data with ad/tracking platforms.
+              </li>
             </ul>
           </PolicySection>
 
           <PolicySection title="4. Why permissions are used">
             <ul>
               <li>
-                <strong>storage</strong>: saves bookmarks, progress, notes, and
-                settings locally.
+                <strong>storage</strong>: stores local bookmarks/cache/progress,
+                auth/runtime state, and settings.
               </li>
               <li>
                 <strong>webRequest / declarativeNetRequest</strong>: enables
-                authenticated calls to X on your behalf.
+                capture of required auth/request metadata and authenticated
+                requests to X.
               </li>
               <li>
                 <strong>host permission (x.com)</strong>: required to read your
-                own bookmark data and detect account context.
+                own bookmark data, run content scripts on x.com, and detect
+                account context.
               </li>
               <li>
-                <strong>optional permissions</strong> (topSites, favicon, search)
-                only apply when you enable those features.
+                <strong>optional permissions</strong> (topSites, favicon,
+                search) are requested on demand when you enable related
+                features.
               </li>
             </ul>
           </PolicySection>
@@ -691,8 +671,12 @@ function PrivacyPage() {
               </li>
               <li>Bookmark mutation event cache: up to 14 days.</li>
               <li>
-                Local data persists until you clear browser storage or remove
-                Totem.
+                GraphQL endpoint catalog entries: up to 30 days.
+              </li>
+              <li>
+                Auth headers are refreshed from live x.com traffic and may
+                remain in local storage until session/auth state changes or you
+                remove the extension.
               </li>
             </ul>
           </PolicySection>
@@ -702,8 +686,18 @@ function PrivacyPage() {
               <li>You can remove the extension at any time.</li>
               <li>You can reset Totem local data from settings.</li>
               <li>
-                You can disable optional permissions by toggling related features
-                off.
+                Optional permission grants are managed by Chrome. Turning a
+                feature off in Totem stops using it, but does not automatically
+                revoke the permission from Chrome.
+              </li>
+              <li>
+                To revoke optional permissions, use Chrome extension permission
+                controls for Totem.
+              </li>
+              <li>
+                Reset local data clears bookmark/content caches and most local
+                state, but currently preserves auth/query metadata used for
+                account continuity.
               </li>
             </ul>
           </PolicySection>

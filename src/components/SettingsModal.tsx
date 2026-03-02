@@ -116,35 +116,6 @@ export function SettingsModal({
                   </ToggleGroup>
                 </div>
 
-                <div className="flex items-center justify-between min-h-10">
-                  <span className="text-sm text-foreground/80">Background</span>
-                  <ToggleGroup
-                    value={[settings.backgroundMode]}
-                    onValueChange={(values) => {
-                      if (values.length)
-                        onUpdateSettings({
-                          backgroundMode:
-                            values[0] as UserSettings["backgroundMode"],
-                        });
-                    }}
-                    className="flex gap-1 rounded bg-foreground/6 p-1"
-                  >
-                    <Toggle
-                      value="gradient"
-                      aria-label="Gradient"
-                      className={cn(toggleBase, "px-3")}
-                    >
-                      Gradient
-                    </Toggle>
-                    <Toggle
-                      value="images"
-                      aria-label="Images"
-                      className={cn(toggleBase, "px-3")}
-                    >
-                      Images
-                    </Toggle>
-                  </ToggleGroup>
-                </div>
               </div>
             </section>
 
