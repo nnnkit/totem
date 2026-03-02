@@ -30,6 +30,7 @@ import {
   CS_LAST_SOFT_SYNC,
   CS_LAST_SYNC,
   CS_SOFT_SYNC_NEEDED,
+  CS_SYNC_AUTO_ENABLED,
   LS_MANUAL_SYNC_REQUIRED,
 } from "../lib/storage-keys";
 import {
@@ -64,6 +65,7 @@ interface ActiveSyncController {
 }
 
 const FALLBACK_SESSION_ACCOUNT_ID = "__session__";
+const DEFAULT_SYNC_AUTO_ENABLED = true;
 const SYNC_BLOCKED_REASONS = new Set<SyncBlockedReason>([
   "in_flight",
   "cooldown",
@@ -95,6 +97,17 @@ function clearManualSyncRequired(): void {
   try {
     localStorage.removeItem(LS_MANUAL_SYNC_REQUIRED);
   } catch {}
+}
+
+async function isAutoSyncEnabled(): Promise<boolean> {
+  try {
+    const stored = await chrome.storage.local.get([CS_SYNC_AUTO_ENABLED]);
+    const value = stored[CS_SYNC_AUTO_ENABLED];
+    if (typeof value === "boolean") {
+      return value;
+    }
+  } catch {}
+  return DEFAULT_SYNC_AUTO_ENABLED;
 }
 
 async function withTimeout<T>(
@@ -437,11 +450,21 @@ export function useBookmarks(
         timeoutId = setTimeout(() => reject(new Error("DB_INIT_TIMEOUT")), DB_INIT_TIMEOUT_MS);
       }),
     ])
-      .then((stored) => {
+      .then(async (stored) => {
         if (cancelled || runId !== syncMachineRef.current.initRunId) return;
         if (stored.length > 0) {
           setBookmarks(stored);
           bookmarksRef.current = stored;
+        }
+
+        if (isReady) {
+          const autoEnabled = await isAutoSyncEnabled();
+          if (autoEnabled) {
+            sync({
+              trigger: "auto",
+              localCountHint: stored.length,
+            }).catch(() => {});
+          }
         }
 
         if (!isReady) {
@@ -469,7 +492,7 @@ export function useBookmarks(
       cancelled = true;
       if (timeoutId !== null) clearTimeout(timeoutId);
     };
-  }, [applySyncEvent, isReady, activeAccountId]);
+  }, [applySyncEvent, isReady, activeAccountId, sync]);
 
   // ── Effect 2: Reauth status normalization (manual recovery only) ──
 

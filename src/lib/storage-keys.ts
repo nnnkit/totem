@@ -37,6 +37,7 @@ export const CS_AUTH_STATE = "totem_auth_state";
 export const CS_LAST_SOFT_SYNC = "totem_last_light_sync";
 export const CS_SOFT_SYNC_NEEDED = "totem_light_sync_needed";
 export const CS_SYNC_ORCHESTRATOR_STATE = "totem_sync_orchestrator_state";
+export const CS_SYNC_AUTO_ENABLED = "totem_sync_auto_enabled";
 export const CS_RUNTIME_AUDIT = "totem_runtime_audit";
 export const CS_RUNTIME_STATE_V2 = "totem_runtime_state_v2";
 

@@ -117,6 +117,12 @@ Mount/refresh trigger
 - Do not send implicit sync reservations on mount/refresh.
 - Refresh must cause zero bookmark fetches unless user explicitly clicks sync.
 
+Phase 2 optional auto refresh
+- Controlled by `chrome.storage.local["totem_sync_auto_enabled"]` (default `true` in current build).
+- When new tab opens and runtime is ready, app sends one `trigger="auto"` reservation with local count hint.
+- Worker policy decides whether to run network fetch (`bootstrap_empty`, `background_stale`) or block (`fresh_cache`, `auto_backoff`, etc.).
+- No `chrome.alarms`; no background sync while new tab is closed.
+
 Manual sync button
 - Sends `trigger="manual"` + `mode="full"`.
 - Must never silently no-op (worker returns explicit blocked reason when denied).
@@ -127,8 +133,9 @@ Manual sync button
 First-time user, logged in
 1. No local DB data.
 2. App becomes `online_ready`.
-3. User clicks Sync.
-4. Full sync fetches bookmarks and caches details over time.
+3. If `totem_sync_auto_enabled=true`, mount sends one auto reservation and worker may run `bootstrap_empty` full sync.
+4. If auto is disabled, user clicks Sync manually.
+5. Full sync fetches bookmarks and caches details over time.
 
 First-time user, logged out
 1. No local DB data.
