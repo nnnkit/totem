@@ -1,5 +1,6 @@
 export {
   checkAuth,
+  getRuntimeSnapshot,
   startAuthCapture,
   closeAuthTab,
   checkReauthStatus,
@@ -15,3 +16,11 @@ export {
 } from "./bookmarks";
 
 export { fetchTweetDetail } from "./posts";
+
+export {
+  reserveSyncRun,
+  completeSyncRun,
+  type SyncTrigger,
+  type SyncCompletionStatus,
+  type SyncReservationDecision,
+} from "./sync";

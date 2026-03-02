@@ -151,9 +151,51 @@ export interface AuthStatus {
   hasAuth: boolean;
   hasQueryId: boolean;
   userId: string | null;
+  accountContextId?: string | null;
   authState: AuthState;
   sessionState: SessionState;
   capability: ApiCapability;
+}
+
+export type SyncBlockedReason =
+  | "in_flight"
+  | "cooldown"
+  | "no_account"
+  | "not_ready";
+
+export interface RuntimeSyncPolicy {
+  accountKey: string | null;
+  inFlight: {
+    leaseId: string;
+    mode: "full" | "incremental";
+    trigger: "manual" | "auto";
+    startedAt: number;
+  } | null;
+  lastAttemptAt: number;
+  lastSuccessAt: number;
+  blockedReason: SyncBlockedReason | null;
+}
+
+export interface RuntimeCacheSummary {
+  lastSyncAt: number;
+  lastSoftSyncAt: number;
+  lightSyncNeededAt: number;
+  pendingBookmarkEventCount: number;
+}
+
+export interface RuntimeSnapshot {
+  sessionState: SessionState;
+  authPhase: "loading" | "need_login" | "connecting" | "ready";
+  accountContextId: string | null;
+  capability: ApiCapability;
+  syncPolicy: RuntimeSyncPolicy;
+  blockedReason: SyncBlockedReason | null;
+  cacheSummary: RuntimeCacheSummary;
+}
+
+export interface SyncRequestResult {
+  accepted: boolean;
+  reason?: string;
 }
 
 export type SyncStatus = "loading" | "syncing" | "idle" | "error" | "reauthing";

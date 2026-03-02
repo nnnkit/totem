@@ -7,6 +7,7 @@ import type {
 } from "../types";
 import { sanitizeBookmark } from "../lib/sanitize";
 import {
+  DB_ACCOUNT_PREFIX,
   DB_NAME,
   DB_VERSION,
   STORE_BOOKMARKS as STORE_NAME,
@@ -51,11 +52,39 @@ interface XBookmarksDbSchema extends DBSchema {
   };
 }
 
-let dbPromise: Promise<IDBPDatabase<XBookmarksDbSchema>> | null = null;
-let legacyDbMigrationPromise: Promise<void> | null = null;
+const dbPromises = new Map<string, Promise<IDBPDatabase<XBookmarksDbSchema>>>();
+const migrationPromises = new Map<string, Promise<void>>();
+let activeAccountId: string | null = null;
+let activeDbName = DB_NAME;
 
-function createDb() {
-  return openDB<XBookmarksDbSchema>(DB_NAME, DB_VERSION, {
+const ACCOUNT_ID_SANITIZE_RE = /[^A-Za-z0-9_-]/g;
+
+function normalizeAccountId(accountId: string | null | undefined): string | null {
+  if (typeof accountId !== "string") return null;
+  const trimmed = accountId.trim();
+  if (!trimmed) return null;
+  const sanitized = trimmed.replace(ACCOUNT_ID_SANITIZE_RE, "_").slice(0, 120);
+  return sanitized || null;
+}
+
+export function getDbNameForAccount(accountId: string | null | undefined): string {
+  const normalized = normalizeAccountId(accountId);
+  return normalized ? `${DB_ACCOUNT_PREFIX}${normalized}` : DB_NAME;
+}
+
+export function setActiveAccountId(accountId: string | null | undefined): string {
+  const normalized = normalizeAccountId(accountId);
+  const nextDbName = getDbNameForAccount(normalized);
+  if (nextDbName === activeDbName && normalized === activeAccountId) {
+    return activeDbName;
+  }
+  activeAccountId = normalized;
+  activeDbName = nextDbName;
+  return activeDbName;
+}
+
+function createDb(dbName: string) {
+  return openDB<XBookmarksDbSchema>(dbName, DB_VERSION, {
     upgrade(db, _oldVersion, _newVersion, tx) {
       const bookmarksStore = db.objectStoreNames.contains(STORE_NAME)
         ? tx.objectStore(STORE_NAME)
@@ -115,10 +144,10 @@ function createDb() {
       // Keep existing tabs open; app can continue with in-memory state until next refresh.
     },
     blocking() {
-      dbPromise = null;
+      dbPromises.delete(dbName);
     },
     terminated() {
-      dbPromise = null;
+      dbPromises.delete(dbName);
     },
   });
 }
@@ -135,33 +164,31 @@ async function hasDatabase(name: string): Promise<boolean> {
   }
 }
 
-async function migrateLegacyDatabaseIfNeeded(db: IDBPDatabase<XBookmarksDbSchema>): Promise<void> {
-  if (!(await hasDatabase(LEGACY_IDB_DATABASE_NAME))) return;
+async function migrateFromDatabase(
+  db: IDBPDatabase<XBookmarksDbSchema>,
+  sourceName: string,
+): Promise<boolean> {
+  if (!(await hasDatabase(sourceName))) return false;
 
-  const [bookmarkCount, detailCount, progressCount, highlightCount] =
-    await Promise.all([
-      db.count(STORE_NAME),
-      db.count(DETAIL_STORE_NAME),
-      db.count(PROGRESS_STORE_NAME),
-      db.count(HIGHLIGHTS_STORE_NAME),
-    ]);
-
-  // If the target DB already has user data, don't overwrite it.
-  if (bookmarkCount + detailCount + progressCount + highlightCount > 0) return;
-
-  const legacyDb = await openDB<XBookmarksDbSchema>(LEGACY_IDB_DATABASE_NAME);
+  let sourceDb: IDBPDatabase<XBookmarksDbSchema> | null = null;
   try {
-    const bookmarks = legacyDb.objectStoreNames.contains(STORE_NAME)
-      ? await legacyDb.getAll(STORE_NAME)
+    sourceDb = await openDB<XBookmarksDbSchema>(sourceName);
+  } catch {
+    return false;
+  }
+
+  try {
+    const bookmarks = sourceDb.objectStoreNames.contains(STORE_NAME)
+      ? await sourceDb.getAll(STORE_NAME)
       : [];
-    const details = legacyDb.objectStoreNames.contains(DETAIL_STORE_NAME)
-      ? await legacyDb.getAll(DETAIL_STORE_NAME)
+    const details = sourceDb.objectStoreNames.contains(DETAIL_STORE_NAME)
+      ? await sourceDb.getAll(DETAIL_STORE_NAME)
       : [];
-    const progress = legacyDb.objectStoreNames.contains(PROGRESS_STORE_NAME)
-      ? await legacyDb.getAll(PROGRESS_STORE_NAME)
+    const progress = sourceDb.objectStoreNames.contains(PROGRESS_STORE_NAME)
+      ? await sourceDb.getAll(PROGRESS_STORE_NAME)
       : [];
-    const highlights = legacyDb.objectStoreNames.contains(HIGHLIGHTS_STORE_NAME)
-      ? await legacyDb.getAll(HIGHLIGHTS_STORE_NAME)
+    const highlights = sourceDb.objectStoreNames.contains(HIGHLIGHTS_STORE_NAME)
+      ? await sourceDb.getAll(HIGHLIGHTS_STORE_NAME)
       : [];
 
     if (
@@ -170,7 +197,7 @@ async function migrateLegacyDatabaseIfNeeded(db: IDBPDatabase<XBookmarksDbSchema
       progress.length === 0 &&
       highlights.length === 0
     ) {
-      return;
+      return false;
     }
 
     const tx = db.transaction(
@@ -190,34 +217,67 @@ async function migrateLegacyDatabaseIfNeeded(db: IDBPDatabase<XBookmarksDbSchema
       tx.objectStore(HIGHLIGHTS_STORE_NAME).put(row);
     }
     await tx.done;
+    return true;
   } finally {
-    legacyDb.close();
+    sourceDb.close();
+  }
+}
+
+async function migrateLegacyDatabaseIfNeeded(
+  db: IDBPDatabase<XBookmarksDbSchema>,
+  dbName: string,
+): Promise<void> {
+  const [bookmarkCount, detailCount, progressCount, highlightCount] =
+    await Promise.all([
+      db.count(STORE_NAME),
+      db.count(DETAIL_STORE_NAME),
+      db.count(PROGRESS_STORE_NAME),
+      db.count(HIGHLIGHTS_STORE_NAME),
+    ]);
+
+  // If the target DB already has user data, don't overwrite it.
+  if (bookmarkCount + detailCount + progressCount + highlightCount > 0) return;
+
+  const migrationSourceNames = dbName === DB_NAME
+    ? [LEGACY_IDB_DATABASE_NAME]
+    : [DB_NAME, LEGACY_IDB_DATABASE_NAME];
+
+  for (const sourceName of migrationSourceNames) {
+    if (sourceName === dbName) continue;
+    const didMigrate = await migrateFromDatabase(db, sourceName).catch(() => false);
+    if (didMigrate) {
+      return;
+    }
   }
 }
 
 async function getDb(): Promise<IDBPDatabase<XBookmarksDbSchema>> {
+  const dbName = activeDbName;
+  let dbPromise = dbPromises.get(dbName);
   if (!dbPromise) {
     dbPromise = (async () => {
-      const db = await createDb();
-      if (!legacyDbMigrationPromise) {
-        legacyDbMigrationPromise = migrateLegacyDatabaseIfNeeded(db).catch(
-          () => {},
-        );
+      const db = await createDb(dbName);
+      let migrationPromise = migrationPromises.get(dbName);
+      if (!migrationPromise) {
+        migrationPromise = migrateLegacyDatabaseIfNeeded(db, dbName).catch(() => {});
+        migrationPromises.set(dbName, migrationPromise);
       }
-      await legacyDbMigrationPromise;
+      await migrationPromise;
       return db;
     })().catch((error) => {
-      dbPromise = null;
+      dbPromises.delete(dbName);
       throw error;
     });
+    dbPromises.set(dbName, dbPromise);
   }
   return dbPromise;
 }
 
 export function closeDb(): void {
-  if (dbPromise) {
-    dbPromise.then((db) => db.close()).catch(() => {});
-    dbPromise = null;
+  const openPromises = Array.from(dbPromises.values());
+  dbPromises.clear();
+  for (const promise of openPromises) {
+    promise.then((db) => db.close()).catch(() => {});
   }
 }
 

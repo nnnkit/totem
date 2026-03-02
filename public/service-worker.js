@@ -48,8 +48,23 @@ const AUTH_PROTECTED_OPERATIONS = new Set([
 ]);
 const AUTH_WEAK_NEGATIVE_WINDOW_MS = 10_000;
 const AUTH_WEAK_NEGATIVE_THRESHOLD = 2;
-const AUTH_PROBE_MIN_INTERVAL_MS = 30_000;
-const AUTH_PROBE_STALE_AFTER_MS = 90_000;
+const EXTENSION_REQUEST_TRACK_TTL_MS = 15_000;
+const SYNC_ORCHESTRATOR_STORAGE_KEY = "totem_sync_orchestrator_state";
+const SYNC_ORCHESTRATOR_VERSION = 1;
+const SYNC_ORCHESTRATOR_LOCK_TTL_MS = 12 * 60 * 1000;
+const SYNC_ORCHESTRATOR_AUTO_BACKOFF_MS = 5 * 60 * 1000;
+const SYNC_ORCHESTRATOR_AUTO_INTERVAL_MS = 4 * 60 * 60 * 1000;
+const SYNC_ORCHESTRATOR_MANUAL_RECLAIM_MS = 90_000;
+const SYNC_ORCHESTRATOR_MANUAL_COOLDOWN_MS = 4_000;
+const CACHE_SUMMARY_KEYS = [
+  "totem_last_sync",
+  "totem_last_light_sync",
+  "totem_light_sync_needed",
+  BOOKMARK_EVENTS_STORAGE_KEY,
+];
+const RUNTIME_AUDIT_STORAGE_KEY = "totem_runtime_audit";
+const RUNTIME_STATE_V2_STORAGE_KEY = "totem_runtime_state_v2";
+const RUNTIME_AUDIT_LIMIT = 60;
 const WEEKLY_SW_CLEANUP_KEY = "totem_sw_cleanup_at";
 const WEEKLY_SW_CLEANUP_INTERVAL_MS = 1000 * 60 * 60 * 24 * 7;
 const BOOKMARK_EVENT_RETENTION_MS = 1000 * 60 * 60 * 24 * 14;
@@ -153,8 +168,580 @@ function getCookieHeaderValue(cookieHeader, name) {
 let authTabId = null;
 let reauthInProgress = false;
 let authWeakNegativeHits = [];
-let lastAuthProbeAt = 0;
-let authProbePromise = null;
+const extensionInitiatedRequestMap = new Map();
+const SYNC_ACCOUNT_ID_SANITIZE_RE = /[^A-Za-z0-9_-]/g;
+let syncOrchestratorMutation = Promise.resolve();
+
+function pruneTrackedExtensionRequests(now = Date.now()) {
+  for (const [url, expiresAt] of extensionInitiatedRequestMap.entries()) {
+    if (!url || expiresAt <= now) {
+      extensionInitiatedRequestMap.delete(url);
+    }
+  }
+}
+
+function trackExtensionInitiatedRequest(url) {
+  if (typeof url !== "string" || !url) return;
+  const now = Date.now();
+  pruneTrackedExtensionRequests(now);
+  extensionInitiatedRequestMap.set(url, now + EXTENSION_REQUEST_TRACK_TTL_MS);
+}
+
+function isTrackedExtensionInitiatedRequest(url) {
+  if (typeof url !== "string" || !url) return false;
+  const now = Date.now();
+  pruneTrackedExtensionRequests(now);
+  const expiresAt = extensionInitiatedRequestMap.get(url);
+  return typeof expiresAt === "number" && expiresAt > now;
+}
+
+function normalizeSyncAccountId(accountId) {
+  if (typeof accountId !== "string") return null;
+  const trimmed = accountId.trim();
+  if (!trimmed) return null;
+  const sanitized = trimmed.replace(SYNC_ACCOUNT_ID_SANITIZE_RE, "_").slice(0, 120);
+  return sanitized || null;
+}
+
+function createEmptySyncAccountState() {
+  return {
+    inFlight: null,
+    lastSuccessAt: 0,
+    lastFullSyncAt: 0,
+    lastIncrementalSyncAt: 0,
+    lastAttemptAt: 0,
+    lastCompletedAt: 0,
+    lastCompletedStatus: null,
+    lastDecisionAt: 0,
+    lastDecisionReason: null,
+    lastError: null,
+  };
+}
+
+function createEmptySyncOrchestratorState() {
+  return {
+    version: SYNC_ORCHESTRATOR_VERSION,
+    accounts: {},
+  };
+}
+
+function normalizeSyncOrchestratorState(raw) {
+  const fallback = createEmptySyncOrchestratorState();
+  if (!raw || typeof raw !== "object") return fallback;
+  const root = raw;
+  const accountsRaw =
+    root.accounts && typeof root.accounts === "object" ? root.accounts : {};
+  const state = {
+    version:
+      typeof root.version === "number" && Number.isFinite(root.version)
+        ? root.version
+        : SYNC_ORCHESTRATOR_VERSION,
+    accounts: {},
+  };
+
+  for (const [key, value] of Object.entries(accountsRaw)) {
+    const accountKey = normalizeSyncAccountId(key);
+    if (!accountKey) continue;
+    const account = value && typeof value === "object" ? value : {};
+    const inFlightRaw = account.inFlight && typeof account.inFlight === "object"
+      ? account.inFlight
+      : null;
+    const inFlight =
+      inFlightRaw && typeof inFlightRaw.leaseId === "string" && inFlightRaw.leaseId
+        ? {
+            leaseId: inFlightRaw.leaseId,
+            mode: inFlightRaw.mode === "full" ? "full" : "incremental",
+            trigger: inFlightRaw.trigger === "manual" ? "manual" : "auto",
+            reason:
+              typeof inFlightRaw.reason === "string" && inFlightRaw.reason
+                ? inFlightRaw.reason
+                : "background_stale",
+            startedAt:
+              typeof inFlightRaw.startedAt === "number" &&
+              Number.isFinite(inFlightRaw.startedAt)
+                ? inFlightRaw.startedAt
+                : 0,
+          }
+        : null;
+
+    state.accounts[accountKey] = {
+      inFlight,
+      lastSuccessAt:
+        typeof account.lastSuccessAt === "number" && Number.isFinite(account.lastSuccessAt)
+          ? account.lastSuccessAt
+          : 0,
+      lastFullSyncAt:
+        typeof account.lastFullSyncAt === "number" && Number.isFinite(account.lastFullSyncAt)
+          ? account.lastFullSyncAt
+          : 0,
+      lastIncrementalSyncAt:
+        typeof account.lastIncrementalSyncAt === "number" &&
+        Number.isFinite(account.lastIncrementalSyncAt)
+          ? account.lastIncrementalSyncAt
+          : 0,
+      lastAttemptAt:
+        typeof account.lastAttemptAt === "number" && Number.isFinite(account.lastAttemptAt)
+          ? account.lastAttemptAt
+          : 0,
+      lastCompletedAt:
+        typeof account.lastCompletedAt === "number" && Number.isFinite(account.lastCompletedAt)
+          ? account.lastCompletedAt
+          : 0,
+      lastCompletedStatus:
+        typeof account.lastCompletedStatus === "string" ? account.lastCompletedStatus : null,
+      lastDecisionAt:
+        typeof account.lastDecisionAt === "number" && Number.isFinite(account.lastDecisionAt)
+          ? account.lastDecisionAt
+          : 0,
+      lastDecisionReason:
+        typeof account.lastDecisionReason === "string" ? account.lastDecisionReason : null,
+      lastError: typeof account.lastError === "string" ? account.lastError : null,
+    };
+  }
+
+  return state;
+}
+
+async function readSyncOrchestratorState() {
+  const stored = await chrome.storage.local.get([SYNC_ORCHESTRATOR_STORAGE_KEY]);
+  return normalizeSyncOrchestratorState(stored[SYNC_ORCHESTRATOR_STORAGE_KEY]);
+}
+
+async function writeSyncOrchestratorState(state) {
+  await chrome.storage.local.set({
+    [SYNC_ORCHESTRATOR_STORAGE_KEY]: state,
+  });
+}
+
+function withSyncOrchestratorLock(task) {
+  const run = syncOrchestratorMutation.then(task, task);
+  syncOrchestratorMutation = run.then(
+    () => undefined,
+    () => undefined,
+  );
+  return run;
+}
+
+function createSyncLeaseId(accountKey, now) {
+  return `${accountKey}:${now}:${Math.random().toString(36).slice(2, 10)}`;
+}
+
+async function appendRuntimeAudit(entry) {
+  const now = Date.now();
+  const safeEntry = entry && typeof entry === "object" ? entry : {};
+  const stored = await chrome.storage.local.get([RUNTIME_AUDIT_STORAGE_KEY]);
+  const existing = Array.isArray(stored[RUNTIME_AUDIT_STORAGE_KEY])
+    ? stored[RUNTIME_AUDIT_STORAGE_KEY]
+    : [];
+  const next = existing.concat({
+    at: now,
+    ...safeEntry,
+  });
+  if (next.length > RUNTIME_AUDIT_LIMIT) {
+    next.splice(0, next.length - RUNTIME_AUDIT_LIMIT);
+  }
+  await chrome.storage.local.set({
+    [RUNTIME_AUDIT_STORAGE_KEY]: next,
+  });
+}
+
+async function hasCachedQueryIdNoNetwork(operationName) {
+  const cached = queryIdMemCache.get(operationName);
+  const now = Date.now();
+  if (
+    cached &&
+    typeof cached.id === "string" &&
+    cached.id &&
+    now - Number(cached.ts || 0) < QUERY_ID_TTL_MS
+  ) {
+    return true;
+  }
+
+  const catalog = await loadGraphqlCatalog();
+  const entries = Object.values(catalog.endpoints || {});
+  for (const entry of entries) {
+    if (
+      entry &&
+      entry.operation === operationName &&
+      typeof entry.queryId === "string" &&
+      entry.queryId
+    ) {
+      queryIdMemCache.set(operationName, { id: entry.queryId, ts: now });
+      return true;
+    }
+  }
+  return false;
+}
+
+async function getSessionSnapshot() {
+  const stored = await chrome.storage.local.get([
+    "totem_user_id",
+    "totem_auth_headers",
+    "totem_auth_state",
+    "totem_auth_state_at",
+  ]);
+
+  let userId =
+    typeof stored.totem_user_id === "string" && stored.totem_user_id
+      ? stored.totem_user_id
+      : null;
+  const hasAuthHeader = Boolean(stored.totem_auth_headers?.authorization);
+  if (!userId && typeof stored.totem_auth_headers?.cookie === "string") {
+    const twidRaw = getCookieHeaderValue(stored.totem_auth_headers.cookie, "twid");
+    const parsedUserId = parseTwidUserId(twidRaw);
+    if (parsedUserId) {
+      userId = parsedUserId;
+      chrome.storage.local.set({ totem_user_id: parsedUserId }).catch(() => {});
+    }
+  }
+
+  const authState = normalizeAuthState(stored.totem_auth_state, hasAuthHeader);
+  const sessionState = authState === AUTH_STATE_LOGGED_OUT
+    ? "logged_out"
+    : hasAuthHeader || authState === AUTH_STATE_AUTHENTICATED
+      ? "logged_in"
+      : "unknown";
+
+  const bookmarksReady = sessionState === "logged_in"
+    ? await hasCachedQueryIdNoNetwork("Bookmarks").catch(() => false)
+    : false;
+
+  return {
+    userId,
+    accountContextId: userId || null,
+    authState,
+    sessionState,
+    capability: {
+      bookmarksApi: sessionState === "logged_in"
+        ? (bookmarksReady ? "ready" : "blocked")
+        : "unknown",
+      detailApi: "unknown",
+    },
+    hasAuthHeader,
+  };
+}
+
+function deriveAuthPhaseFromSession(sessionState) {
+  if (sessionState === "logged_out") return "need_login";
+  if (sessionState === "logged_in") return "ready";
+  return "connecting";
+}
+
+function getSyncBlockedReason(sessionSnapshot, account, accountKey, now) {
+  if (!accountKey) return "no_account";
+
+  if (
+    sessionSnapshot.sessionState !== "logged_in" ||
+    sessionSnapshot.capability.bookmarksApi !== "ready"
+  ) {
+    return "not_ready";
+  }
+
+  if (account?.inFlight) {
+    const startedAt = Number(account.inFlight.startedAt || 0);
+    const lockAge = now - startedAt;
+    if (lockAge < SYNC_ORCHESTRATOR_MANUAL_RECLAIM_MS) {
+      return "in_flight";
+    }
+  }
+
+  if (
+    account &&
+    Number(account.lastAttemptAt || 0) > 0 &&
+    now - Number(account.lastAttemptAt || 0) < SYNC_ORCHESTRATOR_MANUAL_COOLDOWN_MS
+  ) {
+    return "cooldown";
+  }
+
+  return null;
+}
+
+async function buildRuntimeSnapshot(stateOverride = null) {
+  const now = Date.now();
+  const sessionSnapshot = await getSessionSnapshot();
+  const accountContextId = sessionSnapshot.accountContextId;
+  const accountKey = normalizeSyncAccountId(accountContextId);
+  const state = stateOverride || (await readSyncOrchestratorState());
+  const account = accountKey
+    ? state.accounts[accountKey] || createEmptySyncAccountState()
+    : null;
+  const blockedReason = getSyncBlockedReason(
+    sessionSnapshot,
+    account,
+    accountKey,
+    now,
+  );
+
+  const cacheStored = await chrome.storage.local.get(CACHE_SUMMARY_KEYS);
+  const events = Array.isArray(cacheStored[BOOKMARK_EVENTS_STORAGE_KEY])
+    ? cacheStored[BOOKMARK_EVENTS_STORAGE_KEY]
+    : [];
+
+  return {
+    sessionState: sessionSnapshot.sessionState,
+    authPhase: deriveAuthPhaseFromSession(sessionSnapshot.sessionState),
+    accountContextId,
+    capability: sessionSnapshot.capability,
+    syncPolicy: {
+      accountKey,
+      inFlight: account?.inFlight
+        ? {
+            leaseId: account.inFlight.leaseId,
+            mode: account.inFlight.mode === "full" ? "full" : "incremental",
+            trigger: account.inFlight.trigger === "manual" ? "manual" : "auto",
+            startedAt: Number(account.inFlight.startedAt || 0),
+          }
+        : null,
+      lastAttemptAt: Number(account?.lastAttemptAt || 0),
+      lastSuccessAt: Number(account?.lastSuccessAt || 0),
+      blockedReason,
+    },
+    blockedReason,
+    cacheSummary: {
+      lastSyncAt: Number(cacheStored.totem_last_sync || 0),
+      lastSoftSyncAt: Number(cacheStored.totem_last_light_sync || 0),
+      lightSyncNeededAt: Number(cacheStored.totem_light_sync_needed || 0),
+      pendingBookmarkEventCount: events.length,
+    },
+  };
+}
+
+async function persistRuntimeStateV2(snapshot) {
+  const payload = snapshot && typeof snapshot === "object" ? snapshot : {};
+  await chrome.storage.local.set({
+    [RUNTIME_STATE_V2_STORAGE_KEY]: {
+      version: 2,
+      updatedAt: Date.now(),
+      ...payload,
+    },
+  });
+}
+
+async function handleSyncPolicyReserve(message = {}) {
+  return withSyncOrchestratorLock(async () => {
+    const now = Date.now();
+    const trigger = message.trigger === "manual" ? "manual" : "auto";
+    const requestedMode = message.requestedMode === "incremental" ? "incremental" : "full";
+    const localCount =
+      typeof message.localCount === "number" && Number.isFinite(message.localCount)
+        ? message.localCount
+        : 0;
+
+    const state = await readSyncOrchestratorState();
+    const sessionSnapshot = await getSessionSnapshot();
+    const accountKey = normalizeSyncAccountId(
+      message.accountId || sessionSnapshot.accountContextId,
+    );
+
+    const returnBlocked = async (reason, account) => {
+      const safeAccountKey = accountKey || "__none__";
+      if (accountKey) {
+        state.accounts[accountKey] = {
+          ...(account || createEmptySyncAccountState()),
+          lastDecisionAt: now,
+          lastDecisionReason: reason,
+        };
+        await writeSyncOrchestratorState(state);
+      }
+      const snapshot = await buildRuntimeSnapshot(state).catch(() => null);
+      if (snapshot) {
+        await persistRuntimeStateV2(snapshot).catch(() => {});
+      }
+      await appendRuntimeAudit({
+        kind: "sync_reserve",
+        allow: false,
+        trigger,
+        reason,
+        accountKey: safeAccountKey,
+      }).catch(() => {});
+      return { ok: true, allow: false, mode: null, reason, accountKey: safeAccountKey };
+    };
+
+    if (!accountKey) {
+      return returnBlocked("no_account");
+    }
+
+    let account = state.accounts[accountKey] || createEmptySyncAccountState();
+
+    if (
+      sessionSnapshot.sessionState !== "logged_in" ||
+      sessionSnapshot.capability.bookmarksApi !== "ready"
+    ) {
+      return returnBlocked("not_ready", account);
+    }
+
+    if (
+      account.inFlight &&
+      now - Number(account.inFlight.startedAt || 0) >= SYNC_ORCHESTRATOR_LOCK_TTL_MS
+    ) {
+      account = { ...account, inFlight: null };
+    }
+
+    if (account.inFlight) {
+      const canReclaimManualLock =
+        trigger === "manual" &&
+        now - Number(account.inFlight.startedAt || 0) >=
+          SYNC_ORCHESTRATOR_MANUAL_RECLAIM_MS;
+      if (canReclaimManualLock) {
+        account = { ...account, inFlight: null };
+      } else {
+        return returnBlocked("in_flight", account);
+      }
+    }
+
+    if (
+      trigger === "manual" &&
+      account.lastAttemptAt > 0 &&
+      now - Number(account.lastAttemptAt || 0) < SYNC_ORCHESTRATOR_MANUAL_COOLDOWN_MS
+    ) {
+      return returnBlocked("cooldown", account);
+    }
+
+    let mode = null;
+    let reason = "fresh_cache";
+
+    if (trigger === "manual") {
+      mode = requestedMode;
+      reason = "manual";
+    } else if (localCount <= 0) {
+      if (
+        account.lastAttemptAt > 0 &&
+        now - account.lastAttemptAt < SYNC_ORCHESTRATOR_AUTO_BACKOFF_MS
+      ) {
+        return returnBlocked("auto_backoff", account);
+      }
+      mode = "full";
+      reason = "bootstrap_empty";
+    } else {
+      if (
+        account.lastSuccessAt > 0 &&
+        now - account.lastSuccessAt < SYNC_ORCHESTRATOR_AUTO_INTERVAL_MS
+      ) {
+        return returnBlocked("fresh_cache", account);
+      }
+      if (
+        account.lastAttemptAt > 0 &&
+        now - account.lastAttemptAt < SYNC_ORCHESTRATOR_AUTO_BACKOFF_MS
+      ) {
+        return returnBlocked("auto_backoff", account);
+      }
+      mode = "incremental";
+      reason = "background_stale";
+    }
+
+    const leaseId = createSyncLeaseId(accountKey, now);
+    state.accounts[accountKey] = {
+      ...account,
+      inFlight: {
+        leaseId,
+        mode,
+        trigger,
+        reason,
+        startedAt: now,
+      },
+      lastAttemptAt: now,
+      lastDecisionAt: now,
+      lastDecisionReason: reason,
+    };
+    await writeSyncOrchestratorState(state);
+    const snapshot = await buildRuntimeSnapshot(state).catch(() => null);
+    if (snapshot) {
+      await persistRuntimeStateV2(snapshot).catch(() => {});
+    }
+    await appendRuntimeAudit({
+      kind: "sync_reserve",
+      allow: true,
+      trigger,
+      reason,
+      mode,
+      leaseId,
+      accountKey,
+    }).catch(() => {});
+
+    return { ok: true, allow: true, mode, reason, leaseId, accountKey };
+  });
+}
+
+async function handleSyncPolicyComplete(message = {}) {
+  return withSyncOrchestratorLock(async () => {
+    const accountKey = normalizeSyncAccountId(message.accountId);
+    if (!accountKey) return { ok: true, ignored: true, reason: "no_account" };
+
+    const leaseId = typeof message.leaseId === "string" ? message.leaseId : "";
+    const mode = message.mode === "incremental" ? "incremental" : "full";
+    const status =
+      message.status === "success" ||
+      message.status === "failure" ||
+      message.status === "timeout" ||
+      message.status === "skipped"
+        ? message.status
+        : "failure";
+
+    const state = await readSyncOrchestratorState();
+    const account = state.accounts[accountKey];
+    if (!account || !account.inFlight) {
+      const snapshot = await buildRuntimeSnapshot(state).catch(() => null);
+      if (snapshot) {
+        await persistRuntimeStateV2(snapshot).catch(() => {});
+      }
+      await appendRuntimeAudit({
+        kind: "sync_complete",
+        ignored: true,
+        reason: "missing_inflight",
+        accountKey,
+      }).catch(() => {});
+      return { ok: true, ignored: true, reason: "missing_inflight" };
+    }
+    if (!leaseId || account.inFlight.leaseId !== leaseId) {
+      const snapshot = await buildRuntimeSnapshot(state).catch(() => null);
+      if (snapshot) {
+        await persistRuntimeStateV2(snapshot).catch(() => {});
+      }
+      await appendRuntimeAudit({
+        kind: "sync_complete",
+        ignored: true,
+        reason: "lease_mismatch",
+        accountKey,
+      }).catch(() => {});
+      return { ok: true, ignored: true, reason: "lease_mismatch" };
+    }
+
+    const now = Date.now();
+    const next = {
+      ...account,
+      inFlight: null,
+      lastCompletedAt: now,
+      lastCompletedStatus: status,
+    };
+
+    if (status === "success") {
+      next.lastSuccessAt = now;
+      next.lastIncrementalSyncAt = now;
+      if (mode === "full") {
+        next.lastFullSyncAt = now;
+      }
+      next.lastError = null;
+    } else if (status !== "skipped") {
+      next.lastError = status;
+    }
+
+    state.accounts[accountKey] = next;
+    await writeSyncOrchestratorState(state);
+    const snapshot = await buildRuntimeSnapshot(state).catch(() => null);
+    if (snapshot) {
+      await persistRuntimeStateV2(snapshot).catch(() => {});
+    }
+    await appendRuntimeAudit({
+      kind: "sync_complete",
+      ignored: false,
+      status,
+      mode,
+      leaseId,
+      accountKey,
+    }).catch(() => {});
+    return { ok: true };
+  });
+}
 
 function normalizeAuthState(state, hasAuthHeader) {
   if (AUTH_STATE_VALUES.has(state)) return state;
@@ -300,82 +887,6 @@ async function buildHeaders() {
   }
 
   return headers;
-}
-
-async function runAuthProbeRequest() {
-  const stored = await chrome.storage.local.get([
-    "totem_auth_headers",
-    "totem_features",
-  ]);
-
-  if (!stored.totem_auth_headers?.authorization) {
-    await markAuthLoggedOut("probe_no_auth", true);
-    return AUTH_STATE_LOGGED_OUT;
-  }
-
-  const queryId = await resolveQueryId("Bookmarks").catch(() => null);
-  if (!queryId) {
-    await setAuthState(AUTH_STATE_STALE, "probe_no_query_id");
-    return AUTH_STATE_STALE;
-  }
-
-  const pageCount = 1;
-  const variables = { count: pageCount, includePromotedContent: true };
-  const features = stored.totem_features || JSON.stringify(DEFAULT_FEATURES);
-  const params = new URLSearchParams({
-    variables: JSON.stringify(variables),
-    features,
-  });
-  const url = `https://x.com/i/api/graphql/${queryId}/Bookmarks?${params}`;
-
-  let requestHeaders;
-  try {
-    requestHeaders = await buildHeaders();
-  } catch {
-    await markAuthLoggedOut("probe_headers_missing", true);
-    return AUTH_STATE_LOGGED_OUT;
-  }
-
-  try {
-    const response = await fetch(url, {
-      method: "GET",
-      credentials: "include",
-      headers: requestHeaders,
-    });
-
-    if (response.status === 401 || response.status === 403) {
-      await markAuthLoggedOut(`probe_${response.status}`, true);
-      return AUTH_STATE_LOGGED_OUT;
-    }
-    if (response.ok) {
-      await markAuthAuthenticated("probe_ok");
-      return AUTH_STATE_AUTHENTICATED;
-    }
-
-    await setAuthState(AUTH_STATE_STALE, `probe_http_${response.status}`);
-    return AUTH_STATE_STALE;
-  } catch {
-    await setAuthState(AUTH_STATE_STALE, "probe_network_error");
-    return AUTH_STATE_STALE;
-  }
-}
-
-async function probeAuthState(force = false) {
-  const now = Date.now();
-  if (!force && now - lastAuthProbeAt < AUTH_PROBE_MIN_INTERVAL_MS) {
-    return null;
-  }
-  if (authProbePromise) return authProbePromise;
-
-  lastAuthProbeAt = now;
-  authProbePromise = runAuthProbeRequest()
-    .then((state) => ({ authState: state }))
-    .catch(() => ({ authState: AUTH_STATE_STALE }))
-    .finally(() => {
-      authProbePromise = null;
-    });
-
-  return authProbePromise;
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -903,10 +1414,12 @@ function extractTweetIdFromReferer(referer) {
 }
 
 function isExtensionInitiated(details) {
-  return (
+  const byInitiator = (
     typeof details?.initiator === "string" &&
     details.initiator.startsWith("chrome-extension://")
   );
+  if (byInitiator) return true;
+  return isTrackedExtensionInitiatedRequest(details?.url);
 }
 
 async function captureBookmarkMutation(details) {
@@ -1038,6 +1551,7 @@ const XBT_TO_TOTEM_KEY_MAP = {
   xbt_last_sync: "totem_last_sync",
   xbt_last_light_sync: "totem_last_light_sync",
   xbt_light_sync_needed: "totem_light_sync_needed",
+  xbt_sync_orchestrator_state: "totem_sync_orchestrator_state",
   xbt_last_mutation: "totem_last_mutation",
   xbt_last_mutation_done: "totem_last_mutation_done",
 };
@@ -1078,65 +1592,29 @@ migrateOldStorageKeys().catch(() => {});
 // API REQUEST HANDLERS
 // ═══════════════════════════════════════════════════════════
 
-async function handleCheckAuth(options = {}) {
-  const stored = await chrome.storage.local.get([
-    "totem_user_id",
-    "totem_auth_headers",
-    "totem_auth_time",
-    "totem_auth_state",
-    "totem_auth_state_at",
-  ]);
-
-  const userId =
-    typeof stored.totem_user_id === "string" && stored.totem_user_id
-      ? stored.totem_user_id
-      : null;
-  const hasAuthHeader = !!stored.totem_auth_headers?.authorization;
-  let authState = normalizeAuthState(stored.totem_auth_state, hasAuthHeader);
-
-  const authStateAt = Number(stored.totem_auth_state_at || 0);
-  const authStateAgeMs = Date.now() - authStateAt;
-  const shouldProbe =
-    options.probe === true ||
-    (authState === AUTH_STATE_STALE && hasAuthHeader) ||
-    (authState === AUTH_STATE_AUTHENTICATED && authStateAgeMs > AUTH_PROBE_STALE_AFTER_MS);
-
-  if (shouldProbe) {
-    const probeResult = await probeAuthState(options.probe === true).catch(() => null);
-    if (probeResult?.authState) {
-      authState = probeResult.authState;
-    }
-  }
-
-  const sessionState = authState === AUTH_STATE_LOGGED_OUT
-    ? "logged_out"
-    : hasAuthHeader || authState === AUTH_STATE_AUTHENTICATED
-      ? "logged_in"
-      : "unknown";
-
-  const hasUser = sessionState !== "logged_out" && Boolean(userId || hasAuthHeader);
-
-  // Query IDs are resolved on-demand from in-memory cache / bundles.
-  // Check if we already have one cached, or try to resolve it now.
-  const bookmarksQid = sessionState === "logged_in"
-    ? await resolveQueryId("Bookmarks").catch(() => null)
-    : null;
-  const capability = {
-    bookmarksApi: sessionState === "logged_in"
-      ? (bookmarksQid ? "ready" : "blocked")
-      : "unknown",
-    detailApi: "unknown",
-  };
+async function handleCheckAuth() {
+  const snapshot = await getSessionSnapshot();
+  const responseUserId = snapshot.sessionState === "logged_out" ? null : snapshot.userId;
+  const hasUser =
+    snapshot.sessionState !== "logged_out" &&
+    Boolean(responseUserId || snapshot.hasAuthHeader);
 
   return {
     hasUser,
-    hasAuth: sessionState === "logged_in" && hasAuthHeader,
-    hasQueryId: capability.bookmarksApi === "ready",
-    userId,
-    authState,
-    sessionState,
-    capability,
+    hasAuth: snapshot.sessionState === "logged_in" && snapshot.hasAuthHeader,
+    hasQueryId: snapshot.capability.bookmarksApi === "ready",
+    userId: responseUserId,
+    accountContextId: snapshot.accountContextId,
+    authState: snapshot.authState,
+    sessionState: snapshot.sessionState,
+    capability: snapshot.capability,
   };
+}
+
+async function handleGetRuntimeSnapshot() {
+  const snapshot = await buildRuntimeSnapshot();
+  await persistRuntimeStateV2(snapshot).catch(() => {});
+  return { ok: true, data: snapshot };
 }
 
 async function handleFetchBookmarks(cursor, count, _retried = false, _queryIdRetried = false) {
@@ -1164,6 +1642,7 @@ async function handleFetchBookmarks(cursor, count, _retried = false, _queryIdRet
   const url = `https://x.com/i/api/graphql/${queryId}/Bookmarks?${params}`;
   const requestHeaders = await buildHeaders();
 
+  trackExtensionInitiatedRequest(url);
   const response = await fetch(url, {
     method: "GET",
     credentials: "include",
@@ -1211,6 +1690,7 @@ async function handleDeleteBookmark(tweetId, _retried = false, _queryIdRetried =
   const requestHeaders = await buildHeaders();
 
   const url = `https://x.com/i/api/graphql/${queryId}/DeleteBookmark`;
+  trackExtensionInitiatedRequest(url);
   const response = await fetch(url, {
     method: "POST",
     credentials: "include",
@@ -1306,6 +1786,7 @@ async function handleFetchTweetDetail(tweetId, _retried = false, _queryIdRetried
   });
 
   const url = `https://x.com/i/api/graphql/${queryId}/TweetDetail?${params}`;
+  trackExtensionInitiatedRequest(url);
   const response = await fetch(url, {
     method: "GET",
     credentials: "include",
@@ -1369,6 +1850,7 @@ function maybeSignalLightSync() {
 chrome.webRequest.onSendHeaders.addListener(
   (details) => {
     if (!details.requestHeaders) return;
+    const extensionInitiated = isExtensionInitiated(details);
 
     const headers = {};
     for (const header of details.requestHeaders) {
@@ -1391,14 +1873,19 @@ chrome.webRequest.onSendHeaders.addListener(
       headers["x-csrf-token"],
     );
     if (protectedOperation) {
-      if (hasAuthTrio) {
+      if (hasAuthTrio && !extensionInitiated) {
         markAuthAuthenticated("headers_trio").catch(() => {});
-      } else if (!isExtensionInitiated(details)) {
+      } else if (!extensionInitiated) {
         recordWeakAuthNegativeSignal("headers_missing_auth_trio").catch(() => {});
       }
     }
 
-    if (headers["authorization"] && headers["cookie"] && headers["x-csrf-token"]) {
+    if (
+      !extensionInitiated &&
+      headers["authorization"] &&
+      headers["cookie"] &&
+      headers["x-csrf-token"]
+    ) {
       chrome.storage.local.set({
         totem_auth_headers: headers,
         totem_auth_time: Date.now(),
@@ -1440,7 +1927,7 @@ chrome.webRequest.onSendHeaders.addListener(
     }
 
     const mutation = parseBookmarkMutation(details.url);
-    if (mutation && !isExtensionInitiated(details)) {
+    if (mutation && !extensionInitiated) {
       const referer = getHeaderValue(details.requestHeaders, "referer");
       const tweetId = extractTweetIdFromReferer(referer) || "";
       chrome.storage.local
@@ -1465,7 +1952,7 @@ chrome.webRequest.onSendHeaders.addListener(
       }
     }
 
-    if (!isExtensionInitiated(details)) {
+    if (!extensionInitiated) {
       maybeSignalLightSync();
     }
   },
@@ -1523,6 +2010,7 @@ chrome.webRequest.onCompleted.addListener(
 
 chrome.webRequest.onCompleted.addListener(
   (details) => {
+    if (isExtensionInitiated(details)) return;
     if (!isAuthProtectedGraphqlOperation(details.url)) return;
     if (details.statusCode === 401 || details.statusCode === 403) {
       markAuthLoggedOut(`completed_${details.statusCode}`, true).catch(() => {});
@@ -1543,7 +2031,25 @@ chrome.webRequest.onCompleted.addListener(
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message.type === "CHECK_AUTH") {
-    handleCheckAuth({ probe: message.probe === true }).then(sendResponse);
+    handleCheckAuth().then(sendResponse);
+    return true;
+  }
+  if (message.type === "GET_RUNTIME_SNAPSHOT") {
+    handleGetRuntimeSnapshot()
+      .then(sendResponse)
+      .catch((err) => sendResponse({ error: err.message }));
+    return true;
+  }
+  if (message.type === "REQUEST_SYNC" || message.type === "SYNC_POLICY_RESERVE") {
+    handleSyncPolicyReserve(message)
+      .then(sendResponse)
+      .catch((err) => sendResponse({ error: err.message }));
+    return true;
+  }
+  if (message.type === "COMPLETE_SYNC" || message.type === "SYNC_POLICY_COMPLETE") {
+    handleSyncPolicyComplete(message)
+      .then(sendResponse)
+      .catch((err) => sendResponse({ error: err.message }));
     return true;
   }
   if (message.type === "START_AUTH_CAPTURE") {
@@ -1614,6 +2120,21 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     sendResponse({ ok: true });
     return false;
   }
+  if (message.type === "SESSION_USER_MISSING") {
+    chrome.storage.local.remove("totem_user_id").catch(() => {});
+    chrome.storage.local
+      .get(["totem_auth_headers"])
+      .then((stored) => {
+        const hasAuthHeader = Boolean(stored.totem_auth_headers?.authorization);
+        if (hasAuthHeader) {
+          return setAuthState(AUTH_STATE_STALE, "content_no_twid", { clearAuth: false });
+        }
+        return markAuthLoggedOut("content_no_twid", true);
+      })
+      .then(() => sendResponse({ ok: true }))
+      .catch(() => sendResponse({ ok: false }));
+    return true;
+  }
   if (message.type === "REAUTH_STATUS") {
     sendResponse({ inProgress: reauthInProgress });
     return false;
@@ -1632,9 +2153,16 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     }
     reauthInProgress = false;
     authWeakNegativeHits = [];
-    authProbePromise = null;
-    lastAuthProbeAt = 0;
     lastLightSyncSignalAt = 0;
+    extensionInitiatedRequestMap.clear();
+    syncOrchestratorMutation = Promise.resolve();
+    chrome.storage.local
+      .remove([
+        SYNC_ORCHESTRATOR_STORAGE_KEY,
+        RUNTIME_AUDIT_STORAGE_KEY,
+        RUNTIME_STATE_V2_STORAGE_KEY,
+      ])
+      .catch(() => {});
     discoveryInProgress = false;
     sendResponse({ ok: true });
     return false;

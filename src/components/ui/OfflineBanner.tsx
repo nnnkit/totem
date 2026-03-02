@@ -12,7 +12,7 @@ export function OfflineBanner({ onLogin }: Props) {
           <>
             {" "}
             <a
-              href="https://x.com/login"
+              href="https://x.com/i/bookmarks"
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => onLogin()}

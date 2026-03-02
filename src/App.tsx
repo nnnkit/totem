@@ -21,7 +21,7 @@ import { BookmarksList, type ReadingTab } from "./components/BookmarksList";
 import { SettingsModal } from "./components/SettingsModal";
 import { Toast } from "./components/ui/Toast";
 import { useContinueReading } from "./hooks/useContinueReading";
-import type { Bookmark, ThreadTweet } from "./types";
+import type { Bookmark, SyncBlockedReason, ThreadTweet } from "./types";
 
 interface DemoExportPayload {
   generatedAt: string;
@@ -83,7 +83,6 @@ export default function App() {
     refresh,
     reset,
     unbookmark,
-    runtimeMode,
     startLogin,
   } = useRuntime();
   const { themePreference, setThemePreference } = useTheme();
@@ -142,6 +141,34 @@ export default function App() {
     }
   }, [tabHasItems]);
   const [toast, setToast] = useState<ToastState | null>(null);
+  const notifySyncBlocked = useCallback((reason?: string) => {
+    const code = reason as SyncBlockedReason | undefined;
+    switch (code) {
+      case "in_flight":
+        setToast({ message: "Sync is already running in another tab." });
+        return;
+      case "cooldown":
+        setToast({ message: "Please wait a few seconds and try sync again." });
+        return;
+      case "no_account":
+        setToast({ message: "Could not identify account context. Try opening X once." });
+        return;
+      case "not_ready":
+        setToast({ message: "Sync is not ready yet. Log in to X and try again." });
+        return;
+      default:
+        return;
+    }
+  }, []);
+  const handleSync = useCallback(() => {
+    refresh()
+      .then((result) => {
+        if (!result.accepted) {
+          notifySyncBlocked(result.reason);
+        }
+      })
+      .catch(() => {});
+  }, [notifySyncBlocked, refresh]);
   const [shuffleSeed, setShuffleSeed] = useState(0);
   const handleShuffle = useCallback(() => {
     setShuffleSeed((s) => s + 1);
@@ -323,7 +350,7 @@ export default function App() {
     : undefined;
 
   const needsLogin =
-    (runtimeMode === "offline_empty" || phase === "connecting") &&
+    (phase === "need_login" || phase === "connecting") &&
     !hasDisplayBookmarks;
 
   const mainContent = (() => {
@@ -369,7 +396,7 @@ export default function App() {
           activeTab={readingTab}
           onTabChange={handleReadingTabChange}
           onOpenBookmark={openBookmark}
-          onSync={refresh}
+          onSync={handleSync}
           onBack={() => setView("home")}
           offlineMode={offlineMode}
           onLogin={offlineMode ? startLogin : undefined}
@@ -380,7 +407,7 @@ export default function App() {
       <NewTabHome
         bookmarks={displayBookmarks}
         syncStatus={syncStatus}
-        onSync={refresh}
+        onSync={handleSync}
         detailedTweetIds={detailedTweetIds}
         showTopSites={settings.showTopSites}
         showSearchBar={settings.showSearchBar}

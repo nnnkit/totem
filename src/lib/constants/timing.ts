@@ -14,6 +14,7 @@ export const WEEK_MS = 1000 * 60 * 60 * 24 * 7;
 export const DETAIL_CACHE_RETENTION_MS = 1000 * 60 * 60 * 24 * 30;
 export const RECONCILE_THROTTLE_MS = 1000 * 60 * 60 * 2;
 export const SOFT_SYNC_THROTTLE_MS = 1000 * 60 * 10;
+export const BACKGROUND_SYNC_MIN_INTERVAL_MS = 1000 * 60 * 60 * 4;
 export const DB_INIT_TIMEOUT_MS = 8000;
 export const REAUTH_MAX_ATTEMPTS = 15;
 export const REAUTH_POLL_MS = 2000;

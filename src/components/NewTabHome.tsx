@@ -383,7 +383,7 @@ export function NewTabHome({
                 Sign in to your X account to sync and read your saved posts.
               </p>
               <a
-                href="https://x.com/login"
+                href="https://x.com/i/bookmarks"
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => {
@@ -579,7 +579,7 @@ export function NewTabHome({
           >
             Offline mode.{" "}
             <a
-              href="https://x.com/login"
+              href="https://x.com/i/bookmarks"
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => {

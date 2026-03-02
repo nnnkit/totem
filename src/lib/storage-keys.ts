@@ -11,6 +11,7 @@
 // ── IndexedDB ──────────────────────────────────────────────────────
 export const IDB_DATABASE_NAME = "totem";
 export const LEGACY_IDB_DATABASE_NAME = "xbt";
+export const IDB_ACCOUNT_DATABASE_PREFIX = "totem_acct_";
 
 // ── localStorage ───────────────────────────────────────────────────
 export const LS_READING_TAB = "totem_reading_tab";
@@ -35,6 +36,9 @@ export const CS_USER_ID = "totem_user_id";
 export const CS_AUTH_STATE = "totem_auth_state";
 export const CS_LAST_SOFT_SYNC = "totem_last_light_sync";
 export const CS_SOFT_SYNC_NEEDED = "totem_light_sync_needed";
+export const CS_SYNC_ORCHESTRATOR_STATE = "totem_sync_orchestrator_state";
+export const CS_RUNTIME_AUDIT = "totem_runtime_audit";
+export const CS_RUNTIME_STATE_V2 = "totem_runtime_state_v2";
 
 // ── chrome.storage.local (service-worker only) ─────────────────────
 // These are written/read exclusively by public/service-worker.js.
@@ -72,6 +76,7 @@ export const LEGACY_CHROME_LOCAL_KEY_MAP = {
   xbt_auth_state: CS_AUTH_STATE,
   xbt_last_light_sync: CS_LAST_SOFT_SYNC,
   xbt_light_sync_needed: CS_SOFT_SYNC_NEEDED,
+  xbt_sync_orchestrator_state: CS_SYNC_ORCHESTRATOR_STATE,
   // service-worker-only keys
   xbt_graphql_catalog: "totem_graphql_catalog",
   xbt_sw_cleanup_at: "totem_sw_cleanup_at",

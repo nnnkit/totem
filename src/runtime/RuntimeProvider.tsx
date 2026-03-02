@@ -5,10 +5,12 @@ import {
   type PropsWithChildren,
 } from "react";
 import { useAuth, type AuthPhase } from "../hooks/useAuth";
-import { useBookmarks } from "../hooks/useBookmarks";
+import { useBookmarks, useDetailedTweetIds } from "../hooks/useBookmarks";
 import type {
   ApiCapability,
   Bookmark,
+  SyncBlockedReason,
+  SyncRequestResult,
   SessionState,
   SyncStatus,
 } from "../types";
@@ -24,6 +26,7 @@ interface RuntimeContextValue {
   phase: AuthPhase;
   sessionState: SessionState;
   capability: ApiCapability;
+  activeAccountId: string | null;
   hasQueryId: boolean;
   syncStatus: SyncStatus;
   bookmarks: Bookmark[];
@@ -31,9 +34,10 @@ interface RuntimeContextValue {
   isReady: boolean;
   offlineMode: boolean;
   canSync: boolean;
+  syncBlockedReason: SyncBlockedReason | null;
   syncDisabledReason?: string;
   startLogin: () => Promise<void>;
-  refresh: () => void;
+  refresh: () => Promise<SyncRequestResult>;
   reset: () => void;
   unbookmark: (tweetId: string) => Promise<{ apiError?: string }>;
 }
@@ -43,7 +47,7 @@ const RuntimeContext = createContext<RuntimeContextValue | null>(null);
 function deriveRuntimeMode(
   phase: AuthPhase,
   syncStatus: SyncStatus,
-  hasBookmarks: boolean,
+  hasDisplayableCache: boolean,
   capability: ApiCapability,
 ): RuntimeMode {
   if (phase === "loading" || phase === "connecting") {
@@ -51,11 +55,11 @@ function deriveRuntimeMode(
   }
 
   if (phase === "need_login") {
-    return hasBookmarks ? "offline_cached" : "offline_empty";
+    return hasDisplayableCache ? "offline_cached" : "offline_empty";
   }
 
   if (syncStatus === "reauthing") {
-    return hasBookmarks ? "offline_cached" : "offline_empty";
+    return hasDisplayableCache ? "offline_cached" : "offline_empty";
   }
 
   if (capability.bookmarksApi === "ready") {
@@ -65,7 +69,29 @@ function deriveRuntimeMode(
   return "online_degraded";
 }
 
-function deriveSyncDisabledReason(mode: RuntimeMode, phase: AuthPhase): string | undefined {
+function describeBlockedReason(reason: SyncBlockedReason | null): string | undefined {
+  switch (reason) {
+    case "in_flight":
+      return "A sync is already running.";
+    case "cooldown":
+      return "Please wait a few seconds before syncing again.";
+    case "no_account":
+      return "Account context is not available yet.";
+    case "not_ready":
+      return "Sync is not ready yet.";
+    default:
+      return undefined;
+  }
+}
+
+function deriveSyncDisabledReason(
+  mode: RuntimeMode,
+  phase: AuthPhase,
+  blockedReason: SyncBlockedReason | null,
+): string | undefined {
+  const blocked = describeBlockedReason(blockedReason);
+  if (blocked) return blocked;
+
   switch (mode) {
     case "booting":
       return phase === "connecting" ? "Connecting to X..." : "Loading...";
@@ -81,14 +107,32 @@ function deriveSyncDisabledReason(mode: RuntimeMode, phase: AuthPhase): string |
 }
 
 export function RuntimeProvider({ children }: PropsWithChildren) {
-  const { phase, sessionState, capability, hasQueryId, startLogin } = useAuth();
+  const {
+    phase,
+    sessionState,
+    capability,
+    activeAccountId,
+    hasQueryId,
+    startLogin,
+  } = useAuth();
   const syncReady = phase === "ready" && capability.bookmarksApi === "ready";
-  const { bookmarks, syncStatus, refresh, reset, unbookmark } = useBookmarks(syncReady);
-  const hasBookmarks = bookmarks.length > 0;
+  const { bookmarks, syncStatus, syncBlockedReason, refresh, reset, unbookmark } = useBookmarks(
+    syncReady,
+    activeAccountId,
+  );
+  const detailsRefreshKey = `${activeAccountId || "__none__"}:${bookmarks.length}:${syncStatus}`;
+  const { ids: detailedTweetIds, loaded: detailedIdsLoaded } = useDetailedTweetIds(
+    detailsRefreshKey,
+  );
+  const hasDisplayableCache = useMemo(() => {
+    if (bookmarks.length === 0) return false;
+    if (!detailedIdsLoaded) return true;
+    return bookmarks.some((bookmark) => detailedTweetIds.has(bookmark.tweetId));
+  }, [bookmarks, detailedIdsLoaded, detailedTweetIds]);
 
   const runtimeMode = useMemo(
-    () => deriveRuntimeMode(phase, syncStatus, hasBookmarks, capability),
-    [phase, syncStatus, hasBookmarks, capability],
+    () => deriveRuntimeMode(phase, syncStatus, hasDisplayableCache, capability),
+    [phase, syncStatus, hasDisplayableCache, capability],
   );
 
   const value = useMemo<RuntimeContextValue>(() => {
@@ -97,6 +141,7 @@ export function RuntimeProvider({ children }: PropsWithChildren) {
       phase,
       sessionState,
       capability,
+      activeAccountId,
       hasQueryId,
       syncStatus,
       bookmarks,
@@ -104,7 +149,10 @@ export function RuntimeProvider({ children }: PropsWithChildren) {
       isReady: phase === "ready",
       offlineMode: runtimeMode === "offline_cached",
       canSync,
-      syncDisabledReason: canSync ? undefined : deriveSyncDisabledReason(runtimeMode, phase),
+      syncBlockedReason,
+      syncDisabledReason: canSync
+        ? undefined
+        : deriveSyncDisabledReason(runtimeMode, phase, null),
       startLogin,
       refresh,
       reset,
@@ -114,10 +162,12 @@ export function RuntimeProvider({ children }: PropsWithChildren) {
     phase,
     sessionState,
     capability,
+    activeAccountId,
     hasQueryId,
     syncStatus,
     bookmarks,
     runtimeMode,
+    syncBlockedReason,
     startLogin,
     refresh,
     reset,
@@ -138,4 +188,3 @@ export function useRuntime(): RuntimeContextValue {
   }
   return value;
 }
-

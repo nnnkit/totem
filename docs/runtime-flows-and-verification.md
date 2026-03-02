@@ -41,6 +41,8 @@ Implementation progress in this pass:
 - `connecting` has a watchdog timeout fallback.
 - `NO_QUERY_ID` now maps to sync `error` (capability issue), not `reauthing`.
 - Runtime derivation is centralized in `RuntimeProvider` (single source for mode/canSync/offline).
+- Active account context is now derived from `userId` and propagated as `activeAccountId`.
+- IndexedDB is account-scoped (`totem_acct_<accountId>`) with runtime reset on account switch.
 
 ## 2. Current Runtime State Model
 
@@ -100,9 +102,9 @@ Current mapping from `CHECK_AUTH` result:
 
 Key behavior:
 
-- Initial mount always calls `checkAuth({ probe: true })`.
-- While `ready`, heartbeat probe every 45s.
-- Relevant storage changes trigger `performCheck()`.
+- Initial mount calls `checkAuth({ probe: false })`.
+- While `ready`, heartbeat re-check runs every 45s without network probing.
+- Relevant storage changes trigger `performCheck(false)`.
 
 ## 2.3 Sync state (`useBookmarks` + sync machine)
 
@@ -129,7 +131,7 @@ Current derived flags:
 - `runtimeMode` is sourced from `RuntimeProvider` (not ad-hoc in `App.tsx`)
 - `offlineMode = runtimeMode === offline_cached`
 - `displayBookmarks = offlineMode ? bookmarks filtered by cached-detail-id : bookmarks`
-- `needsLogin = (runtimeMode === offline_empty OR phase === connecting) && displayBookmarks.length === 0`
+- `needsLogin = (phase === need_login OR phase === connecting) && displayBookmarks.length === 0`
 
 Critical UI gate for stuck screen:
 
@@ -141,19 +143,18 @@ Critical UI gate for stuck screen:
 
 ## 3.1 Extension opens, user logged in, query IDs available
 
-1. `useAuth` calls `CHECK_AUTH(probe=true)`.
-2. Worker probe succeeds (`runAuthProbeRequest` -> 200) and sets `authenticated`.
+1. `useAuth` calls `CHECK_AUTH(probe=false)`.
+2. Worker derives session from captured auth headers + auth state.
 3. `useAuth` enters `ready`.
 4. `useBookmarks(syncReady=true)` initializes local DB list and stays `idle` until user sync/soft-sync event.
 5. Home shows sync button and normal content.
 
 ## 3.2 Extension opens, user logged in, query IDs not resolvable yet
 
-1. Initial `CHECK_AUTH(probe=true)` runs.
-2. Probe may mark auth state stale due `probe_no_query_id`.
-3. Worker still reports `sessionState=logged_in` when headers/session are present.
-4. `useAuth` stays `ready`, while `capability.bookmarksApi=blocked` until query IDs are available.
-5. Runtime mode becomes `online_degraded`; sync stays disabled with capability message instead of trapping in connecting.
+1. Initial `CHECK_AUTH(probe=false)` runs.
+2. Worker reports `sessionState=logged_in` when headers/session are present.
+3. `useAuth` stays `ready`, while `capability.bookmarksApi=blocked` until query IDs are available.
+4. Runtime mode becomes `online_degraded`; sync stays disabled with capability message instead of trapping in connecting.
 
 Why this is fragile:
 
@@ -177,9 +178,9 @@ Why this is fragile:
 ## 3.5 Login CTA from extension (current)
 
 1. Login link opens `https://x.com/login` in a normal tab.
-2. `startLogin()` only dispatches `USER_LOGIN` and triggers `performCheck(true)`.
+2. `startLogin()` dispatches `USER_LOGIN` and triggers `performCheck(false)`.
 3. No direct call to `START_AUTH_CAPTURE`.
-4. Transition out of connecting depends on intercepted x.com traffic and/or successful probe.
+4. Transition out of connecting depends on intercepted x.com traffic and auth storage updates.
 
 Observed risk:
 
@@ -288,7 +289,7 @@ Severity legend:
 
 | ID | Severity | State pattern | Evidence | Why it is problematic |
 |---|---|---|---|---|
-| F1 | P0 | `authState=stale` + valid session + unresolved query ID -> UI `connecting` indefinitely | `runAuthProbeRequest` returns stale on `probe_no_query_id`; `useAuth` maps stale -> connecting | Query-id readiness is treated as login truth, causing false "not ready" lock |
+| F1 | P0 | `authState=stale` + valid session + unresolved query ID -> UI `connecting` indefinitely | Historical path before probe removal: stale auth probe state pushed reducer into connecting | Query-id readiness is treated as login truth, causing false "not ready" lock |
 | F2 | P0 | `hasAuthHeader=true` but `hasAuth=false` while stale | `handleCheckAuth` computes `hasAuth` only when authenticated | Session may exist but UI cannot become ready due strict coupling |
 | F3 | P1 | `NO_QUERY_ID` mapped to `reauthing` | `sync-state-machine.errorToStatus` | Capability failure is misclassified as auth failure, triggering wrong recovery messaging/path |
 | F4 | P1 | `connecting` has no watchdog fallback | `useAuth` retries stale forever every 15s | Impossible-state recovery is unbounded; user can remain on "Connecting..." |
@@ -308,7 +309,7 @@ Severity legend:
 
 Primary cause chain:
 
-1. Auth probe requires Bookmarks query ID in `runAuthProbeRequest`.
+1. Historical behavior: auth probe required Bookmarks query ID.
 2. If query ID cannot be resolved quickly, worker sets `authState=stale` (`probe_no_query_id`).
 3. `CHECK_AUTH` returns `hasAuth=false` unless `authState=authenticated`.
 4. `useAuth` maps stale to `phase=connecting` with repeat retries.
@@ -525,6 +526,8 @@ Done in current code:
 3. `useAuth` reducer updated with connecting watchdog.
 4. `NO_QUERY_ID` sync classification adjusted.
 5. Runtime selector centralized in `RuntimeProvider`.
+6. Account context is now explicit (`activeAccountId`) and drives account-scoped IndexedDB.
+7. Account switch now resets runtime/sync state and clears stale event/sync markers.
 
 Next items:
 

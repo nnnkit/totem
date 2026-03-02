@@ -40,6 +40,12 @@
 
   if (currentUserId) {
     chrome.storage.local.set({ totem_user_id: currentUserId });
+  } else {
+    chrome.storage.local.remove("totem_user_id");
+    chrome.runtime.sendMessage({
+      type: "SESSION_USER_MISSING",
+      source: "detect-user",
+    }).catch(() => {});
   }
 
   function handleBookmarkMutationMessage(event) {

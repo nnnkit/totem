@@ -4,6 +4,7 @@ This folder contains the extension's primary API-call entrypoints so core data f
 
 ## Auth
 - `checkAuth({ probe? })` -> runtime message `CHECK_AUTH` (optional lightweight auth probe)
+- `getRuntimeSnapshot()` -> runtime message `GET_RUNTIME_SNAPSHOT` (canonical runtime state, no network probe)
 - `startAuthCapture()` -> runtime message `START_AUTH_CAPTURE`
 - `closeAuthTab()` -> runtime message `CLOSE_AUTH_TAB`
 - `checkReauthStatus()` -> runtime message `REAUTH_STATUS`
@@ -13,6 +14,10 @@ This folder contains the extension's primary API-call entrypoints so core data f
 - `deleteBookmark(tweetId)` -> runtime message `DELETE_BOOKMARK`
 - `getBookmarkEvents()` -> runtime message `GET_BOOKMARK_EVENTS`
 - `ackBookmarkEvents(ids)` -> runtime message `ACK_BOOKMARK_EVENTS`
+
+## Sync policy
+- `reserveSyncRun(...)` -> runtime message `REQUEST_SYNC` (legacy alias `SYNC_POLICY_RESERVE`)
+- `completeSyncRun(...)` -> runtime message `COMPLETE_SYNC` (legacy alias `SYNC_POLICY_COMPLETE`)
 
 ## Posts
 - `fetchTweetDetail(tweetId)` -> runtime message `FETCH_TWEET_DETAIL`

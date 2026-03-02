@@ -1,5 +1,6 @@
 import { closeDb } from "../db";
 import {
+  IDB_ACCOUNT_DATABASE_PREFIX,
   IDB_DATABASE_NAME,
   LEGACY_IDB_DATABASE_NAME,
   LOCAL_STORAGE_KEYS,
@@ -13,6 +14,9 @@ import {
   CS_BOOKMARK_EVENTS,
   CS_LAST_SOFT_SYNC,
   CS_SOFT_SYNC_NEEDED,
+  CS_SYNC_ORCHESTRATOR_STATE,
+  CS_RUNTIME_AUDIT,
+  CS_RUNTIME_STATE_V2,
 } from "./storage-keys";
 
 // chrome.storage.local keys to remove on reset.
@@ -25,11 +29,30 @@ const CHROME_LOCAL_RESET_KEYS = [
   CS_BOOKMARK_EVENTS,
   CS_LAST_SOFT_SYNC,
   CS_SOFT_SYNC_NEEDED,
+  CS_SYNC_ORCHESTRATOR_STATE,
+  CS_RUNTIME_AUDIT,
+  CS_RUNTIME_STATE_V2,
 ];
 
 const IDB_DATABASE_NAMES = Array.from(
   new Set([IDB_DATABASE_NAME, LEGACY_IDB_DATABASE_NAME]),
 );
+
+async function getAccountDatabaseNames(): Promise<string[]> {
+  if (typeof indexedDB === "undefined" || typeof indexedDB.databases !== "function") {
+    return [];
+  }
+  try {
+    const databases = await indexedDB.databases();
+    return databases
+      .map((entry) => entry.name)
+      .filter((name): name is string =>
+        typeof name === "string" && name.startsWith(IDB_ACCOUNT_DATABASE_PREFIX),
+      );
+  } catch {
+    return [];
+  }
+}
 
 const LOCAL_STORAGE_RESET_KEYS = Array.from(
   new Set([
@@ -65,7 +88,9 @@ export async function resetLocalData(): Promise<void> {
   closeDb();
 
   // 2. Delete databases entirely (skip clearAllLocalData — it needs an active connection)
-  for (const dbName of IDB_DATABASE_NAMES) {
+  const accountDbNames = await getAccountDatabaseNames();
+  const allDbNames = Array.from(new Set([...IDB_DATABASE_NAMES, ...accountDbNames]));
+  for (const dbName of allDbNames) {
     try { indexedDB.deleteDatabase(dbName); } catch {}
   }
 

@@ -29,7 +29,7 @@ export function Onboarding({ phase, onLogin }: Props) {
       </p>
 
       <a
-        href="https://x.com/login"
+        href="https://x.com/i/bookmarks"
         target="_blank"
         rel="noopener noreferrer"
         onClick={() => {
