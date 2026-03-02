@@ -17,9 +17,7 @@
     "release:prepare": "node scripts/prepare-release.mjs",
     "test": "vitest run",
     "test:reliability": "vitest run src/hooks/__tests__/sync-state-machine.test.ts src/api/__tests__/parsers.bookmarks.test.ts src/lib/__tests__/reconcile.test.ts",
-    "ci:verify": "pnpm test && pnpm build",
-    "curate:download": "node scripts/curate-wallpapers.mjs",
-    "build:curate": "VITE_CURATOR=1 vite build"
+    "ci:verify": "pnpm test && pnpm build"
   },
   "dependencies": {
     "@base-ui/react": "^1.2.0",

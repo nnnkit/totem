@@ -2,7 +2,6 @@ import { useState } from "react";
 import { LOCAL_WALLPAPERS } from "../data/local-wallpapers";
 import { generateGradient } from "../lib/gradient";
 import { LS_WALLPAPER_INDEX } from "../lib/storage-keys";
-import { useUnsplashCurator } from "../dev/useUnsplashCurator";
 import type { BackgroundMode } from "../types";
 
 export interface WallpaperCredit {
@@ -10,19 +9,10 @@ export interface WallpaperCredit {
   url: string;
 }
 
-export interface CuratorHud {
-  count: number;
-  total: number;
-  rateRemaining: number | null;
-  loading: boolean;
-  justSelected: boolean;
-}
-
 export interface UseWallpaperResult {
   wallpaperUrl: string | null;
   wallpaperCredit: WallpaperCredit | null;
   gradientCss: string | null;
-  curatorHud: CuratorHud | null;
 }
 
 function getNextIndex(): number {
@@ -51,12 +41,8 @@ export function useWallpaper(backgroundMode: BackgroundMode): UseWallpaperResult
   const [gradientCss] = useState(() => generateGradient(String(Date.now())));
   const [wallpaperIndex] = useState(getNextIndex);
 
-  // VITE_CURATOR is a compile-time constant — Vite dead-code-eliminates this branch in normal builds
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  if (import.meta.env.VITE_CURATOR) return { ...useUnsplashCurator(), gradientCss };
-
   if (backgroundMode === "gradient") {
-    return { wallpaperUrl: null, wallpaperCredit: null, gradientCss, curatorHud: null };
+    return { wallpaperUrl: null, wallpaperCredit: null, gradientCss };
   }
 
   const local = resolveLocalWallpaper(wallpaperIndex);
@@ -64,6 +50,5 @@ export function useWallpaper(backgroundMode: BackgroundMode): UseWallpaperResult
     wallpaperUrl: local?.url ?? null,
     wallpaperCredit: local?.credit ?? null,
     gradientCss,
-    curatorHud: null,
   };
 }
