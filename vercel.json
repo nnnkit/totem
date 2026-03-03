@@ -2,42 +2,18 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "vite",
   "installCommand": "pnpm install",
-  "buildCommand": "pnpm build",
-  "outputDirectory": "dist",
-  "rewrites": [
-    {
-      "source": "/",
-      "destination": "/website/index.html"
-    },
-    {
-      "source": "/privacy",
-      "destination": "/website/privacy.html"
-    },
-    {
-      "source": "/privacy.html",
-      "destination": "/website/privacy.html"
-    },
-    {
-      "source": "/demo",
-      "destination": "/website/demo-page.html"
-    },
-    {
-      "source": "/demo-page",
-      "destination": "/website/demo-page.html"
-    },
-    {
-      "source": "/demo-page.html",
-      "destination": "/website/demo-page.html"
-    },
-    {
-      "source": "/demo.html",
-      "destination": "/website/demo.html"
-    }
-  ],
+  "buildCommand": "pnpm build:website",
+  "outputDirectory": "dist-website",
+  "cleanUrls": true,
   "redirects": [
     {
       "source": "/website",
-      "destination": "/website/",
+      "destination": "/",
+      "permanent": false
+    },
+    {
+      "source": "/website/:path*",
+      "destination": "/:path*",
       "permanent": false
     }
   ]

@@ -1,5 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { TotemLogo } from "../../src/components/TotemLogo";
+import cleanReaderPreview from "./feature-previews/clean-reader.jpg";
+import readingStatesPreview from "./feature-previews/reading-states.jpg";
+import highlightsNotesPreview from "./feature-previews/highlights-notes.jpg";
+import manualMarkReadPreview from "./feature-previews/manual-mark-read.jpg";
+import worksOfflinePreview from "./feature-previews/works-offline.jpg";
+import keyboardShortcutsPreview from "./feature-previews/keyboard-shortcuts.jpg";
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 
@@ -68,7 +74,7 @@ function SiteLayout({
       >
         <div className="max-w-5xl mx-auto flex items-center justify-between px-6 h-14">
           <a
-            href="index.html"
+            href="/"
             className="flex items-center gap-2.5 no-underline"
             aria-label="Totem homepage"
           >
@@ -79,7 +85,7 @@ function SiteLayout({
           </a>
           <nav className="flex items-center gap-1" aria-label="Primary">
             <a
-              href="privacy.html"
+              href="/privacy"
               className={`px-3 py-1.5 rounded-full text-sm font-medium no-underline transition-colors ${
                 page === "privacy"
                   ? "text-neutral-900 bg-neutral-100"
@@ -105,7 +111,7 @@ function SiteLayout({
         <div className="max-w-5xl mx-auto px-6 py-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-sm text-neutral-600">
           <div className="flex flex-col gap-1.5">
             <a
-              href="index.html"
+              href="/"
               className="flex items-center gap-2 no-underline"
               aria-label="Totem homepage"
             >
@@ -123,7 +129,7 @@ function SiteLayout({
             aria-label="Footer links"
           >
             <a
-              href="privacy.html"
+              href="/privacy"
               className="no-underline text-neutral-600 hover:text-neutral-900 transition-colors"
             >
               Privacy Policy
@@ -257,7 +263,7 @@ function DemoBrowser() {
         <button
           type="button"
           onClick={() => {
-            window.open("demo-page.html", "_blank", "noopener,noreferrer");
+            window.open("/demo-page", "_blank", "noopener,noreferrer");
           }}
           className="ml-auto mb-2.5 flex items-center justify-center size-6 rounded-md text-white/45 hover:text-white/80 hover:bg-white/8 transition-colors cursor-pointer"
           aria-label="Open full-page demo"
@@ -355,26 +361,43 @@ const FEATURES = [
   {
     title: "Clean reader",
     body: "Read threads, articles, and links without feed clutter.",
+    previewSrc: cleanReaderPreview,
+    previewAlt:
+      "Totem reader view showing a distraction-free article reading layout.",
   },
   {
     title: "Simple reading states",
     body: "Track what is unread, in progress, and done.",
+    previewSrc: readingStatesPreview,
+    previewAlt:
+      "Totem reading list showing item states for active progress tracking.",
   },
   {
     title: "Highlights & notes",
     body: "Highlight lines and add notes while you read.",
+    previewSrc: highlightsNotesPreview,
+    previewAlt:
+      "Totem reader with highlighted text and inline notes while reading.",
   },
   {
     title: "Manual mark as read",
     body: "Nothing auto-completes. You choose when an item is done.",
+    previewSrc: manualMarkReadPreview,
+    previewAlt: "Totem list showing items manually marked as read.",
   },
   {
     title: "Works offline",
     body: "Cached content and progress stay available without internet.",
+    previewSrc: worksOfflinePreview,
+    previewAlt:
+      "Totem home screen showing sync status and locally available reading items.",
   },
   {
     title: "Keyboard shortcuts",
     body: "Move faster with shortcuts for navigation and reading actions.",
+    previewSrc: keyboardShortcutsPreview,
+    previewAlt:
+      "Totem settings screen with controls for faster keyboard-driven workflow.",
   },
 ];
 
@@ -399,6 +422,9 @@ const STEPS = [
 // ─── Landing Page ─────────────────────────────────────────────────────────────
 
 function LandingPage() {
+  const [activeFeatureIndex, setActiveFeatureIndex] = useState(0);
+  const activeFeature = FEATURES[activeFeatureIndex] ?? FEATURES[0];
+
   return (
     <SiteLayout page="landing">
       <main>
@@ -443,7 +469,7 @@ function LandingPage() {
             <p className="text-neutral-500 text-sm max-w-[52ch]">
               Click the New tab button in the mock browser to open Totem.{" "}
               <a
-                href="demo-page.html"
+                href="/demo-page"
                 className="text-white/70 underline underline-offset-2 hover:text-white transition-colors"
               >
                 Open full-page demo &rarr;
@@ -469,22 +495,52 @@ function LandingPage() {
             What you get
           </p>
           <h2 className="font-[Newsreader,serif] text-[clamp(1.8rem,3.5vw,2.8rem)] leading-tight tracking-tight text-neutral-900 mb-10 max-w-[20ch]">
-            Clear workflow. Less noise.
+            Designed to help you read more, with less noise.
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {FEATURES.map((f) => (
-              <article
-                key={f.title}
-                className="border border-neutral-100 rounded-xl p-5"
-              >
-                <h3 className="text-[0.95rem] font-semibold text-neutral-900 mb-1.5">
-                  {f.title}
-                </h3>
-                <p className="text-sm text-neutral-500 leading-relaxed m-0">
-                  {f.body}
-                </p>
-              </article>
-            ))}
+          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.04fr)] gap-6 lg:gap-8 items-start">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {FEATURES.map((f, index) => {
+                const isActive = index === activeFeatureIndex;
+                return (
+                  <button
+                    key={f.title}
+                    type="button"
+                    onMouseEnter={() => setActiveFeatureIndex(index)}
+                    onFocus={() => setActiveFeatureIndex(index)}
+                    onClick={() => setActiveFeatureIndex(index)}
+                    className={`text-left border rounded-xl p-5 transition-colors ${
+                      isActive
+                        ? "border-neutral-900 bg-neutral-50"
+                        : "border-neutral-100 hover:border-neutral-300"
+                    }`}
+                    aria-pressed={isActive}
+                  >
+                    <h3 className="text-[0.95rem] font-semibold text-neutral-900 mb-1.5">
+                      {f.title}
+                    </h3>
+                    <p className="text-sm text-neutral-500 leading-relaxed m-0">
+                      {f.body}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="lg:sticky lg:top-20">
+              <div className="relative overflow-hidden rounded-2xl border border-neutral-200 bg-neutral-950 aspect-[16/10] shadow-[0_20px_50px_rgba(0,0,0,0.2)]">
+                <img
+                  key={activeFeature.title}
+                  src={activeFeature.previewSrc}
+                  alt={activeFeature.previewAlt}
+                  className="absolute inset-0 h-full w-full object-contain animate-fade-in"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </div>
+              <p className="mt-3 text-xs text-neutral-500">
+                Hover or tap a feature to preview it.
+              </p>
+            </div>
           </div>
         </section>
 
