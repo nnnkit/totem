@@ -4,20 +4,24 @@
   "installCommand": "pnpm install",
   "buildCommand": "pnpm build",
   "outputDirectory": "dist",
-  "redirects": [
+  "rewrites": [
     {
       "source": "/",
-      "destination": "/website/",
-      "permanent": false
+      "destination": "/website/index.html"
     },
     {
       "source": "/privacy",
-      "destination": "/website/privacy.html",
-      "permanent": false
+      "destination": "/website/privacy.html"
     },
     {
       "source": "/demo",
-      "destination": "/website/demo-page.html",
+      "destination": "/website/demo-page.html"
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/website",
+      "destination": "/website/",
       "permanent": false
     }
   ]
