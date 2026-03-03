@@ -1,7 +1,15 @@
 # Screenshot Capture Guide
 
-8 screenshots needed. Follow this exactly so Replit Animation gets clean,
+16 screenshots needed. Follow this exactly so Replit Animation gets clean,
 consistent reference images to work from.
+
+SS1–SS8: Viewport-sized UI screenshots (normal capture).
+SS9–SS12: Full-page tall screenshots — clean, no highlights (for scroll animation).
+SS13–SS16: Full-page tall screenshots — same content WITH highlights and notes applied.
+
+SS13–SS16 are the "after reading" state. They are used in the opening scene to
+show before → after: clean article, then the same article with highlights glowing
+through it. The two states side by side is the product's strongest visual.
 
 ---
 
@@ -184,18 +192,198 @@ consistent reference images to work from.
 
 ---
 
+## SS9 — Full-page scroll: Twitter Thread (dark mode)
+
+**Filename:** `ss9-thread-scroll-dark.png`
+**Type:** FULL-PAGE (taller than viewport — use DevTools method below)
+**Theme:** Dark
+
+**What to show:**
+- A thread with 6+ tweets, all rendered from top to bottom
+- The vertical connector line between tweets clearly visible
+- Author avatar at the top tweet, then the thin dot + line for continuity
+- Each tweet's text, any media if present
+- The thread section header ("Thread") visible at the top of the thread block
+
+**How to pick the right bookmark:**
+- Find a thread with 6–10 tweets (not a single tweet)
+- Good threads: long essays broken into tweets, step-by-step explanations
+- Avoid threads with lots of images — pure text shows the reading experience best
+
+**How to capture full-page in Chrome:**
+1. Open the bookmark in the Totem reader
+2. Open Chrome DevTools: `Cmd+Option+I` (Mac) / `F12` (Windows)
+3. Press `Cmd+Shift+P` (Mac) / `Ctrl+Shift+P` (Windows) to open command palette
+4. Type "full size" and select **"Capture full size screenshot"**
+5. Chrome saves a PNG of the entire scrollable page to your Downloads
+6. Move it to this folder and rename to `ss9-thread-scroll-dark.png`
+
+---
+
+## SS10 — Full-page scroll: Twitter Thread (light mode)
+
+**Filename:** `ss10-thread-scroll-light.png`
+**Type:** FULL-PAGE
+**Theme:** Light
+
+**What to show:** Same thread as SS9, identical bookmark, but switch theme to Light first.
+
+**How to get there:**
+- Click gear icon on home → switch to Light theme
+- Open the same thread bookmark
+- Capture full page (same DevTools method as SS9)
+- Switch back to Dark theme after
+
+---
+
+## SS11 — Full-page scroll: Article (dark mode)
+
+**Filename:** `ss11-article-scroll-dark.png`
+**Type:** FULL-PAGE
+**Theme:** Dark
+
+**What to show:**
+- A long article rendered in the reader — cover image at top (if it has one), then big serif H1 title, then multiple sections with subheadings and paragraphs
+- The full prose layout: Spectral serif body text, generous line height, centered column
+- At least 3 sections visible (heading + 2–3 paragraphs each)
+- The ActionBar ("View on X · Grok · Mark read") visible near the top
+
+**How to pick the right bookmark:**
+- Find an "Article" type bookmark (ones with the Article badge in the reading list)
+- Long-form is better — more than 500 words so there's real content to scroll through
+- Avoid very short articles — you want the scroll to feel substantial
+
+**How to capture:** Same DevTools full-size screenshot method as SS9.
+
+---
+
+## SS12 — Full-page scroll: Article (light mode)
+
+**Filename:** `ss12-article-scroll-light.png`
+**Type:** FULL-PAGE
+**Theme:** Light
+
+**What to show:** Same article as SS11, identical content, Light theme.
+
+**How to get there:**
+- Switch to Light theme in settings
+- Open the same article bookmark
+- Capture full page
+- Switch back to Dark theme after
+
+---
+
+## How Replit Animation Uses the Full-Page Screenshots
+
+These 4 tall screenshots enable a specific animation technique:
+
+```
+Thread dark/light:
+  — Start at the top (author header)
+  — Slow scroll downward at ~80px/s
+  — Pause briefly at each tweet node
+  — Shows: clean thread rendering, connector lines, no engagement clutter
+
+Article dark/light:
+  — Start at cover image / title
+  — Slow scroll through headings and paragraphs
+  — Shows: editorial serif typography, section structure, long-form reading
+
+Dark ↔ Light flip:
+  — Cross-dissolve between SS9 and SS10 (or SS11 and SS12)
+  — Copy: "Read in any light."
+  — Timing: 0.5s dissolve, hold each mode for 1.5s, repeat once
+```
+
+---
+
+## SS13 — Full-page: Thread WITH highlights (dark)
+
+**Filename:** `ss13-thread-highlighted-dark.png`
+**Type:** FULL-PAGE · **Theme:** Dark
+**Must have before capturing:** 4–6 highlights applied across different tweets in the thread.
+
+**Two visual states to show:**
+- **Highlight only** → soft terracotta background wash over the sentence
+  (color: `rgba(226, 128, 103, 0.16)` — looks like a physical highlighter pen)
+- **Highlight + note** → wavy terracotta underline under the text, no background
+  (color: `rgba(226, 128, 103, 0.75)` — looks like a handwritten annotation)
+
+**Before capturing:**
+1. Open the same thread bookmark used for SS9
+2. Highlight 3–4 sentences across different tweets (select text → click Highlight)
+3. On 1–2 of those highlights, add a note (click the highlight → click Note → type anything)
+4. The wavy-underlined notes and the filled highlights should both be visible
+5. Capture full-page (DevTools → Capture full size screenshot)
+
+**What to check:**
+- At least one highlight-only (filled) AND one highlight-with-note (wavy underline) are visible
+- The highlights are spread across different tweets, not all in one place
+- The terracotta color is clearly visible against the dark background
+
+---
+
+## SS14 — Full-page: Thread WITH highlights (light)
+
+**Filename:** `ss14-thread-highlighted-light.png`
+**Type:** FULL-PAGE · **Theme:** Light
+
+Same thread, same highlights as SS13, but switch to Light theme first.
+Capture full-page. Switch back to Dark after.
+
+---
+
+## SS15 — Full-page: Article WITH highlights (dark)
+
+**Filename:** `ss15-article-highlighted-dark.png`
+**Type:** FULL-PAGE · **Theme:** Dark
+**Must have before capturing:** 4–6 highlights across different sections of the article.
+
+**Before capturing:**
+1. Open the same article used for SS11
+2. Highlight 3–4 sentences in different paragraphs/sections
+3. Add notes to 1–2 of them
+4. Scroll through to confirm highlights are spread throughout the article
+5. Capture full-page
+
+**Why this matters for the animation:**
+The opening scene dissolves from the clean article (SS11) to this one (SS15).
+The viewer sees the same content — same title, same paragraphs — but now
+sentences are glowing with soft terracotta and wavy annotation lines. It
+communicates "people actually read and engage here" without saying a word.
+
+---
+
+## SS16 — Full-page: Article WITH highlights (light)
+
+**Filename:** `ss16-article-highlighted-light.png`
+**Type:** FULL-PAGE · **Theme:** Light
+
+Same article, same highlights as SS15, but Light theme.
+Capture full-page. Switch back to Dark after.
+
+---
+
 ## Quick Capture Checklist
 
-| # | File | Scene | Status |
-|---|---|---|---|
-| 1 | `ss1-home-card.png` | Home with bookmark card | [ ] |
-| 2 | `ss2-home-syncing.png` | Home syncing spinner | [ ] |
-| 3 | `ss3-list-unread.png` | Reading list — Unread tab | [ ] |
-| 4 | `ss4-list-reading.png` | Reading list — Reading tab | [ ] |
-| 5 | `ss5-list-read.png` | Reading list — Read tab | [ ] |
-| 6 | `ss6-reader-article.png` | Reader — full article | [ ] |
-| 7 | `ss7-reader-highlight.png` | Reader — highlight active | [ ] |
-| 8 | `ss8-settings.png` | Settings modal | [ ] |
+| # | File | Scene | Type | Status |
+|---|---|---|---|---|
+| 1 | `ss1-home-card.png` | Home with bookmark card | Viewport | [ ] |
+| 2 | `ss2-home-syncing.png` | Home syncing spinner | Viewport | [ ] |
+| 3 | `ss3-list-unread.png` | Reading list — Unread tab | Viewport | [ ] |
+| 4 | `ss4-list-reading.png` | Reading list — Reading tab | Viewport | [ ] |
+| 5 | `ss5-list-read.png` | Reading list — Read tab | Viewport | [ ] |
+| 6 | `ss6-reader-article.png` | Reader — article viewport | Viewport | [ ] |
+| 7 | `ss7-reader-highlight.png` | Reader — highlight active | Viewport | [ ] |
+| 8 | `ss8-settings.png` | Settings modal | Viewport | [ ] |
+| 9 | `ss9-thread-scroll-dark.png` | Full thread — clean, dark | Full-page | [ ] |
+| 10 | `ss10-thread-scroll-light.png` | Full thread — clean, light | Full-page | [ ] |
+| 11 | `ss11-article-scroll-dark.png` | Full article — clean, dark | Full-page | [ ] |
+| 12 | `ss12-article-scroll-light.png` | Full article — clean, light | Full-page | [ ] |
+| 13 | `ss13-thread-highlighted-dark.png` | Thread with highlights, dark | Full-page | [ ] |
+| 14 | `ss14-thread-highlighted-light.png` | Thread with highlights, light | Full-page | [ ] |
+| 15 | `ss15-article-highlighted-dark.png` | Article with highlights, dark | Full-page | [ ] |
+| 16 | `ss16-article-highlighted-light.png` | Article with highlights, light | Full-page | [ ] |
 
 ---
 

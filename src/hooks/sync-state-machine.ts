@@ -1,6 +1,6 @@
 import type { SyncStatus } from "../types";
 
-export type SyncMode = "incremental" | "full";
+export type SyncMode = "incremental" | "full" | "quick";
 
 export interface SyncMachineState {
   syncStatus: SyncStatus;

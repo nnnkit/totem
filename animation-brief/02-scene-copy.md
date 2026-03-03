@@ -1,10 +1,26 @@
 # Scene Copy — All Text in the Animation
 
 Every word that appears on screen, per scene, in order.
+Target runtime: **30–35 seconds**. Short. Every second earns its place.
 
 ---
 
-## Scene 1 — The Problem (0–8s)
+## Scene 1 — Opening: The Reading Experience (0–8s)
+
+**Overlay text** (small caps, bottom-left, fades in after the highlight dissolve):
+> "Read it. Mark it. Own it."
+
+*No other text in this scene. The product speaks.*
+
+Visual beat:
+1. Clean article scrolling (silent)
+2. [click sound] → highlight wash dissolves in
+3. Copy fades in
+4. Quick cut to thread — same beat
+
+---
+
+## Scene 2 — The Problem (8–12s)
 
 **Line 1** (fades in at 1s):
 > "You saved it to read later."
@@ -90,6 +106,15 @@ Every word that appears on screen, per scene, in order.
 
 **Overlay text** (fades in at 35s):
 > "Read it. Highlight it. Pick up where you left off."
+
+---
+
+## Scene 5b — Dark / Light Mode Flip (38–42s)
+
+**Overlay text** (centered, fades in after first dissolve):
+> "Read in any light."
+
+*No other text. The visual contrast between dark and light does the work.*
 
 ---
 

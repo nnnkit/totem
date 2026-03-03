@@ -148,7 +148,10 @@ export default function App() {
         setToast({ message: "Sync is already running in another tab." });
         return;
       case "cooldown":
-        setToast({ message: "Please wait a few seconds and try sync again." });
+        setToast({ message: "Please wait before trying sync again." });
+        return;
+      case "rate_limited":
+        setToast({ message: "X rate-limited sync requests. Please wait a bit and try again." });
         return;
       case "no_account":
         setToast({ message: "Could not identify account context. Try opening X once." });

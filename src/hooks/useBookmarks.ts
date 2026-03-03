@@ -38,6 +38,8 @@ import {
   DETAIL_CACHE_RETENTION_MS,
   DB_INIT_TIMEOUT_MS,
   PAGE_FETCH_TIMEOUT_MS,
+  SYNC_MAX_BOOKMARKS_PER_JOB,
+  SYNC_MAX_PAGES_PER_JOB,
 } from "../lib/constants";
 import {
   createSyncMachineState,
@@ -64,10 +66,19 @@ interface ActiveSyncController {
   abort: (markTimeout?: boolean) => void;
 }
 
+interface ActiveSyncLease {
+  accountId: string | null;
+  leaseId: string;
+  mode: SyncMode;
+  trigger: "manual" | "auto";
+  released: boolean;
+}
+
 const DEFAULT_SYNC_AUTO_ENABLED = false;
 const SYNC_BLOCKED_REASONS = new Set<SyncBlockedReason>([
   "in_flight",
   "cooldown",
+  "rate_limited",
   "no_account",
   "not_ready",
 ]);
@@ -78,6 +89,17 @@ function syncAbortTimeout(bookmarkCount: number, mode: SyncMode): number {
   const base = mode === "full" ? 8 * 60 * 1000 : 3 * 60 * 1000;
   const extra = Math.floor(bookmarkCount / 1000) * 30_000;
   return Math.min(base + extra, 12 * 60 * 1000);
+}
+
+function syncFailureCodeFromMessage(message: string): string | undefined {
+  if (
+    message === "RATE_LIMITED" ||
+    message.startsWith("RATE_LIMITED:") ||
+    message.includes("API_ERROR_429")
+  ) {
+    return "RATE_LIMITED";
+  }
+  return undefined;
 }
 
 function compareSortIndexDesc(a: Bookmark, b: Bookmark): number {
@@ -138,6 +160,7 @@ export function useBookmarks(
   const [syncBlockedReason, setSyncBlockedReason] = useState<SyncBlockedReason | null>(null);
   const bookmarksRef = useRef<Bookmark[]>([]);
   const activeSyncRef = useRef<ActiveSyncController | null>(null);
+  const activeLeaseRef = useRef<ActiveSyncLease | null>(null);
   const processingBookmarkEventsRef = useRef(false);
   const syncMachineRef = useRef(createSyncMachineState("loading"));
   const activeAccountRef = useRef<string | null>(null);
@@ -160,6 +183,58 @@ export function useBookmarks(
     [],
   );
 
+  const releaseActiveLease = useCallback(
+    async (
+      status: "success" | "failure" | "timeout" | "skipped",
+      errorCode?: string,
+    ): Promise<void> => {
+      const lease = activeLeaseRef.current;
+      if (!lease || lease.released) return;
+      lease.released = true;
+      try {
+        await completeSyncRun({
+          accountId: lease.accountId,
+          leaseId: lease.leaseId,
+          mode: lease.mode,
+          status,
+          trigger: lease.trigger,
+          errorCode,
+        });
+      } catch {
+        lease.released = false;
+        return;
+      }
+      if (activeLeaseRef.current === lease) {
+        activeLeaseRef.current = null;
+      }
+    },
+    [],
+  );
+
+  const bestEffortReleaseOnUnload = useCallback(() => {
+    const lease = activeLeaseRef.current;
+    if (!lease || lease.released) return;
+
+    activeSyncRef.current?.abort();
+    lease.released = true;
+
+    completeSyncRun({
+      accountId: lease.accountId,
+      leaseId: lease.leaseId,
+      mode: lease.mode,
+      status: "skipped",
+      trigger: lease.trigger,
+    })
+      .then(() => {
+        if (activeLeaseRef.current === lease) {
+          activeLeaseRef.current = null;
+        }
+      })
+      .catch(() => {
+        lease.released = false;
+      });
+  }, []);
+
   // ── Core: sync() ──────────────────────────────────────────
 
   const sync = useCallback(async (options: SyncOptions = {}): Promise<SyncRequestResult> => {
@@ -167,7 +242,7 @@ export function useBookmarks(
 
     const trigger = options.trigger ?? "manual";
     const requestedMode =
-      options.mode ?? (trigger === "manual" ? "full" : undefined);
+      options.mode ?? (trigger === "manual" ? "quick" : undefined);
     const localCount =
       typeof options.localCountHint === "number" &&
       Number.isFinite(options.localCountHint)
@@ -231,7 +306,15 @@ export function useBookmarks(
       queue.abort();
     };
     activeSyncRef.current = { abort: abortSync };
+    activeLeaseRef.current = {
+      accountId: completionAccountId,
+      leaseId,
+      mode,
+      trigger,
+      released: false,
+    };
     let completionStatus: "success" | "failure" | "timeout" = "failure";
+    let completionErrorCode: string | undefined;
     const syncTimer = setTimeout(() => {
       abortSync(true);
     }, timeout);
@@ -250,6 +333,8 @@ export function useBookmarks(
             ),
           ),
         fullReconcile: mode === "full",
+        maxPages: mode === "quick" ? SYNC_MAX_PAGES_PER_JOB : undefined,
+        maxBookmarks: mode === "quick" ? SYNC_MAX_BOOKMARKS_PER_JOB : undefined,
         onPage: async (pageNew) => {
           if (abortController.aborted) return;
           const currentIds = new Set(bookmarksRef.current.map((b) => b.tweetId));
@@ -289,7 +374,7 @@ export function useBookmarks(
           await chrome.storage.local.set({ [CS_LAST_SYNC]: now });
         }
         await chrome.storage.local.remove(CS_SOFT_SYNC_NEEDED);
-        if (mode === "full") {
+        if (trigger === "manual") {
           clearManualSyncRequired();
         }
         applySyncEvent({ type: "SYNC_SUCCESS" });
@@ -299,6 +384,7 @@ export function useBookmarks(
     } catch (err) {
       if (!abortController.aborted) {
         const msg = err instanceof Error ? err.message : "Unknown error";
+        completionErrorCode = syncFailureCodeFromMessage(msg);
         applySyncEvent({ type: "SYNC_FAILURE", message: msg });
       }
     } finally {
@@ -314,16 +400,10 @@ export function useBookmarks(
         applySyncEvent({ type: "SYNC_TIMEOUT" });
         completionStatus = "timeout";
       }
-      await completeSyncRun({
-        accountId: completionAccountId,
-        leaseId,
-        mode,
-        status: completionStatus,
-        trigger,
-      }).catch(() => {});
+      await releaseActiveLease(completionStatus, completionErrorCode);
     }
     return { accepted: true };
-  }, [activeAccountId, applySyncEvent, isReady]);
+  }, [activeAccountId, applySyncEvent, isReady, releaseActiveLease]);
 
   // ── Effect: account context switch ──
 
@@ -352,6 +432,7 @@ export function useBookmarks(
     }
 
     activeSyncRef.current?.abort();
+    releaseActiveLease("skipped").catch(() => {});
     processingBookmarkEventsRef.current = false;
     applySyncEvent({ type: "RESET" });
     setSyncBlockedReason(null);
@@ -365,7 +446,7 @@ export function useBookmarks(
         CS_SOFT_SYNC_NEEDED,
       ])
       .catch(() => {});
-  }, [activeAccountId, applySyncEvent]);
+  }, [activeAccountId, applySyncEvent, releaseActiveLease]);
 
   // ── Effect: bookmark mutation events (service worker) ──
 
@@ -527,10 +608,22 @@ export function useBookmarks(
     };
   }, [isReady, applyBookmarkEvents]);
 
+  // ── Effect 4: release sync lease when tab unloads ──
+  useEffect(() => {
+    const onPageHide = () => {
+      bestEffortReleaseOnUnload();
+    };
+    window.addEventListener("pagehide", onPageHide);
+    return () => {
+      window.removeEventListener("pagehide", onPageHide);
+      bestEffortReleaseOnUnload();
+    };
+  }, [bestEffortReleaseOnUnload]);
+
   // ── refresh (manual trigger) ──
 
   const refresh = useCallback(async (): Promise<SyncRequestResult> => {
-    return sync({ trigger: "manual", mode: "full" });
+    return sync({ trigger: "manual", mode: "quick" });
   }, [sync]);
 
   // ── reset ──

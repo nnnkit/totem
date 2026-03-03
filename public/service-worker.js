@@ -57,7 +57,10 @@ const SYNC_ORCHESTRATOR_LOCK_TTL_MS = 12 * 60 * 1000;
 const SYNC_ORCHESTRATOR_AUTO_BACKOFF_MS = 5 * 60 * 1000;
 const SYNC_ORCHESTRATOR_AUTO_INTERVAL_MS = 4 * 60 * 60 * 1000;
 const SYNC_ORCHESTRATOR_MANUAL_RECLAIM_MS = 90_000;
-const SYNC_ORCHESTRATOR_MANUAL_COOLDOWN_MS = 4_000;
+const SYNC_ORCHESTRATOR_MANUAL_SUCCESS_COOLDOWN_MS = 15 * 60 * 1000;
+const SYNC_ORCHESTRATOR_MANUAL_FAILURE_RETRY_MS = 30_000;
+const SYNC_ORCHESTRATOR_RATE_LIMIT_BACKOFF_BASE_MS = 60_000;
+const SYNC_ORCHESTRATOR_RATE_LIMIT_BACKOFF_MAX_MS = 15 * 60 * 1000;
 const CACHE_SUMMARY_KEYS = [
   "totem_last_sync",
   "totem_last_light_sync",
@@ -211,12 +214,16 @@ function createEmptySyncAccountState() {
     lastSuccessAt: 0,
     lastFullSyncAt: 0,
     lastIncrementalSyncAt: 0,
+    manualCooldownUntil: 0,
+    rateLimitBackoffUntil: 0,
+    rateLimitConsecutive: 0,
     lastAttemptAt: 0,
     lastCompletedAt: 0,
     lastCompletedStatus: null,
     lastDecisionAt: 0,
     lastDecisionReason: null,
     lastError: null,
+    lastFailureCode: null,
   };
 }
 
@@ -252,7 +259,12 @@ function normalizeSyncOrchestratorState(raw) {
       inFlightRaw && typeof inFlightRaw.leaseId === "string" && inFlightRaw.leaseId
         ? {
             leaseId: inFlightRaw.leaseId,
-            mode: inFlightRaw.mode === "full" ? "full" : "incremental",
+            mode:
+              inFlightRaw.mode === "full"
+                ? "full"
+                : inFlightRaw.mode === "quick"
+                  ? "quick"
+                  : "incremental",
             trigger: inFlightRaw.trigger === "manual" ? "manual" : "auto",
             reason:
               typeof inFlightRaw.reason === "string" && inFlightRaw.reason
@@ -281,6 +293,21 @@ function normalizeSyncOrchestratorState(raw) {
         Number.isFinite(account.lastIncrementalSyncAt)
           ? account.lastIncrementalSyncAt
           : 0,
+      manualCooldownUntil:
+        typeof account.manualCooldownUntil === "number" &&
+        Number.isFinite(account.manualCooldownUntil)
+          ? account.manualCooldownUntil
+          : 0,
+      rateLimitBackoffUntil:
+        typeof account.rateLimitBackoffUntil === "number" &&
+        Number.isFinite(account.rateLimitBackoffUntil)
+          ? account.rateLimitBackoffUntil
+          : 0,
+      rateLimitConsecutive:
+        typeof account.rateLimitConsecutive === "number" &&
+        Number.isFinite(account.rateLimitConsecutive)
+          ? account.rateLimitConsecutive
+          : 0,
       lastAttemptAt:
         typeof account.lastAttemptAt === "number" && Number.isFinite(account.lastAttemptAt)
           ? account.lastAttemptAt
@@ -298,6 +325,8 @@ function normalizeSyncOrchestratorState(raw) {
       lastDecisionReason:
         typeof account.lastDecisionReason === "string" ? account.lastDecisionReason : null,
       lastError: typeof account.lastError === "string" ? account.lastError : null,
+      lastFailureCode:
+        typeof account.lastFailureCode === "string" ? account.lastFailureCode : null,
     };
   }
 
@@ -454,6 +483,10 @@ function getSyncBlockedReason(sessionSnapshot, account, accountKey, now) {
     return "not_ready";
   }
 
+  if (account && Number(account.rateLimitBackoffUntil || 0) > now) {
+    return "rate_limited";
+  }
+
   if (account?.inFlight) {
     const startedAt = Number(account.inFlight.startedAt || 0);
     const lockAge = now - startedAt;
@@ -464,8 +497,7 @@ function getSyncBlockedReason(sessionSnapshot, account, accountKey, now) {
 
   if (
     account &&
-    Number(account.lastAttemptAt || 0) > 0 &&
-    now - Number(account.lastAttemptAt || 0) < SYNC_ORCHESTRATOR_MANUAL_COOLDOWN_MS
+    Number(account.manualCooldownUntil || 0) > now
   ) {
     return "cooldown";
   }
@@ -505,7 +537,12 @@ async function buildRuntimeSnapshot(stateOverride = null, accountContextOverride
       inFlight: account?.inFlight
         ? {
             leaseId: account.inFlight.leaseId,
-            mode: account.inFlight.mode === "full" ? "full" : "incremental",
+            mode:
+              account.inFlight.mode === "full"
+                ? "full"
+                : account.inFlight.mode === "quick"
+                  ? "quick"
+                  : "incremental",
             trigger: account.inFlight.trigger === "manual" ? "manual" : "auto",
             startedAt: Number(account.inFlight.startedAt || 0),
           }
@@ -614,7 +651,14 @@ async function handleSyncPolicyReserve(message = {}) {
   return withSyncOrchestratorLock(async () => {
     const now = Date.now();
     const trigger = message.trigger === "manual" ? "manual" : "auto";
-    const requestedMode = message.requestedMode === "incremental" ? "incremental" : "full";
+    const requestedMode =
+      message.requestedMode === "incremental"
+        ? "incremental"
+        : message.requestedMode === "quick"
+          ? "quick"
+          : message.requestedMode === "full"
+            ? "full"
+            : null;
     const localCount =
       typeof message.localCount === "number" && Number.isFinite(message.localCount)
         ? message.localCount
@@ -682,10 +726,13 @@ async function handleSyncPolicyReserve(message = {}) {
       }
     }
 
+    if (Number(account.rateLimitBackoffUntil || 0) > now) {
+      return returnBlocked("rate_limited", account);
+    }
+
     if (
       trigger === "manual" &&
-      account.lastAttemptAt > 0 &&
-      now - Number(account.lastAttemptAt || 0) < SYNC_ORCHESTRATOR_MANUAL_COOLDOWN_MS
+      Number(account.manualCooldownUntil || 0) > now
     ) {
       return returnBlocked("cooldown", account);
     }
@@ -694,7 +741,7 @@ async function handleSyncPolicyReserve(message = {}) {
     let reason = "fresh_cache";
 
     if (trigger === "manual") {
-      mode = requestedMode;
+      mode = requestedMode || "quick";
       reason = "manual";
     } else if (localCount <= 0) {
       if (
@@ -761,7 +808,13 @@ async function handleSyncPolicyComplete(message = {}) {
     if (!accountKey) return { ok: true, ignored: true, reason: "no_account" };
 
     const leaseId = typeof message.leaseId === "string" ? message.leaseId : "";
-    const mode = message.mode === "incremental" ? "incremental" : "full";
+    const trigger = message.trigger === "manual" ? "manual" : "auto";
+    const mode =
+      message.mode === "full"
+        ? "full"
+        : message.mode === "quick"
+          ? "quick"
+          : "incremental";
     const status =
       message.status === "success" ||
       message.status === "failure" ||
@@ -769,6 +822,11 @@ async function handleSyncPolicyComplete(message = {}) {
       message.status === "skipped"
         ? message.status
         : "failure";
+    const errorCode =
+      typeof message.errorCode === "string" && message.errorCode
+        ? message.errorCode.slice(0, 120)
+        : "";
+    const isRateLimited = errorCode === "RATE_LIMITED";
 
     const state = await readSyncOrchestratorState();
     const account = state.accounts[accountKey];
@@ -809,13 +867,43 @@ async function handleSyncPolicyComplete(message = {}) {
 
     if (status === "success") {
       next.lastSuccessAt = now;
-      next.lastIncrementalSyncAt = now;
       if (mode === "full") {
         next.lastFullSyncAt = now;
+      } else {
+        next.lastIncrementalSyncAt = now;
       }
+      if (trigger === "manual") {
+        next.manualCooldownUntil = now + SYNC_ORCHESTRATOR_MANUAL_SUCCESS_COOLDOWN_MS;
+      }
+      next.rateLimitConsecutive = 0;
+      next.rateLimitBackoffUntil = 0;
       next.lastError = null;
+      next.lastFailureCode = null;
     } else if (status !== "skipped") {
       next.lastError = status;
+      next.lastFailureCode = errorCode || null;
+      if (trigger === "manual") {
+        next.manualCooldownUntil = Math.max(
+          Number(next.manualCooldownUntil || 0),
+          now + SYNC_ORCHESTRATOR_MANUAL_FAILURE_RETRY_MS,
+        );
+      }
+      if (isRateLimited) {
+        const nextStreak = Math.max(1, Number(next.rateLimitConsecutive || 0) + 1);
+        const backoffMs = Math.min(
+          SYNC_ORCHESTRATOR_RATE_LIMIT_BACKOFF_BASE_MS * Math.pow(2, nextStreak - 1),
+          SYNC_ORCHESTRATOR_RATE_LIMIT_BACKOFF_MAX_MS,
+        );
+        next.rateLimitConsecutive = nextStreak;
+        next.rateLimitBackoffUntil = now + backoffMs;
+        next.manualCooldownUntil = Math.max(
+          Number(next.manualCooldownUntil || 0),
+          next.rateLimitBackoffUntil,
+        );
+      } else {
+        next.rateLimitConsecutive = 0;
+        next.rateLimitBackoffUntil = 0;
+      }
     }
 
     state.accounts[accountKey] = next;
@@ -829,6 +917,8 @@ async function handleSyncPolicyComplete(message = {}) {
       ignored: false,
       status,
       mode,
+      trigger,
+      errorCode: errorCode || null,
       leaseId,
       accountKey,
     }).catch(() => {});
@@ -1773,6 +1863,9 @@ async function handleFetchBookmarks(cursor, count, _retried = false, _queryIdRet
   }
 
   if (!response.ok) {
+    if (response.status === 429) {
+      throw new Error("RATE_LIMITED");
+    }
     if (!_queryIdRetried && response.status === 400) {
       const freshId = await forceRediscoverQueryId("Bookmarks");
       if (freshId && freshId !== queryId) return handleFetchBookmarks(cursor, count, _retried, true);

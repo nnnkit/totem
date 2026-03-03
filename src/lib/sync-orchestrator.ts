@@ -1,7 +1,7 @@
 import { BACKGROUND_SYNC_MIN_INTERVAL_MS } from "./constants";
 
 export type SyncTrigger = "auto" | "manual";
-export type SyncMode = "full" | "incremental";
+export type SyncMode = "full" | "incremental" | "quick";
 export type SyncCompletionStatus = "success" | "failure" | "timeout" | "skipped";
 
 export const SYNC_ORCHESTRATOR_VERSION = 1;
@@ -9,7 +9,10 @@ export const SYNC_ORCHESTRATOR_LOCK_TTL_MS = 12 * 60 * 1000;
 export const SYNC_ORCHESTRATOR_AUTO_BACKOFF_MS = 5 * 60 * 1000;
 export const SYNC_ORCHESTRATOR_AUTO_INTERVAL_MS = BACKGROUND_SYNC_MIN_INTERVAL_MS;
 export const SYNC_ORCHESTRATOR_MANUAL_RECLAIM_MS = 90_000;
-export const SYNC_ORCHESTRATOR_MANUAL_COOLDOWN_MS = 4_000;
+export const SYNC_ORCHESTRATOR_MANUAL_SUCCESS_COOLDOWN_MS = 15 * 60 * 1000;
+export const SYNC_ORCHESTRATOR_MANUAL_FAILURE_RETRY_MS = 30_000;
+export const SYNC_ORCHESTRATOR_RATE_LIMIT_BACKOFF_BASE_MS = 60_000;
+export const SYNC_ORCHESTRATOR_RATE_LIMIT_BACKOFF_MAX_MS = 15 * 60 * 1000;
 
 const ACCOUNT_ID_SANITIZE_RE = /[^A-Za-z0-9_-]/g;
 
@@ -29,6 +32,7 @@ export interface SyncReservationDecision {
     | "background_stale"
     | "in_flight"
     | "cooldown"
+    | "rate_limited"
     | "not_ready"
     | "fresh_cache"
     | "auto_backoff"
@@ -55,12 +59,16 @@ interface SyncAccountState {
   lastSuccessAt: number;
   lastFullSyncAt: number;
   lastIncrementalSyncAt: number;
+  manualCooldownUntil: number;
+  rateLimitBackoffUntil: number;
+  rateLimitConsecutive: number;
   lastAttemptAt: number;
   lastCompletedAt: number;
   lastCompletedStatus: SyncCompletionStatus | null;
   lastDecisionAt: number;
   lastDecisionReason: SyncReservationDecision["reason"] | null;
   lastError: string | null;
+  lastFailureCode: string | null;
 }
 
 export interface SyncOrchestratorState {
@@ -74,6 +82,7 @@ export interface SyncCompletionInput {
   mode: SyncMode;
   status: SyncCompletionStatus;
   trigger: SyncTrigger;
+  errorCode?: string;
 }
 
 function normalizeAccountId(accountId: string | null | undefined): string | null {
@@ -90,12 +99,16 @@ function createEmptyAccountState(): SyncAccountState {
     lastSuccessAt: 0,
     lastFullSyncAt: 0,
     lastIncrementalSyncAt: 0,
+    manualCooldownUntil: 0,
+    rateLimitBackoffUntil: 0,
+    rateLimitConsecutive: 0,
     lastAttemptAt: 0,
     lastCompletedAt: 0,
     lastCompletedStatus: null,
     lastDecisionAt: 0,
     lastDecisionReason: null,
     lastError: null,
+    lastFailureCode: null,
   };
 }
 
@@ -172,10 +185,25 @@ export function reserveSyncRun(
     }
   }
 
+  if (account.rateLimitBackoffUntil > now) {
+    return {
+      state: withAccount(state, accountKey, {
+        ...account,
+        lastDecisionAt: now,
+        lastDecisionReason: "rate_limited",
+      }),
+      decision: {
+        allow: false,
+        mode: null,
+        reason: "rate_limited",
+        accountKey,
+      },
+    };
+  }
+
   if (
     input.trigger === "manual" &&
-    account.lastAttemptAt > 0 &&
-    now - account.lastAttemptAt < SYNC_ORCHESTRATOR_MANUAL_COOLDOWN_MS
+    account.manualCooldownUntil > now
   ) {
     return {
       state: withAccount(state, accountKey, {
@@ -208,7 +236,7 @@ export function reserveSyncRun(
   let reason: SyncReservationDecision["reason"] = "fresh_cache";
 
   if (input.trigger === "manual") {
-    mode = input.requestedMode || "full";
+    mode = input.requestedMode || "quick";
     reason = "manual";
   } else {
     if (localCount <= 0) {
@@ -310,16 +338,48 @@ export function completeSyncReservation(
     lastCompletedAt: now,
     lastCompletedStatus: input.status,
   };
+  const failureCode = typeof input.errorCode === "string" ? input.errorCode : "";
+  const isRateLimited = failureCode === "RATE_LIMITED";
 
   if (input.status === "success") {
     nextAccount.lastSuccessAt = now;
-    nextAccount.lastIncrementalSyncAt = now;
     if (input.mode === "full") {
       nextAccount.lastFullSyncAt = now;
+    } else {
+      nextAccount.lastIncrementalSyncAt = now;
     }
+    if (input.trigger === "manual") {
+      nextAccount.manualCooldownUntil = now + SYNC_ORCHESTRATOR_MANUAL_SUCCESS_COOLDOWN_MS;
+    }
+    nextAccount.rateLimitBackoffUntil = 0;
+    nextAccount.rateLimitConsecutive = 0;
+    nextAccount.lastFailureCode = null;
     nextAccount.lastError = null;
   } else if (input.status !== "skipped") {
     nextAccount.lastError = input.status;
+    nextAccount.lastFailureCode = failureCode || null;
+    if (input.trigger === "manual") {
+      nextAccount.manualCooldownUntil = Math.max(
+        nextAccount.manualCooldownUntil,
+        now + SYNC_ORCHESTRATOR_MANUAL_FAILURE_RETRY_MS,
+      );
+    }
+    if (isRateLimited) {
+      const nextStreak = Math.max(1, nextAccount.rateLimitConsecutive + 1);
+      const backoffMs = Math.min(
+        SYNC_ORCHESTRATOR_RATE_LIMIT_BACKOFF_BASE_MS * Math.pow(2, nextStreak - 1),
+        SYNC_ORCHESTRATOR_RATE_LIMIT_BACKOFF_MAX_MS,
+      );
+      nextAccount.rateLimitConsecutive = nextStreak;
+      nextAccount.rateLimitBackoffUntil = now + backoffMs;
+      nextAccount.manualCooldownUntil = Math.max(
+        nextAccount.manualCooldownUntil,
+        nextAccount.rateLimitBackoffUntil,
+      );
+    } else {
+      nextAccount.rateLimitConsecutive = 0;
+      nextAccount.rateLimitBackoffUntil = 0;
+    }
   }
 
   return withAccount(state, accountKey, nextAccount);
@@ -369,7 +429,9 @@ export function normalizeSyncOrchestratorState(value: unknown): SyncOrchestrator
           leaseId: toStringOrNull(inFlightRaw.leaseId) || "",
           mode: inFlightRaw.mode === "full"
             ? ("full" as SyncMode)
-            : ("incremental" as SyncMode),
+            : inFlightRaw.mode === "quick"
+              ? ("quick" as SyncMode)
+              : ("incremental" as SyncMode),
           trigger: inFlightRaw.trigger === "manual"
             ? ("manual" as SyncTrigger)
             : ("auto" as SyncTrigger),
@@ -383,12 +445,16 @@ export function normalizeSyncOrchestratorState(value: unknown): SyncOrchestrator
       lastSuccessAt: toNumber(accountRaw.lastSuccessAt),
       lastFullSyncAt: toNumber(accountRaw.lastFullSyncAt),
       lastIncrementalSyncAt: toNumber(accountRaw.lastIncrementalSyncAt),
+      manualCooldownUntil: toNumber(accountRaw.manualCooldownUntil),
+      rateLimitBackoffUntil: toNumber(accountRaw.rateLimitBackoffUntil),
+      rateLimitConsecutive: toNumber(accountRaw.rateLimitConsecutive),
       lastAttemptAt: toNumber(accountRaw.lastAttemptAt),
       lastCompletedAt: toNumber(accountRaw.lastCompletedAt),
       lastCompletedStatus: (toStringOrNull(accountRaw.lastCompletedStatus) as SyncCompletionStatus | null) || null,
       lastDecisionAt: toNumber(accountRaw.lastDecisionAt),
       lastDecisionReason: (toStringOrNull(accountRaw.lastDecisionReason) as SyncReservationDecision["reason"] | null) || null,
       lastError: toStringOrNull(accountRaw.lastError),
+      lastFailureCode: toStringOrNull(accountRaw.lastFailureCode),
     };
   }
 

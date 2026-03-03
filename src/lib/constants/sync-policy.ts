@@ -8,10 +8,10 @@
 export const SYNC_PAGE_SIZE = 100;
 
 /** Maximum pages fetched per sync job. 3 pages = up to 250 bookmarks. */
-export const SYNC_MAX_PAGES_PER_JOB = 3;
+export const SYNC_MAX_PAGES_PER_JOB = 2;
 
 /** Hard cap on bookmarks fetched per sync job. */
-export const SYNC_MAX_BOOKMARKS_PER_JOB = 250;
+export const SYNC_MAX_BOOKMARKS_PER_JOB = 200;
 
 // ── Orchestrator timing ─────────────────────────────────────
 /** How long an in-flight lease is valid before it's considered stale. */

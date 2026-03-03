@@ -160,6 +160,7 @@ export interface AuthStatus {
 export type SyncBlockedReason =
   | "in_flight"
   | "cooldown"
+  | "rate_limited"
   | "no_account"
   | "not_ready";
 
@@ -167,7 +168,7 @@ export interface RuntimeSyncPolicy {
   accountKey: string | null;
   inFlight: {
     leaseId: string;
-    mode: "full" | "incremental";
+    mode: "full" | "incremental" | "quick";
     trigger: "manual" | "auto";
     startedAt: number;
   } | null;

@@ -258,6 +258,27 @@ describe("reconcileBookmarks", () => {
       expect(result.pagesRequested).toBe(1);
     });
 
+    it("caps quick sync by pages and bookmarks while preserving incremental behavior", async () => {
+      const localIds = new Set<string>();
+      const fetchPage = makePaginatedFetcher([
+        [makeBookmark("1"), makeBookmark("2"), makeBookmark("3")],
+        [makeBookmark("4"), makeBookmark("5"), makeBookmark("6")],
+        [makeBookmark("7"), makeBookmark("8"), makeBookmark("9")],
+      ]);
+
+      const result = await reconcileBookmarks({
+        localIds,
+        fetchPage,
+        fullReconcile: false,
+        maxPages: 3,
+        maxBookmarks: 5,
+      });
+
+      expect(result.pagesRequested).toBe(2);
+      expect(result.newBookmarks.map((b) => b.tweetId)).toEqual(["1", "2", "3", "4", "5"]);
+      expect(result.staleIds).toHaveLength(0);
+    });
+
     it("full reconcile with N bookmarks at P per page = ceil(N/P) fetches", async () => {
       const totalBookmarks = 10;
       const pageSize = 3;

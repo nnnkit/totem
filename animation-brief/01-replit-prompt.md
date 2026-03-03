@@ -35,17 +35,37 @@ made of two paths: a large terracotta triangle (M20 80 L80 80 L80 20 Z, fill #e0
 and a darker shadow triangle (M80 20 L52.5 47.5 L80 80 Z, fill #c96b50).
 Use this mark in the pivot scene and the closing tagline scene.
 
+VIDEO SPECS
+Duration: 30–35 seconds (short — optimised for social/Twitter, grab attention fast)
+Output: 1080p, 16:9, 60fps
+Aspect ratio: consider also exporting a 9:16 vertical crop for mobile
+
 SCENES
 
-SCENE 1 — THE PROBLEM (0–8s)
-A chaotic social feed fills the screen: rows of small cards with engagement
-numbers, trending labels, notification dots, random images. Colors are muted
-and desaturated. Text fades in on the left side:
-  Line 1: "You saved it to read later."
-  Line 2 (1.5s delay): "You opened X. You scrolled instead."
-The feed blurs and dims to near-black.
+SCENE 1 — OPEN WITH THE READING EXPERIENCE (0–8s)
+Do not start with the problem. Start with the product.
 
-SCENE 2 — THE PIVOT (8–12s)
+Show the full-page article screenshot (ss11-article-scroll-dark.png) filling
+the frame — no browser chrome, edge to edge. Begin a slow upward scroll from
+the title downward at ~60px/s. The Spectral serif text, clean paragraphs, and
+dark background should feel like opening a well-designed book.
+
+After 3 seconds of scrolling, zoom in (scale 1.0 → 1.08, 600ms ease-out) and
+cross-dissolve to the highlighted version (ss15-article-highlighted-dark.png)
+— the same article, same scroll position, but now sentences glow with soft
+terracotta highlights and wavy note underlines are visible.
+
+Play a soft click sound at the moment the highlight dissolve happens.
+
+Hold on the highlighted version for 1.5 seconds while continuing the slow scroll.
+
+Overlay text fades in (bottom-left, small caps): "Read it. Mark it. Own it."
+
+Then cut to: the same sequence for the thread (ss9 → ss13), 3 seconds total.
+Thread has the vertical connector lines and avatar — visually very different
+from X's UI.
+
+SCENE 2 — THE PROBLEM (8–12s)
 A browser new tab appears — dark, minimal, completely empty except for the
 Totem logo mark centered on screen, which gently scales in from 0.85 to 1.0.
 Text fades in below the logo: "Open a new tab. Start reading."
@@ -78,15 +98,28 @@ Show a clean list panel with:
 - Switch to Reading tab: show 2 rows with "Last read 2h ago · 3 Highlights" metadata
 Overlay text: "Every bookmark. Sorted. No feed."
 
-SCENE 5 — THE READER (32–40s)
-Open the reader view full screen. Reference screenshot ss6-reader-article.png.
-Show:
-- Wide centered column, Spectral serif at 20px, generous line height
-- A 3-paragraph tweet thread rendered as clean prose
-- User's mouse cursor selects a sentence — highlight it in amber (#fbbf24 at 40% opacity)
-- A small toolbar appears above the selection with two buttons: "Highlight" and "Note"
-- The selected text gains a persistent amber underline/background
-Overlay text: "Read it. Highlight it. Pick up where you left off."
+SCENE 5 — THE READER INTERACTION (32–38s)
+Show a viewport-sized crop of the reader (ss6-reader-article.png).
+Animate a mouse cursor moving to a sentence mid-paragraph and clicking to
+select it. Play a soft click sound as the selection appears.
+Zoom in slightly on the selected text (scale 1.0 → 1.06, 400ms ease-out).
+The SelectionToolbar ("Highlight · Add note") appears above the selection with
+a gentle popover-in animation (scale 0.92 → 1.0, 200ms).
+User clicks "Highlight" — play a second soft click sound. The text immediately
+gets the terracotta background fill. Zoom back out (1.06 → 1.0, 300ms ease-in).
+Then cursor moves to a second sentence, clicks "Highlight" then "Add note" —
+play click sounds for each. That sentence switches to the wavy underline style.
+Zoom into the wavy underline for 0.5 seconds to make sure it registers visually.
+Overlay text: "Highlight. Annotate. Nothing gets lost."
+
+SCENE 5b — DARK / LIGHT MODE FLIP (38–42s)
+Show the full-page article screenshot (ss11-article-scroll-dark.png) filling
+the screen with a slow upward scroll. After 2 seconds, cross-dissolve to the
+same article in light mode (ss12-article-scroll-light.png), continuing the
+scroll. Then dissolve back to dark.
+Copy overlay center: "Read in any light."
+This scene should feel like watching someone adjust to the right reading
+environment — calm, deliberate, satisfying.
 
 SCENE 6 — LOCAL FIRST (40–43s)
 Dark minimal scene. Browser icon on one side. A cloud/server icon with a
@@ -100,6 +133,15 @@ Below it in large Spectral serif, weight 400:
   "actually read what you saved on X."
 Small text below in muted: "Free Chrome extension"
 Slow fade to black over 1.5 seconds.
+
+SOUND DESIGN
+Use a subtle soft click sound (like a mechanical keyboard or a gentle UI tap)
+at these exact moments:
+- When the highlight background fill appears (Scene 1 dissolve + Scene 5 click)
+- When the SelectionToolbar button is clicked
+- When a note is added (the wavy underline appears)
+No music. No voiceover. Sound only on interactions — everything else is silent.
+The silence reinforces the calm, focused reading atmosphere.
 
 MOTION RULES
 - All transitions: slow opacity dissolves or 12px upward fades, 350–500ms duration

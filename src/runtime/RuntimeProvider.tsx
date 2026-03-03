@@ -74,7 +74,9 @@ function describeBlockedReason(reason: SyncBlockedReason | null): string | undef
     case "in_flight":
       return "A sync is already running.";
     case "cooldown":
-      return "Please wait a few seconds before syncing again.";
+      return "Please wait before syncing again.";
+    case "rate_limited":
+      return "Rate limited by X. Please wait and try again.";
     case "no_account":
       return "Account context is not available yet.";
     case "not_ready":

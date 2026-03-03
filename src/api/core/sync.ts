@@ -1,6 +1,6 @@
 export type SyncTrigger = "auto" | "manual";
 export type SyncCompletionStatus = "success" | "failure" | "timeout" | "skipped";
-export type SyncMode = "full" | "incremental";
+export type SyncMode = "full" | "incremental" | "quick";
 
 export interface SyncReservationDecision {
   allow: boolean;
@@ -18,6 +18,7 @@ interface RuntimeResponse {
   reason?: string;
   leaseId?: string;
   accountKey?: string;
+  errorCode?: string;
 }
 
 function runtimeError(response: RuntimeResponse): string {
@@ -42,7 +43,9 @@ export async function reserveSyncRun(input: {
   return {
     allow: response.allow === true,
     mode:
-      response.mode === "full" || response.mode === "incremental"
+      response.mode === "full" ||
+      response.mode === "incremental" ||
+      response.mode === "quick"
         ? response.mode
         : null,
     reason: typeof response.reason === "string" ? response.reason : "unknown",
@@ -58,6 +61,7 @@ export async function completeSyncRun(input: {
   mode: SyncMode;
   status: SyncCompletionStatus;
   trigger: SyncTrigger;
+  errorCode?: string;
 }): Promise<void> {
   const response = (await chrome.runtime.sendMessage({
     type: "COMPLETE_SYNC",
@@ -66,6 +70,7 @@ export async function completeSyncRun(input: {
     mode: input.mode,
     status: input.status,
     trigger: input.trigger,
+    errorCode: input.errorCode,
   })) as RuntimeResponse;
   if (response?.error) throw new Error(runtimeError(response));
 }

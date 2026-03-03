@@ -99,7 +99,22 @@ describe("sync orchestrator", () => {
     expect(manual.decision.reason).toBe("manual");
   });
 
-  it("applies short cooldown to repeated manual clicks", () => {
+  it("defaults manual sync mode to quick when not specified", () => {
+    const initial = createEmptySyncOrchestratorState();
+    const now = 3_300_000;
+
+    const manual = reserve(initial, {
+      accountId: "acct_a",
+      trigger: "manual",
+      localCount: 0,
+    }, now);
+
+    expect(manual.decision.allow).toBe(true);
+    expect(manual.decision.mode).toBe("quick");
+    expect(manual.decision.reason).toBe("manual");
+  });
+
+  it("applies cooldown to repeated manual clicks after success", () => {
     const initial = createEmptySyncOrchestratorState();
     const now = 3_500_000;
 
@@ -127,6 +142,46 @@ describe("sync orchestrator", () => {
     }, now + 1_000);
     expect(tooSoon.decision.allow).toBe(false);
     expect(tooSoon.decision.reason).toBe("cooldown");
+  });
+
+  it("blocks manual sync after rate-limit failure until backoff expires", () => {
+    const initial = createEmptySyncOrchestratorState();
+    const now = 3_800_000;
+
+    const first = reserve(initial, {
+      accountId: "acct_a",
+      trigger: "manual",
+      requestedMode: "quick",
+      localCount: 0,
+    }, now);
+    expect(first.decision.allow).toBe(true);
+
+    const failed = completeSyncReservation(first.state, {
+      accountId: "acct_a",
+      leaseId: first.decision.leaseId || "",
+      mode: "quick",
+      status: "failure",
+      trigger: "manual",
+      errorCode: "RATE_LIMITED",
+    }, now + 2_000);
+
+    const blocked = reserve(failed, {
+      accountId: "acct_a",
+      trigger: "manual",
+      requestedMode: "quick",
+      localCount: 0,
+    }, now + 10_000);
+    expect(blocked.decision.allow).toBe(false);
+    expect(blocked.decision.reason).toBe("rate_limited");
+
+    const afterBackoff = reserve(failed, {
+      accountId: "acct_a",
+      trigger: "manual",
+      requestedMode: "quick",
+      localCount: 0,
+    }, now + 63_000);
+    expect(afterBackoff.decision.allow).toBe(true);
+    expect(afterBackoff.decision.mode).toBe("quick");
   });
 
   it("isolates lock/cooldown by account", () => {
