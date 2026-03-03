@@ -8,6 +8,7 @@ export interface SyncReservationDecision {
   reason: string;
   leaseId?: string;
   accountKey?: string;
+  retryAfterMs?: number;
 }
 
 interface RuntimeResponse {
@@ -19,6 +20,7 @@ interface RuntimeResponse {
   leaseId?: string;
   accountKey?: string;
   errorCode?: string;
+  retryAfterMs?: number;
 }
 
 function runtimeError(response: RuntimeResponse): string {
@@ -52,6 +54,10 @@ export async function reserveSyncRun(input: {
     leaseId: typeof response.leaseId === "string" ? response.leaseId : undefined,
     accountKey:
       typeof response.accountKey === "string" ? response.accountKey : undefined,
+    retryAfterMs:
+      typeof response.retryAfterMs === "number" && Number.isFinite(response.retryAfterMs)
+        ? Math.max(0, Math.floor(response.retryAfterMs))
+        : undefined,
   };
 }
 

@@ -197,6 +197,7 @@ export interface RuntimeSnapshot {
 export interface SyncRequestResult {
   accepted: boolean;
   reason?: string;
+  retryAfterMs?: number;
 }
 
 export type SyncStatus = "loading" | "syncing" | "idle" | "error" | "reauthing";

@@ -75,6 +75,7 @@ interface ActiveSyncLease {
 }
 
 const DEFAULT_SYNC_AUTO_ENABLED = false;
+const CREATE_EVENT_FETCH_COUNT = 20;
 const SYNC_BLOCKED_REASONS = new Set<SyncBlockedReason>([
   "in_flight",
   "cooldown",
@@ -274,6 +275,7 @@ export function useBookmarks(
       return {
         accepted: false,
         reason: blockedReason || policy.reason || "blocked",
+        retryAfterMs: policy.retryAfterMs,
       };
     }
 
@@ -484,15 +486,35 @@ export function useBookmarks(
         await ackBookmarkEvents(deleteEventIds);
       }
 
-      // Manual-sync-only mode: never fetch bookmark pages from event processing.
-      // Create events are acknowledged and picked up on next user-triggered full sync.
-      if (plan.needsPageFetch || createEventIds.length > 0) {
+      let createFetchSucceeded = true;
+      if (plan.needsPageFetch) {
+        if (!isReady) {
+          createFetchSucceeded = false;
+        } else {
+          try {
+            const page = await fetchBookmarkPage(undefined, CREATE_EVENT_FETCH_COUNT);
+            const currentIds = new Set(bookmarksRef.current.map((b) => b.tweetId));
+            const deduped = page.bookmarks.filter((b) => !currentIds.has(b.tweetId));
+            if (deduped.length > 0) {
+              const updated = [...bookmarksRef.current, ...deduped].toSorted(compareSortIndexDesc);
+              bookmarksRef.current = updated;
+              setBookmarks(updated);
+              await upsertBookmarks(deduped);
+            }
+            await chrome.storage.local.set({ [CS_LAST_SOFT_SYNC]: Date.now() });
+          } catch {
+            createFetchSucceeded = false;
+          }
+        }
+      }
+
+      if (createEventIds.length > 0 && createFetchSucceeded) {
         await ackBookmarkEvents(createEventIds);
       }
     } finally {
       processingBookmarkEventsRef.current = false;
     }
-  }, []);
+  }, [isReady]);
 
   // ── Effect: DB cleanup (runs once) ──
 

@@ -39,6 +39,7 @@ export interface SyncReservationDecision {
     | "no_account";
   leaseId?: string;
   accountKey: string;
+  retryAfterMs?: number;
 }
 
 export interface SyncReservationResult {
@@ -159,6 +160,33 @@ export function reserveSyncRun(
   }
 
   let account = state.accounts[accountKey] || createEmptyAccountState();
+  const retryAfterFor = (
+    reason: SyncReservationDecision["reason"],
+  ): number | undefined => {
+    if (reason === "cooldown") {
+      return Math.max(0, account.manualCooldownUntil - now);
+    }
+    if (reason === "rate_limited") {
+      return Math.max(0, account.rateLimitBackoffUntil - now);
+    }
+    if (reason === "in_flight" && account.inFlight) {
+      const reclaimAt = account.inFlight.startedAt + SYNC_ORCHESTRATOR_MANUAL_RECLAIM_MS;
+      return Math.max(0, reclaimAt - now);
+    }
+    if (reason === "auto_backoff") {
+      return Math.max(
+        0,
+        account.lastAttemptAt + SYNC_ORCHESTRATOR_AUTO_BACKOFF_MS - now,
+      );
+    }
+    if (reason === "fresh_cache") {
+      return Math.max(
+        0,
+        account.lastSuccessAt + SYNC_ORCHESTRATOR_AUTO_INTERVAL_MS - now,
+      );
+    }
+    return undefined;
+  };
   if (
     account.inFlight &&
     now - account.inFlight.startedAt >= SYNC_ORCHESTRATOR_LOCK_TTL_MS
@@ -180,6 +208,7 @@ export function reserveSyncRun(
           mode: null,
           reason: "in_flight",
           accountKey,
+          retryAfterMs: retryAfterFor("in_flight"),
         },
       };
     }
@@ -197,6 +226,7 @@ export function reserveSyncRun(
         mode: null,
         reason: "rate_limited",
         accountKey,
+        retryAfterMs: retryAfterFor("rate_limited"),
       },
     };
   }
@@ -216,6 +246,7 @@ export function reserveSyncRun(
         mode: null,
         reason: "cooldown",
         accountKey,
+        retryAfterMs: retryAfterFor("cooldown"),
       },
     };
   }
@@ -252,6 +283,7 @@ export function reserveSyncRun(
             mode: null,
             reason: "auto_backoff",
             accountKey,
+            retryAfterMs: retryAfterFor("auto_backoff"),
           },
         };
       }
@@ -270,6 +302,7 @@ export function reserveSyncRun(
             mode: null,
             reason: "fresh_cache",
             accountKey,
+            retryAfterMs: retryAfterFor("fresh_cache"),
           },
         };
       }
@@ -285,6 +318,7 @@ export function reserveSyncRun(
             mode: null,
             reason: "auto_backoff",
             accountKey,
+            retryAfterMs: retryAfterFor("auto_backoff"),
           },
         };
       }

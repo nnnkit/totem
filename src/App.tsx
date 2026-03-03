@@ -71,6 +71,22 @@ interface ToastState {
 
 type AppView = "home" | "reading";
 
+function formatRetryAfterMs(value?: number): string | null {
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
+    return null;
+  }
+  const totalSeconds = Math.ceil(value / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  if (minutes <= 0) {
+    return `${seconds}s`;
+  }
+  if (seconds === 0) {
+    return `${minutes}m`;
+  }
+  return `${minutes}m ${seconds}s`;
+}
+
 export default function App() {
   const {
     phase,
@@ -141,17 +157,30 @@ export default function App() {
     localStorage.setItem(LS_READING_TAB, tab);
   }, []);
   const [toast, setToast] = useState<ToastState | null>(null);
-  const notifySyncBlocked = useCallback((reason?: string) => {
+  const notifySyncBlocked = useCallback((reason?: string, retryAfterMs?: number) => {
     const code = reason as SyncBlockedReason | undefined;
+    const retryIn = formatRetryAfterMs(retryAfterMs);
     switch (code) {
       case "in_flight":
-        setToast({ message: "Sync is already running in another tab." });
+        setToast({
+          message: retryIn
+            ? `Sync is in progress. Try again in ${retryIn}.`
+            : "Sync is already in progress. Please wait for it to finish.",
+        });
         return;
       case "cooldown":
-        setToast({ message: "Please wait before trying sync again." });
+        setToast({
+          message: retryIn
+            ? `You can sync again in ${retryIn}.`
+            : "You can only resync every few minutes.",
+        });
         return;
       case "rate_limited":
-        setToast({ message: "X rate-limited sync requests. Please wait a bit and try again." });
+        setToast({
+          message: retryIn
+            ? `Sync is temporarily paused. Try again in ${retryIn}.`
+            : "Sync is temporarily paused. Please try again in a few minutes.",
+        });
         return;
       case "no_account":
         setToast({ message: "Could not identify account context. Try opening X once." });
@@ -167,7 +196,7 @@ export default function App() {
     refresh()
       .then((result) => {
         if (!result.accepted) {
-          notifySyncBlocked(result.reason);
+          notifySyncBlocked(result.reason, result.retryAfterMs);
         }
       })
       .catch(() => {});

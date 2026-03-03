@@ -670,8 +670,40 @@ async function handleSyncPolicyReserve(message = {}) {
       message.accountId || sessionSnapshot.accountContextId,
     );
 
+    const retryAfterFor = (reason, account) => {
+      if (!account || typeof account !== "object") return 0;
+      if (reason === "cooldown") {
+        return Math.max(0, Number(account.manualCooldownUntil || 0) - now);
+      }
+      if (reason === "rate_limited") {
+        return Math.max(0, Number(account.rateLimitBackoffUntil || 0) - now);
+      }
+      if (reason === "in_flight" && account.inFlight) {
+        const startedAt = Number(account.inFlight.startedAt || 0);
+        if (!startedAt) return 0;
+        if (trigger === "manual") {
+          return Math.max(0, startedAt + SYNC_ORCHESTRATOR_MANUAL_RECLAIM_MS - now);
+        }
+        return Math.max(0, startedAt + SYNC_ORCHESTRATOR_LOCK_TTL_MS - now);
+      }
+      if (reason === "auto_backoff") {
+        return Math.max(
+          0,
+          Number(account.lastAttemptAt || 0) + SYNC_ORCHESTRATOR_AUTO_BACKOFF_MS - now,
+        );
+      }
+      if (reason === "fresh_cache") {
+        return Math.max(
+          0,
+          Number(account.lastSuccessAt || 0) + SYNC_ORCHESTRATOR_AUTO_INTERVAL_MS - now,
+        );
+      }
+      return 0;
+    };
+
     const returnBlocked = async (reason, account) => {
       const safeAccountKey = accountKey || "__none__";
+      const retryAfterMs = retryAfterFor(reason, account);
       if (accountKey) {
         state.accounts[accountKey] = {
           ...(account || createEmptySyncAccountState()),
@@ -690,8 +722,16 @@ async function handleSyncPolicyReserve(message = {}) {
         trigger,
         reason,
         accountKey: safeAccountKey,
+        retryAfterMs,
       }).catch(() => {});
-      return { ok: true, allow: false, mode: null, reason, accountKey: safeAccountKey };
+      return {
+        ok: true,
+        allow: false,
+        mode: null,
+        reason,
+        accountKey: safeAccountKey,
+        retryAfterMs,
+      };
     };
 
     if (!accountKey) {
