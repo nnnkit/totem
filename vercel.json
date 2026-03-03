@@ -14,8 +14,24 @@
       "destination": "/website/privacy.html"
     },
     {
+      "source": "/privacy.html",
+      "destination": "/website/privacy.html"
+    },
+    {
       "source": "/demo",
       "destination": "/website/demo-page.html"
+    },
+    {
+      "source": "/demo-page",
+      "destination": "/website/demo-page.html"
+    },
+    {
+      "source": "/demo-page.html",
+      "destination": "/website/demo-page.html"
+    },
+    {
+      "source": "/demo.html",
+      "destination": "/website/demo.html"
     }
   ],
   "redirects": [
