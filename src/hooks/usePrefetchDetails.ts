@@ -12,6 +12,40 @@ interface UsePrefetchDetailsReturn {
   prefetchedCount: number;
 }
 
+interface PrefetchLoopOptions {
+  tweetIds: string[];
+  fetchDetail: (tweetId: string) => Promise<unknown>;
+  onSuccess: () => void;
+  shouldStop: () => boolean;
+  pauseBetween?: () => Promise<void>;
+}
+
+export async function runPrefetchLoop({
+  tweetIds,
+  fetchDetail,
+  onSuccess,
+  shouldStop,
+  pauseBetween,
+}: PrefetchLoopOptions): Promise<void> {
+  for (let index = 0; index < tweetIds.length; index += 1) {
+    if (shouldStop()) return;
+
+    if (index > 0 && pauseBetween) {
+      await pauseBetween();
+      if (shouldStop()) return;
+    }
+
+    try {
+      await fetchDetail(tweetIds[index]);
+    } catch {
+      continue;
+    }
+
+    if (shouldStop()) return;
+    onSuccess();
+  }
+}
+
 export function usePrefetchDetails(
   bookmarks: Bookmark[],
   isReady: boolean,
@@ -44,26 +78,17 @@ export function usePrefetchDetails(
         else if (unread.length < OFFLINE_PREFETCH_UNREAD_MAX) unread.push(b);
       }
 
-      const candidates = [...read, ...unread];
-
-      const loop = async (index: number) => {
-        if (cancelledRef.current || index >= candidates.length) return;
-
-        try {
-          await fetchTweetDetail(candidates[index].tweetId);
-        } catch {
-          return;
-        }
-
-        if (cancelledRef.current) return;
-        setPrefetchedCount((c) => c + 1);
-
-        if (index + 1 < candidates.length) {
-          timerId = setTimeout(() => loop(index + 1), PREFETCH_INTERVAL_MS);
-        }
-      };
-
-      await loop(0);
+      const candidateIds = [...read, ...unread].map((bookmark) => bookmark.tweetId);
+      await runPrefetchLoop({
+        tweetIds: candidateIds,
+        fetchDetail: fetchTweetDetail,
+        onSuccess: () => setPrefetchedCount((c) => c + 1),
+        shouldStop: () => cancelledRef.current,
+        pauseBetween: () =>
+          new Promise<void>((resolve) => {
+            timerId = setTimeout(resolve, PREFETCH_INTERVAL_MS);
+          }),
+      });
     };
 
     run().catch(() => {});

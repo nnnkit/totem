@@ -52,6 +52,22 @@ const NAMED_ENTITIES: Record<string, string> = {
 };
 
 const NAMED_RE = /&(?:amp|lt|gt|quot|apos);/g;
+const MAX_UNICODE_CODE_POINT = 0x10ffff;
+
+function decodeCodePoint(codePoint: number, fallback: string): string {
+  if (
+    !Number.isInteger(codePoint) ||
+    codePoint < 0 ||
+    codePoint > MAX_UNICODE_CODE_POINT
+  ) {
+    return fallback;
+  }
+  try {
+    return String.fromCodePoint(codePoint);
+  } catch {
+    return fallback;
+  }
+}
 
 export function decodeHtmlEntities(text: string): string {
   if (!text || !/&/.test(text)) return text;
@@ -59,8 +75,8 @@ export function decodeHtmlEntities(text: string): string {
   return text
     .replace(/&amp;/g, "&")
     .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) =>
-      String.fromCodePoint(parseInt(hex, 16)),
+      decodeCodePoint(parseInt(hex, 16), `&#x${hex};`),
     )
-    .replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(Number(dec)))
+    .replace(/&#(\d+);/g, (_, dec) => decodeCodePoint(Number(dec), `&#${dec};`))
     .replace(NAMED_RE, (match) => NAMED_ENTITIES[match] || match);
 }

@@ -91,6 +91,7 @@ export function NewTabHome({
   const [cardEngaged, setCardEngaged] = useState(false);
   const [mountSeed] = useState(() => Math.random());
   const searchRef = useRef<HTMLInputElement>(null);
+  const prevWallpaperUrlRef = useRef<string | null>(null);
   const { wallpaperUrl, wallpaperCredit, gradientCss } = useWallpaper(backgroundMode);
   const { sites: topSites } = useTopSites(topSitesLimit, showTopSites);
 
@@ -115,14 +116,14 @@ export function NewTabHome({
     return pool[index];
   }, [items, unreadItems, mountSeed]);
 
-  const [prevWallpaperUrl, setPrevWallpaperUrl] = useState(wallpaperUrl);
-  if (wallpaperUrl !== prevWallpaperUrl) {
-    setPrevWallpaperUrl(wallpaperUrl);
+  const showWallpaper = Boolean(wallpaperUrl && !imgError);
+
+  useEffect(() => {
+    if (prevWallpaperUrlRef.current === wallpaperUrl) return;
+    prevWallpaperUrlRef.current = wallpaperUrl;
     setImgLoaded(false);
     setImgError(false);
-  }
-
-  const showWallpaper = Boolean(wallpaperUrl && !imgError);
+  }, [wallpaperUrl]);
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(new Date()), CLOCK_UPDATE_MS);

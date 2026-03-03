@@ -17,6 +17,7 @@ import { TweetLinks } from "./TweetLinks";
 import { TweetRecommendations } from "./TweetRecommendations";
 import type { ReaderTweet } from "./types";
 import { resolveTweetBodyVisibility } from "./tweet-body-visibility";
+import { classifyDetailError } from "./detail-error";
 import { cn } from "../../lib/cn";
 import { Button } from "../ui/Button";
 import { OfflineBanner } from "../ui/OfflineBanner";
@@ -257,6 +258,57 @@ function ActionBar({
   );
 }
 
+interface DetailErrorNoticeProps {
+  detailError: string;
+  onLogin?: () => void;
+}
+
+function DetailErrorNotice({ detailError, onLogin }: DetailErrorNoticeProps) {
+  const errorKind = classifyDetailError(detailError, {
+    isOnline: typeof navigator === "undefined" ? true : navigator.onLine,
+  });
+
+  if (errorKind === "none") return null;
+
+  if (errorKind === "offline") {
+    return <OfflineBanner onLogin={onLogin} />;
+  }
+
+  if (errorKind === "auth") {
+    return (
+      <div className="text-sm text-muted">
+        <hr className="mb-3 w-12 border-t border-dashed border-border" />
+        <p>
+          Session expired while loading full details.
+          {onLogin && (
+            <>
+              {" "}
+              <button
+                type="button"
+                onClick={onLogin}
+                className="underline hover:text-foreground"
+              >
+                Log in
+              </button>{" "}
+              to retry.
+            </>
+          )}
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="text-sm text-muted">
+      <hr className="mb-3 w-12 border-t border-dashed border-border" />
+      <p>
+        Couldn't load full thread details right now.
+        <span className="ml-1">Saved tweet content is still available.</span>
+      </p>
+    </div>
+  );
+}
+
 /* ── Main component ── */
 
 interface Props {
@@ -331,7 +383,7 @@ export const TweetContent = memo(function TweetContent({
 
       {detailError && (
         <div className="mt-8">
-          <OfflineBanner onLogin={onLogin} />
+          <DetailErrorNotice detailError={detailError} onLogin={onLogin} />
         </div>
       )}
 

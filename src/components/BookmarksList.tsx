@@ -89,11 +89,6 @@ export function BookmarksList({
 }: Props) {
   const containerWidthClass = "max-w-3xl";
   const [focusedIndex, setFocusedIndex] = useState(-1);
-  const [prevActiveTab, setPrevActiveTab] = useState(activeTab);
-  if (prevActiveTab !== activeTab) {
-    setPrevActiveTab(activeTab);
-    setFocusedIndex(-1);
-  }
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const tabListRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -101,6 +96,10 @@ export function BookmarksList({
   const readTabRef = useRef<HTMLButtonElement>(null);
   const unreadTabRef = useRef<HTMLButtonElement>(null);
   const [indicator, setIndicator] = useState({ left: 0, width: 0 });
+
+  useEffect(() => {
+    setFocusedIndex(-1);
+  }, [activeTab]);
 
   const allBookmarks = useMemo(() => {
     const seen = new Set<string>();
