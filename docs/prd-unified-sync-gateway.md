@@ -16,8 +16,8 @@ Important: this system can significantly reduce ban risk, but it cannot guarante
 
 1. Route all X API requests through one gateway with consistent policy enforcement.
 2. Prevent duplicate manual sync runs when users click multiple times.
-3. Keep first sync fast by fetching a capped recent window first.
-4. Limit how many bookmarks are shown by default for performance and readability.
+3. Keep first sync fast by fetching a capped recent window and streaming results to the UI as each page arrives.
+4. Ensure the UI remains responsive at any bookmark count through efficient rendering (virtual scrolling), not artificial display caps.
 5. Make limits configurable so premium tiers can be enabled later without architecture changes.
 
 ## 3) Non-Goals (v1)
@@ -67,23 +67,31 @@ No module should call X API directly. Existing sync/detail/create/delete handler
 
 6. Progress + State Reporter
 - Exposes sync status to UI (`queued`, `running`, `paused`, `blocked`, `done`, `failed`).
+- Emits per-page progress events so the UI can stream bookmarks as they arrive.
+
+7. Per-Page Streaming
+- Each completed page fetch writes results to IndexedDB immediately.
+- UI is notified after each page via `SYNC_PAGE_COMPLETE` event.
+- First page renders instantly; subsequent pages append progressively.
+- Sync loop should be owned by the service worker so it survives UI component unmounts.
 
 ## 6) Sync Modes
 
 ### 6.1 Quick Sync (default manual and first-run)
 
-Purpose: immediate usable data with low request volume.
+Purpose: immediate usable data with low request volume, streamed progressively.
 
 - Fetch newest pages only.
 - Stop at cap.
 - Save cursor for optional future continuation.
+- Stream results to UI page-by-page: first 100 bookmarks appear immediately, remaining pages append as they arrive.
 
 Default free-tier cap:
-- `PAGE_SIZE = 20`
-- `MAX_PAGES_PER_JOB = 10`
-- `MAX_BOOKMARKS_PER_JOB = 200`
+- `PAGE_SIZE = 100` (matches existing X API page size)
+- `MAX_PAGES_PER_JOB = 3`
+- `MAX_BOOKMARKS_PER_JOB = 250`
 
-Result: first run needs about 10 page requests instead of hundreds for very large accounts.
+Result: first run needs 3 page requests instead of hundreds for very large accounts. First page of 100 bookmarks is visible within seconds.
 
 ### 6.2 Incremental Sync (auto/stale refresh)
 
@@ -114,22 +122,28 @@ Result: first run needs about 10 page requests instead of hundreds for very larg
 4. Recovery:
 - Stale in-flight locks can be reclaimed after TTL (existing behavior retained).
 
-## 8) Bookmark Display and Fetch Limits
+## 8) Progressive Loading and UI Rendering
 
-We separate network limit from UI display limit.
+The fetch budget (250 bookmarks) is the sole throttle on API usage. There is no separate UI display cap. The UI must handle any number of local bookmarks efficiently.
 
-1. Network fetch limit (v1 free)
-- First manual sync fetches max 200 bookmarks.
+### 8.1 Progressive streaming during sync
 
-2. UI display limit (v1 free)
-- Show latest 200 bookmarks by default.
-- Provide explicit “Load older from local cache” in chunks (for users already having more locally).
-- No additional network call for local-only pagination.
+1. Each page fetch (100 bookmarks) writes to IndexedDB immediately on completion.
+2. The UI receives a `SYNC_PAGE_COMPLETE` notification after each page.
+3. The UI appends new bookmarks to the rendered list without a full reload.
+4. User sees first 100 bookmarks within seconds, with remaining pages appearing progressively (~2-3s apart due to human-like fetch delays).
 
-3. Reason
-- Keeps UI fast.
-- Reduces temptation to over-sync.
-- Gives predictable resource usage on low-end devices.
+### 8.2 UI rendering performance
+
+1. Use virtual scrolling (e.g. `react-window`) so rendering cost is constant regardless of total bookmark count.
+2. No artificial display cap — all locally stored bookmarks are accessible via scrolling and search.
+3. Search operates over the full local dataset, not a capped subset.
+
+### 8.3 Reason
+
+- Fetch budget controls API risk; the UI should not re-implement rate limiting via display caps.
+- Virtual scrolling solves the rendering performance problem at its root rather than hiding it behind a cap.
+- Progressive streaming gives immediate value while staying conservative on requests.
 
 ## 9) Policy Configuration (future-proof for premium)
 
@@ -140,7 +154,6 @@ type SyncPolicy = {
   manualCooldownMs: number;
   maxPagesPerJob: number;
   maxBookmarksPerJob: number;
-  uiVisibleBookmarksLimit: number;
   minRequestDelayMs: number;
   maxRequestJitterMs: number;
   burstLimitPerMinute: number;
@@ -154,9 +167,8 @@ Default profiles:
 | Field | Free (v1 default) | Premium (future) |
 |---|---:|---:|
 | `manualCooldownMs` | 900,000 (15m) | 120,000 (2m) |
-| `maxPagesPerJob` | 10 | 50 |
-| `maxBookmarksPerJob` | 200 | 1,000 |
-| `uiVisibleBookmarksLimit` | 200 | 1,000 |
+| `maxPagesPerJob` | 3 | 25 |
+| `maxBookmarksPerJob` | 250 | 2,500 |
 | `allowDeferredBackfill` | false | true |
 
 ## 10) Internal Contracts
@@ -176,7 +188,14 @@ Default profiles:
 - Input: `accountId`
 - Output: `jobId`, `state`, `fetchedCount`, `targetCount`, `startedAt`, `updatedAt`, `reason?`
 
-### 10.3 Event stream (optional first pass via polling)
+### 10.3 Page progress event
+
+`SYNC_PAGE_COMPLETE`
+- Emitted after each page is fetched and written to IndexedDB.
+- Payload: `jobId`, `pageNumber`, `newBookmarksCount`, `totalFetchedSoFar`, `hasMore`
+- UI uses this to append new bookmarks to the rendered list without reloading the full dataset.
+
+### 10.4 Event stream (optional first pass via polling)
 
 `SYNC_STATUS_CHANGED`
 - Emitted on state transitions so UI progress is live.
@@ -245,24 +264,27 @@ Exit criteria:
 - No direct API calls outside gateway.
 - Repeated manual clicks return same `jobId`.
 
-### Phase 2: Quick Sync Cap + UI States
+### Phase 2: Quick Sync Cap + Progressive UI
 
-1. Enforce `maxBookmarksPerJob=200` for free profile.
-2. Add sync progress states in UI.
-3. Add manual cooldown messaging.
+1. Enforce `maxBookmarksPerJob=250` for free profile (3 pages max).
+2. Implement per-page streaming: each page writes to IDB and notifies UI immediately.
+3. Add sync progress states in UI (page count, bookmark count).
+4. Add manual cooldown messaging.
 
 Exit criteria:
-- First manual sync does not exceed cap.
+- First manual sync does not exceed 250 bookmarks / 3 pages.
+- First page of bookmarks is visible within seconds of sync start.
 - Cooldown and in-flight states are visible and clear.
 
-### Phase 3: Display Cap + Local Pagination
+### Phase 3: Virtual Scrolling + Rendering Performance
 
-1. Default display to latest 200.
-2. Add local “Load older” chunking.
-3. Verify smooth performance on large local DB.
+1. Implement virtual scrolling for bookmark lists.
+2. Verify smooth performance with 1,000+ local bookmarks.
+3. Search operates over full local dataset.
 
 Exit criteria:
-- No heavy render lag with large bookmark libraries.
+- No render lag regardless of local bookmark count.
+- All local bookmarks are searchable and scrollable.
 
 ### Phase 4: Premium Policy Toggle
 
@@ -287,7 +309,7 @@ Exit criteria:
 - Account switch isolation.
 
 3. E2E tests:
-- First sync with simulated 10,000 bookmarks returns first 200 quickly.
+- First sync with simulated 10,000 bookmarks returns first 100 quickly and streams up to 250 total.
 - UI remains responsive while sync is active.
 - No duplicate sync jobs created by rapid clicks.
 
@@ -296,14 +318,14 @@ Exit criteria:
 1. All X API requests pass through gateway.
 2. One in-flight sync per account at any point.
 3. Repeated manual clicks do not multiply request volume.
-4. Free tier first sync caps at 200 bookmarks by default.
-5. UI default shows latest 200 bookmarks with clear state and local pagination.
-6. Safety backoff is triggered on repeated rate-limit responses.
-7. Config values can be changed per tier without rewriting sync flow.
+4. Free tier first sync caps at 250 bookmarks (3 pages) by default.
+5. First page of bookmarks (up to 100) is visible within seconds of sync start; remaining pages stream in progressively.
+6. UI uses virtual scrolling — all local bookmarks are accessible without artificial display caps.
+7. Safety backoff is triggered on repeated rate-limit responses.
+8. Config values can be changed per tier without rewriting sync flow.
 
 ## 17) Open Questions
 
 1. Should deferred backfill be enabled for free users at a very slow cadence, or fully disabled?
-2. Should “Load older” auto-trigger a backfill request when local cache has no older items?
-3. Should manual cooldown start at request time or successful completion time?
-4. What premium limits are acceptable from cost/risk perspective at launch?
+2. Should manual cooldown start at request time or successful completion time? (Recommendation: cooldown on success, short retry delay ~30s on failure — so users are not locked out for 15 minutes after a failed sync.)
+3. What premium limits are acceptable from cost/risk perspective at launch?
