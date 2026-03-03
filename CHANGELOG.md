@@ -2,6 +2,43 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.0] - 2026-03-03
+
+### Added
+- feat: improve sync
+- feat: fix better error messages
+- feat: implement sync threshold
+- feat: add animation info
+- feat: improve copy
+- feat: improve sync and auth
+- feat: fix offline and syncing issues
+- feat: refactor and improve sync
+- feat: website v2 implementation
+- feat: website v2
+- feat: add website basics
+- feat: fix parsing
+- feat: update website
+- feat: remove driver.js and product walkthrough
+
+### Changed
+- refactor: phase 2
+- refactor: from scratch the archetecture
+- refactor: move to provider
+- refactor: auth and sync
+- refactor: replace SyncState reducer with SyncStatus state machine
+
+### Fixed
+- fix: code review changes
+- fix: remove wallpaper selector
+- fix: quote showing full body
+- fix: remove image avatar for threads
+- fix: remove website
+- fix: remove tabs permission
+- fix: sanatize
+- fix: only persist reading tab to localStorage when tab has items
+- fix: sync state
+- fix: escape single quotes in escapeHtml and scope postMessage origin
+
 ## [1.0.4] - 2026-02-26
 
 ### Added
