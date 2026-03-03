@@ -1,0 +1,24 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "vite",
+  "installCommand": "pnpm install",
+  "buildCommand": "pnpm build",
+  "outputDirectory": "dist",
+  "redirects": [
+    {
+      "source": "/",
+      "destination": "/website/",
+      "permanent": false
+    },
+    {
+      "source": "/privacy",
+      "destination": "/website/privacy.html",
+      "permanent": false
+    },
+    {
+      "source": "/demo",
+      "destination": "/website/demo-page.html",
+      "permanent": false
+    }
+  ]
+}

@@ -1,297 +1,147 @@
 # Totem — Replit Animation Brief
 
-**Product:** Totem Chrome Extension
-**One-liner:** Totem turns your Chrome new tab into a focused reading queue for X bookmarks — so you actually read what you saved, without opening X and getting distracted by the feed.
-**Tagline:** "Totem — actually read what you saved on X."
+**How Replit Animation works:** It writes React code that plays in a loop. It is NOT a video editor — it animates HTML/CSS/JS. Upload all files flat into the Replit project (no subfolders). Reference them by filename in your prompts.
 
 ---
 
-## Files Index
+## Files to Upload
 
-Upload all of these into Replit. No subfolders — everything is flat.
+Upload everything flat — no subfolders.
 
-| File | Scene Used In | Notes |
-|---|---|---|
-| `ss1-home-card.png` | Scene 3 | Home: "YOUR NEXT READ" card |
-| `ss2-home-syncing.png` | — | Home: syncing spinner (reference) |
-| `ss3-list-unread.png` | Scene 4 | Reading list — Unread tab |
-| `ss4-list-reading.png` | — | Reading list — Reading tab (reference) |
-| `ss5-list-read.png` | — | Reading list — Read tab (reference) |
-| `ss6-reader-article.jpg` | Scene 5 | Reader — article viewport |
-| `ss7-reader-highlight.jpg` | Scene 5 | Reader — highlight toolbar active |
-| `ss8-settings.png` | — | Settings modal (reference) |
-| `ss9-thread-scroll-dark.png` | Scene 1 | Full thread — clean, dark |
-| `ss10-thread-scroll-light.png` | — | Full thread — clean, light (reference) |
-| `ss11-article-scroll-dark.jpg` | Scene 1, 5b | Full article — clean, dark |
-| `ss12-article-scroll-light.jpg` | Scene 5b | Full article — clean, light |
-| `ss13-thread-highlighted-dark.jpg` | Scene 1 | Thread with highlights, dark |
-| `ss14-thread-highlighted-light.jpg` | — | Thread with highlights, light (reference) |
-| `ss15-article-highlighted-dark.jpg` | Scene 1 | Article with highlights, dark |
-| `ss16-article-highlighted-light.jpg` | — | Article with highlights, light (reference) |
-| `logo.png` | Scene 2, 7 | Totem logo mark (512×512) |
-| `logo-with-shine.png` | Scene 2, 7 | Totem logo with gradient shine (512×512) |
-| `favicon.png` | — | Small logo for reference (256×256) |
+| File | What It Is |
+|---|---|
+| `ss1-home-card.png` | Home screen — "YOUR NEXT READ" card |
+| `ss3-list-unread.png` | Reading list — Unread tab |
+| `ss6-reader-article.jpg` | Reader — full article view |
+| `ss7-reader-highlight.jpg` | Reader — highlight toolbar visible |
+| `ss9-thread-scroll-dark.png` | Full-page thread, dark, no highlights |
+| `ss11-article-scroll-dark.jpg` | Full-page article, dark, no highlights |
+| `ss12-article-scroll-light.jpg` | Full-page article, light mode |
+| `ss13-thread-highlighted-dark.jpg` | Full-page thread, dark, WITH highlights |
+| `ss15-article-highlighted-dark.jpg` | Full-page article, dark, WITH highlights |
+| `logo-with-shine.png` | Totem logo mark (512×512) |
+
+Reference-only (upload but don't need to call out in prompts unless asked):
+`ss2`, `ss4`, `ss5`, `ss8`, `ss10`, `ss14`, `ss16`, `logo.png`, `favicon.png`
 
 ---
 
-## Replit Animation Prompt
+## Step 1 — Initial Prompt
 
-> Paste this into Replit Animation. Click **Enhance Prompt** before submitting.
+**Keep it short. Hit "Enhance Prompt" before submitting.**
 
----
-
-Create a 45-second product promo animation for a Chrome extension called Totem.
-
-**PRODUCT**
-Totem turns your Chrome new tab into a distraction-free reading queue for X (Twitter) bookmarks. Instead of opening X and getting pulled into the feed, you open a new tab and see exactly what you saved to read — clean, calm, one at a time. No Totem account, no server, everything stays in your browser.
-
-**TAGLINE:** "Totem — actually read what you saved on X."
-
-**BRAND**
-- Primary accent: #e07a5f (warm terracotta/coral)
-- Accent dark: #c96b50
-- Background: #0f0f0e (near-black)
-- Card surface: dark frosted glass, rgba(255,255,255,0.06), border rgba(255,255,255,0.08)
-- Text primary: rgba(255,255,255,0.90)
-- Text muted: rgba(255,255,255,0.45)
-- Sans font: Space Grotesk (use for UI labels, buttons, metadata)
-- Serif font: Spectral (use for headlines and reading content)
-- Tone: calm, editorial, premium — like Pocket or Substack, not a tech startup
-
-**LOGO**
-Use the uploaded file `logo-with-shine.png` for the logo mark. It is a dark rounded square (#1c1c1e) with a terracotta triangle (fill #e07a5f) and a shadow triangle (fill #c96b50) with a soft white gradient shine. Use it in the pivot scene and the closing tagline scene.
-
-**VIDEO SPECS**
-Duration: 30–35 seconds (short — optimised for social/Twitter, grab attention fast)
-Output: 1080p, 16:9, 60fps
-Aspect ratio: consider also exporting a 9:16 vertical crop for mobile
+> Create a 35-second dark-mode product promo animation for Totem, a Chrome extension that turns your new tab into a distraction-free reading queue for X (Twitter) bookmarks.
+>
+> Use the uploaded screenshots as the main visuals. Start with the reading experience (ss11-article-scroll-dark.jpg scrolling slowly upward, then dissolving to ss15-article-highlighted-dark.jpg showing highlights). Cut to the home screen (ss1-home-card.png). Then the reading list (ss3-list-unread.png). Then the reader (ss6-reader-article.jpg).
+>
+> Brand: dark background #0f0f0e, terracotta accent #e07a5f, serif font Spectral for headlines, Space Grotesk for UI. Tone: calm, editorial, premium.
+>
+> End with the logo (logo-with-shine.png) centered on a dark screen and the text: "actually read what you saved on X."
+>
+> Pacing: slow and deliberate. Smooth cross-dissolves between scenes. Text overlays fade in gently, one line at a time.
 
 ---
 
-### SCENE 1 — OPEN WITH THE READING EXPERIENCE (0–8s)
+## Step 2 — After First Render
 
-Do not start with the problem. Start with the product.
+Review what it built. Then send one of these depending on what you see:
 
-Show the full-page article screenshot (`ss11-article-scroll-dark.jpg`) filling the frame — no browser chrome, edge to edge. Begin a slow upward scroll from the title downward at ~60px/s. The Spectral serif text, clean paragraphs, and dark background should feel like opening a well-designed book.
+**If the overall structure is right but motion feels cheap:**
+> Make the animations more cinematic and polished. Slow everything down — the screenshot scrolls should feel like turning pages, not sliding. All text should fade in line by line with a subtle upward drift. Make transitions between scenes cross-dissolve instead of cut. Add a slow zoom (scale 1.0 to 1.06) on the screenshots while they scroll.
 
-After 3 seconds of scrolling, zoom in (scale 1.0 → 1.08, 600ms ease-out) and cross-dissolve to the highlighted version (`ss15-article-highlighted-dark.jpg`) — the same article, same scroll position, but now sentences glow with soft terracotta highlights and wavy note underlines are visible.
+**If it ignored the screenshots:**
+> The screenshots are uploaded as project files. Use them as the actual visual content — display them as large full-screen images and animate them (slow scroll, slow zoom, dissolve). Do not generate placeholder graphics in place of the screenshots.
 
-Play a soft click sound at the moment the highlight dissolve happens.
-
-Hold on the highlighted version for 1.5 seconds while continuing the slow scroll.
-
-Overlay text fades in (bottom-left, small caps): "Read it. Mark it. Own it."
-
-Then cut to: the same sequence for the thread (`ss9-thread-scroll-dark.png` → `ss13-thread-highlighted-dark.jpg`), 3 seconds total. Thread has the vertical connector lines and avatar — visually very different from X's UI.
+**If the brand colors are off:**
+> Correct the color palette: background must be #0f0f0e (near-black), accent color #e07a5f (terracotta/coral) used only on the tab underline indicator, "YOUR NEXT READ" label, and the logo. All other UI is white at reduced opacity. No blues, no bright whites, no gradients that weren't in the original.
 
 ---
 
-### SCENE 2 — THE PROBLEM (8–12s)
+## Step 3 — Refinement Round
 
-**Line 1** (fades in at 1s): "You saved it to read later."
-**Line 2** (fades in at 2.5s): "You opened X. You scrolled instead."
+Once the structure and motion feel right, push on polish:
 
-Then a browser new tab appears — dark, minimal, completely empty except for the Totem logo mark (`logo-with-shine.png`) centered on screen, which gently scales in from 0.85 to 1.0.
-
-Text fades in below the logo: "Open a new tab. Start reading."
-Hold for 1.5 seconds.
-
----
-
-### SCENE 3 — HOME SCREEN (12–22s)
-
-Show the Totem new tab interface. Reference screenshot `ss1-home-card.png`.
-
-Key elements to render:
-- Large serif clock numerals centered ("10:42") in text-white/90
-- A frosted glass card below the clock containing:
-  - Small caps label "YOUR NEXT READ" in #e07a5f
-  - Serif headline (2 lines): "Why the best founders read more than they build"
-  - One-line excerpt in muted text: "A thread on the reading habits behind long-term thinking."
-  - Author: Patrick O'Shaughnessy · @patrick_oshag
-  - "Space" keyboard hint badge top-right of card
-- Two ghost buttons below the card: "Open reading list [L]" and "Surprise me [S]"
-- Subtle dark landscape wallpaper behind everything, darkened to 40% opacity
-
-Animate: card slides up 12px and fades in over 400ms. Hold 3 seconds.
-Overlay text bottom-left: "Your next read, every new tab."
+> Opening scene: ss11-article-scroll-dark.jpg fills the frame edge-to-edge with no letterboxing. It scrolls upward slowly at a reading pace. After 3 seconds, cross-dissolve to ss15-article-highlighted-dark.jpg at the same scroll position — the same article but now with soft terracotta sentence highlights glowing through it. Text overlay bottom-left fades in: "Read it. Mark it. Own it."
+>
+> Then repeat for the thread: ss9-thread-scroll-dark.png dissolves to ss13-thread-highlighted-dark.jpg.
+>
+> Home scene: ss1-home-card.png fades in, the card slides up 12px as it appears. Overlay: "Your next read, every new tab."
+>
+> List scene: ss3-list-unread.png. Show the tab indicator animating from "Unread" to "Reading". Overlay: "Every bookmark. Sorted. No feed."
+>
+> Dark/light flip: ss11-article-scroll-dark.jpg cross-dissolves to ss12-article-scroll-light.jpg while continuing to scroll. Overlay center: "Read in any light."
+>
+> Close: logo-with-shine.png fades in centered. Below it in large serif: "actually read what you saved on X." Then "Free Chrome extension — usetotem.app" in small muted text. Fade to black.
 
 ---
 
-### SCENE 4 — READING LIST (22–32s)
+## Step 4 — Typography and Color Pass
 
-Transition to the reading list view. Reference screenshot `ss3-list-unread.png`.
-
-Show a clean list panel with:
-- Header: back arrow + "Reading" title + search input top-right
-- Three tabs: "Unread 24" / "Reading 3" / "Read 11"
-  A terracotta (#e07a5f) underline bar slides from "Unread" to "Reading" tab (animate the slide over 250ms ease-in-out)
-- Under Unread tab: 5 bookmark rows, each with author avatar, title, "@handle · Thread"
-  One row has a small "New" badge in terracotta
-- Switch to Reading tab: show 2 rows with "Last read 2h ago · 3 Highlights" metadata
-
-**Bookmark rows (Unread tab):**
-1. "Why the best founders read more than they build" · @patrick_oshag · Thread · **New**
-2. "The quiet collapse of long-form thinking" · @paulg · Essay
-3. "How Stripe builds product" · @shl · Thread
-4. "Naval on reading without guilt" · @naval · Thread
-5. "The Lindy Effect and why old ideas win" · @nntaleb · Essay
-
-Overlay text: "Every bookmark. Sorted. No feed."
+> Typography corrections: the clock on the home screen and all article body text should use Spectral serif at weight 400. All UI labels, tab text, and metadata use Space Grotesk. The "YOUR NEXT READ" label is Space Grotesk weight 700, all caps, with wide letter-spacing, in #e07a5f. Body text opacity: primary content rgba(255,255,255,0.90), secondary rgba(255,255,255,0.65), metadata rgba(255,255,255,0.50).
+>
+> Remove any bounce or elastic easing. All entrances should use a smooth ease-out curve. No wipes, no slides from the side — only upward fades and cross-dissolves.
 
 ---
 
-### SCENE 5 — THE READER INTERACTION (32–38s)
+## Scene Copy (Text on Screen)
 
-Show a viewport-sized crop of the reader (`ss6-reader-article.jpg`). Also reference `ss7-reader-highlight.jpg` for the highlight toolbar state.
+Use these exact words for each overlay:
 
-Animate a mouse cursor moving to a sentence mid-paragraph and clicking to select it. Play a soft click sound as the selection appears. Zoom in slightly on the selected text (scale 1.0 → 1.06, 400ms ease-out).
+| Scene | Copy |
+|---|---|
+| Opening (article + thread) | "Read it. Mark it. Own it." |
+| Home screen | "Your next read, every new tab." |
+| Reading list | "Every bookmark. Sorted. No feed." |
+| Reader | "Read it. Highlight it. Pick up where you left off." |
+| Dark/light flip | "Read in any light." |
+| Local-first scene | "Your data never leaves your browser." / "No account. No server. Always yours." |
+| Close | "actually read what you saved on X." / "Free Chrome extension — usetotem.app" |
 
-The SelectionToolbar ("Highlight · Add note") appears above the selection with a gentle popover-in animation (scale 0.92 → 1.0, 200ms).
-
-User clicks "Highlight" — play a second soft click sound. The text immediately gets the terracotta background fill (highlight sweep: 300ms left-to-right). Zoom back out (1.06 → 1.0, 300ms ease-in).
-
-Then cursor moves to a second sentence, clicks "Highlight" then "Add note" — play click sounds for each. That sentence switches to the wavy underline style. Zoom into the wavy underline for 0.5 seconds to make sure it registers visually.
-
-**Body text to render (plausible content):**
-> "The founders who compound knowledge the fastest aren't the ones who read more headlines — they're the ones who actually finish what they start."
-
-> "Most of us have a graveyard of bookmarks. Things we meant to read. Links we meant to revisit. The tab closes, the thought evaporates."
-
-> "The difference is a reading habit built into your workflow, not bolted onto it. You don't check your reading list. You run into it."
-
-**Highlighted sentence:** "The difference is a reading habit built into your workflow, not bolted onto it."
-
-Overlay text: "Read it. Highlight it. Pick up where you left off."
-
----
-
-### SCENE 5b — DARK / LIGHT MODE FLIP (38–42s)
-
-Show the full-page article screenshot (`ss11-article-scroll-dark.jpg`) filling the screen with a slow upward scroll. After 2 seconds, cross-dissolve to the same article in light mode (`ss12-article-scroll-light.jpg`), continuing the scroll. Then dissolve back to dark.
-
-Copy overlay center: "Read in any light."
-
-This scene should feel like watching someone adjust to the right reading environment — calm, deliberate, satisfying.
-
----
-
-### SCENE 6 — LOCAL FIRST (40–43s)
-
-Dark minimal scene. Browser icon on one side. A cloud/server icon with a diagonal line through it on the other side.
-
-**Main text:** "Your data never leaves your browser."
-**Subtitle in muted text:** "No account. No server. Always yours."
-
----
-
-### SCENE 7 — TAGLINE CLOSE (43–45s)
-
-Full dark screen. Totem logo mark (`logo-with-shine.png`) fades in center. Below it in large Spectral serif, weight 400:
-
-> "actually read what you saved on X."
-
-Small text below in muted: "Free Chrome extension — usetotem.app"
-
-Slow fade to black over 1.5 seconds.
-
----
-
-### SOUND DESIGN
-
-Use a subtle soft click sound (like a mechanical keyboard or a gentle UI tap) at these exact moments:
-- When the highlight background fill appears (Scene 1 dissolve + Scene 5 click)
-- When the SelectionToolbar button is clicked
-- When a note is added (the wavy underline appears)
-
-No music. No voiceover. Sound only on interactions — everything else is silent. The silence reinforces the calm, focused reading atmosphere.
-
----
-
-### MOTION RULES
-
-- All transitions: slow opacity dissolves or 12px upward fades, 350–500ms duration
-- Easing for entrances: cubic-bezier(0.23, 1, 0.32, 1)
-- No cuts, no wipes, no zoom bursts, no bounces
-- Text enters line by line with 150ms stagger between lines
-- Card translate: always 12px upward (translateY: 12px → 0)
-- Backdrop blur on frosted glass: blur(16px)
-- Overall pacing: calm and deliberate, like turning a page
-
----
-
-**OUTPUT:** 1080p, 16:9, 45 seconds, 60fps
-
----
-
-## Round 2 Prompt — Motion Refinement
-
-Slow down all text entrance animations. Each line should take 400ms to fade in with 200ms stagger between lines. The tab indicator underline in Scene 4 should slide with cubic-bezier(0.645, 0.045, 0.355, 1) over 250ms. In Scene 5 the text highlight should appear with a 300ms left-to-right sweep, not an instant fill. Make the card in Scene 3 feel heavier — increase the frosted glass blur to backdrop-filter: blur(16px) and darken the card background slightly.
-
----
-
-## Round 3 Prompt — Color and Typography Polish
-
-Darken the background to #0a0a09. The terracotta accent (#e07a5f) should only appear on: the "YOUR NEXT READ" label, the tab indicator underline, the "New" badge, and the Totem logo. Remove it from any other elements. In the reader scene make sure the body text uses Spectral at font-weight 400, not bold. The frosted glass card borders should be rgba(255,255,255,0.07) — very subtle. Increase the muted text opacity to rgba(255,255,255,0.50) so it is readable but still clearly secondary.
-
----
-
-## Brand Tokens
-
-### Colors
-
-| Token | Value | Use |
-|---|---|---|
-| Accent primary | `#e07a5f` | Logo, "YOUR NEXT READ" label, tab indicator, "New" badge — nowhere else |
-| Accent dark | `#c96b50` | Logo shadow, hover states |
-| Page background | `#0f0f0e` | Main new tab background |
-| Background dark | `#0a0a09` | Darkest scenes |
-| Card surface | `rgba(255,255,255,0.06)` | Frosted glass cards |
-| Card border | `rgba(255,255,255,0.07)` | Subtle card edges |
-| Text primary | `rgba(255,255,255,0.90)` | Headlines, titles |
-| Text secondary | `rgba(255,255,255,0.65)` | Card content, body |
-| Text muted | `rgba(255,255,255,0.50)` | Metadata, handles, timestamps |
-| Highlight amber | `#fbbf24` at 40% opacity | Text highlights in reader |
-| Border default | `rgba(255,255,255,0.08)` | List item borders |
-
-### Typography
-
-| Role | Family | Size |
-|---|---|---|
-| Clock | Spectral light | 60–72px |
-| Reader body / card headline | Spectral 400 | 22–24px |
-| Section headers | Space Grotesk 600 | 18–20px |
-| Bookmark titles | Space Grotesk 500 | 14px |
-| Tab labels / metadata | Space Grotesk 500 | 12px |
-| "YOUR NEXT READ" label | Space Grotesk 700, 0.25em letter-spacing, small caps | 10px |
-
-### Logo SVG
-
-```svg
-<svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="100" height="100" rx="18" fill="#1c1c1e"/>
-  <path d="M20 80L80 80L80 20Z" fill="#e07a5f"/>
-  <path d="M80 20L52.5 47.5L80 80Z" fill="#c96b50"/>
-  <path d="M20 80L80 80L80 20Z" fill="url(#shine)"/>
-  <defs>
-    <linearGradient id="shine" x1="0" y1="0" x2="0.3" y2="1">
-      <stop offset="0%" stop-color="white" stop-opacity="0.45"/>
-      <stop offset="50%" stop-color="white" stop-opacity="0.10"/>
-      <stop offset="100%" stop-color="white" stop-opacity="0"/>
-    </linearGradient>
-  </defs>
-</svg>
-```
-
----
-
-## Alternate Copy (if any scene feels too long)
+**Alternates if a scene runs short:**
 
 | Scene | Alternate |
 |---|---|
-| Scene 1 | "Bookmarks don't read themselves." |
-| Scene 3 | "One thing. Right there." |
-| Scene 4 | "Your list. Your pace." |
-| Scene 5 | "Finish what you started." |
-| Scene 6 | "Fully offline. Fully private." |
+| Opening | "Bookmarks don't read themselves." |
+| Home | "One thing. Right there." |
+| List | "Your list. Your pace." |
+| Reader | "Finish what you started." |
 | Close | "Read. Don't scroll." |
+
+---
+
+## Brand Reference
+
+**Colors**
+
+| Token | Value | Rule |
+|---|---|---|
+| Page background | `#0f0f0e` | All dark scenes |
+| Deepest dark | `#0a0a09` | Close scene |
+| Accent | `#e07a5f` | Logo, tab underline, "YOUR NEXT READ" label, "New" badge — nowhere else |
+| Accent shadow | `#c96b50` | Logo shadow path only |
+| Card surface | `rgba(255,255,255,0.06)` | Frosted glass cards |
+| Card border | `rgba(255,255,255,0.07)` | Card edges |
+| Text primary | `rgba(255,255,255,0.90)` | Headlines |
+| Text secondary | `rgba(255,255,255,0.65)` | Body |
+| Text muted | `rgba(255,255,255,0.50)` | Metadata, handles |
+| Text highlight | `#fbbf24` at 40% opacity | Highlighted sentences in reader |
+
+**Fonts**
+- Headlines / reader body: Spectral (serif), weight 400
+- UI / labels / buttons: Space Grotesk (sans), weight 500–700
+- Clock: Spectral, weight 300, 60–72px
+
+**Motion feel**
+- Entrance: smooth ease-out (no bounce, no elastic)
+- All transitions: cross-dissolve or upward fade (12px translate + opacity)
+- Pacing: slow and deliberate, like turning a page
+- No cuts. No wipes. No side-slides.
+
+---
+
+## What to Expect
+
+- **First render will be rough.** That's normal — use Step 2 prompts to correct direction.
+- **Screenshots as assets:** If Replit ignores the uploaded images and draws placeholder boxes instead, explicitly tell it the files are uploaded and to use them as `<img>` sources or CSS backgrounds.
+- **No reliable audio:** Replit Animation can attempt click sounds but results vary. Don't make sound a requirement — focus on visuals first and add "add subtle click sound effects on highlight interactions" only after visuals are locked.
+- **Export:** Top-right Export button → 1080p, 60fps → renders server-side, downloads as MP4.
