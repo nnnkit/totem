@@ -187,6 +187,9 @@ export function NewTabHome({
     syncing
       ? "Syncing bookmarks..."
       : syncDisabledReason || "Sync bookmarks";
+  const showSyncButton = authPhase
+    ? authPhase === "ready"
+    : !offlineMode;
 
   return (
     <div className="totem-home relative flex h-dvh flex-col overflow-hidden bg-surface text-home-fg">
@@ -215,7 +218,7 @@ export function NewTabHome({
       <header className="relative z-20 flex w-full items-center justify-between px-6 pt-5 sm:px-8">
         <TotemLogo className="size-8" />
         <div className="flex items-center gap-2">
-          {!offlineMode && (
+          {showSyncButton && (
             <Button
               type="button"
               variant="ghost"

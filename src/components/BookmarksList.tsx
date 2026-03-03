@@ -11,6 +11,7 @@ import { useHotkeys } from "react-hotkeys-hook";
 import { ArrowLeftIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
 import type { Bookmark } from "../types";
 import type { ContinueReadingItem } from "../hooks/useContinueReading";
+import type { AuthPhase } from "../hooks/useAuth";
 import { useBookmarkSearch } from "../hooks/useBookmarkSearch";
 import { pickTitle, inferKindBadge } from "../lib/bookmark-utils";
 import { timeAgo, sortIndexToTimestamp } from "../lib/time";
@@ -35,6 +36,7 @@ interface Props {
   onSync: () => void;
   onBack: () => void;
   offlineMode?: boolean;
+  authPhase?: AuthPhase;
   onLogin?: () => void;
 }
 
@@ -85,6 +87,7 @@ export function BookmarksList({
   onSync,
   onBack,
   offlineMode,
+  authPhase,
   onLogin,
 }: Props) {
   const containerWidthClass = "max-w-3xl";
@@ -317,6 +320,9 @@ export function BookmarksList({
   );
 
   let continueIdx = 0;
+  const showSyncControls = authPhase
+    ? authPhase === "ready"
+    : !offlineMode;
 
   return (
     <div className="min-h-dvh bg-surface">
@@ -439,13 +445,15 @@ export function BookmarksList({
                 <p className="text-muted text-lg text-pretty">
                   All caught up! No unread bookmarks.
                 </p>
-                <Button
-                  onClick={onSync}
-                  disabled={syncing || syncDisabled}
-                  className="mt-4"
-                >
-                  Sync new bookmarks
-                </Button>
+                {showSyncControls && (
+                  <Button
+                    onClick={onSync}
+                    disabled={syncing || syncDisabled}
+                    className="mt-4"
+                  >
+                    Sync new bookmarks
+                  </Button>
+                )}
               </div>
             )}
           </>

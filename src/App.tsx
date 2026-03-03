@@ -427,6 +427,7 @@ export default function App() {
           unreadBookmarks={allUnread}
           syncing={syncStatus === "syncing"}
           syncDisabled={!canSync}
+          authPhase={phase}
           activeTab={readingTab}
           onTabChange={handleReadingTabChange}
           onOpenBookmark={openBookmark}
@@ -454,7 +455,7 @@ export default function App() {
         onOpenSettings={() => setSettingsOpen(true)}
         onOpenReading={() => { restoreReadingTab(); setView("reading"); }}
         offlineMode={offlineMode}
-        authPhase={needsLogin ? phase : undefined}
+        authPhase={phase}
         onLogin={needsLogin || offlineMode ? startLogin : undefined}
         bookmarksLoading={bookmarksLoading}
         isResetting={isResetting}
