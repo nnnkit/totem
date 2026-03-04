@@ -1,5 +1,7 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
+@source "./**/*.{html,js,jsx,ts,tsx}";
+@source "../website/**/*.{html,js,jsx,ts,tsx}";
 
 /* Z-index scale: z-10 sticky | z-20 nav | z-30 popover | z-40 overlay | z-50 modal */
 
@@ -729,4 +731,3 @@
     --color-home-description: rgba(255, 255, 255, 0.74);
     --color-home-empty: rgba(255, 255, 255, 0.5);
 }
-
