@@ -30,13 +30,13 @@ import {
   CS_LAST_SOFT_SYNC,
   CS_LAST_SYNC,
   CS_SOFT_SYNC_NEEDED,
-  CS_SYNC_AUTO_ENABLED,
   LS_MANUAL_SYNC_REQUIRED,
 } from "../lib/storage-keys";
 import {
   WEEK_MS,
   DETAIL_CACHE_RETENTION_MS,
   DB_INIT_TIMEOUT_MS,
+  BACKGROUND_SYNC_MIN_INTERVAL_MS,
   PAGE_FETCH_TIMEOUT_MS,
   SYNC_MAX_BOOKMARKS_PER_JOB,
   SYNC_MAX_PAGES_PER_JOB,
@@ -74,7 +74,6 @@ interface ActiveSyncLease {
   released: boolean;
 }
 
-const DEFAULT_SYNC_AUTO_ENABLED = false;
 const CREATE_EVENT_FETCH_COUNT = 20;
 const SYNC_BLOCKED_REASONS = new Set<SyncBlockedReason>([
   "in_flight",
@@ -121,15 +120,15 @@ function clearManualSyncRequired(): void {
   } catch {}
 }
 
-async function isAutoSyncEnabled(): Promise<boolean> {
+async function shouldRunTabOpenAutoSync(): Promise<boolean> {
   try {
-    const stored = await chrome.storage.local.get([CS_SYNC_AUTO_ENABLED]);
-    const value = stored[CS_SYNC_AUTO_ENABLED];
-    if (typeof value === "boolean") {
-      return value;
-    }
-  } catch {}
-  return DEFAULT_SYNC_AUTO_ENABLED;
+    const stored = await chrome.storage.local.get([CS_LAST_SYNC]);
+    const lastSync = Number(stored[CS_LAST_SYNC] || 0);
+    if (!Number.isFinite(lastSync) || lastSync <= 0) return true;
+    return Date.now() - lastSync >= BACKGROUND_SYNC_MIN_INTERVAL_MS;
+  } catch {
+    return true;
+  }
 }
 
 async function withTimeout<T>(
@@ -535,7 +534,7 @@ export function useBookmarks(
     runCleanup().catch(() => {});
   }, []);
 
-  // ── Effect 1: Init local cache + optional tab-open auto sync ──
+  // ── Effect 1: Init local cache + periodic tab-open auto sync ──
 
   useEffect(() => {
     if (isManualSyncRequired()) {
@@ -562,10 +561,10 @@ export function useBookmarks(
           bookmarksRef.current = stored;
         }
 
-        if (isReady && activeAccountId) {
-          const autoEnabled = await isAutoSyncEnabled();
-          if (autoEnabled && autoSyncAttemptRef.current !== activeAccountId) {
-            autoSyncAttemptRef.current = activeAccountId;
+        if (isReady && activeAccountId && autoSyncAttemptRef.current !== activeAccountId) {
+          autoSyncAttemptRef.current = activeAccountId;
+          const shouldSync = await shouldRunTabOpenAutoSync();
+          if (shouldSync) {
             sync({
               trigger: "auto",
               localCountHint: stored.length,

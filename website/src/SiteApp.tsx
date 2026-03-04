@@ -357,7 +357,14 @@ function DemoBrowser() {
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
-const FEATURES = [
+type FeatureItem = {
+  title: string;
+  body: string;
+  previewSrc: string;
+  previewAlt: string;
+};
+
+const FEATURES: FeatureItem[] = [
   {
     title: "Clean reader",
     body: "Read threads, articles, and links without feed clutter.",
@@ -422,9 +429,6 @@ const STEPS = [
 // ─── Landing Page ─────────────────────────────────────────────────────────────
 
 function LandingPage() {
-  const [activeFeatureIndex, setActiveFeatureIndex] = useState(0);
-  const activeFeature = FEATURES[activeFeatureIndex] ?? FEATURES[0];
-
   return (
     <SiteLayout page="landing">
       <main>
@@ -491,56 +495,36 @@ function LandingPage() {
 
         {/* ── Features ──────────────────────────────────────────── */}
         <section className="max-w-5xl mx-auto px-6 py-16 sm:py-20">
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-400 mb-3">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-400 mb-3 text-center">
             What you get
           </p>
-          <h2 className="font-[Newsreader,serif] text-[clamp(1.8rem,3.5vw,2.8rem)] leading-tight tracking-tight text-neutral-900 mb-10 max-w-[20ch]">
+          <h2 className="font-[Newsreader,serif] text-[clamp(1.8rem,3.5vw,2.8rem)] leading-tight tracking-tight text-neutral-900 mb-3 max-w-[22ch] mx-auto text-center text-balance">
             Designed to help you read more, with less noise.
           </h2>
-          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.04fr)] gap-6 lg:gap-8 items-start">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {FEATURES.map((f, index) => {
-                const isActive = index === activeFeatureIndex;
-                return (
-                  <button
-                    key={f.title}
-                    type="button"
-                    onMouseEnter={() => setActiveFeatureIndex(index)}
-                    onFocus={() => setActiveFeatureIndex(index)}
-                    onClick={() => setActiveFeatureIndex(index)}
-                    className={`text-left border rounded-xl p-5 transition-colors ${
-                      isActive
-                        ? "border-neutral-900 bg-neutral-50"
-                        : "border-neutral-100 hover:border-neutral-300"
-                    }`}
-                    aria-pressed={isActive}
-                  >
-                    <h3 className="text-[0.95rem] font-semibold text-neutral-900 mb-1.5">
-                      {f.title}
-                    </h3>
-                    <p className="text-sm text-neutral-500 leading-relaxed m-0">
-                      {f.body}
-                    </p>
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="lg:sticky lg:top-20">
-              <div className="relative overflow-hidden rounded-2xl border border-neutral-200 bg-neutral-950 aspect-[16/10] shadow-[0_20px_50px_rgba(0,0,0,0.2)]">
-                <img
-                  key={activeFeature.title}
-                  src={activeFeature.previewSrc}
-                  alt={activeFeature.previewAlt}
-                  className="absolute inset-0 h-full w-full object-contain animate-fade-in"
-                  loading="lazy"
-                  decoding="async"
-                />
-              </div>
-              <p className="mt-3 text-xs text-neutral-500">
-                Hover or tap a feature to preview it.
-              </p>
-            </div>
+          <p className="text-neutral-500 text-[0.98rem] leading-relaxed max-w-[56ch] mx-auto text-center mb-10 text-balance">
+            A clean reading workflow with clear states, offline continuity, and
+            tools that keep your attention on the text.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-4 gap-y-8">
+            {FEATURES.map((f) => (
+              <article key={f.title}>
+                <div className="relative overflow-hidden rounded-2xl border border-neutral-200 bg-neutral-100 aspect-[16/10] shadow-[0_12px_30px_rgba(0,0,0,0.08)]">
+                  <img
+                    src={f.previewSrc}
+                    alt={f.previewAlt}
+                    className="absolute inset-0 h-full w-full object-cover object-[50%_22%] transition-transform duration-300 ease-out scale-[1.14] hover:scale-[1.18]"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                </div>
+                <h3 className="text-[1.45rem] font-[Newsreader,serif] leading-tight tracking-tight text-neutral-900 mt-4 mb-1">
+                  {f.title}
+                </h3>
+                <p className="text-[0.98rem] text-neutral-600 leading-relaxed m-0 max-w-[34ch]">
+                  {f.body}
+                </p>
+              </article>
+            ))}
           </div>
         </section>
 
