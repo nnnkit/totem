@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const USAGE =
-  "Usage: pnpm release [patch|minor|major|x.y.z] [--dry-run] [--no-build] [--allow-dirty]";
+  "Usage: pnpm release [patch|minor|major|x.y.z] [--dry-run] [--no-build] [--allow-dirty] [--with-website] [--include-website]";
 
 function runOrFail(command, args, options = {}) {
   const result = spawnSync(command, args, {
@@ -91,6 +91,8 @@ function main() {
   const dryRun = args.includes("--dry-run");
   const noBuild = args.includes("--no-build");
   const allowDirty = args.includes("--allow-dirty");
+  const withWebsite =
+    args.includes("--with-website") || args.includes("--include-website");
 
   if (positionalArgs.length > 1) {
     console.error(USAGE);
@@ -114,6 +116,10 @@ function main() {
 
   if (allowDirty) {
     prepareArgs.push("--allow-dirty");
+  }
+
+  if (withWebsite) {
+    prepareArgs.push("--with-website");
   }
 
   runOrFail("pnpm", prepareArgs);

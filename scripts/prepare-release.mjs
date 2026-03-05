@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import { execSync, spawnSync } from "node:child_process";
 
 const USAGE =
-  "Usage: pnpm release:prepare <patch|minor|major|x.y.z> [--no-build] [--dry-run] [--allow-dirty]";
+  "Usage: pnpm release:prepare <patch|minor|major|x.y.z> [--no-build] [--dry-run] [--allow-dirty] [--with-website]";
 
 function readJson(path) {
   return JSON.parse(readFileSync(path, "utf8"));
@@ -178,6 +178,7 @@ function main() {
   const noBuild = args.includes("--no-build");
   const dryRun = args.includes("--dry-run");
   const allowDirty = args.includes("--allow-dirty");
+  const withWebsite = args.includes("--with-website") || args.includes("--include-website");
 
   if (!releaseArg) {
     console.error(USAGE);
@@ -241,7 +242,11 @@ function main() {
   }
 
   if (!dryRun && !noBuild) {
-    runOrFail("pnpm", ["release:check"]);
+    runOrFail("pnpm", ["release:version:check"]);
+    runOrFail("pnpm", ["package:extension"]);
+    if (withWebsite) {
+      runOrFail("pnpm", ["package:website"]);
+    }
   }
 
   console.log("");
@@ -252,6 +257,9 @@ function main() {
   }
   console.log("");
   console.log(`Commits included in changelog entry: ${commits.length}`);
+  console.log(
+    `Website artifact packaging: ${withWebsite ? "enabled" : "disabled"}`
+  );
   console.log("");
   console.log("Next commands:");
   console.log("git add CHANGELOG.md package.json public/manifest.json");

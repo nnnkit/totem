@@ -5,6 +5,12 @@ on:
     tags:
       - "v*.*.*"
   workflow_dispatch:
+    inputs:
+      with_website:
+        description: "Also package and upload the website/demo ZIP."
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: write
@@ -37,6 +43,10 @@ jobs:
 
       - name: Validate and package release artifact
         run: pnpm release:check
+
+      - name: Optionally package website artifact
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.with_website == 'true'
+        run: pnpm package:website
 
       - name: Read manifest version
         id: manifest
