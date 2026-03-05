@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.7] - 2026-03-05
+
+- feat: improve parsing
+
 ## [1.1.6] - 2026-03-05
 
 - Maintenance release.
