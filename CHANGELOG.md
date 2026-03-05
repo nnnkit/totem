@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.2] - 2026-03-05
+
+### Added
+- feat: fix tailwind
+- feat: optimize images
+
 ## [1.1.1] - 2026-03-05
 
 ### Added
