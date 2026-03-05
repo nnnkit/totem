@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.5] - 2026-03-05
+
+- feat: improve tweetdetails fetch
+
 ## [1.1.4] - 2026-03-05
 
 - feat: optimize offline mode
