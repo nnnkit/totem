@@ -321,13 +321,19 @@ export async function clearAllLocalData(): Promise<void> {
   await tx.done;
 }
 
+export interface DeleteBookmarksOptions {
+  purgeHighlights?: boolean;
+}
+
 export async function deleteBookmarksByTweetIds(
   tweetIds: string[],
+  options: DeleteBookmarksOptions = {},
 ): Promise<void> {
   if (tweetIds.length === 0) return;
 
   const uniqueIds = Array.from(new Set(tweetIds.filter(Boolean)));
   if (uniqueIds.length === 0) return;
+  const { purgeHighlights = false } = options;
 
   const db = await getDb();
   const tx = db.transaction(
@@ -337,8 +343,8 @@ export async function deleteBookmarksByTweetIds(
   const bookmarkStore = tx.objectStore(STORE_NAME);
   const detailStore = tx.objectStore(DETAIL_STORE_NAME);
   const progressStore = tx.objectStore(PROGRESS_STORE_NAME);
-  const highlightsStore = tx.objectStore(HIGHLIGHTS_STORE_NAME);
   const tweetIndex = bookmarkStore.index("tweetId");
+  const highlightsStore = tx.objectStore(HIGHLIGHTS_STORE_NAME);
   const highlightTweetIndex = highlightsStore.index("tweetId");
 
   for (const tweetId of uniqueIds) {
@@ -346,11 +352,13 @@ export async function deleteBookmarksByTweetIds(
     for (const bookmarkId of bookmarkIds) {
       await bookmarkStore.delete(bookmarkId as string);
     }
-    const highlightIds = await highlightTweetIndex.getAllKeys(
-      IDBKeyRange.only(tweetId),
-    );
-    for (const hId of highlightIds) {
-      await highlightsStore.delete(hId as string);
+    if (purgeHighlights) {
+      const highlightIds = await highlightTweetIndex.getAllKeys(
+        IDBKeyRange.only(tweetId),
+      );
+      for (const hId of highlightIds) {
+        await highlightsStore.delete(hId as string);
+      }
     }
     await detailStore.delete(tweetId);
     await progressStore.delete(tweetId);

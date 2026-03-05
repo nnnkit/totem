@@ -8,6 +8,7 @@ interface ReconcileResult {
   pagesRequested: number;
   lastCursor: string | null;
   needsRecovery: boolean;
+  capReached: "maxPages" | "maxBookmarks" | null;
   terminationReason:
     | "cursor_missing"
     | "page_cap"
@@ -45,6 +46,7 @@ export async function reconcileBookmarks(
   let lastCursor: string | null = null;
   let pagesRequested = 0;
   let terminationReason: ReconcileResult["terminationReason"] = "complete";
+  let capReached: ReconcileResult["capReached"] = null;
   const cappedMode = !fullReconcile;
   const effectiveMaxPages =
     cappedMode && Number.isFinite(maxPages) && (maxPages || 0) > 0
@@ -59,10 +61,12 @@ export async function reconcileBookmarks(
   while (true) {
     if (pagesRequested >= effectiveMaxPages) {
       terminationReason = "page_cap";
+      capReached = "maxPages";
       break;
     }
     if (allNew.length >= effectiveMaxBookmarks) {
       terminationReason = "page_cap";
+      capReached = "maxBookmarks";
       break;
     }
 
@@ -107,6 +111,7 @@ export async function reconcileBookmarks(
     }
     if (allNew.length >= effectiveMaxBookmarks) {
       terminationReason = "page_cap";
+      capReached = "maxBookmarks";
       break;
     }
 
@@ -128,7 +133,6 @@ export async function reconcileBookmarks(
   }
 
   const needsRecovery =
-    !fullReconcile &&
     pagesRequested === 1 &&
     allNew.length === SYNC_PAGE_SIZE &&
     !cursor &&
@@ -146,6 +150,7 @@ export async function reconcileBookmarks(
     pagesRequested,
     lastCursor,
     needsRecovery,
+    capReached,
     terminationReason,
   };
 }

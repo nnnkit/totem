@@ -40,4 +40,5 @@ export const FETCH_READ_PAUSE_JITTER_MS = 2000;
 export const PAGE_FETCH_TIMEOUT_MS = 45_000;
 
 // ── Prefetch ────────────────────────────────────────────────
-export const PREFETCH_INTERVAL_MS = 45_000;
+// Prefetch details more conservatively for background smoothness/offline comfort.
+export const PREFETCH_INTERVAL_MS = 2 * 60 * 1000;

@@ -364,7 +364,7 @@ export function useBookmarks(
     };
 
     try {
-      let reconcileResult = await runReconcilePass({
+      const firstReconcileResult = await runReconcilePass({
         maxPages: mode === "quick" ? SYNC_MAX_PAGES_PER_JOB : undefined,
         maxBookmarks: mode === "quick" ? SYNC_MAX_BOOKMARKS_PER_JOB : undefined,
       });
@@ -372,11 +372,23 @@ export function useBookmarks(
       if (
         trigger === "manual" &&
         mode === "quick" &&
+        firstReconcileResult.terminationReason === "page_cap" &&
+        firstReconcileResult.capReached
+      ) {
+        console.warn(
+          `[totem] Quick sync truncated by cap: maxPages=${SYNC_MAX_PAGES_PER_JOB}, maxBookmarks=${SYNC_MAX_BOOKMARKS_PER_JOB}, fetchedPages=${firstReconcileResult.pagesRequested}, fetchedNew=${firstReconcileResult.newBookmarks.length}, cap=${firstReconcileResult.capReached}`,
+        );
+      }
+
+      let reconcileResult = firstReconcileResult;
+
+      if (
+        trigger === "manual" &&
         reconcileResult.needsRecovery &&
         !abortController.aborted
       ) {
         console.warn(
-          "[totem] Quick sync reached first page without cursor; running automatic recovery pass.",
+          "[totem] Bookmark sync reached first page without cursor; running automatic recovery pass.",
         );
         reconcileResult = await runReconcilePass({
           continueOnNoNewItems: true,
@@ -385,7 +397,9 @@ export function useBookmarks(
 
       if (!abortController.aborted) {
         if (mode === "full" && reconcileResult.staleIds.length > 0) {
-          await deleteBookmarksByTweetIds(reconcileResult.staleIds);
+          await deleteBookmarksByTweetIds(reconcileResult.staleIds, {
+            purgeHighlights: false,
+          });
           const staleIds = new Set(reconcileResult.staleIds);
           const filtered = bookmarksRef.current.filter((b) => !staleIds.has(b.tweetId));
           if (filtered.length !== bookmarksRef.current.length) {
@@ -507,7 +521,9 @@ export function useBookmarks(
           setBookmarks(filtered);
         }
 
-        await deleteBookmarksByTweetIds(plan.idsToDelete);
+        await deleteBookmarksByTweetIds(plan.idsToDelete, {
+          purgeHighlights: false,
+        });
       }
 
       if (deleteEventIds.length > 0) {
@@ -700,7 +716,9 @@ export function useBookmarks(
       setBookmarks(filtered);
     }
 
-    await deleteBookmarksByTweetIds([tweetId]);
+    await deleteBookmarksByTweetIds([tweetId], {
+      purgeHighlights: false,
+    });
 
     try {
       await deleteBookmark(tweetId);

@@ -784,20 +784,34 @@ export interface BookmarkPageResult {
   stopOnEmptyResponse: boolean;
 }
 
-function extractCursorValue(value: unknown): string | null {
+function extractCursorValue(value: unknown, depth = 0): string | null {
+  if (depth > 2) return null;
+
   const direct = asString(value);
   if (direct) return direct;
 
   const record = asRecord(value);
   if (!record) return null;
 
-  return (
-    asString(record.cursor) ||
-    asString(record.value) ||
-    asString(record.cursorValue) ||
-    asString(record.bottomCursor) ||
-    asString(record.topCursor)
-  );
+  const directCandidates = [
+    "cursor",
+    "value",
+    "cursorValue",
+    "bottomCursor",
+    "topCursor",
+  ] as const;
+  for (const key of directCandidates) {
+    const directValue = asString(record[key]);
+    if (directValue) return directValue;
+  }
+
+  const nestedCandidates = ["operation", "item", "entry", "cursor", "content", "value"] as const;
+  for (const key of nestedCandidates) {
+    const nestedValue = extractCursorValue(record[key], depth + 1);
+    if (nestedValue) return nestedValue;
+  }
+
+  return null;
 }
 
 function readCursorFromContent(
@@ -805,12 +819,7 @@ function readCursorFromContent(
   cursorRank: number,
 ): { cursor: string; rank: number } | null {
   if (cursorRank <= 0) return null;
-  const candidate =
-    extractCursorValue(content.value) ||
-    extractCursorValue(content.cursor) ||
-    extractCursorValue(asRecord(content.operation)?.cursor) ||
-    extractCursorValue(asRecord(content.operation)?.value) ||
-    null;
+  const candidate = extractCursorValue(content);
 
   if (!candidate) return null;
 
@@ -822,10 +831,14 @@ function readCursorByPriority(
   content: UnknownRecord,
 ): { cursor: string; rank: number } | null {
   const cursorType = asString(content.cursorType);
+  const entryType = asString(content.entryType);
+  const typename = asString(content.__typename);
+  const isCursorEntry =
+    entryType === "TimelineTimelineCursor" || typename === "TimelineTimelineCursor";
   const priority =
     entryId.startsWith("cursor-bottom") || cursorType === "Bottom"
       ? 3
-      : cursorType === "Top"
+      : cursorType === "Top" || isCursorEntry
         ? 2
         : 0;
 

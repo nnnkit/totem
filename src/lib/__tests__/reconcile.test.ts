@@ -283,6 +283,30 @@ describe("reconcileBookmarks", () => {
       expect(result.terminationReason).toBe("cursor_missing");
     });
 
+    it("flags first-page full results with missing cursor for recovery", async () => {
+      const localIds = new Set<string>();
+
+      const fetchPage = async (): Promise<BookmarkPageResult> => ({
+        bookmarks: Array.from({ length: 100 }, (_, index) =>
+          makeBookmark(`tweet-${index}`),
+        ),
+        cursor: null,
+        stopOnEmptyResponse: false,
+      });
+
+      const result = await reconcileBookmarks({
+        localIds,
+        fetchPage,
+        fullReconcile: true,
+      });
+
+      expect(result.pagesRequested).toBe(1);
+      expect(result.newBookmarks).toHaveLength(100);
+      expect(result.lastCursor).toBeNull();
+      expect(result.needsRecovery).toBe(true);
+      expect(result.terminationReason).toBe("cursor_missing");
+    });
+
     it("perfect match produces no new bookmarks and no stale IDs", async () => {
       const localIds = new Set(["1", "2"]);
 
@@ -338,6 +362,48 @@ describe("reconcileBookmarks", () => {
       expect(result.pagesRequested).toBe(2);
       expect(result.newBookmarks.map((b) => b.tweetId)).toEqual(["1", "2", "3", "4", "5"]);
       expect(result.staleIds).toHaveLength(0);
+    });
+
+    it("records maxPages cap in reconciliation result", async () => {
+      const localIds = new Set<string>();
+      const fetchPage = makePaginatedFetcher([
+        [makeBookmark("1"), makeBookmark("2"), makeBookmark("3")],
+        [makeBookmark("4"), makeBookmark("5"), makeBookmark("6")],
+        [makeBookmark("7"), makeBookmark("8"), makeBookmark("9")],
+      ]);
+
+      const result = await reconcileBookmarks({
+        localIds,
+        fetchPage,
+        fullReconcile: false,
+        maxPages: 1,
+        maxBookmarks: 10,
+      });
+
+      expect(result.terminationReason).toBe("page_cap");
+      expect(result.capReached).toBe("maxPages");
+      expect(result.pagesRequested).toBe(1);
+    });
+
+    it("records maxBookmarks cap in reconciliation result", async () => {
+      const localIds = new Set<string>();
+      const fetchPage = makePaginatedFetcher([
+        [makeBookmark("1"), makeBookmark("2"), makeBookmark("3")],
+        [makeBookmark("4"), makeBookmark("5"), makeBookmark("6")],
+        [makeBookmark("7"), makeBookmark("8"), makeBookmark("9")],
+      ]);
+
+      const result = await reconcileBookmarks({
+        localIds,
+        fetchPage,
+        fullReconcile: false,
+        maxPages: 10,
+        maxBookmarks: 4,
+      });
+
+      expect(result.terminationReason).toBe("page_cap");
+      expect(result.capReached).toBe("maxBookmarks");
+      expect(result.newBookmarks).toHaveLength(4);
     });
 
     it("full reconcile with N bookmarks at P per page = ceil(N/P) fetches", async () => {

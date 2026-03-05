@@ -109,6 +109,61 @@ describe("parseBookmarkPagePayload", () => {
     expect(result.stopOnEmptyResponse).toBe(true);
   });
 
+  it("reads nested operation cursor payload", () => {
+    const payload = makePayload([
+      {
+        type: "TimelineAddEntries",
+        entries: [
+          {
+            entryId: "tweet-1",
+            content: {
+              itemType: "TimelineTweet",
+            },
+          },
+          {
+            entryId: "cursor-0",
+            content: {
+              operation: {
+                cursor: {
+                  value: "CURSOR_OP",
+                },
+              },
+              stopOnEmptyResponse: false,
+            },
+          },
+        ],
+      },
+    ]);
+
+    const result = parseBookmarkPagePayload(payload);
+    expect(result.cursor).toBe("CURSOR_OP");
+    expect(result.stopOnEmptyResponse).toBe(false);
+  });
+
+  it("reads cursor from TimelineTimelineCursor entry type", () => {
+    const payload = makePayload([
+      {
+        type: "TimelineAddEntries",
+        entries: [
+          {
+            entryId: "some-entry",
+            content: {
+              __typename: "TimelineTimelineCursor",
+              value: {
+                value: "CURSOR_TYPE_ENTRY",
+              },
+              stopOnEmptyResponse: true,
+            },
+          },
+        ],
+      },
+    ]);
+
+    const result = parseBookmarkPagePayload(payload);
+    expect(result.cursor).toBe("CURSOR_TYPE_ENTRY");
+    expect(result.stopOnEmptyResponse).toBe(true);
+  });
+
   it("falls back to Top cursor when Bottom cursor is unavailable", () => {
     const payload = makePayload([
       {

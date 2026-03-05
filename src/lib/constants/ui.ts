@@ -8,7 +8,7 @@ export const PICK_EXCERPT_MAX = 210;
 
 // ── Offline prefetch ────────────────────────────────────────
 export const OFFLINE_PREFETCH_POOL = 20;
-export const OFFLINE_PREFETCH_UNREAD_MAX = 15;
+export const OFFLINE_PREFETCH_UNREAD_MAX = 10;
 
 // ── Reading speed ───────────────────────────────────────────
 export const READING_WPM = 180;

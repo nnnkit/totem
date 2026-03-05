@@ -73,12 +73,14 @@ export function usePrefetchDetails(
 
       const read: Bookmark[] = [];
       const unread: Bookmark[] = [];
+
       for (const b of pool) {
         if (completedIds.has(b.tweetId)) read.push(b);
         else if (unread.length < OFFLINE_PREFETCH_UNREAD_MAX) unread.push(b);
       }
 
       const candidateIds = [...read, ...unread].map((bookmark) => bookmark.tweetId);
+
       await runPrefetchLoop({
         tweetIds: candidateIds,
         fetchDetail: fetchTweetDetail,

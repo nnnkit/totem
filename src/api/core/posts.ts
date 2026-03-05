@@ -15,7 +15,11 @@ export async function fetchTweetDetail(
 ): Promise<TweetDetailContent> {
   const cached = await getTweetDetailCache(tweetId).catch(() => null);
 
-  if (cached) {
+  const hasUsableCachedDetail =
+    cached?.focalTweet !== null &&
+    cached?.focalTweet !== undefined &&
+    cached.focalTweet.id.length > 0;
+  if (cached && hasUsableCachedDetail) {
     return {
       focalTweet: cached.focalTweet,
       thread: cached.thread,
@@ -32,12 +36,14 @@ export async function fetchTweetDetail(
   }
 
   const detail = parseTweetDetailPayload(response.data, tweetId);
-  upsertTweetDetailCache({
-    tweetId,
-    fetchedAt: Date.now(),
-    focalTweet: detail.focalTweet,
-    thread: detail.thread,
-  }).catch(() => {});
+  if (detail.focalTweet || detail.thread.length > 0) {
+    upsertTweetDetailCache({
+      tweetId,
+      fetchedAt: Date.now(),
+      focalTweet: detail.focalTweet,
+      thread: detail.thread,
+    }).catch(() => {});
+  }
 
   return detail;
 }
