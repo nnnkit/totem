@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.1] - 2026-03-05
+
+### Added
+- feat: improve parser
+- feat: improve build seperation
+- feat: auto sync
+- feat: add new features
+- feat: add vercel json
+
+### Changed
+- fix vercel routes for privacy and demo pages
+- route root to website on vercel
+
+### Fixed
+- fix: css build
+
 ## [1.1.0] - 2026-03-03
 
 ### Added

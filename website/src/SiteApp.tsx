@@ -49,7 +49,6 @@ const FINAL_INSTALL_BUTTON_LABEL = HAS_WEB_STORE_INSTALL
 type FeatureItem = {
   title: string;
   body: string;
-  proof: string;
   image: string;
   alt: string;
   wide?: boolean;
@@ -64,21 +63,18 @@ const FEATURES: FeatureItem[] = [
   {
     title: "Clean reader, zero feed noise",
     body: "Read saved posts in a calmer layout made for long-form scanning.",
-    proof: "Threads, quotes, media, and article cards render in one place.",
     image: cleanReaderImage,
     alt: "Totem clean reader view showing saved X bookmarks without feed distractions.",
   },
   {
     title: "Unread, Continue, and Read states",
     body: "Your queue auto-organizes so you always know what to pick next.",
-    proof: "Reading progress is tracked per bookmark and restored on return.",
     image: readingStatesImage,
     alt: "Totem reading states showing unread, continue, and read progress.",
   },
   {
     title: "Highlight and save notes",
     body: "Select text while reading and keep notes where the insight happened.",
-    proof: "Highlights and note counts appear directly in your reading flow.",
     image: highlightsNotesImage,
     alt: "Totem highlights and notes feature in the reader.",
     wide: true,
@@ -86,54 +82,16 @@ const FEATURES: FeatureItem[] = [
   {
     title: "Speed through with shortcuts",
     body: "Navigate and triage quickly without breaking focus.",
-    proof: "Shortcuts like /, Space, L, S, J, and K work across views.",
     image: keyboardShortcutsImage,
     alt: "Totem keyboard shortcuts helping users move through saved bookmarks faster.",
   },
   {
     title: "Keep reading offline",
     body: "Continue reading when X is unavailable or your connection drops.",
-    proof: "Cached bookmarks, details, and progress stay usable locally.",
     image: worksOfflineImage,
     alt: "Totem interface running with offline-ready cached reading queue.",
   },
 ];
-
-const INSTALL_STEPS = HAS_WEB_STORE_INSTALL
-  ? [
-      {
-        n: "1",
-        title: "Install from store",
-        body: "Click install and confirm when Chrome asks.",
-      },
-      {
-        n: "2",
-        title: "Open new tab",
-        body: "Totem loads your queue and bookmark focus immediately.",
-      },
-      {
-        n: "3",
-        title: "Start reading",
-        body: "Read saved content in a cleaner layout.",
-      },
-    ]
-  : [
-      {
-        n: "1",
-        title: "Download release",
-        body: "Open the latest release package and download `totem-v<version>.zip`.",
-      },
-      {
-        n: "2",
-        title: "Load unpacked",
-        body: "Open `chrome://extensions`, enable Developer mode, click Load unpacked.",
-      },
-      {
-        n: "3",
-        title: "Open new tab",
-        body: "Select the unzipped folder and open a new tab to begin.",
-      },
-    ];
 
 const INSTALL_FAQ: FAQItem[] = [
   {
@@ -160,7 +118,7 @@ const INSTALL_FAQ: FAQItem[] = [
 // ─── Layout ───────────────────────────────────────────────────────────────────
 
 function SiteLayout({
-  page,
+  page: _page,
   children,
 }: {
   page: SitePage;
@@ -196,9 +154,7 @@ function SiteLayout({
       {/* ── Header ─────────────────────────────────────────────────── */}
       <header
         className={`sticky top-0 z-50 border-b border-neutral-200 transition-colors duration-200 ${
-          scrolled
-            ? "bg-white/90 backdrop-blur-lg"
-            : "bg-white"
+          scrolled ? "bg-white/90 backdrop-blur-lg" : "bg-white"
         }`}
       >
         <div className="max-w-5xl mx-auto px-6 py-2.5">
@@ -562,8 +518,8 @@ function LandingPage() {
               See the experience before you install.
             </h2>
             <p className="text-neutral-500 text-sm max-w-[52ch]">
-              Click the New tab button in the mock browser to open Totem. If this
-              looks useful, install now.{" "}
+              Click the New tab button in the mock browser to open Totem. If
+              this looks useful, install now.{" "}
               <a
                 href="/demo-page"
                 className="text-white/70 underline underline-offset-2 hover:text-white transition-colors"
@@ -591,7 +547,9 @@ function LandingPage() {
             Features
           </p>
           <h2 className="font-[Newsreader,serif] text-[clamp(1.95rem,3.7vw,3rem)] leading-tight tracking-tight text-neutral-900 mb-3 text-center text-balance">
-            <span className="block">Five practical features you will love.</span>
+            <span className="block">
+              Five practical features you will love.
+            </span>
             <span className="block text-neutral-400">
               (Discover more once you install.)
             </span>
@@ -604,16 +562,14 @@ function LandingPage() {
               <article
                 key={feature.title}
                 className={`rounded-2xl border border-neutral-200 bg-white shadow-[0_16px_36px_rgba(0,0,0,0.06)] ${
-                  feature.wide
-                    ? "md:col-span-2 p-5 sm:p-6"
-                    : "p-4 sm:p-5"
+                  feature.wide ? "md:col-span-2 p-4 sm:p-4" : "p-3 sm:p-3"
                 }`}
               >
                 <img
                   src={feature.image}
                   alt={feature.alt}
                   className={`w-full object-cover rounded-xl border border-neutral-200 mb-4 ${
-                    feature.wide ? "aspect-[21/9]" : "aspect-[16/10]"
+                    feature.wide ? "aspect-21/9" : "aspect-16/10"
                   }`}
                   loading="lazy"
                 />
@@ -625,87 +581,14 @@ function LandingPage() {
                   {feature.title}
                 </h3>
                 <p
-                  className={`text-[0.96rem] text-neutral-600 leading-relaxed mb-4 ${
+                  className={`text-[0.96rem] text-neutral-600 leading-relaxed ${
                     feature.wide ? "text-center max-w-[62ch] mx-auto" : ""
                   }`}
                 >
                   {feature.body}
                 </p>
-                <p
-                  className={`text-xs font-medium uppercase tracking-[0.08em] text-neutral-500 ${
-                    feature.wide ? "text-center" : ""
-                  }`}
-                >
-                  proof: {feature.proof}
-                </p>
               </article>
             ))}
-          </div>
-          <div className="mt-8 rounded-2xl border border-neutral-200 bg-neutral-50 p-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-neutral-500">
-              Also inside Totem
-            </p>
-            <div className="mt-3 grid gap-2 sm:grid-cols-2">
-              <p className="rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-700">
-                Search bar with engine picker
-              </p>
-              <p className="rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-700">
-                Optional quick links from your top sites
-              </p>
-              <p className="rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-700">
-                Theme modes and background styles
-              </p>
-              <p className="rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-700">
-                Read-next suggestions and shuffle
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* ── CTA Band ──────────────────────────────────────────── */}
-        <section id="install" className="w-full bg-neutral-950 py-16 sm:py-20">
-          <div className="max-w-xl mx-auto px-6 text-center">
-            <h2 className="font-[Newsreader,serif] text-[clamp(1.8rem,3.5vw,2.8rem)] leading-tight tracking-tight text-white mb-4">
-              Start reading your saved posts.
-            </h2>
-            <p className="text-neutral-500 text-sm mb-8">
-              Free. Local-first. 2–3 minutes to start.
-            </p>
-            <a
-              href={INSTALL_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center h-11 px-7 rounded-xl bg-white text-neutral-900 font-semibold text-[0.95rem] no-underline transition-all hover:bg-neutral-100 active:scale-[0.97]"
-            >
-              {FINAL_INSTALL_BUTTON_LABEL}
-            </a>
-            <div className="mx-auto mt-8 max-w-lg text-left rounded-2xl bg-white/5 px-5 py-5 text-sm text-white/75">
-              <h3 className="text-white font-semibold text-sm mb-3">
-                After install
-              </h3>
-              <ol className="grid gap-3">
-                {INSTALL_STEPS.map((step) => (
-                  <li key={step.n} className="flex gap-3">
-                    <span className="w-6 h-6 rounded-full bg-white/20 text-white text-xs flex items-center justify-center shrink-0">
-                      {step.n}
-                    </span>
-                    <p className="text-left m-0">
-                      <span className="text-white font-semibold">
-                        {step.title}:
-                      </span>{" "}
-                      {step.body}
-                    </p>
-                  </li>
-                ))}
-              </ol>
-              <p className="text-xs uppercase tracking-[0.12em] text-white/60 mt-4">
-                No account. No server. Your bookmarks stay on your device.
-              </p>
-            </div>
-            <p className="text-neutral-700 text-xs mt-6 tracking-wide">
-              Install safety note: Totem only uses access needed to read your own
-              X bookmarks and cache your reading state.
-            </p>
           </div>
         </section>
 
@@ -871,8 +754,8 @@ function PrivacyPage() {
               </li>
               <li>
                 Totem does not send analytics or behavioral telemetry to a
-                Totem-operated server, does not sell personal data, and does
-                not share data with ad/tracking platforms.
+                Totem-operated server, does not sell personal data, and does not
+                share data with ad/tracking platforms.
               </li>
             </ul>
           </PolicySection>
@@ -908,9 +791,7 @@ function PrivacyPage() {
                 logic.
               </li>
               <li>Bookmark mutation event cache: up to 14 days.</li>
-              <li>
-                GraphQL endpoint catalog entries: up to 30 days.
-              </li>
+              <li>GraphQL endpoint catalog entries: up to 30 days.</li>
               <li>
                 Auth headers are refreshed from live x.com traffic and may
                 remain in local storage until session/auth state changes or you
