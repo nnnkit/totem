@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { cn } from "../../src/lib/cn";
 import { TotemLogo } from "../../src/components/TotemLogo";
 import cleanReaderImage from "./feature-previews/clean-reader.jpg";
 import highlightsNotesImage from "./feature-previews/highlights-notes.jpg";
@@ -153,9 +154,10 @@ function SiteLayout({
     <div className="min-h-dvh bg-white text-neutral-900 font-[Space_Grotesk,sans-serif]">
       {/* ── Header ─────────────────────────────────────────────────── */}
       <header
-        className={`sticky top-0 z-50 border-b border-neutral-200 transition-colors duration-200 ${
-          scrolled ? "bg-white/90 backdrop-blur-lg" : "bg-white"
-        }`}
+        className={cn(
+          "sticky top-0 z-50 border-b border-neutral-200 transition-colors duration-200",
+          scrolled ? "bg-white/90 backdrop-blur-lg" : "bg-white",
+        )}
       >
         <div className="max-w-5xl mx-auto px-6 py-2.5">
           <div className="flex items-center justify-between gap-2">
@@ -433,9 +435,10 @@ function DemoBrowser() {
             title="Totem New Tab demo"
             src="demo.html"
             onLoad={() => setFrameReady(true)}
-            className={`block w-full border-0 bg-[#0a0f16] animate-fade-in transition-opacity duration-200 ${
-              frameReady ? "opacity-100" : "opacity-0"
-            }`}
+            className={cn(
+              "block w-full border-0 bg-[#0a0f16] animate-fade-in transition-opacity duration-200",
+              frameReady ? "opacity-100" : "opacity-0",
+            )}
             style={{ minHeight: "clamp(540px, 65vh, 760px)" }}
             loading="eager"
           />
@@ -561,29 +564,33 @@ function LandingPage() {
             {FEATURES.map((feature) => (
               <article
                 key={feature.title}
-                className={`rounded-2xl border border-neutral-200 bg-white shadow-[0_16px_36px_rgba(0,0,0,0.06)] ${
-                  feature.wide ? "md:col-span-2 p-4 sm:p-4" : "p-3 sm:p-3"
-                }`}
+                className={cn(
+                  "rounded-2xl border border-neutral-200 bg-white shadow-[0_16px_36px_rgba(0,0,0,0.06)]",
+                  feature.wide ? "md:col-span-2 p-4 sm:p-4" : "p-3 sm:p-3",
+                )}
               >
                 <img
                   src={feature.image}
                   alt={feature.alt}
-                  className={`w-full object-cover rounded-xl border border-neutral-200 mb-4 ${
-                    feature.wide ? "aspect-21/9" : "aspect-16/10"
-                  }`}
+                  className={cn(
+                    "w-full object-cover rounded-xl border border-neutral-200 mb-4",
+                    feature.wide ? "aspect-21/9" : "aspect-16/10",
+                  )}
                   loading="lazy"
                 />
                 <h3
-                  className={`text-[1.2rem] leading-tight tracking-tight text-neutral-900 mb-2 font-[Newsreader,serif] ${
-                    feature.wide ? "text-center" : ""
-                  }`}
+                  className={cn(
+                    "text-[1.2rem] leading-tight tracking-tight text-neutral-900 mb-2 font-[Newsreader,serif]",
+                    feature.wide && "text-center",
+                  )}
                 >
                   {feature.title}
                 </h3>
                 <p
-                  className={`text-[0.96rem] text-neutral-600 leading-relaxed ${
-                    feature.wide ? "text-center max-w-[62ch] mx-auto" : ""
-                  }`}
+                  className={cn(
+                    "text-[0.96rem] text-neutral-600 leading-relaxed",
+                    feature.wide && "text-center max-w-[62ch] mx-auto",
+                  )}
                 >
                   {feature.body}
                 </p>
@@ -879,9 +886,10 @@ function DemoPage() {
         title="Totem New Tab demo"
         src="demo.html"
         onLoad={() => setFrameReady(true)}
-        className={`absolute inset-0 block w-full h-full border-0 transition-opacity duration-200 ${
-          frameReady ? "opacity-100" : "opacity-0"
-        }`}
+        className={cn(
+          "absolute inset-0 block w-full h-full border-0 transition-opacity duration-200",
+          frameReady ? "opacity-100" : "opacity-0",
+        )}
         loading="eager"
       />
     </div>

@@ -91,6 +91,8 @@ export function BookmarksList({
   onLogin,
 }: Props) {
   const containerWidthClass = "max-w-3xl";
+  const bookmarkItemBase =
+    "bookmark-list-item flex w-full items-center gap-3 rounded border p-3 text-left transition-colors hover:bg-surface-hover";
   const [focusedIndex, setFocusedIndex] = useState(-1);
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const tabListRef = useRef<HTMLDivElement>(null);
@@ -475,7 +477,7 @@ export function BookmarksList({
                       type="button"
                       onClick={() => onOpenBookmark(bookmark)}
                       className={cn(
-                        "bookmark-list-item flex w-full items-center gap-3 rounded border p-3 text-left transition-colors hover:bg-surface-hover",
+                        bookmarkItemBase,
                         focusedIndex === idx
                           ? "border-accent ring-2 ring-accent/40 bg-surface-hover"
                           : "border-border bg-surface-card",
@@ -549,7 +551,7 @@ export function BookmarksList({
                       type="button"
                       onClick={() => onOpenBookmark(bookmark)}
                       className={cn(
-                        "bookmark-list-item flex w-full items-center gap-3 rounded border p-3 text-left transition-colors hover:bg-surface-hover",
+                        bookmarkItemBase,
                         focusedIndex === idx
                           ? "border-accent ring-2 ring-accent/40 bg-surface-hover"
                           : "border-border bg-surface-card",
