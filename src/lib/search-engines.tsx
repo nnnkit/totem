@@ -164,16 +164,3 @@ export const SEARCH_ENGINES: Record<
     logo: ECOSIA_LOGO,
   },
 };
-
-export const SEARCH_ENGINE_OPTIONS: {
-  value: SearchEngineId;
-  label: string;
-}[] = [
-  { value: "google", label: "Google" },
-  { value: "bing", label: "Bing" },
-  { value: "duckduckgo", label: "DuckDuckGo" },
-  { value: "yahoo", label: "Yahoo" },
-  { value: "brave", label: "Brave" },
-  { value: "ecosia", label: "Ecosia" },
-  { value: "default", label: "Browser default" },
-];

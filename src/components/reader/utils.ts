@@ -2,7 +2,7 @@ import type { ArticleContentBlock } from "../../types";
 import type { ReaderTweet } from "./types";
 import type { TweetKind } from "../../types";
 import { cn } from "../../lib/cn";
-export { compactPreview, normalizeText, truncateLabel } from "../../lib/text";
+export { compactPreview, normalizeText } from "../../lib/text";
 
 export const baseTweetTextClass =
   "font-serif break-words [&_a]:text-accent [&_a:hover]:underline";

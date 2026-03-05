@@ -3,7 +3,6 @@ export const NEW_BADGE_CUTOFF_MS = 24 * 60 * 60 * 1000;
 
 // ── Text limits ─────────────────────────────────────────────
 export const COMPACT_PREVIEW_MAX = 130;
-export const TRUNCATE_LABEL_MAX = 48;
 export const PICK_TITLE_MAX = 92;
 export const PICK_EXCERPT_MAX = 210;
 
