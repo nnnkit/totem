@@ -140,6 +140,31 @@ describe("parseBookmarkPagePayload", () => {
     expect(result.stopOnEmptyResponse).toBe(false);
   });
 
+  it("ignores non-cursor operation payloads", () => {
+    const payload = makePayload([
+      {
+        type: "TimelineAddEntries",
+        entries: [
+          {
+            entryId: "cursor-unknown-shape",
+            content: {
+              operation: {
+                foo: {
+                  value: "NOT_A_CURSOR",
+                },
+              },
+              stopOnEmptyResponse: false,
+            },
+          },
+        ],
+      },
+    ]);
+
+    const result = parseBookmarkPagePayload(payload);
+    expect(result.cursor).toBeNull();
+    expect(result.stopOnEmptyResponse).toBe(false);
+  });
+
   it("reads cursor from TimelineTimelineCursor entry type", () => {
     const payload = makePayload([
       {

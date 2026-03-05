@@ -835,12 +835,17 @@ function readCursorByPriority(
   const typename = asString(content.__typename);
   const isCursorEntry =
     entryType === "TimelineTimelineCursor" || typename === "TimelineTimelineCursor";
+  const operation = asRecord(content.operation);
+  const operationCursor = extractCursorValue(operation);
+  const hasOperationCursor = operationCursor !== null;
   const priority =
     entryId.startsWith("cursor-bottom") || cursorType === "Bottom"
       ? 3
       : cursorType === "Top" || isCursorEntry
         ? 2
-        : 0;
+        : hasOperationCursor
+          ? 1
+          : 0;
 
   return readCursorFromContent(content, priority);
 }
