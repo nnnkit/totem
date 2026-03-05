@@ -15,6 +15,10 @@ import type {
   SearchEngineId,
   SyncStatus,
 } from "../types";
+import {
+  getEffectiveHomeAuthPhase,
+  shouldShowHomeCardButtons,
+} from "./new-tab-home-state";
 import { SEARCH_ENGINES } from "../lib/search-engines";
 import { hasChromeSearch } from "../lib/chrome";
 import { formatClock } from "../lib/time";
@@ -176,10 +180,14 @@ export function NewTabHome({
     [surpriseMe],
   );
 
-  const showCardButtons = Boolean(
-    currentItem &&
-      authPhase !== "connecting" &&
-      authPhase !== "need_login",
+  const hasCurrentItem = Boolean(currentItem);
+  const effectiveAuthPhase = getEffectiveHomeAuthPhase(
+    authPhase,
+    hasCurrentItem,
+  );
+  const showCardButtons = shouldShowHomeCardButtons(
+    hasCurrentItem,
+    effectiveAuthPhase,
   );
   const syncing = syncStatus === "syncing";
   const syncDisabled = syncing || !canSync;
@@ -361,7 +369,7 @@ export function NewTabHome({
                 <TotemLogo className="size-10" />
               </div>
             </article>
-          ) : authPhase === "connecting" ? (
+          ) : effectiveAuthPhase === "connecting" ? (
             <article className={cardCentered}>
               <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
                 Connecting to X&hellip;
@@ -381,7 +389,7 @@ export function NewTabHome({
                 Syncing your session in the background.
               </p>
             </article>
-          ) : authPhase === "need_login" ? (
+          ) : effectiveAuthPhase === "need_login" ? (
             <article className={cardCentered}>
               <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
                 Log in to start reading

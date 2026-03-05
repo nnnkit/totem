@@ -12,6 +12,7 @@ import {
   getTweetDetailCache,
   getAllReadingProgress,
 } from "./db";
+import { selectDisplayBookmarks, shouldRestrictToCachedDetails } from "./lib/display-bookmarks";
 import { pickRelatedBookmarks } from "./lib/related";
 import { resetLocalData } from "./lib/reset";
 import { LS_MANUAL_SYNC_REQUIRED, LS_READING_TAB } from "./lib/storage-keys";
@@ -114,11 +115,19 @@ export default function App() {
   const { ids: detailedTweetIds, loaded: detailedIdsLoaded } = useDetailedTweetIds(
     detailIdsRefreshKey,
   );
+  const restrictToCachedDetails = useMemo(
+    () => shouldRestrictToCachedDetails(phase, syncStatus),
+    [phase, syncStatus],
+  );
 
   const displayBookmarks = useMemo(() => {
-    if (!offlineMode) return bookmarks;
-    return bookmarks.filter((b) => detailedTweetIds.has(b.tweetId));
-  }, [bookmarks, detailedTweetIds, offlineMode]);
+    return selectDisplayBookmarks(
+      bookmarks,
+      detailedTweetIds,
+      phase,
+      syncStatus,
+    );
+  }, [bookmarks, detailedTweetIds, phase, syncStatus]);
 
   const selectedBookmark = useMemo(() => {
     if (!selectedBookmarkRaw) return null;
@@ -372,7 +381,7 @@ export default function App() {
   const bookmarksLoading =
     phase === "loading" ||
     (isReady && syncStatus === "loading") ||
-    (offlineMode && !detailedIdsLoaded);
+    (restrictToCachedDetails && !detailedIdsLoaded);
   const hasDisplayBookmarks = displayBookmarks.length > 0;
   const canSync = runtimeCanSync && !isResetting;
   const syncDisabledReason = !canSync
