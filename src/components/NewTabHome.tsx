@@ -191,6 +191,10 @@ export function NewTabHome({
     ? authPhase === "ready"
     : !offlineMode;
 
+  const cardBase =
+    "relative min-h-40 overflow-hidden rounded px-6 py-6 bg-main-bg shadow-glass backdrop-blur-lg transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 max-sm:min-h-36 max-sm:px-4 max-sm:py-4";
+  const cardCentered = cn(cardBase, "text-center");
+
   return (
     <div className="totem-home relative flex h-dvh flex-col overflow-hidden bg-surface text-home-fg">
       {!showWallpaper && gradientCss && (
@@ -352,13 +356,13 @@ export function NewTabHome({
 
         <footer className="mx-auto w-full max-w-lg space-y-6 pb-6">
           {(bookmarksLoading || isResetting) && !currentItem ? (
-            <article className="relative min-h-40 overflow-hidden rounded px-6 py-6 bg-main-bg shadow-glass backdrop-blur-lg max-sm:min-h-36 max-sm:px-4 max-sm:py-4 flex items-center justify-center">
+            <article className={cn(cardBase, "flex items-center justify-center")}>
               <div className="animate-logo-shine">
                 <TotemLogo className="size-10" />
               </div>
             </article>
           ) : authPhase === "connecting" ? (
-            <article className="relative min-h-40 overflow-hidden rounded px-6 py-6 bg-main-bg shadow-glass backdrop-blur-lg transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 max-sm:min-h-36 max-sm:px-4 max-sm:py-4 text-center">
+            <article className={cardCentered}>
               <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
                 Connecting to X&hellip;
               </p>
@@ -378,30 +382,28 @@ export function NewTabHome({
               </p>
             </article>
           ) : authPhase === "need_login" ? (
-            <article className="relative min-h-40 overflow-hidden rounded px-6 py-6 bg-main-bg shadow-glass backdrop-blur-lg transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 max-sm:min-h-36 max-sm:px-4 max-sm:py-4 text-center">
+            <article className={cardCentered}>
               <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
                 Log in to start reading
               </p>
               <p className="mt-4 text-pretty text-base text-home-empty">
                 Sign in to your X account to sync and read your saved posts.
               </p>
-              <a
-                href="https://x.com/i/bookmarks"
-                target="_blank"
-                rel="noopener noreferrer"
+              <Button
+                className="mt-6 border-0 bg-home-accent text-white hover:opacity-90"
                 onClick={() => {
+                  window.open("https://x.com/i/bookmarks", "_blank", "noopener,noreferrer");
                   onLogin?.().catch(() => {});
                 }}
-                className="inline-block items-center justify-center rounded text-sm font-semibold leading-none transition-all duration-150 ease-hover disabled:cursor-default disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 border-0 bg-home-accent px-4 py-2 text-white hover:opacity-90 mt-6"
               >
                 Log in to X
-              </a>
+              </Button>
             </article>
           ) : currentItem ? (
               <article
-                
                 className={cn(
-                  "relative min-h-40 overflow-hidden rounded p-4 bg-main-bg shadow-glass backdrop-blur-lg transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 max-sm:min-h-36 max-sm:px-4 max-sm:py-3.5 cursor-pointer hover:bg-main-bg-hover",
+                  cardBase,
+                  "p-4 max-sm:py-3.5 cursor-pointer hover:bg-main-bg-hover",
                   cardEngaged && "bg-main-bg-hover",
                 )}
                 onMouseEnter={() => setCardEngaged(true)}
@@ -479,7 +481,7 @@ export function NewTabHome({
                 </div>
               </article>
           ) : syncStatus === "syncing" ? (
-            <article className="relative min-h-40 overflow-hidden rounded px-6 py-6 bg-main-bg shadow-glass backdrop-blur-lg transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 max-sm:min-h-36 max-sm:px-4 max-sm:py-4 text-center">
+            <article className={cardCentered}>
               <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
                 Syncing your bookmarks&hellip;
               </p>
@@ -499,7 +501,7 @@ export function NewTabHome({
               </p>
             </article>
           ) : syncStatus === "reauthing" ? (
-            <article className="relative min-h-40 overflow-hidden rounded px-6 py-6 bg-main-bg shadow-glass backdrop-blur-lg transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 max-sm:min-h-36 max-sm:px-4 max-sm:py-4 text-center">
+            <article className={cardCentered}>
               <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
                 Something went wrong
               </p>
@@ -508,7 +510,7 @@ export function NewTabHome({
               </p>
             </article>
           ) : syncStatus === "error" ? (
-            <article className="relative min-h-40 overflow-hidden rounded px-6 py-6 bg-main-bg shadow-glass backdrop-blur-lg transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 max-sm:min-h-36 max-sm:px-4 max-sm:py-4 text-center">
+            <article className={cardCentered}>
               <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
                 Something went wrong
               </p>
@@ -516,17 +518,17 @@ export function NewTabHome({
                 Could not sync your bookmarks. Check your connection and try
                 again.
               </p>
-              <button
+              <Button
                 type="button"
                 onClick={onSync}
                 disabled={syncDisabled}
-                className="inline-flex items-center justify-center rounded text-sm font-semibold leading-none transition-all duration-150 ease-hover disabled:cursor-default disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 border-0 bg-home-accent px-4 py-2 text-white hover:opacity-90 mt-6"
+                className="mt-6 border-0 bg-home-accent text-white hover:opacity-90"
               >
                 Try again
-              </button>
+              </Button>
             </article>
           ) : (
-            <article className="relative min-h-40 overflow-hidden rounded px-6 py-6 bg-main-bg shadow-glass backdrop-blur-lg transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 max-sm:min-h-36 max-sm:px-4 max-sm:py-4 text-center">
+            <article className={cardCentered}>
               <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
                 Your reading list is quiet
               </p>
@@ -534,14 +536,14 @@ export function NewTabHome({
                 No bookmarks yet. Bookmark posts on X, then sync to start
                 reading.
               </p>
-              <button
+              <Button
                 type="button"
                 onClick={onSync}
                 disabled={syncDisabled}
-                className="inline-flex items-center justify-center rounded text-sm font-semibold leading-none transition-all duration-150 ease-hover disabled:cursor-default disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 border-0 bg-home-accent px-4 py-2 text-white hover:opacity-90 mt-6"
+                className="mt-6 border-0 bg-home-accent text-white hover:opacity-90"
               >
                 Sync bookmarks
-              </button>
+              </Button>
             </article>
           )}
 
@@ -576,7 +578,7 @@ export function NewTabHome({
 
           <p
             className={cn(
-              "text-center text-xs text-gray-200/70",
+              "text-center text-xs text-on-bg-ghost",
               (!offlineMode || !showCardButtons) && "invisible",
             )}
           >
@@ -597,13 +599,13 @@ export function NewTabHome({
         </footer>
 
         {showWallpaper && wallpaperCredit && (
-          <p className="fixed bottom-6 left-6 z-20 text-xs text-stone-500">
+          <p className="fixed bottom-6 left-6 z-20 text-xs text-on-bg-ghost">
             Photo by{" "}
             <a
               href={wallpaperCredit.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="transition-colors hover:text-stone-400"
+              className="transition-colors hover:text-on-bg-muted"
             >
               {wallpaperCredit.name}
             </a>

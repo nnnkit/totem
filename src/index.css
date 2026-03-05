@@ -70,6 +70,7 @@
     --shadow-glass: none;
     --shadow-search: none;
     --shadow-kbd: 0 1px 0 0 rgba(255, 255, 255, 0.1);
+    --radius: 0.5rem;
 
     --ease-hover: ease;
     --ease-entrance: cubic-bezier(0.23, 1, 0.32, 1);
@@ -350,7 +351,7 @@
     html,
     body,
     #root {
-        @apply min-h-dvh;
+        min-height: 100dvh;
     }
 
     html {
@@ -358,7 +359,10 @@
     }
 
     body {
-        @apply bg-surface text-foreground antialiased;
+        background-color: var(--surface);
+        color: var(--foreground);
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
         text-rendering: optimizeLegibility;
     }
 
@@ -564,10 +568,6 @@
     }
 }
 
-.rounded {
-    border-radius: 0.5rem;
-}
-
 /* Unlayered — wins over @tailwindcss/typography's components-layer rules */
 .prose code::before,
 .prose code::after {
@@ -588,7 +588,7 @@
     }
 }
 
-.bookmark-list-item {
+@utility bookmark-list-item {
     content-visibility: auto;
     contain-intrinsic-size: 0 72px;
 }
@@ -658,64 +658,66 @@
     --color-home-empty: rgba(10, 10, 12, 0.44);
 }
 
-.totem-ambient {
-    background:
-        radial-gradient(
-            ellipse 80% 70% at 50% 45%,
-            transparent 30%,
-            rgba(0, 0, 0, 0.45) 100%
-        ),
-        linear-gradient(
-            to top,
-            rgba(0, 0, 0, 0.5) 0%,
-            rgba(0, 0, 0, 0.15) 40%,
-            transparent 70%
-        ),
-        linear-gradient(
-            180deg,
-            rgba(226, 128, 103, 0.03) 0%,
-            rgba(226, 128, 103, 0.02) 100%
-        );
-}
-
-/* Reader page — flat, no card */
-.reader-page {
-    background: var(--surface);
-}
-
-.totem-grain {
-    opacity: 0.18;
-    mix-blend-mode: overlay;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
-    background-repeat: repeat;
-    background-size: 200px 200px;
-}
-
-.animate-logo-shine {
-    position: relative;
-    overflow: hidden;
-    border-radius: 0.25rem;
-}
-
-.animate-logo-shine::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(
-        120deg,
-        transparent 30%,
-        rgba(255, 255, 255, 0.12) 50%,
-        transparent 70%
-    );
-    animation: logo-shine 2s ease-in-out infinite;
-}
-
-@keyframes logo-shine {
-    0% {
-        transform: translateX(-100%);
+@layer components {
+    .totem-ambient {
+        background:
+            radial-gradient(
+                ellipse 80% 70% at 50% 45%,
+                transparent 30%,
+                rgba(0, 0, 0, 0.45) 100%
+            ),
+            linear-gradient(
+                to top,
+                rgba(0, 0, 0, 0.5) 0%,
+                rgba(0, 0, 0, 0.15) 40%,
+                transparent 70%
+            ),
+            linear-gradient(
+                180deg,
+                rgba(226, 128, 103, 0.03) 0%,
+                rgba(226, 128, 103, 0.02) 100%
+            );
     }
-    100% {
-        transform: translateX(100%);
+
+    /* Reader page — flat, no card */
+    .reader-page {
+        background: var(--surface);
+    }
+
+    .totem-grain {
+        opacity: 0.18;
+        mix-blend-mode: overlay;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+        background-repeat: repeat;
+        background-size: 200px 200px;
+    }
+
+    .animate-logo-shine {
+        position: relative;
+        overflow: hidden;
+        border-radius: 0.25rem;
+    }
+
+    .animate-logo-shine::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+            120deg,
+            transparent 30%,
+            rgba(255, 255, 255, 0.12) 50%,
+            transparent 70%
+        );
+        animation: logo-shine 2s ease-in-out infinite;
+    }
+
+    @keyframes logo-shine {
+        0% {
+            transform: translateX(-100%);
+        }
+        100% {
+            transform: translateX(100%);
+        }
     }
 }
 
