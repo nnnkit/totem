@@ -665,7 +665,7 @@ async function handleSyncPolicyReserve(message = {}) {
         : 0;
 
     const state = await readSyncOrchestratorState();
-    const sessionSnapshot = await getSessionSnapshot();
+    let sessionSnapshot = await getSessionSnapshot();
     const accountKey = normalizeSyncAccountId(
       message.accountId || sessionSnapshot.accountContextId,
     );
@@ -739,6 +739,14 @@ async function handleSyncPolicyReserve(message = {}) {
     }
 
     let account = state.accounts[accountKey] || createEmptySyncAccountState();
+    if (
+      trigger === "manual" &&
+      sessionSnapshot.sessionState === "logged_in" &&
+      sessionSnapshot.capability.bookmarksApi !== "ready"
+    ) {
+      await discoverAllMissingQueryIds().catch(() => {});
+      sessionSnapshot = await getSessionSnapshot();
+    }
 
     if (
       sessionSnapshot.sessionState !== "logged_in" ||

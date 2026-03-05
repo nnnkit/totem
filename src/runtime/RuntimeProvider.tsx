@@ -117,7 +117,7 @@ export function RuntimeProvider({ children }: PropsWithChildren) {
     hasQueryId,
     startLogin,
   } = useAuth();
-  const syncReady = phase === "ready" && capability.bookmarksApi === "ready";
+  const syncReady = phase === "ready";
   const { bookmarks, syncStatus, syncBlockedReason, refresh, reset, unbookmark } = useBookmarks(
     syncReady,
     activeAccountId,
@@ -138,7 +138,7 @@ export function RuntimeProvider({ children }: PropsWithChildren) {
   );
 
   const value = useMemo<RuntimeContextValue>(() => {
-    const canSync = runtimeMode === "online_ready";
+    const canSync = phase === "ready";
     return {
       phase,
       sessionState,
