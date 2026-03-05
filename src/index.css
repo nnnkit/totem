@@ -362,6 +362,35 @@
         text-rendering: optimizeLegibility;
     }
 
+    :where(
+            a,
+            button,
+            input,
+            select,
+            textarea,
+            summary,
+            [role="button"],
+            [tabindex]:not([tabindex="-1"])
+        ):focus-visible {
+        outline: 2px solid color-mix(in srgb, var(--accent) 84%, white);
+        outline-offset: 2px;
+        box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 16%, transparent);
+    }
+
+    :where(
+            a,
+            button,
+            input,
+            select,
+            textarea,
+            summary,
+            [role="button"],
+            [tabindex]:not([tabindex="-1"])
+        ):focus:not(:focus-visible) {
+        outline: none;
+        box-shadow: none;
+    }
+
     code,
     pre,
     kbd,

@@ -60,6 +60,44 @@ describe("reconcileBookmarks", () => {
       expect(result.pagesRequested).toBe(1);
     });
 
+    it("incremental sync stops on duplicate page when continueOnNoNewItems=false", async () => {
+      const localIds = new Set(["1", "2"]);
+      const fetchPage = makePaginatedFetcher([
+        [makeBookmark("1"), makeBookmark("2")],
+        [makeBookmark("3"), makeBookmark("4")],
+      ]);
+
+      const result = await reconcileBookmarks({
+        localIds,
+        fetchPage,
+        fullReconcile: false,
+        continueOnNoNewItems: false,
+      });
+
+      expect(result.newBookmarks).toHaveLength(0);
+      expect(result.pagesRequested).toBe(1);
+      expect(result.terminationReason).toBe("duplicate_stop");
+    });
+
+    it("incremental sync continues when continueOnNoNewItems=true", async () => {
+      const localIds = new Set(["1", "2"]);
+      const fetchPage = makePaginatedFetcher([
+        [makeBookmark("1"), makeBookmark("2")],
+        [makeBookmark("3"), makeBookmark("4")],
+      ]);
+
+      const result = await reconcileBookmarks({
+        localIds,
+        fetchPage,
+        fullReconcile: false,
+        continueOnNoNewItems: true,
+      });
+
+      expect(result.newBookmarks.map((b) => b.tweetId)).toEqual(["3", "4"]);
+      expect(result.pagesRequested).toBe(2);
+      expect(result.terminationReason).toBe("cursor_missing");
+    });
+
     it("incremental sync collects new bookmarks across multiple pages", async () => {
       const localIds = new Set(["1"]);
 
@@ -220,6 +258,29 @@ describe("reconcileBookmarks", () => {
 
       expect(result.newBookmarks.map((b) => b.tweetId)).toEqual(["1", "2"]);
       expect(result.staleIds).toHaveLength(0);
+    });
+
+    it("flags first-page full quick results with missing cursor for recovery", async () => {
+      const localIds = new Set<string>();
+      const fetchPage = async (): Promise<BookmarkPageResult> => ({
+        bookmarks: Array.from({ length: 100 }, (_, index) =>
+          makeBookmark(`tweet-${index}`),
+        ),
+        cursor: null,
+        stopOnEmptyResponse: false,
+      });
+
+      const result = await reconcileBookmarks({
+        localIds,
+        fetchPage,
+        fullReconcile: false,
+      });
+
+      expect(result.pagesRequested).toBe(1);
+      expect(result.newBookmarks).toHaveLength(100);
+      expect(result.lastCursor).toBeNull();
+      expect(result.needsRecovery).toBe(true);
+      expect(result.terminationReason).toBe("cursor_missing");
     });
 
     it("perfect match produces no new bookmarks and no stale IDs", async () => {

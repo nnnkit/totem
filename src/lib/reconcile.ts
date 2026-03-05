@@ -1,10 +1,18 @@
 import type { Bookmark } from "../types";
 import type { BookmarkPageResult } from "../api/parsers";
+import { SYNC_PAGE_SIZE } from "./constants";
 
 interface ReconcileResult {
   newBookmarks: Bookmark[];
   staleIds: string[];
   pagesRequested: number;
+  lastCursor: string | null;
+  needsRecovery: boolean;
+  terminationReason:
+    | "cursor_missing"
+    | "page_cap"
+    | "duplicate_stop"
+    | "complete";
 }
 
 interface ReconcileOptions {
@@ -14,6 +22,7 @@ interface ReconcileOptions {
   onPage?: (newBookmarks: Bookmark[]) => void | Promise<void>;
   maxPages?: number;
   maxBookmarks?: number;
+  continueOnNoNewItems?: boolean;
 }
 
 export async function reconcileBookmarks(
@@ -26,13 +35,16 @@ export async function reconcileBookmarks(
     onPage,
     maxPages,
     maxBookmarks,
+    continueOnNoNewItems,
   } = opts;
   const seen = new Set(localIds);
   const seenCursors = new Set<string>();
   const remoteIds = new Set<string>();
   const allNew: Bookmark[] = [];
   let cursor: string | undefined;
+  let lastCursor: string | null = null;
   let pagesRequested = 0;
+  let terminationReason: ReconcileResult["terminationReason"] = "complete";
   const cappedMode = !fullReconcile;
   const effectiveMaxPages =
     cappedMode && Number.isFinite(maxPages) && (maxPages || 0) > 0
@@ -43,17 +55,28 @@ export async function reconcileBookmarks(
       ? Math.floor(maxBookmarks as number)
       : Number.POSITIVE_INFINITY;
 
+  const shouldContinueOnNoNewItems = continueOnNoNewItems === true;
   while (true) {
-    if (pagesRequested >= effectiveMaxPages) break;
-    if (allNew.length >= effectiveMaxBookmarks) break;
+    if (pagesRequested >= effectiveMaxPages) {
+      terminationReason = "page_cap";
+      break;
+    }
+    if (allNew.length >= effectiveMaxBookmarks) {
+      terminationReason = "page_cap";
+      break;
+    }
 
     if (cursor) {
-      if (seenCursors.has(cursor)) break;
+      if (seenCursors.has(cursor)) {
+        terminationReason = "duplicate_stop";
+        break;
+      }
       seenCursors.add(cursor);
     }
 
     const result = await fetchPage(cursor);
     pagesRequested++;
+    lastCursor = result.cursor;
 
     const pageNewRaw = result.bookmarks.filter((b) => !seen.has(b.tweetId));
     const remaining = effectiveMaxBookmarks - allNew.length;
@@ -66,8 +89,14 @@ export async function reconcileBookmarks(
       }
     }
 
-    if (pageNewRaw.length === 0 && !fullReconcile) break;
-    if (result.stopOnEmptyResponse && result.bookmarks.length === 0) break;
+    if (pageNewRaw.length === 0 && !fullReconcile && !shouldContinueOnNoNewItems) {
+      terminationReason = "duplicate_stop";
+      break;
+    }
+    if (result.stopOnEmptyResponse && result.bookmarks.length === 0) {
+      terminationReason = "complete";
+      break;
+    }
 
     if (pageNew.length > 0) {
       for (const b of pageNew) {
@@ -76,17 +105,21 @@ export async function reconcileBookmarks(
       allNew.push(...pageNew);
       await onPage?.(pageNew);
     }
-    if (allNew.length >= effectiveMaxBookmarks) break;
+    if (allNew.length >= effectiveMaxBookmarks) {
+      terminationReason = "page_cap";
+      break;
+    }
 
     const nextCursor = result.cursor || undefined;
-    if (!nextCursor) break;
-    if (nextCursor === cursor) break;
+    if (!nextCursor) {
+      terminationReason = "cursor_missing";
+      break;
+    }
+    if (nextCursor === cursor) {
+      terminationReason = "duplicate_stop";
+      break;
+    }
     cursor = nextCursor;
-  }
-
-  if (pagesRequested === 1 && allNew.length > 0 && !cursor) {
-    console.warn("[totem] Sync stopped after 1 page (" + allNew.length +
-      " bookmarks) — no cursor in response. Check API response format.");
   }
 
   let staleIds: string[] = [];
@@ -94,5 +127,25 @@ export async function reconcileBookmarks(
     staleIds = [...localIds].filter((id) => !remoteIds.has(id));
   }
 
-  return { newBookmarks: allNew, staleIds, pagesRequested };
+  const needsRecovery =
+    !fullReconcile &&
+    pagesRequested === 1 &&
+    allNew.length === SYNC_PAGE_SIZE &&
+    !cursor &&
+    terminationReason === "cursor_missing";
+
+  if (needsRecovery) {
+    console.warn(
+      `[totem] Sync stopped after 1 full page (${allNew.length} bookmarks) with no cursor. Triggering recovery path.`,
+    );
+  }
+
+  return {
+    newBookmarks: allNew,
+    staleIds,
+    pagesRequested,
+    lastCursor,
+    needsRecovery,
+    terminationReason,
+  };
 }

@@ -784,6 +784,54 @@ export interface BookmarkPageResult {
   stopOnEmptyResponse: boolean;
 }
 
+function extractCursorValue(value: unknown): string | null {
+  const direct = asString(value);
+  if (direct) return direct;
+
+  const record = asRecord(value);
+  if (!record) return null;
+
+  return (
+    asString(record.cursor) ||
+    asString(record.value) ||
+    asString(record.cursorValue) ||
+    asString(record.bottomCursor) ||
+    asString(record.topCursor)
+  );
+}
+
+function readCursorFromContent(
+  content: UnknownRecord,
+  cursorRank: number,
+): { cursor: string; rank: number } | null {
+  if (cursorRank <= 0) return null;
+  const candidate =
+    extractCursorValue(content.value) ||
+    extractCursorValue(content.cursor) ||
+    extractCursorValue(asRecord(content.operation)?.cursor) ||
+    extractCursorValue(asRecord(content.operation)?.value) ||
+    null;
+
+  if (!candidate) return null;
+
+  return { cursor: candidate, rank: cursorRank };
+}
+
+function readCursorByPriority(
+  entryId: string,
+  content: UnknownRecord,
+): { cursor: string; rank: number } | null {
+  const cursorType = asString(content.cursorType);
+  const priority =
+    entryId.startsWith("cursor-bottom") || cursorType === "Bottom"
+      ? 3
+      : cursorType === "Top"
+        ? 2
+        : 0;
+
+  return readCursorFromContent(content, priority);
+}
+
 export function parseBookmarkPagePayload(payload: unknown): BookmarkPageResult {
   const timeline = asRecord(
     asRecord(asRecord(payload)?.data)?.bookmark_timeline_v2,
@@ -807,20 +855,17 @@ export function parseBookmarkPagePayload(payload: unknown): BookmarkPageResult {
   const bookmarks: Bookmark[] = [];
   let nextCursor: string | null = null;
   let stopOnEmptyResponse = false;
+  let nextCursorRank = 0;
 
   for (const entry of entries) {
     const entryId = asString(entry.entryId) || "";
     const content = asRecord(entry.content);
+    if (!content) continue;
 
-    if (entryId.startsWith("cursor-bottom")) {
-      nextCursor = asString(content?.value);
-      stopOnEmptyResponse = content?.stopOnEmptyResponse === true;
-      continue;
-    }
-
-    // Fallback cursor extraction: check cursorType on any entry
-    if (!nextCursor && asString(content?.cursorType) === "Bottom") {
-      nextCursor = asString(content?.value);
+    const candidate = readCursorByPriority(entryId, content);
+    if (candidate && candidate.rank >= nextCursorRank) {
+      nextCursor = candidate.cursor;
+      nextCursorRank = candidate.rank;
       stopOnEmptyResponse = content?.stopOnEmptyResponse === true;
       continue;
     }

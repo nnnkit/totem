@@ -1,11 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { TotemLogo } from "../../src/components/TotemLogo";
-import cleanReaderPreview from "./feature-previews/clean-reader.jpg";
-import readingStatesPreview from "./feature-previews/reading-states.jpg";
-import highlightsNotesPreview from "./feature-previews/highlights-notes.jpg";
-import manualMarkReadPreview from "./feature-previews/manual-mark-read.jpg";
-import worksOfflinePreview from "./feature-previews/works-offline.jpg";
-import keyboardShortcutsPreview from "./feature-previews/keyboard-shortcuts.jpg";
+import cleanReaderImage from "./feature-previews/clean-reader.jpg";
+import highlightsNotesImage from "./feature-previews/highlights-notes.jpg";
+import keyboardShortcutsImage from "./feature-previews/keyboard-shortcuts.jpg";
+import readingStatesImage from "./feature-previews/reading-states.jpg";
+import worksOfflineImage from "./feature-previews/works-offline.jpg";
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 
@@ -27,6 +26,136 @@ export type SitePage = "landing" | "privacy" | "demo";
 interface SiteAppProps {
   page: SitePage;
 }
+
+// Set this once the Chrome Web Store listing is live. Falls back to GitHub release path when empty.
+const CHROME_WEB_STORE_INSTALL_URL = "";
+const DEMO_VIDEO_URL = "https://www.youtube.com/watch?v=dummy";
+const DEMO_VIDEO_EMBED_URL =
+  "https://www.youtube.com/embed/dQw4w9WgXcQ?rel=0&modestbranding=1";
+const GITHUB_RELEASE_URL = "https://github.com/nnnkit/totem/releases/latest";
+const HAS_WEB_STORE_INSTALL = Boolean(CHROME_WEB_STORE_INSTALL_URL);
+const INSTALL_URL = HAS_WEB_STORE_INSTALL
+  ? CHROME_WEB_STORE_INSTALL_URL
+  : GITHUB_RELEASE_URL;
+
+const INSTALL_BUTTON_LABEL = HAS_WEB_STORE_INSTALL
+  ? "Install from Chrome Web Store"
+  : "Install extension";
+
+const FINAL_INSTALL_BUTTON_LABEL = HAS_WEB_STORE_INSTALL
+  ? "Install from Chrome Web Store"
+  : "Install extension";
+
+type FeatureItem = {
+  title: string;
+  body: string;
+  proof: string;
+  image: string;
+  alt: string;
+  wide?: boolean;
+};
+
+type FAQItem = {
+  question: string;
+  answer: string;
+};
+
+const FEATURES: FeatureItem[] = [
+  {
+    title: "Clean reader, zero feed noise",
+    body: "Read saved posts in a calmer layout made for long-form scanning.",
+    proof: "Threads, quotes, media, and article cards render in one place.",
+    image: cleanReaderImage,
+    alt: "Totem clean reader view showing saved X bookmarks without feed distractions.",
+  },
+  {
+    title: "Unread, Continue, and Read states",
+    body: "Your queue auto-organizes so you always know what to pick next.",
+    proof: "Reading progress is tracked per bookmark and restored on return.",
+    image: readingStatesImage,
+    alt: "Totem reading states showing unread, continue, and read progress.",
+  },
+  {
+    title: "Highlight and save notes",
+    body: "Select text while reading and keep notes where the insight happened.",
+    proof: "Highlights and note counts appear directly in your reading flow.",
+    image: highlightsNotesImage,
+    alt: "Totem highlights and notes feature in the reader.",
+    wide: true,
+  },
+  {
+    title: "Speed through with shortcuts",
+    body: "Navigate and triage quickly without breaking focus.",
+    proof: "Shortcuts like /, Space, L, S, J, and K work across views.",
+    image: keyboardShortcutsImage,
+    alt: "Totem keyboard shortcuts helping users move through saved bookmarks faster.",
+  },
+  {
+    title: "Keep reading offline",
+    body: "Continue reading when X is unavailable or your connection drops.",
+    proof: "Cached bookmarks, details, and progress stay usable locally.",
+    image: worksOfflineImage,
+    alt: "Totem interface running with offline-ready cached reading queue.",
+  },
+];
+
+const INSTALL_STEPS = HAS_WEB_STORE_INSTALL
+  ? [
+      {
+        n: "1",
+        title: "Install from store",
+        body: "Click install and confirm when Chrome asks.",
+      },
+      {
+        n: "2",
+        title: "Open new tab",
+        body: "Totem loads your queue and bookmark focus immediately.",
+      },
+      {
+        n: "3",
+        title: "Start reading",
+        body: "Read saved content in a cleaner layout.",
+      },
+    ]
+  : [
+      {
+        n: "1",
+        title: "Download release",
+        body: "Open the latest release package and download `totem-v<version>.zip`.",
+      },
+      {
+        n: "2",
+        title: "Load unpacked",
+        body: "Open `chrome://extensions`, enable Developer mode, click Load unpacked.",
+      },
+      {
+        n: "3",
+        title: "Open new tab",
+        body: "Select the unzipped folder and open a new tab to begin.",
+      },
+    ];
+
+const INSTALL_FAQ: FAQItem[] = [
+  {
+    question: "Will this need my X password?",
+    answer:
+      "No. Totem uses your existing logged-in session in Chrome to access your bookmarks.",
+  },
+  {
+    question: "Does this use my data?",
+    answer:
+      "It only uses your bookmarks and local reading state to work as your reading queue.",
+  },
+  {
+    question: "How quickly does it show my bookmarks?",
+    answer:
+      "Most users can view saved items quickly after install, with fuller sync during normal usage.",
+  },
+  {
+    question: "Can I uninstall cleanly?",
+    answer: "Yes. Removing Totem removes extension state from your browser.",
+  },
+];
 
 // ─── Layout ───────────────────────────────────────────────────────────────────
 
@@ -72,35 +201,40 @@ function SiteLayout({
             : "bg-white"
         }`}
       >
-        <div className="max-w-5xl mx-auto flex items-center justify-between px-6 h-14">
-          <a
-            href="/"
-            className="flex items-center gap-2.5 no-underline"
-            aria-label="Totem homepage"
-          >
-            <TotemLogo className="size-7" />
-            <span className="font-bold text-neutral-900 text-[0.95rem] tracking-tight">
-              Totem
-            </span>
-          </a>
-          <nav className="flex items-center gap-1" aria-label="Primary">
+        <div className="max-w-5xl mx-auto px-6 py-2.5">
+          <div className="flex items-center justify-between gap-2">
             <a
-              href="/privacy"
-              className={`px-3 py-1.5 rounded-full text-sm font-medium no-underline transition-colors ${
-                page === "privacy"
-                  ? "text-neutral-900 bg-neutral-100"
-                  : "text-neutral-500 hover:text-neutral-900 hover:bg-neutral-50"
-              }`}
+              href="/"
+              className="flex items-center gap-2.5 no-underline"
+              aria-label="Totem homepage"
             >
-              Privacy
+              <TotemLogo className="size-7" />
+              <span className="flex flex-col leading-tight">
+                <span className="font-bold text-neutral-900 text-[0.95rem] tracking-tight">
+                  Totem
+                </span>
+                <span className="text-[0.68rem] text-neutral-500 tracking-[0.08em]">
+                  Read your X bookmarks, not the feed.
+                </span>
+              </span>
             </a>
-            <a
-              href="#install"
-              className="ml-1 inline-flex items-center px-4 py-1.5 rounded-full bg-neutral-900 text-white text-sm font-semibold no-underline transition-all hover:bg-neutral-800 active:scale-[0.97]"
-            >
-              Add to Chrome
-            </a>
-          </nav>
+            <nav className="flex items-center gap-1" aria-label="Primary">
+              <a
+                href={INSTALL_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="ml-1 inline-flex items-center px-4 py-1.5 rounded-full bg-neutral-900 text-white text-sm font-semibold no-underline transition-all hover:bg-neutral-800 active:scale-[0.97]"
+              >
+                Install Totem
+              </a>
+              <a
+                href="#demo"
+                className="ml-1 inline-flex items-center px-4 py-1.5 rounded-full border border-neutral-200 text-sm font-semibold text-neutral-700 no-underline transition-colors hover:text-neutral-900 hover:bg-neutral-50"
+              >
+                See Demo
+              </a>
+            </nav>
+          </div>
         </div>
       </header>
 
@@ -160,7 +294,7 @@ function SiteLayout({
 // ─── Demo Browser Mockup ──────────────────────────────────────────────────────
 
 function DemoBrowser() {
-  const [opened, setOpened] = useState(false);
+  const [opened, setOpened] = useState(true);
   const [frameReady, setFrameReady] = useState(false);
   const [tabTitle, setTabTitle] = useState("Totem");
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -357,75 +491,6 @@ function DemoBrowser() {
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
-type FeatureItem = {
-  title: string;
-  body: string;
-  previewSrc: string;
-  previewAlt: string;
-};
-
-const FEATURES: FeatureItem[] = [
-  {
-    title: "Clean reader",
-    body: "Read threads, articles, and links without feed clutter.",
-    previewSrc: cleanReaderPreview,
-    previewAlt:
-      "Totem reader view showing a distraction-free article reading layout.",
-  },
-  {
-    title: "Simple reading states",
-    body: "Track what is unread, in progress, and done.",
-    previewSrc: readingStatesPreview,
-    previewAlt:
-      "Totem reading list showing item states for active progress tracking.",
-  },
-  {
-    title: "Highlights & notes",
-    body: "Highlight lines and add notes while you read.",
-    previewSrc: highlightsNotesPreview,
-    previewAlt:
-      "Totem reader with highlighted text and inline notes while reading.",
-  },
-  {
-    title: "Manual mark as read",
-    body: "Nothing auto-completes. You choose when an item is done.",
-    previewSrc: manualMarkReadPreview,
-    previewAlt: "Totem list showing items manually marked as read.",
-  },
-  {
-    title: "Works offline",
-    body: "Cached content and progress stay available without internet.",
-    previewSrc: worksOfflinePreview,
-    previewAlt:
-      "Totem home screen showing sync status and locally available reading items.",
-  },
-  {
-    title: "Keyboard shortcuts",
-    body: "Move faster with shortcuts for navigation and reading actions.",
-    previewSrc: keyboardShortcutsPreview,
-    previewAlt:
-      "Totem settings screen with controls for faster keyboard-driven workflow.",
-  },
-];
-
-const STEPS = [
-  {
-    n: "1",
-    title: "Save on X",
-    body: "Bookmark any post on X. Totem syncs it.",
-  },
-  {
-    n: "2",
-    title: "Open a new tab",
-    body: "Your reading queue appears instantly.",
-  },
-  {
-    n: "3",
-    title: "Read and finish",
-    body: "Read, highlight, add notes, then mark as read.",
-  },
-];
-
 // ─── Landing Page ─────────────────────────────────────────────────────────────
 
 function LandingPage() {
@@ -433,31 +498,57 @@ function LandingPage() {
     <SiteLayout page="landing">
       <main>
         {/* ── Hero ──────────────────────────────────────────────── */}
-        <section className="max-w-5xl mx-auto px-6 pt-20 pb-16 sm:pt-28 sm:pb-20">
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-400 mb-4">
-            Chrome Extension
-          </p>
-          <h1 className="font-[Newsreader,serif] text-[clamp(2.25rem,5vw,3.125rem)] leading-[1.05] tracking-tight text-neutral-900 mb-5 max-w-[18ch] text-balance">
-            Read your X bookmarks, not the feed.
-          </h1>
-          <p className="text-neutral-500 text-lg leading-relaxed max-w-[48ch] mb-8">
-            Totem replaces your Chrome new tab with a focused reading queue, so
-            you can read saved posts without getting pulled back into X.
-          </p>
-          <div className="flex flex-wrap gap-3 mb-8">
-            <a
-              href="#install"
-              className="inline-flex items-center h-11 px-6 rounded-xl bg-accent-400 text-white font-semibold text-[0.95rem] no-underline transition-all hover:bg-accent-500 active:scale-[0.97]"
-            >
-              Add to Chrome
-            </a>
-          </div>
-          <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-neutral-400 font-medium">
-            <span>No account</span>
-            <span className="text-neutral-200">|</span>
-            <span>No backend</span>
-            <span className="text-neutral-200">|</span>
-            <span>Local-first</span>
+        <section className="max-w-6xl mx-auto px-6 pt-20 pb-16 sm:pt-28 sm:pb-20">
+          <div className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr] lg:items-start">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-400 mb-4">
+                Chrome Extension
+              </p>
+              <h1 className="font-[Newsreader,serif] text-[clamp(2.25rem,5vw,3.125rem)] leading-[1.05] tracking-tight text-neutral-900 mb-5 max-w-[18ch] text-balance">
+                Read your X bookmarks, not the feed.
+              </h1>
+              <p className="text-neutral-500 text-lg leading-relaxed max-w-[48ch] mb-8">
+                Open a new tab to read your saved posts. No feed, no algorithmic
+                noise.
+              </p>
+              <div className="flex flex-wrap gap-3 mb-8">
+                <a
+                  href={INSTALL_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center h-11 px-6 rounded-xl bg-accent-400 text-white font-semibold text-[0.95rem] no-underline transition-all hover:bg-accent-500 active:scale-[0.97]"
+                >
+                  {INSTALL_BUTTON_LABEL}
+                </a>
+                <a
+                  href={DEMO_VIDEO_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center h-11 px-6 rounded-xl border border-neutral-200 bg-white text-neutral-900 text-[0.95rem] no-underline font-semibold transition-all hover:bg-neutral-100"
+                >
+                  Watch demo video
+                </a>
+              </div>
+              <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-neutral-400 font-medium">
+                <span>No account</span>
+                <span className="text-neutral-200">|</span>
+                <span>No backend</span>
+                <span className="text-neutral-200">|</span>
+                <span>Local-first</span>
+              </div>
+            </div>
+            <aside className="lg:pt-2">
+              <div className="overflow-hidden rounded-2xl border border-neutral-200 bg-neutral-950 shadow-[0_18px_50px_rgba(0,0,0,0.14)]">
+                <iframe
+                  title="Totem quick walkthrough video"
+                  src={DEMO_VIDEO_EMBED_URL}
+                  className="block w-full aspect-[16/10] border-0"
+                  loading="lazy"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                />
+              </div>
+            </aside>
           </div>
         </section>
 
@@ -468,10 +559,11 @@ function LandingPage() {
               Live demo
             </p>
             <h2 className="font-[Newsreader,serif] text-[clamp(1.8rem,3.5vw,2.8rem)] leading-tight tracking-tight text-white mb-3 max-w-[22ch]">
-              See Totem in action.
+              See the experience before you install.
             </h2>
             <p className="text-neutral-500 text-sm max-w-[52ch]">
-              Click the New tab button in the mock browser to open Totem.{" "}
+              Click the New tab button in the mock browser to open Totem. If this
+              looks useful, install now.{" "}
               <a
                 href="/demo-page"
                 className="text-white/70 underline underline-offset-2 hover:text-white transition-colors"
@@ -487,70 +579,85 @@ function LandingPage() {
           </div>
 
           <div className="max-w-5xl mx-auto px-6">
-            <p className="text-neutral-600 text-xs mt-4">
-              Demo uses fixture data and the same core UI as the extension.
+            <p className="text-neutral-600 text-sm mt-4">
+              Works offline after first sync and keeps your reading state local.
             </p>
           </div>
         </section>
 
-        {/* ── Features ──────────────────────────────────────────── */}
+        {/* ── Features ─────────────────────────────────────────── */}
         <section className="max-w-5xl mx-auto px-6 py-16 sm:py-20">
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-400 mb-3 text-center">
-            What you get
+            Features
           </p>
-          <h2 className="font-[Newsreader,serif] text-[clamp(1.8rem,3.5vw,2.8rem)] leading-tight tracking-tight text-neutral-900 mb-3 max-w-[22ch] mx-auto text-center text-balance">
-            Designed to help you read more, with less noise.
+          <h2 className="font-[Newsreader,serif] text-[clamp(1.95rem,3.7vw,3rem)] leading-tight tracking-tight text-neutral-900 mb-3 text-center text-balance">
+            <span className="block">Five practical features you will love.</span>
+            <span className="block text-neutral-400">
+              (Discover more once you install.)
+            </span>
           </h2>
-          <p className="text-neutral-500 text-[0.98rem] leading-relaxed max-w-[56ch] mx-auto text-center mb-10 text-balance">
-            A clean reading workflow with clear states, offline continuity, and
-            tools that keep your attention on the text.
+          <p className="text-neutral-500 text-[0.98rem] leading-relaxed max-w-[60ch] mx-auto text-center mb-10 text-balance">
+            Everything below is already in the extension today.
           </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-4 gap-y-8">
-            {FEATURES.map((f) => (
-              <article key={f.title}>
-                <div className="relative overflow-hidden rounded-2xl border border-neutral-200 bg-neutral-100 aspect-[16/10] shadow-[0_12px_30px_rgba(0,0,0,0.08)]">
-                  <img
-                    src={f.previewSrc}
-                    alt={f.previewAlt}
-                    className="absolute inset-0 h-full w-full object-cover object-[50%_22%] transition-transform duration-300 ease-out scale-[1.14] hover:scale-[1.18]"
-                    loading="lazy"
-                    decoding="async"
-                  />
-                </div>
-                <h3 className="text-[1.45rem] font-[Newsreader,serif] leading-tight tracking-tight text-neutral-900 mt-4 mb-1">
-                  {f.title}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {FEATURES.map((feature) => (
+              <article
+                key={feature.title}
+                className={`rounded-2xl border border-neutral-200 bg-white shadow-[0_16px_36px_rgba(0,0,0,0.06)] ${
+                  feature.wide
+                    ? "md:col-span-2 p-5 sm:p-6"
+                    : "p-4 sm:p-5"
+                }`}
+              >
+                <img
+                  src={feature.image}
+                  alt={feature.alt}
+                  className={`w-full object-cover rounded-xl border border-neutral-200 mb-4 ${
+                    feature.wide ? "aspect-[21/9]" : "aspect-[16/10]"
+                  }`}
+                  loading="lazy"
+                />
+                <h3
+                  className={`text-[1.2rem] leading-tight tracking-tight text-neutral-900 mb-2 font-[Newsreader,serif] ${
+                    feature.wide ? "text-center" : ""
+                  }`}
+                >
+                  {feature.title}
                 </h3>
-                <p className="text-[0.98rem] text-neutral-600 leading-relaxed m-0 max-w-[34ch]">
-                  {f.body}
+                <p
+                  className={`text-[0.96rem] text-neutral-600 leading-relaxed mb-4 ${
+                    feature.wide ? "text-center max-w-[62ch] mx-auto" : ""
+                  }`}
+                >
+                  {feature.body}
+                </p>
+                <p
+                  className={`text-xs font-medium uppercase tracking-[0.08em] text-neutral-500 ${
+                    feature.wide ? "text-center" : ""
+                  }`}
+                >
+                  proof: {feature.proof}
                 </p>
               </article>
             ))}
           </div>
-        </section>
-
-        {/* ── How it works ──────────────────────────────────────── */}
-        <section className="border-t border-neutral-100">
-          <div className="max-w-5xl mx-auto px-6 py-16 sm:py-20">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-400 mb-3">
-              How it works
+          <div className="mt-8 rounded-2xl border border-neutral-200 bg-neutral-50 p-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-neutral-500">
+              Also inside Totem
             </p>
-            <h2 className="font-[Newsreader,serif] text-[clamp(1.8rem,3.5vw,2.8rem)] leading-tight tracking-tight text-neutral-900 mb-10 max-w-[26ch]">
-              From bookmark to done in three steps.
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
-              {STEPS.map((step) => (
-                <div key={step.n} className="flex flex-col gap-3">
-                  <div className="w-10 h-10 rounded-full bg-neutral-900 text-white text-sm font-bold flex items-center justify-center shrink-0">
-                    {step.n}
-                  </div>
-                  <h3 className="text-[0.95rem] font-semibold text-neutral-900 m-0">
-                    {step.title}
-                  </h3>
-                  <p className="text-sm text-neutral-500 leading-relaxed m-0">
-                    {step.body}
-                  </p>
-                </div>
-              ))}
+            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+              <p className="rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-700">
+                Search bar with engine picker
+              </p>
+              <p className="rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-700">
+                Optional quick links from your top sites
+              </p>
+              <p className="rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-700">
+                Theme modes and background styles
+              </p>
+              <p className="rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-700">
+                Read-next suggestions and shuffle
+              </p>
             </div>
           </div>
         </section>
@@ -562,17 +669,108 @@ function LandingPage() {
               Start reading your saved posts.
             </h2>
             <p className="text-neutral-500 text-sm mb-8">
-              Free. Local-first. No account.
+              Free. Local-first. 2–3 minutes to start.
             </p>
             <a
-              href="#install"
+              href={INSTALL_URL}
+              target="_blank"
+              rel="noopener noreferrer"
               className="inline-flex items-center h-11 px-7 rounded-xl bg-white text-neutral-900 font-semibold text-[0.95rem] no-underline transition-all hover:bg-neutral-100 active:scale-[0.97]"
             >
-              Add to Chrome
+              {FINAL_INSTALL_BUTTON_LABEL}
             </a>
-            <p className="text-neutral-700 text-xs mt-5 tracking-wide">
-              Local-first &middot; 0 servers &middot; No feed
+            <div className="mx-auto mt-8 max-w-lg text-left rounded-2xl bg-white/5 px-5 py-5 text-sm text-white/75">
+              <h3 className="text-white font-semibold text-sm mb-3">
+                After install
+              </h3>
+              <ol className="grid gap-3">
+                {INSTALL_STEPS.map((step) => (
+                  <li key={step.n} className="flex gap-3">
+                    <span className="w-6 h-6 rounded-full bg-white/20 text-white text-xs flex items-center justify-center shrink-0">
+                      {step.n}
+                    </span>
+                    <p className="text-left m-0">
+                      <span className="text-white font-semibold">
+                        {step.title}:
+                      </span>{" "}
+                      {step.body}
+                    </p>
+                  </li>
+                ))}
+              </ol>
+              <p className="text-xs uppercase tracking-[0.12em] text-white/60 mt-4">
+                No account. No server. Your bookmarks stay on your device.
+              </p>
+            </div>
+            <p className="text-neutral-700 text-xs mt-6 tracking-wide">
+              Install safety note: Totem only uses access needed to read your own
+              X bookmarks and cache your reading state.
             </p>
+          </div>
+        </section>
+
+        {/* ── Trust & FAQ ────────────────────────────────────────── */}
+        <section id="faq" className="max-w-5xl mx-auto px-6 py-16 sm:py-20">
+          <div className="grid gap-8 md:grid-cols-[1.05fr,1fr]">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-400 mb-3">
+                What this extension will and won&apos;t do
+              </p>
+              <h2 className="font-[Newsreader,serif] text-[1.8rem] leading-tight tracking-tight text-neutral-900 mb-4 text-balance">
+                Permission trust, in plain language.
+              </h2>
+              <div className="rounded-xl border border-neutral-200 bg-neutral-100 p-4">
+                <p className="text-sm text-neutral-600 m-0">
+                  The extension only needs access required to read your own X
+                  bookmarks and cache your reading data.
+                </p>
+                <p className="text-sm text-neutral-600 m-0 mt-2">
+                  It does not create an account, store your feed, or upload your
+                  notes anywhere.
+                </p>
+              </div>
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-400 mb-3">
+                Quick questions
+              </p>
+              <div className="flex flex-col gap-4">
+                {INSTALL_FAQ.map((item) => (
+                  <article
+                    key={item.question}
+                    className="rounded-xl border border-neutral-200 p-4"
+                  >
+                    <h3 className="text-[1rem] leading-snug tracking-tight text-neutral-900 mb-2">
+                      {item.question}
+                    </h3>
+                    <p className="text-sm text-neutral-600 m-0 leading-relaxed">
+                      {item.answer}
+                    </p>
+                  </article>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ── Final CTA ─────────────────────────────────────────── */}
+        <section className="w-full bg-neutral-900 py-14">
+          <div className="max-w-xl mx-auto px-6 text-center">
+            <h2 className="font-[Newsreader,serif] text-[clamp(1.8rem,3.5vw,2.8rem)] leading-tight tracking-tight text-white mb-3">
+              Ready to start reading your bookmarks?
+            </h2>
+            <p className="text-white/70 text-sm mb-8">
+              No account required. No subscription. Just install and open a new
+              tab.
+            </p>
+            <a
+              href={INSTALL_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center h-11 px-7 rounded-xl bg-white text-neutral-900 font-semibold text-[0.95rem] no-underline transition-all hover:bg-neutral-100 active:scale-[0.97]"
+            >
+              {FINAL_INSTALL_BUTTON_LABEL}
+            </a>
           </div>
         </section>
       </main>

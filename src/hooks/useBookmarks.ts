@@ -241,8 +241,11 @@ export function useBookmarks(
     const accountId = activeAccountId;
 
     const trigger = options.trigger ?? "manual";
+    const startingLocalCount = bookmarksRef.current.length;
     const requestedMode =
       options.mode ?? (trigger === "manual" ? "quick" : undefined);
+    const requestedModeForReservation =
+      trigger === "manual" && startingLocalCount <= 0 ? "full" : requestedMode;
     const localCount =
       typeof options.localCountHint === "number" &&
       Number.isFinite(options.localCountHint)
@@ -253,7 +256,7 @@ export function useBookmarks(
       accountId,
       trigger,
       localCount,
-      requestedMode,
+      requestedMode: requestedModeForReservation,
     }).catch(() => null);
 
     if (!policy) {
@@ -320,11 +323,30 @@ export function useBookmarks(
       abortSync(true);
     }, timeout);
 
-    try {
-      const existingIds = new Set(bookmarksRef.current.map((b) => b.tweetId));
+    const onPage = async (pageNew: Bookmark[]) => {
+      if (abortController.aborted) return;
+      const currentIds = new Set(bookmarksRef.current.map((b) => b.tweetId));
+      const deduped = pageNew.filter((b) => !currentIds.has(b.tweetId));
+      if (deduped.length === 0) return;
 
-      const reconcileResult = await reconcileBookmarks({
-        localIds: existingIds,
+      const updated = [...bookmarksRef.current, ...deduped].toSorted(compareSortIndexDesc);
+      bookmarksRef.current = updated;
+      setBookmarks(updated);
+
+      try {
+        await upsertBookmarks(deduped);
+      } catch {
+        // DB write can fail if IndexedDB was cleared externally.
+      }
+    };
+
+    const runReconcilePass = async (options: {
+      continueOnNoNewItems?: boolean;
+      maxPages?: number;
+      maxBookmarks?: number;
+    }) => {
+      return reconcileBookmarks({
+        localIds: new Set(bookmarksRef.current.map((b) => b.tweetId)),
         fetchPage: (cursor) =>
           queue.enqueue(() =>
             withTimeout(
@@ -334,25 +356,32 @@ export function useBookmarks(
             ),
           ),
         fullReconcile: mode === "full",
+        maxPages: options.maxPages,
+        maxBookmarks: options.maxBookmarks,
+        continueOnNoNewItems: options.continueOnNoNewItems,
+        onPage,
+      });
+    };
+
+    try {
+      let reconcileResult = await runReconcilePass({
         maxPages: mode === "quick" ? SYNC_MAX_PAGES_PER_JOB : undefined,
         maxBookmarks: mode === "quick" ? SYNC_MAX_BOOKMARKS_PER_JOB : undefined,
-        onPage: async (pageNew) => {
-          if (abortController.aborted) return;
-          const currentIds = new Set(bookmarksRef.current.map((b) => b.tweetId));
-          const deduped = pageNew.filter((b) => !currentIds.has(b.tweetId));
-          if (deduped.length === 0) return;
-
-          const updated = [...bookmarksRef.current, ...deduped].toSorted(compareSortIndexDesc);
-          bookmarksRef.current = updated;
-          setBookmarks(updated);
-
-          try {
-            await upsertBookmarks(deduped);
-          } catch {
-            // DB write can fail if IndexedDB was cleared externally.
-          }
-        },
       });
+
+      if (
+        trigger === "manual" &&
+        mode === "quick" &&
+        reconcileResult.needsRecovery &&
+        !abortController.aborted
+      ) {
+        console.warn(
+          "[totem] Quick sync reached first page without cursor; running automatic recovery pass.",
+        );
+        reconcileResult = await runReconcilePass({
+          continueOnNoNewItems: true,
+        });
+      }
 
       if (!abortController.aborted) {
         if (mode === "full" && reconcileResult.staleIds.length > 0) {
@@ -644,7 +673,7 @@ export function useBookmarks(
   // ── refresh (manual trigger) ──
 
   const refresh = useCallback(async (): Promise<SyncRequestResult> => {
-    return sync({ trigger: "manual", mode: "quick" });
+    return sync({ trigger: "manual" });
   }, [sync]);
 
   // ── reset ──

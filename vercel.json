@@ -1,16 +1,12 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "vite",
-  "installCommand": "pnpm install",
+  "installCommand": "pnpm install --frozen-lockfile",
   "buildCommand": "pnpm build:website",
   "outputDirectory": "dist-website",
   "cleanUrls": true,
+  "trailingSlash": false,
   "redirects": [
-    {
-      "source": "/website",
-      "destination": "/",
-      "permanent": false
-    },
     {
       "source": "/website/:path*",
       "destination": "/:path*",

@@ -85,6 +85,82 @@ describe("parseBookmarkPagePayload", () => {
     expect(result.stopOnEmptyResponse).toBe(true);
   });
 
+  it("reads cursor from nested cursor payload shape", () => {
+    const payload = makePayload([
+      {
+        type: "TimelineAddEntries",
+        entries: [
+          {
+            entryId: "cursor-bottom-0",
+            content: {
+              cursorType: "Bottom",
+              value: {
+                cursor: "CURSOR_NESTED",
+              },
+              stopOnEmptyResponse: true,
+            },
+          },
+        ],
+      },
+    ]);
+
+    const result = parseBookmarkPagePayload(payload);
+    expect(result.cursor).toBe("CURSOR_NESTED");
+    expect(result.stopOnEmptyResponse).toBe(true);
+  });
+
+  it("falls back to Top cursor when Bottom cursor is unavailable", () => {
+    const payload = makePayload([
+      {
+        type: "TimelineAddEntries",
+        entries: [
+          {
+            entryId: "cursor-top-0",
+            content: {
+              cursorType: "Top",
+              value: {
+                cursor: "CURSOR_TOP",
+              },
+              stopOnEmptyResponse: false,
+            },
+          },
+        ],
+      },
+    ]);
+
+    const result = parseBookmarkPagePayload(payload);
+    expect(result.cursor).toBe("CURSOR_TOP");
+    expect(result.stopOnEmptyResponse).toBe(false);
+  });
+
+  it("prefers Bottom cursor over Top when both are present", () => {
+    const payload = makePayload([
+      {
+        type: "TimelineAddEntries",
+        entries: [
+          {
+            entryId: "cursor-top-0",
+            content: {
+              cursorType: "Top",
+              value: "CURSOR_TOP",
+              stopOnEmptyResponse: false,
+            },
+          },
+          {
+            entryId: "cursor-bottom-0",
+            content: {
+              value: "CURSOR_BOTTOM",
+              stopOnEmptyResponse: false,
+            },
+          },
+        ],
+      },
+    ]);
+
+    const result = parseBookmarkPagePayload(payload);
+    expect(result.cursor).toBe("CURSOR_BOTTOM");
+  });
+
   it("returns empty result when timeline payload is missing", () => {
     const result = parseBookmarkPagePayload({});
     expect(result).toEqual({
@@ -94,4 +170,3 @@ describe("parseBookmarkPagePayload", () => {
     });
   });
 });
-
