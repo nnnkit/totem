@@ -70,26 +70,13 @@ function getCommitSubjectsSinceTag(tag) {
     .filter(Boolean);
 }
 
-function categorizeCommits(commits) {
-  const added = [];
-  const fixed = [];
-  const changed = [];
+const SKIP_PREFIXES = /^(chore|ci|build|test|refactor|docs|style)(\(.+\))?:\s+/i;
+const MERGE_COMMIT = /^Merge /;
 
-  for (const subject of commits) {
-    if (/^feat(\(.+\))?:\s+/i.test(subject)) {
-      added.push(subject);
-      continue;
-    }
-
-    if (/^fix(\(.+\))?:\s+/i.test(subject)) {
-      fixed.push(subject);
-      continue;
-    }
-
-    changed.push(subject);
-  }
-
-  return { added, fixed, changed };
+function filterCommits(commits) {
+  return commits.filter(
+    (subject) => !SKIP_PREFIXES.test(subject) && !MERGE_COMMIT.test(subject)
+  );
 }
 
 function escapeRegExp(value) {
@@ -108,15 +95,7 @@ function normalizeChangelog(content) {
   ].join("\n");
 }
 
-function renderSection(title, lines) {
-  if (lines.length === 0) {
-    return "";
-  }
-
-  return [`### ${title}`, ...lines.map((line) => `- ${line}`), ""].join("\n");
-}
-
-function upsertChangelogEntry(changelogPath, version, categorized) {
+function upsertChangelogEntry(changelogPath, version, commits) {
   let content = "";
 
   try {
@@ -128,17 +107,10 @@ function upsertChangelogEntry(changelogPath, version, categorized) {
   content = normalizeChangelog(content);
   const date = new Date().toISOString().slice(0, 10);
 
-  const sections = [
-    renderSection("Added", categorized.added),
-    renderSection("Changed", categorized.changed),
-    renderSection("Fixed", categorized.fixed),
-  ]
-    .filter(Boolean)
-    .join("\n")
-    .trimEnd();
-
   const releaseBody =
-    sections.length > 0 ? sections : ["### Changed", "- Maintenance release."].join("\n");
+    commits.length > 0
+      ? commits.map((c) => `- ${c}`).join("\n")
+      : "- Maintenance release.";
 
   const entry = [`## [${version}] - ${date}`, "", releaseBody].join("\n");
 
@@ -231,9 +203,8 @@ function main() {
   manifest.version = nextVersion;
 
   const latestTag = getLatestTag();
-  const commits = getCommitSubjectsSinceTag(latestTag);
-  const categorized = categorizeCommits(commits);
-  const nextChangelog = upsertChangelogEntry(changelogPath, nextVersion, categorized);
+  const commits = filterCommits(getCommitSubjectsSinceTag(latestTag));
+  const nextChangelog = upsertChangelogEntry(changelogPath, nextVersion, commits);
 
   if (!dryRun) {
     writeJson(packageJsonPath, packageJson);
