@@ -6,6 +6,7 @@ import {
 } from "../runtime-store";
 import type { Bookmark, RuntimeSnapshot } from "../../types";
 import { LS_BOOT_SYNC_POLICY } from "../../lib/storage-keys";
+import type { RuntimeState } from "../runtime-store";
 
 const mocks = vi.hoisted(() => ({
   getRuntimeSnapshot: vi.fn<() => Promise<RuntimeSnapshot>>(),
@@ -286,5 +287,134 @@ describe("runtime-store boot", () => {
       "totem_boot_sync_policy",
       "manual_only_until_seeded",
     );
+  });
+});
+
+describe("runtime-store sync", () => {
+  function primeReadyState(
+    store: ReturnType<typeof createRuntimeStore>,
+    overrides: Partial<RuntimeState> = {},
+  ) {
+    store.setState({
+      authPhase: "ready",
+      authState: "authenticated",
+      sessionState: "logged_in",
+      capability: {
+        bookmarksApi: "ready",
+        detailApi: "unknown",
+      },
+      activeAccountId: "acct-1",
+      hasQueryId: true,
+      bookmarksLoaded: true,
+      detailedIdsLoaded: true,
+      syncStatus: "idle",
+      syncJobKind: "none",
+      syncBlockedReason: null,
+      ...overrides,
+    });
+  }
+
+  it("forces full manual sync while seeding after reset even if bookmarks already exist", async () => {
+    localStorage.setItem(LS_BOOT_SYNC_POLICY, "manual_only_until_seeded");
+    mocks.reserveSyncRun.mockResolvedValue({
+      allow: false,
+      mode: null,
+      reason: "not_ready",
+    });
+
+    const store = createRuntimeStore();
+    primeReadyState(store, {
+      bootPolicy: "manual_only_until_seeded",
+      bookmarks: [createBookmark("tweet-1")],
+    });
+
+    await store.getState().actions.refresh();
+
+    expect(mocks.reserveSyncRun).toHaveBeenCalledWith({
+      accountId: "acct-1",
+      trigger: "manual",
+      localCount: 1,
+      requestedMode: "full",
+    });
+  });
+
+  it("keeps manual-only policy and reports an error when a full seed sync is incomplete", async () => {
+    localStorage.setItem(LS_BOOT_SYNC_POLICY, "manual_only_until_seeded");
+    mocks.reserveSyncRun.mockResolvedValue({
+      allow: true,
+      mode: "full",
+      reason: "manual",
+      leaseId: "lease-1",
+      accountKey: "acct-1",
+    });
+    mocks.fetchBookmarkPage.mockResolvedValue({
+      bookmarks: Array.from({ length: 100 }, (_, index) => createBookmark(`tweet-${index}`)),
+      cursor: null,
+      stopOnEmptyResponse: false,
+    });
+
+    const store = createRuntimeStore();
+    primeReadyState(store, {
+      bootPolicy: "manual_only_until_seeded",
+    });
+
+    await store.getState().actions.refresh();
+
+    const state = store.getState();
+    expect(mocks.fetchBookmarkPage).toHaveBeenCalledTimes(2);
+    expect(state.bookmarks).toHaveLength(100);
+    expect(state.syncStatus).toBe("error");
+    expect(state.bootPolicy).toBe("manual_only_until_seeded");
+    expect(localStorage.getItem(LS_BOOT_SYNC_POLICY)).toBe("manual_only_until_seeded");
+    expect(mocks.completeSyncRun).toHaveBeenCalledWith({
+      accountId: "acct-1",
+      leaseId: "lease-1",
+      mode: "full",
+      status: "failure",
+      trigger: "manual",
+      errorCode: "INCOMPLETE_FULL_SYNC",
+    });
+  });
+
+  it("clears manual-only policy only after a complete full seed sync", async () => {
+    localStorage.setItem(LS_BOOT_SYNC_POLICY, "manual_only_until_seeded");
+    mocks.reserveSyncRun.mockResolvedValue({
+      allow: true,
+      mode: "full",
+      reason: "manual",
+      leaseId: "lease-2",
+      accountKey: "acct-1",
+    });
+    mocks.fetchBookmarkPage
+      .mockResolvedValueOnce({
+        bookmarks: [createBookmark("tweet-1"), createBookmark("tweet-2")],
+        cursor: "cursor-1",
+        stopOnEmptyResponse: false,
+      })
+      .mockResolvedValueOnce({
+        bookmarks: [],
+        cursor: null,
+        stopOnEmptyResponse: true,
+      });
+
+    const store = createRuntimeStore();
+    primeReadyState(store, {
+      bootPolicy: "manual_only_until_seeded",
+    });
+
+    await store.getState().actions.refresh();
+
+    const state = store.getState();
+    expect(state.syncStatus).toBe("idle");
+    expect(state.bootPolicy).toBe("auto");
+    expect(localStorage.getItem(LS_BOOT_SYNC_POLICY)).toBeNull();
+    expect(mocks.completeSyncRun).toHaveBeenCalledWith({
+      accountId: "acct-1",
+      leaseId: "lease-2",
+      mode: "full",
+      status: "success",
+      trigger: "manual",
+      errorCode: undefined,
+    });
   });
 });

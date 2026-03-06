@@ -732,7 +732,10 @@ export function createRuntimeStore() {
       const requestedMode =
         options.requestedMode ?? (trigger === "manual" ? "quick" : undefined);
       const requestedModeForReservation =
-        trigger === "manual" && startingLocalCount <= 0 ? "full" : requestedMode;
+        trigger === "manual" &&
+          (startingLocalCount <= 0 || state.bootPolicy === "manual_only_until_seeded")
+          ? "full"
+          : requestedMode;
 
       const policy = await reserveSyncRun({
         accountId,
@@ -843,7 +846,6 @@ export function createRuntimeStore() {
 
         try {
           await upsertBookmarks(deduped);
-          maybeClearBootPolicy();
         } catch {}
 
         prefetchController.reconcile();
@@ -891,42 +893,50 @@ export function createRuntimeStore() {
         }
 
         if (!abortState.aborted && get().syncGeneration === syncGeneration) {
-          if (mode === "full" && reconcileResult.staleIds.length > 0) {
-            await deleteBookmarksByTweetIds(reconcileResult.staleIds, {
-              purgeHighlights: false,
-            });
-            const staleIds = new Set(reconcileResult.staleIds);
-            setRuntimeState((state) => ({
-              bookmarks: state.bookmarks.filter((bookmark) => !staleIds.has(bookmark.tweetId)),
-            }));
-          }
+          const fullSyncCompleted = mode !== "full" ||
+            reconcileResult.terminationReason === "complete";
 
-          const now = Date.now();
-          if (mode === "incremental") {
-            await chrome.storage.local.set({
-              [CS_LAST_SYNC]: now,
-              [CS_LAST_SOFT_SYNC]: now,
+          if (!fullSyncCompleted) {
+            completionErrorCode = "INCOMPLETE_FULL_SYNC";
+            setRuntimeState({
+              syncStatus: "error",
+              syncJobKind: "none",
+              syncBlockedReason: null,
             });
           } else {
-            await chrome.storage.local.set({ [CS_LAST_SYNC]: now });
+            if (mode === "full" && reconcileResult.staleIds.length > 0) {
+              await deleteBookmarksByTweetIds(reconcileResult.staleIds, {
+                purgeHighlights: false,
+              });
+              const staleIds = new Set(reconcileResult.staleIds);
+              setRuntimeState((state) => ({
+                bookmarks: state.bookmarks.filter((bookmark) => !staleIds.has(bookmark.tweetId)),
+              }));
+            }
+
+            const now = Date.now();
+            if (mode === "incremental") {
+              await chrome.storage.local.set({
+                [CS_LAST_SYNC]: now,
+                [CS_LAST_SOFT_SYNC]: now,
+              });
+            } else {
+              await chrome.storage.local.set({ [CS_LAST_SYNC]: now });
+            }
+
+            await chrome.storage.local.remove(CS_SOFT_SYNC_NEEDED);
+
+            if (mode === "full" && reconcileResult.terminationReason === "complete") {
+              maybeClearBootPolicy();
+            }
+
+            setRuntimeState({
+              syncStatus: "idle",
+              syncJobKind: "none",
+              syncBlockedReason: null,
+            });
+            completionStatus = "success";
           }
-
-          await chrome.storage.local.remove(CS_SOFT_SYNC_NEEDED);
-
-          if (
-            trigger === "manual" &&
-            reconcileResult.newBookmarks.length === 0 &&
-            reconcileResult.terminationReason === "complete"
-          ) {
-            maybeClearBootPolicy();
-          }
-
-          setRuntimeState({
-            syncStatus: "idle",
-            syncJobKind: "none",
-            syncBlockedReason: null,
-          });
-          completionStatus = "success";
         }
       } catch (error) {
         if (!abortState.aborted && get().syncGeneration === syncGeneration) {
