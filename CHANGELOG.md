@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.9] - 2026-03-06
+
+- update: archetecture
+- fix: initial sync
+- fix: loading sync
+- fix: reset sync
+- feat: implement rewrite
+- feat: update website metadata and improve user experience
+
 ## [1.1.8] - 2026-03-05
 
 - feat: fix impossible state
