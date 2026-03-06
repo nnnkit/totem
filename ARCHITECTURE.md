@@ -1,691 +1,503 @@
-# Totem — Architecture
+# Totem Architecture
 
-Chrome extension (Manifest V3, React 19 + TypeScript) that syncs X/Twitter bookmarks for offline reading.
+Chrome extension (Manifest V3, React 19 + TypeScript) that syncs X bookmarks into an offline reading experience.
 
-No state management library — all state lives in hooks at the App level, backed by IndexedDB + chrome.storage.
+This document reflects the current runtime architecture:
 
-```
-                          ┌──────────────────────────────────────┐
-                          │            YOUR BROWSER              │
-                          │                                      │
-  ┌─────────┐             │  ┌──────────────┐  ┌─────────────┐  │
-  │         │  cookies,   │  │              │  │             │  │
-  │  x.com  │──headers───▶│  │   Service    │◀─│  Totem App  │  │
-  │  tabs   │  traffic    │  │   Worker     │  │  (New Tab)  │  │
-  │         │◀────────────│  │              │  │             │  │
-  └─────────┘  API calls  │  └──────┬───────┘  └──────┬──────┘  │
-      │                   │         │                  │         │
-      │                   │    chrome.storage     IndexedDB      │
-      ▼                   │    (auth, events,     (bookmarks,    │
-  ┌─────────┐             │     catalog, sync)    details,       │
-  │ Content │             │                       progress,      │
-  │ Script  │             │                       highlights)    │
-  │ (twid)  │             │                                      │
-  └─────────┘             └──────────────────────────────────────┘
+- Service worker owns session, capability, and sync admission truth.
+- IndexedDB owns persisted bookmark, detail, reading-progress, and highlight data.
+- A private Zustand runtime store owns UI/runtime truth for the new-tab app.
+- Components render from selectors, not from ad-hoc auth/sync flags.
 
-  Content Script — reads twid cookie on x.com, detects logged-in user
-  Service Worker — intercepts network traffic, captures auth, proxies API calls
-  React App      — UI, state management via hooks, reads/writes IndexedDB
-```
+## 1. System Overview
 
----
-
-## 1. Authentication
-
-Totem piggybacks on your existing Twitter session. It needs three things before it can work:
-
-```
-  ① USER ID          "Who are you?"                    ← content script reads twid cookie
-  ② AUTH HEADERS      "Prove it to Twitter's API"      ← SW intercepts x.com requests
-  ③ QUERY ID          "Which API endpoint to call"     ← SW resolves from cache/catalog/bundles
-
-  All three ✓  →  phase: "ready"
-  Missing any  →  phase: "connecting" or "need_login"
+```mermaid
+flowchart LR
+  X["X / x.com"] --> CS["Content Script<br/>detect-user.js"]
+  X --> SW["Service Worker<br/>network capture + API proxy + sync policy"]
+  CS --> CL["chrome.storage.local<br/>auth + runtime snapshot + sync state"]
+  SW --> CL
+  SW --> IDB["IndexedDB<br/>account-scoped bookmark data"]
+  APP["React New Tab App"] --> RP["RuntimeProvider<br/>thin effect shell"]
+  RP --> STORE["Zustand Runtime Store<br/>runtime-store.ts"]
+  STORE --> SEL["Selector Hooks<br/>selectors.ts"]
+  SEL --> UI["Home / Reading List / Reader"]
+  STORE --> IDB
+  STORE --> SW
+  STORE --> CL
 ```
 
-### How each piece is captured
+### Layer responsibilities
 
-```
-  ┌─ USER ID ──────────────────────────────────────────────────────────────┐
-  │                                                                        │
-  │  x.com loads → detect-user.js runs at document_start                   │
-  │       │                                                                │
-  │       ▼                                                                │
-  │  document.cookie → find "twid=u%3D123456789" → parse numeric ID        │
-  │       │                                                                │
-  │       ├── found ──► chrome.storage.local.set({ totem_user_id: "..." }) │
-  │       └── not found ──► chrome.storage.local.remove("totem_user_id")   │
-  └────────────────────────────────────────────────────────────────────────┘
-
-  ┌─ AUTH HEADERS ─────────────────────────────────────────────────────────┐
-  │                                                                        │
-  │  You browse x.com → browser sends API requests → SW onSendHeaders      │
-  │       │                                                                │
-  │       ▼                                                                │
-  │  Copy: authorization, cookie, x-csrf-token (+ 5 more headers)         │
-  │       │                                                                │
-  │       ▼                                                                │
-  │  chrome.storage.local.set({ totem_auth_headers: {...} })               │
-  └────────────────────────────────────────────────────────────────────────┘
-
-  ┌─ QUERY ID (3-tier fallback) ───────────────────────────────────────────┐
-  │                                                                        │
-  │  Tier 1: Memory cache             instant, 10min TTL                   │
-  │       │ miss                                                           │
-  │       ▼                                                                │
-  │  Tier 2: GraphQL catalog          passively captured from x.com        │
-  │       │ miss                       traffic, persisted to storage       │
-  │       ▼                                                                │
-  │  Tier 3: Bundle discovery          fetch x.com HTML → parse JS         │
-  │                                    bundles → regex extract IDs         │
-  └────────────────────────────────────────────────────────────────────────┘
-```
-
-### Phase machine (useAuth)
-
-```
-                       ┌──────────┐
-            app mounts │ loading  │ sends CHECK_AUTH to SW
-                       └────┬─────┘
-                            │
-                 ┌──────────┴──────────┐
-                 ▼                     ▼
-        all three pieces?       missing something?
-                 │                     │
-                 ▼                     ▼
-            ┌────────┐          ┌────────────┐
-            │ ready  │◄─────┐  │ connecting │ opens x.com tab silently
-            └────────┘      │  │            │ polls every 1s for 15s
-                            │  └──┬─────┬───┘
-                    auth ───┘     │     │
-                    arrives       │     │ 15s timeout
-                                  │     ▼
-                                  │  ┌────────────┐
-                                  │  │ need_login │ "Log in to X"
-                                  │  └──────┬─────┘
-                                  │         │
-                                  │    user clicks Login
-                                  │         │
-                                  └─────────┘ resets to loading
-
-  Recovery: even in need_login, storage listener watches for
-  auth_headers changes → auto-recovers to ready when you log in elsewhere
-```
-
-### Timing constants
-
-| Constant | Value | Purpose |
+| Layer | Owns | Does not own |
 |---|---|---|
-| `AUTH_TIMEOUT_MS` | 8s | Max wait for a single checkAuth() call |
-| `AUTH_POLL_MS` | 1s | Polling interval while in "connecting" |
-| `AUTH_CONNECTING_TIMEOUT_MS` | 15s | Max time in "connecting" before giving up |
-| `AUTH_RECHECK_MS` | 1.2s | Retry delay after no-user capture attempt |
-| `AUTH_QUICK_CHECK_MS` | 0.5s | Quick recheck when user exists but auth missing |
+| Service worker | auth/session snapshot, query ID discovery, sync reservation/cooldown/in-flight policy | UI mode, bookmark rendering |
+| IndexedDB | durable bookmark metadata, tweet details, reading progress, highlights | auth/session truth |
+| Runtime store | boot sequencing, runtime mode, sync UI state, selector outputs, reader/prefetch coordination | network interception, durable sync policy |
+| Components | rendering and local interaction state | business logic for auth/sync/offline mode |
 
-**Files**: `src/hooks/useAuth.ts`, `src/api/core/auth.ts`, `public/content/detect-user.js`
+## 2. Runtime Architecture
 
----
+The previous hook cascade is gone. The new-tab app now has one runtime store and one thin provider.
 
-## 2. Bookmark Sync Engine
-
-Three sync strategies work together to keep your local bookmark database current:
-
-```
-  ┌────────────────────────────────────────────────────────────────────────┐
-  │                                                                        │
-  │   HARD SYNC              SOFT SYNC             REAL-TIME EVENTS        │
-  │   ───────────            ─────────             ────────────────        │
-  │   Full download          Quick check           Instant reaction        │
-  │   All pages              1 page (20)           Single bookmark         │
-  │   Every 2h               Every 10min           As it happens           │
-  │                                                                        │
-  │   Triggered by:          Triggered by:         Triggered by:           │
-  │   • First sync ever      • SW light sync       • You bookmark/         │
-  │   • Stale cache (>2h)      signal                unbookmark on x.com  │
-  │   • Manual refresh       • Manual refresh       (webRequest capture)   │
-  │                                                                        │
-  └────────────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+  RP["RuntimeProvider"] -->|"boot(), checkAuth(), handleBookmarkEvents(), releaseLease()"| STORE["runtime-store.ts"]
+  STORE -->|"selectRuntimeMode / selectFooterState / selectSyncUiState"| SEL["selectors.ts"]
+  SEL --> HOME["NewTabHome"]
+  SEL --> LIST["BookmarksList"]
+  SEL --> READER["BookmarkReader"]
+  STORE --> PREFETCH["prefetch-controller.ts"]
+  STORE --> DB["db/index.ts"]
+  STORE --> API["api/core/*"]
 ```
 
-### Mount flow — what happens when you open a new tab
+### RuntimeProvider
 
-```
-  useBookmarks mounts
-       │
-       ▼
-  getAllBookmarks() from IndexedDB ← instant, local data
-       │
-  ┌────┴───────────────────┐
-  ▼                        ▼
-  has bookmarks            empty DB
-  │                        │
-  │  Show immediately!     │  Ever synced before?
-  │  (< 100ms)            │  (check CS_LAST_SYNC)
-  │       │                │       │
-  │       ▼                │  ┌────┴────┐
-  │  Last reconcile?       │  ▼         ▼
-  │       │                │  never     yes (DB cleared)
-  │  ┌────┴────┐           │  │         └─► show empty
-  │  ▼         ▼           │  ▼
-  │  > 2h      < 2h        │  runHardSync()
-  │  │         └─► done    │  (first-time full download)
-  │  ▼                     │
-  │  runHardSync           │
-  │  (fullReconcile)       │
-  └────────────────────────┘
-```
+`src/runtime/RuntimeProvider.tsx` is intentionally small. It only manages external side effects:
 
-### Hard sync — the full download
+- boot on mount
+- heartbeat while auth is ready
+- auth retry timer
+- connecting watchdog
+- `chrome.storage.onChanged`
+- `pagehide` lease release
 
-```
-  runHardSync()
-       │
-       ▼
-  Create FetchQueue + set abort timeout
-  Timeout = 3min + 30s per 1000 bookmarks (max 10min)
-       │
-       ▼
-  ┌──── LOOP ──────────────────────────────────────────────────────┐
-  │                                                                │
-  │  fetchPage(cursor)                                             │
-  │       │                                                        │
-  │       │  FetchQueue adds human-like delay between requests:    │
-  │       │  ┌──────────────────────────────────────────────────┐  │
-  │       │  │  1.2s base + random jitter (0-800ms)            │  │
-  │       │  │  + 20% chance of extra 2-5s "reading pause"     │  │
-  │       │  └──────────────────────────────────────────────────┘  │
-  │       ▼                                                        │
-  │  SW → x.com GraphQL API → response                             │
-  │       │                                                        │
-  │       ▼                                                        │
-  │  onPage(newBookmarks):                                         │
-  │    dedup against current bookmarks                             │
-  │    merge + sort by sortIndex desc                              │
-  │    setState (UI updates live while syncing)                    │
-  │    upsert to IndexedDB                                         │
-  │       │                                                        │
-  │  more pages? ─► continue                                       │
-  │  no more?    ─► break                                          │
-  └────────────────────────────────────────────────────────────────┘
-       │
-       ▼
-  if fullReconcile:
-    staleIds = local IDs not found in remote
-    delete stale from DB + state in single transaction
-       │
-       ▼
-  Save CS_LAST_SYNC + CS_LAST_RECONCILE timestamps
-```
+It does **not** derive UI mode.
 
-### Real-time bookmark events — create vs delete asymmetry
+### Runtime store
 
-```
-  DELETE: we know the tweetId immediately       CREATE: must wait for confirmation
-  ─────────────────────────────────────         ──────────────────────────────────
+`src/stores/runtime-store.ts` owns the runtime state for the new tab:
 
-  onBeforeRequest                               onCompleted (2xx from x.com)
-       │                                             │
-       ▼                                             ▼
-  extract tweetId from body                     push "CreateBookmark" event
-  push "DeleteBookmark" event                        │
-       │                                             ▼
-       ▼                                        storage change triggers React
-  storage change triggers React                      │
-       │                                             ▼
-       ▼                                        wait 1.5s (replication delay)
-  remove from state + DB                             │
-  ack immediately                                    ▼
-                                                fetch 1 page (20 bookmarks)
-                                                add anything missing
-                                                ack only on success
-                                                (retry on failure)
-```
+- auth/session state
+- account context
+- hydration flags
+- bookmark and detail-cache state
+- sync status and sync job kind
+- boot policy after reset
+- generation guards for boot and sync
+- reader active state
+- prefetch status
 
-### Error recovery during sync
+### Selector surface
 
-```
-  API returns 401/403 mid-sync
-       │
-       ▼
-  Show "reconnecting" → poll every 2s (max 15 attempts)
-  "Is SW done re-authenticating?"
-       │
-  ┌────┴────┐
-  ▼         ▼
-  auth OK   timed out (30s)
-  │         └── show error state
-  ▼
-  Retry the entire hard sync
-```
+Components read selector hooks from `src/stores/selectors.ts`, for example:
 
-**Files**: `src/hooks/useBookmarks.ts`, `src/lib/reconcile.ts`, `src/lib/fetch-queue.ts`, `src/lib/bookmark-event-plan.ts`
+- `useAppMode()`
+- `useDisplayBookmarks()`
+- `useSyncUiState()`
+- `useSyncButtonState()`
+- `useFooterState()`
+- `useReaderAvailabilityState()`
+- `useRuntimeActions()`
 
-**Throttles**: Hard sync 2h, soft sync 10min, event dedup 1s window, light sync signal 60s debounce / 30min throttle.
+The raw store hook is private to the runtime module.
 
----
+## 3. Runtime State Model
 
-## 3. Data Persistence (IndexedDB)
+### Internal runtime modes
 
-```
-  ┌────────────────────────── IndexedDB "totem" v6 ──────────────────────────┐
-  │                                                                          │
-  │   bookmarks              tweet_details         reading_progress          │
-  │   ─────────              ─────────────         ────────────────          │
-  │   Your saved bookmarks   Full tweet content    Where you left off        │
-  │   from Twitter           (HTML, media, thread) reading each bookmark     │
-  │                                                                          │
-  │   key: id                key: tweetId          key: tweetId              │
-  │   idx: tweetId           idx: fetchedAt        idx: lastReadAt           │
-  │   idx: sortIndex                                                         │
-  │   idx: createdAt         30-day TTL            Fields: scrollY,          │
-  │   idx: screenName        weekly cleanup        scrollHeight, completed   │
-  │                                                                          │
-  │   highlights                                                             │
-  │   ──────────                                                             │
-  │   Text you've highlighted + notes                                        │
-  │                                                                          │
-  │   key: id                                                                │
-  │   idx: tweetId                                                           │
-  │   idx: createdAt                                                         │
-  └──────────────────────────────────────────────────────────────────────────┘
-```
+The runtime store derives one internal mode:
 
-### Data flow through the stores
+- `initializing`
+- `connecting`
+- `offline_empty`
+- `offline_cached`
+- `online_blocked`
+- `online_ready`
 
-```
-  Bookmark synced from Twitter ──► bookmarks store (metadata only)
-                                        │
-  You open a bookmark to read ──────────┼──► tweet_details store (full HTML, 30-day cache)
-                                        │
-  You scroll through it ────────────────┼──► reading_progress store (scrollY, completed)
-                                        │
-  You highlight text ───────────────────┼──► highlights store (text, offsets, note)
-```
+This mode is not the full UI contract. UI consumes more specific selectors such as footer state and sync button state.
 
-### Database initialization
+### Core runtime state
 
-```
-  Any DB operation
-       │
-       ▼
-  getDb() ─── dbPromise exists? ─── yes ──► return cached connection
-       │
-       no (first call or after disconnect)
-       │
-       ▼
-  createDb() → openDB("totem", 6) with upgrade handler
-       │
-       ▼
-  migrateLegacyDatabaseIfNeeded()
-       │
-       ├── "xbt" DB exists + "totem" empty? → copy all 4 stores
-       └── otherwise → skip
-```
-
-### Self-healing connection
-
-```
-  "blocking"   → another tab upgrading DB → dbPromise = null (reopen on next call)
-  "terminated" → browser killed connection → dbPromise = null (reopen on next call)
-  "blocked"    → we're upgrading, other tab open → keep running (no crash)
-```
-
-### Deletion cascade
-
-`deleteBookmarksByTweetIds()` removes from all 4 stores in a single atomic transaction — no orphaned data possible.
-
-**Files**: `src/db/index.ts`, `src/lib/constants/db.ts`
-
----
-
-## 4. Service Worker (API Proxy)
-
-The service worker runs independently of any tab. Three responsibilities: passive capture, on-demand API proxy, background maintenance.
-
-### Web request listeners (passive capture)
-
-```
-  ┌─ onSendHeaders ─── fires on every x.com/i/api/graphql/* request ───────┐
-  │                                                                         │
-  │  1. Capture auth headers → chrome.storage.local                         │
-  │     (triggers discoverAllMissingQueryIds on each capture)               │
-  │                                                                         │
-  │  2. Capture GraphQL catalog → in-memory + debounced flush to storage    │
-  │     (operation name, queryId, params, features)                         │
-  │                                                                         │
-  │  3. Capture query IDs into memory cache                                 │
-  │     /Bookmarks, /TweetDetail, /DeleteBookmark, /CreateBookmark          │
-  │                                                                         │
-  │  4. Capture ?features= param → persist for our own API calls            │
-  │                                                                         │
-  │  5. Detect delete mutations → push "DeleteBookmark" event               │
-  │     (tweetId from referer header)                                       │
-  │                                                                         │
-  │  6. Signal light sync (debounced 60s, throttled 30min)                  │
-  └─────────────────────────────────────────────────────────────────────────┘
-
-  ┌─ onBeforeRequest ─── fires on Create/Delete bookmark mutations ────────┐
-  │                                                                         │
-  │  Parse request body → extract tweetId                                   │
-  │  Cache mutation query IDs (in-memory)                                   │
-  │  DELETE: push event immediately   CREATE: don't push (not confirmed)    │
-  └─────────────────────────────────────────────────────────────────────────┘
-
-  ┌─ onCompleted ─── fires after x.com returns 2xx for mutations ──────────┐
-  │                                                                         │
-  │  CREATE: push event now (x.com confirmed)   DELETE: already handled     │
-  └─────────────────────────────────────────────────────────────────────────┘
-```
-
-### Message handler (API proxy for React app)
-
-```
-  React App                          Service Worker
-  ─────────                          ──────────────
-
-  CHECK_AUTH ───────────────────────► read storage, sync cookie, resolve query ID
-                                ◄─── { hasUser, hasAuth, hasQueryId }
-
-  FETCH_BOOKMARKS(cursor, count) ──► build headers, resolve QID, GET GraphQL
-                                ◄─── { data: json }
-
-  FETCH_TWEET_DETAIL(tweetId) ─────► same pattern, TweetDetail endpoint
-  DELETE_BOOKMARK(tweetId) ─────────► POST to DeleteBookmark endpoint
-  START_AUTH_CAPTURE ───────────────► open x.com tab silently
-  CLOSE_AUTH_TAB ───────────────────► close the auth tab
-  RESET_SW_STATE ───────────────────► clear all in-memory caches
-```
-
-### Self-healing API calls (double retry)
-
-Every API call has two independent retry paths:
-
-```
-  fetch(x.com GraphQL API)
-       │
-  ┌────┴──────────────────────────────────────┐
-  ▼                                            ▼
-  200 OK                                   401/403
-  │                                         │
-  ▼                                         ▼
-  Check JSON for                       already retried auth?
-  GRAPHQL_VALIDATION_FAILED            no → reAuthSilently() → retry
-  or HTTP 400                          yes → throw AUTH_EXPIRED
-  │
-  ▼
-  already retried queryId?
-  no → forceRediscoverQueryId() → retry
-  yes → throw error
-```
-
-### In-memory state (lost on SW restart — Chrome can kill the SW at any time)
-
-| Variable | Type | Purpose |
+| Field group | Examples | Why it exists |
 |---|---|---|
-| `queryIdMemCache` | `Map<op, {id, ts}>` | Query IDs with 10min TTL |
-| `graphqlCatalogCache` | object | Mirror of persisted catalog |
-| `authTabId` | `number \| null` | Auth capture tab reference |
-| `reauthInProgress` | boolean | Prevents concurrent reauth |
-| `discoveryInProgress` | boolean | Prevents concurrent bundle fetches |
-| `catalogDirty` / `catalogFlushTimer` | — | Debounced flush state |
-| `lastLightSyncSignalAt` | timestamp | Light sync debounce |
+| Auth | `authPhase`, `authState`, `sessionState`, `capability`, `activeAccountId`, `hasQueryId` | runtime truth from service worker |
+| Hydration | `bookmarksLoaded`, `detailedIdsLoaded` | prevents false loading/offline states |
+| Data | `bookmarks`, `detailedTweetIds` | bookmark list + offline-readable detail index |
+| Sync | `syncStatus`, `syncJobKind`, `syncBlockedReason` | separates blocking bootstrap from background work |
+| Reset/seed policy | `bootPolicy` | controls post-reset startup and incomplete initial imports |
+| Safety | `bootGeneration`, `syncGeneration` | ignores stale async completions |
+| Reader/prefetch | `readerActive`, `prefetchStatus` | controls offline detail warmup |
 
-All rebuilt from chrome.storage or bundle discovery on next SW wake.
+### Important invariants
 
-### Startup sequence
+- Account context must be set before any IndexedDB read.
+- `initializing` ends only after auth and hydration have settled, unless reset policy explicitly short-circuits logged-out boot.
+- `bootstrap` with visible content normalizes to `backfill`.
+- `logged_out` can never remain in `authPhase = "ready"`.
+- Components should not branch directly on raw `authPhase`, `syncStatus`, or `bootPolicy`.
 
-```
-  SW wakes up → migrateOldStorageKeys() (tw_/xbt_ → totem_)
-             → runWeeklyServiceWorkerCleanup() (prune old events + catalog)
-             → if auth exists: discoverAllMissingQueryIds() (pre-warm cache)
-```
+## 4. Boot Sequence
 
-**Files**: `public/service-worker.js`
+Boot is centralized in `runtime-store.ts`.
 
-**GraphQL catalog**: Passively captured, debounced flush (600ms), max 300 endpoints, 30-day retention, weekly cleanup.
+```mermaid
+sequenceDiagram
+  participant UI as RuntimeProvider
+  participant Store as Runtime Store
+  participant SW as Service Worker
+  participant DB as IndexedDB
 
----
-
-## 5. Reading Experience
-
-Four cooperating hooks handle the reader, scroll restore, highlights, and offline prefetch.
-
-### useReadingProgress — scroll restore
-
-```
-  Open bookmark → load progress from IndexedDB
-       │
-       ▼
-  Wait for contentReady (HTML fully rendered)
-       │
-       ▼
-  ┌──────────────────────────────────────────────┐
-  │  completed?                                   │
-  │  └── yes → scroll to top (read it fresh)      │
-  │                                               │
-  │  not completed:                               │
-  │    saved height vs current height             │
-  │         │                                     │
-  │    ┌────┴──────────┐                          │
-  │    ▼               ▼                          │
-  │  changed > 15%    similar                     │
-  │    │               │                          │
-  │    ▼               ▼                          │
-  │  ratio-based      absolute                    │
-  │  scroll restore   scroll restore              │
-  │  (adapts to       (pixel-perfect)             │
-  │   new height)                                 │
-  └──────────────────────────────────────────────┘
+  UI->>Store: boot()
+  Store->>Store: increment bootGeneration
+  Store->>Store: read persisted boot policy
+  Store->>SW: getRuntimeSnapshot()
+  alt snapshot/auth resolves
+    Store->>Store: derive auth phase + account context
+    Store->>DB: setActiveAccountId(accountContextId)
+    alt logged out after reset
+      Store->>Store: settle immediately to offline_empty
+    else normal hydration
+      par bookmarks
+        Store->>DB: getAllBookmarks()
+      and detail IDs
+        Store->>DB: getDetailedTweetIds()
+      end
+      Store->>Store: mark hydration complete
+      Store->>Store: maybe auto-sync or resume seed sync
+    end
+  else auth unavailable
+    Store->>Store: enter connecting with retry/watchdog
+  end
 ```
 
-### useHighlights — persistent text highlighting
+### Why boot is generation-safe
 
-```
-  LOADING                                 KEEPING ALIVE
-  ───────                                 ────────────
+Each boot increments `bootGeneration`. Any async auth or hydration result from an older generation is ignored. This prevents:
 
-  contentReady → load from IndexedDB      MutationObserver watches container
-       │                                       │
-       ▼                                       ▼
-  For each highlight:                     DOM changed? (ignores own <mark>s)
-    find section by CSS ID                     │
-    verify text at offsets matches             ▼
-    wrap in <mark class="totem-highlight">  1. pause observer
-       │                                    2. strip ALL existing <mark>s
-       ▼                                    3. re-apply ALL highlights
-  Retry up to 10x at 60ms                  4. resume observer
-  if DOM not ready yet
-                                          (nuclear rebuild — simple, reliable)
+- StrictMode double-mount stale writes
+- old auth checks writing after reset
+- account-switch hydration poisoning the current tab
 
+## 5. Authentication and Capability
 
-  ADDING                                  REMOVING
-  ──────                                  ────────
+Totem depends on three pieces from X:
 
-  User selects text                       removeHighlight(id)
-       │                                       │
-       ▼                                       ▼
-  Create Highlight object                 Delete from IndexedDB
-  Save to IndexedDB                       Remove from highlightsRef
-  Add to highlightsRef                    Increment revision → re-render
-  Flash animation
-  Increment revision → re-render
+- user/account context
+- auth headers/session
+- bookmark API query ID / capability readiness
+
+The service worker builds a runtime snapshot. The runtime store converts that snapshot into app-facing auth state.
+
+```mermaid
+stateDiagram-v2
+  [*] --> loading
+  loading --> ready: logged_in + bookmarksApi ready
+  loading --> connecting: stale / partial auth
+  loading --> need_login: logged_out
+  connecting --> ready: auth recovered
+  connecting --> need_login: timeout or explicit logged_out
+  ready --> need_login: logout
+  ready --> connecting: auth goes stale
+  need_login --> connecting: startLogin()
 ```
 
-### useContinueReading — reading list organizer
+### Meaning of online states
 
-```
-  bookmarks + getAllReadingProgress() from IndexedDB
-       │
-       ▼
-  JOIN by tweetId:
-       │
-       ├── bookmark HAS progress ──► continueReading[]   (started reading)
-       └── bookmark NO progress  ──► allUnread[]          (never opened)
+- `online_ready`: user is logged in and bookmark API is usable
+- `online_blocked`: user exists, but bookmark API/query ID is not ready yet
 
-  UI tabs: [Unread] [Continue Reading] [Read]
-```
+This is why the app can show a "finish X setup" style state instead of a misleading sync CTA.
 
-### usePrefetchDetails — offline readiness
+## 6. Sync Architecture
 
-```
-  isReady + has bookmarks + reader closed
-       │
-       ▼
-  Build pool: top N bookmarks without cached details
-  Prioritize: read bookmarks first, then unread (capped)
-       │
-       ▼
-  Fetch one detail at a time, 45s pause between each
-  Cancel immediately if: reader opens or bookmarks change
+The runtime store never syncs "whenever it feels like it". Every sync attempt first reserves permission through the service worker.
+
+### Reservation model
+
+```mermaid
+flowchart TD
+  Store["runtime-store sync()"] --> Reserve["reserveSyncRun()"]
+  Reserve -->|"allow: false"| Blocked["syncBlockedReason / retryAfterMs"]
+  Reserve -->|"allow: true + leaseId + mode"| Run["fetch pages + reconcile"]
+  Run --> Complete["completeSyncRun()"]
+  Complete --> WorkerState["sync orchestrator state"]
 ```
 
-**Files**: `src/hooks/useReadingProgress.ts`, `src/hooks/useHighlights.ts`, `src/hooks/useContinueReading.ts`, `src/hooks/usePrefetchDetails.ts`
+### Sync modes
 
----
+Worker/orchestrator modes:
 
-## 6. Settings & Theme
+- `full`
+- `incremental`
+- `quick`
 
-Both hooks follow the same pattern:
+Runtime UI job kinds:
 
-```
-  ┌─────────────────────────────────────────────────────────────────────┐
-  │                                                                     │
-  │   React State  ◄───── load on mount ─────  chrome.storage.sync      │
-  │   (instant UI) ─── write on change ─────►  (persisted, cross-device)│
-  │                ◄── storage change event ──  (syncs from other device)│
-  │                                                                     │
-  │   All values normalized on load — invalid values fall to defaults   │
-  └─────────────────────────────────────────────────────────────────────┘
-```
+- `bootstrap`: blocking only while no visible content exists
+- `backfill`: non-blocking once content is visible
 
-### useSettings
+These are intentionally different concepts:
 
-Race condition guard: `userPatchedRef` — if user changes a setting before async load completes, the stale load won't overwrite their change.
+- worker mode controls how much remote work is attempted
+- job kind controls how the UI behaves while that work runs
 
-| Field | Type | Default |
-|---|---|---|
-| `showTopSites` | boolean | false |
-| `showSearchBar` | boolean | true |
-| `topSitesLimit` | 1-10 | 5 |
-| `backgroundMode` | `"gradient" \| "images"` | `"images"` |
-| `searchEngine` | `"google" \| "bing" \| "duckduckgo" \| ...` | `"google"` |
+### Bootstrap vs backfill
 
-### useTheme
-
-```
-  themePreference ── "light" ──► apply "light"
-                  ── "dark"  ──► apply "dark"
-                  ── "system" ─► query prefers-color-scheme
-                                 + live mediaQuery listener
-                                      │
-                                      ▼
-                                 apply resolved theme to:
-                                   document.documentElement.dataset.theme
-                                   document.documentElement.style.colorScheme
+```mermaid
+stateDiagram-v2
+  [*] --> idle
+  idle --> bootstrap: syncing with empty local content
+  bootstrap --> backfill: first visible bookmarks arrive
+  bootstrap --> error: sync fails before usable content
+  backfill --> idle: sync completes
+  backfill --> error: sync fails
 ```
 
-**Files**: `src/hooks/useSettings.ts`, `src/hooks/useTheme.ts`
+### Reconcile behavior
 
----
+`src/lib/reconcile.ts` walks bookmark pages and reports:
 
-## 7. Reset Logic
+- new bookmarks
+- stale local IDs
+- termination reason
+- recovery hint when X returns one full page (100) with no cursor
 
-Careful sequence that clears everything except auth:
+The runtime store merges each page into state immediately, then persists it to IndexedDB.
 
-```
-  resetLocalData()
-       │
-  ─────┼──────────────────────────────────────────────────────────────────
-  0.   │  RESET_SW_STATE → service worker
-       │  Clears: catalog cache, auth tab, reauth flag, discovery flag
-       │
-  ─────┼──────────────────────────────────────────────────────────────────
-  1.   │  IndexedDB
-       │  clearAllLocalData() → empty all 4 stores
-       │  closeDb() → release connection
-       │  deleteDatabase("totem") + deleteDatabase("xbt")
-       │
-  ─────┼──────────────────────────────────────────────────────────────────
-  2.   │  localStorage
-       │  Remove: has_bookmarks, reading_tab, + all legacy keys
-       │
-  ─────┼──────────────────────────────────────────────────────────────────
-  3.   │  chrome.storage.local (NON-AUTH ONLY)
-       │  Remove: cleanup_at, last_reconcile, last_sync, events, soft_sync
-       │  PRESERVED: auth_headers, auth_time, user_id, graphql_catalog
-       │
-  ─────┼──────────────────────────────────────────────────────────────────
-  4.   │  chrome.storage.sync
-       │  Remove: settings, theme
-       │
-  ─────┼──────────────────────────────────────────────────────────────────
-       ▼
-  window.location.reload()
-  → empty state, auth still valid
-  → hard sync triggers (no CS_LAST_SYNC) → full re-fetch from Twitter
+## 7. Incomplete Initial Seed Handling
+
+This is the most important post-reset edge case.
+
+### Problem
+
+X can sometimes return exactly 100 bookmarks with no continuation cursor. That looks like a successful first page, but it is not a complete import.
+
+### Current behavior
+
+```mermaid
+flowchart TD
+  ManualSync["Manual full sync after reset"] --> Page100["X returns 100 bookmarks, no cursor"]
+  Page100 --> Persist["Persist visible bookmarks"]
+  Persist --> MarkIncomplete["completeSyncRun(... errorCode=INCOMPLETE_FULL_SYNC)"]
+  MarkIncomplete --> KeepSeed["bootPolicy stays manual_only_until_seeded"]
+  KeepSeed --> Reload["refresh / open new tab"]
+  Reload --> Resume["boot auto-resumes one full sync"]
+  Resume --> Complete["seed completes normally"]
 ```
 
-Auth preserved intentionally — avoids opening a disruptive background tab to re-capture headers.
+### Rules
 
-**Files**: `src/lib/reset.ts`, `src/App.tsx`
+- visible bookmarks are kept
+- seed policy is not cleared
+- manual failure cooldown is **not** applied for `INCOMPLETE_FULL_SYNC`
+- on the next boot, if:
+  - boot policy is still `manual_only_until_seeded`
+  - bookmarks already exist
+  - user is logged in
+  - bookmark API is ready
+- then the runtime automatically resumes one `full` sync for that boot
 
----
+This preserves the simple user journey:
 
-## 8. Page Reload & State Recovery
+1. reset
+2. log in
+3. click sync once
+4. if X flakes, partial bookmarks stay visible
+5. refresh/new tab continues the import automatically
 
+## 8. Bookmark Events
+
+The service worker captures create/delete bookmark events from X and persists them into `chrome.storage.local`.
+
+The runtime store processes them through `handleBookmarkEvents()`.
+
+```mermaid
+flowchart LR
+  X["X mutation"] --> SW["Service Worker event capture"]
+  SW --> CS["chrome.storage.local bookmark events"]
+  CS --> RP["RuntimeProvider storage listener"]
+  RP --> STORE["handleBookmarkEvents()"]
+  STORE --> DB["update IndexedDB"]
+  STORE --> UI["update visible bookmarks"]
 ```
-  SURVIVES RELOAD                            REBUILT ON MOUNT
-  ───────────────                            ────────────────
 
-  chrome.storage.local                       bookmarksRef ← from IndexedDB
-    auth, sync timestamps, events            selectedBookmark ← null (reader closes)
-  chrome.storage.sync                        fetch queues ← new on next sync
-    settings, theme                          sync-in-progress flags ← reset
-  IndexedDB                                  reauth polling ← re-triggered if needed
-    bookmarks, details, progress,            SW in-memory caches ← from storage/bundles
-    highlights
-  localStorage
-    has_bookmarks, reading_tab
+### Important detail
+
+Seed mode no longer suppresses bookmark events. Post-reset seeding blocks auto-sync policy, not normal event ingestion.
+
+## 9. Detail Cache and Reader Flow
+
+Bookmarks alone are not enough for offline reading. The reader and prefetch loop both contribute to the same detail-cache index.
+
+### Reader flow
+
+```mermaid
+sequenceDiagram
+  participant UI as Reader
+  participant Store as Runtime Store
+  participant SW as Service Worker/API
+  participant DB as IndexedDB
+
+  UI->>Store: loadReaderDetail(tweetId)
+  Store->>SW: fetchTweetDetail(tweetId)
+  SW-->>Store: detail payload
+  Store->>DB: persist tweet detail
+  Store->>Store: detailCached(tweetId)
+  Store-->>UI: reader + offline cache update
 ```
 
-### Recovery flow on mount
+`detailCached(tweetId)` updates the in-memory `detailedTweetIds` set immediately so offline filtering stays correct without waiting for a later refresh.
 
+### Offline-readable bookmarks
+
+When the app is offline or reconnecting, visible bookmarks are restricted to bookmarks with cached details:
+
+- online: show all bookmarks
+- offline/connecting/reauthing: show only bookmarks whose `tweetId` exists in `detailedTweetIds`
+
+## 10. Prefetch Controller
+
+Prefetch loop mechanics live in `src/stores/prefetch-controller.ts`, not inside the store itself.
+
+```mermaid
+flowchart TD
+  Store["Runtime Store"] --> Snapshot["getSnapshot()"]
+  Snapshot --> Prefetch["prefetch-controller"]
+  Prefetch --> Detail["loadReaderDetail(tweetId)"]
+  Detail --> Store
+  Store -->|"detailCached(tweetId)"| Prefetch
 ```
-  t=0      useAuth starts (loading) + useBookmarks loads from IndexedDB
-  t<100ms  cached bookmarks visible (instant)
-  t=?      checkAuth() resolves → isReady = true
-           │
-           ├── cache stale (>2h) → hard sync in background
-           └── cache fresh → done, show cached data
+
+### Prefetch rules
+
+- only runs when runtime mode is `online_ready`
+- pauses while reader is active
+- prioritizes a small top-of-list pool
+- continues after item-level failures
+- updates `prefetchStatus` as `idle`, `running`, or `paused`
+
+## 11. Persistence
+
+### IndexedDB
+
+Totem uses account-scoped databases.
+
+| Store | Purpose |
+|---|---|
+| `bookmarks` | synced bookmark metadata |
+| `tweet_details` | full reader payload for offline reading |
+| `reading_progress` | resume position + completion |
+| `highlights` | saved highlights and notes |
+
+Database naming:
+
+- default DB: `totem`
+- account DB: `totem_acct_<accountId>`
+
+The runtime store calls `setActiveAccountId(accountContextId)` before hydration so it opens the correct database.
+
+### chrome.storage.local
+
+Used for:
+
+- auth/session capture
+- runtime snapshot from service worker
+- sync orchestrator state
+- bookmark event queue
+- last sync timestamps
+- runtime audit and cache summary
+
+### localStorage
+
+Used sparingly for app-local state, including:
+
+- `totem_boot_sync_policy`
+
+Boot policies:
+
+- `auto`
+- `manual_only_until_seeded`
+
+## 12. Reset Flow
+
+Reset is intentionally split between runtime preparation and durable storage cleanup.
+
+```mermaid
+sequenceDiagram
+  participant UI as App UI
+  participant Store as Runtime Store
+  participant Reset as resetLocalData()
+  participant SW as Service Worker
+  participant DB as IndexedDB
+
+  UI->>Store: prepareForReset()
+  Store->>Store: set bootPolicy=manual_only_until_seeded
+  Store->>Store: clear in-memory bookmarks/details
+  UI->>Reset: resetLocalData()
+  Reset->>SW: RESET_SW_STATE
+  Reset->>DB: close connections + delete DBs
+  Reset->>Reset: preserve boot policy key
+  Reset->>chrome.storage: remove non-auth runtime keys
 ```
 
-### Deep linking
+### Reset goals
 
-`?read=tweetId` → find bookmark → openBookmark() → remove query param. One-time use, not restored on reload.
+- keep auth capture when possible so login recovery is cheaper
+- clear local bookmark/detail/progress/highlight state
+- preserve boot policy so the next boot knows reset happened
+- prevent the logged-out post-reset flow from blocking forever on hydration
 
----
+### Logged-out reset shortcut
 
-## Storage Map
+If boot policy is `manual_only_until_seeded` and auth resolves to logged out, boot settles directly to `offline_empty` instead of waiting on cache hydration. This avoids the old "loading forever after reset" failure mode.
 
-| Layer | Key | What | Survives reload |
-|---|---|---|---|
-| `chrome.storage.local` | `totem_auth_headers` | Captured auth headers | Yes |
-| `chrome.storage.local` | `totem_auth_time` | When auth was captured | Yes |
-| `chrome.storage.local` | `totem_user_id` | X user ID from cookie | Yes |
-| `chrome.storage.local` | `totem_last_reconcile` | Last full reconcile time | Yes |
-| `chrome.storage.local` | `totem_last_sync` | Last hard sync time | Yes |
-| `chrome.storage.local` | `totem_last_light_sync` | Last soft sync time | Yes |
-| `chrome.storage.local` | `totem_bookmark_events` | Pending mutation events | Yes |
-| `chrome.storage.local` | `totem_graphql_catalog` | Captured GraphQL endpoints | Yes |
-| `chrome.storage.local` | `totem_features` | Captured API feature flags | Yes |
-| `chrome.storage.sync` | `totem_settings` | User preferences | Yes (cross-device) |
-| `chrome.storage.sync` | `totem_theme` | Theme preference | Yes (cross-device) |
-| `localStorage` | `totem_has_bookmarks` | Quick check for splash screen | Yes |
-| `localStorage` | `totem_reading_tab` | Active reading tab | Yes |
-| `IndexedDB` | `bookmarks` store | All synced bookmarks | Yes |
-| `IndexedDB` | `tweet_details` store | Cached full tweet content | Yes (30-day TTL) |
-| `IndexedDB` | `reading_progress` store | Scroll position + completion | Yes |
-| `IndexedDB` | `highlights` store | Text highlights + notes | Yes |
-| In-memory (SW) | `queryIdMemCache` | Query IDs (10min TTL) | No |
-| In-memory (SW) | `graphqlCatalogCache` | Catalog mirror | No |
-| In-memory (SW) | `authTabId` | Auth capture tab reference | No |
+## 13. Component Rendering Rules
+
+The main app-level rule is simple:
+
+> Components render from selector answers, not by reconstructing runtime truth locally.
+
+Examples:
+
+- `NewTabHome` uses `useFooterState()` and `useSyncButtonState()`
+- `BookmarksList` uses the same sync selectors as the home screen
+- `BookmarkReader` uses `useReaderAvailabilityState()`
+- bookmark lists use `useDisplayBookmarks()`
+
+This keeps home, reading list, and reader aligned.
+
+## 14. Key Files
+
+### Runtime and UI state
+
+- `src/stores/runtime-store.ts`
+- `src/stores/selectors.ts`
+- `src/runtime/RuntimeProvider.tsx`
+- `src/stores/prefetch-controller.ts`
+
+### Service worker and API boundary
+
+- `public/service-worker.js`
+- `src/api/core/auth.ts`
+- `src/api/core/bookmarks.ts`
+- `src/api/core/posts.ts`
+- `src/api/core/sync.ts`
+
+### Persistence
+
+- `src/db/index.ts`
+- `src/lib/reset.ts`
+- `src/lib/storage-keys.ts`
+
+### Sync helpers
+
+- `src/lib/reconcile.ts`
+- `src/lib/fetch-queue.ts`
+- `src/lib/bookmark-event-plan.ts`
+
+### Components
+
+- `src/App.tsx`
+- `src/components/NewTabHome.tsx`
+- `src/components/BookmarksList.tsx`
+- `src/components/BookmarkReader.tsx`
+
+## 15. Mental Model
+
+If you need one sentence for the whole system, use this:
+
+> The service worker decides whether Totem is allowed to sync, IndexedDB remembers what Totem already knows, and the runtime store decides what the UI should show right now.
+
+That split is the backbone of the current architecture.

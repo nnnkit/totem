@@ -17,7 +17,7 @@ import { TweetLinks } from "./TweetLinks";
 import { TweetRecommendations } from "./TweetRecommendations";
 import type { ReaderTweet } from "./types";
 import { resolveTweetBodyVisibility } from "./tweet-body-visibility";
-import { classifyDetailError } from "./detail-error";
+import type { DetailErrorKind } from "./detail-error";
 import { cn } from "../../lib/cn";
 import { Button } from "../ui/Button";
 import { OfflineBanner } from "../ui/OfflineBanner";
@@ -259,15 +259,11 @@ function ActionBar({
 }
 
 interface DetailErrorNoticeProps {
-  detailError: string;
+  errorKind: DetailErrorKind;
   onLogin?: () => void;
 }
 
-function DetailErrorNotice({ detailError, onLogin }: DetailErrorNoticeProps) {
-  const errorKind = classifyDetailError(detailError, {
-    isOnline: typeof navigator === "undefined" ? true : navigator.onLine,
-  });
-
+function DetailErrorNotice({ errorKind, onLogin }: DetailErrorNoticeProps) {
   if (errorKind === "none") return null;
 
   if (errorKind === "offline") {
@@ -317,6 +313,7 @@ interface Props {
   detailThread: ThreadTweet[];
   detailLoading: boolean;
   detailError: string | null;
+  detailErrorKind: DetailErrorKind;
   relatedBookmarks: Bookmark[];
   onOpenBookmark: (bookmark: Bookmark) => void;
   onShuffle?: () => void;
@@ -333,6 +330,7 @@ export const TweetContent = memo(function TweetContent({
   detailThread,
   detailLoading,
   detailError,
+  detailErrorKind,
   relatedBookmarks,
   onOpenBookmark,
   onShuffle,
@@ -383,7 +381,7 @@ export const TweetContent = memo(function TweetContent({
 
       {detailError && (
         <div className="mt-8">
-          <DetailErrorNotice detailError={detailError} onLogin={onLogin} />
+          <DetailErrorNotice errorKind={detailErrorKind} onLogin={onLogin} />
         </div>
       )}
 

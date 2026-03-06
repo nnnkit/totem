@@ -1,10 +1,7 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
-import { useDetailedTweetIds } from "./hooks/useBookmarks";
-import { usePrefetchDetails } from "./hooks/usePrefetchDetails";
 import { useTheme } from "./hooks/useTheme";
 import { useSettings } from "./hooks/useSettings";
 import { useKeyboardNavigation } from "./hooks/useKeyboard";
-import { useRuntime } from "./runtime/RuntimeProvider";
 import {
   ensureReadingProgressExists,
   markReadingProgressCompleted,
@@ -12,16 +9,23 @@ import {
   getTweetDetailCache,
   getAllReadingProgress,
 } from "./db";
-import { selectDisplayBookmarks, shouldRestrictToCachedDetails } from "./lib/display-bookmarks";
 import { pickRelatedBookmarks } from "./lib/related";
 import { resetLocalData } from "./lib/reset";
-import { LS_MANUAL_SYNC_REQUIRED, LS_READING_TAB } from "./lib/storage-keys";
+import { LS_READING_TAB } from "./lib/storage-keys";
 import { NewTabHome } from "./components/NewTabHome";
 import { BookmarkReader } from "./components/BookmarkReader";
 import { BookmarksList, type ReadingTab } from "./components/BookmarksList";
 import { SettingsModal } from "./components/SettingsModal";
 import { Toast } from "./components/ui/Toast";
 import { useContinueReading } from "./hooks/useContinueReading";
+import {
+  useActiveAccountId,
+  useAllBookmarks,
+  useDetailedTweetIds,
+  useDisplayBookmarks,
+  useIsOffline,
+  useRuntimeActions,
+} from "./stores/selectors";
 import type { Bookmark, SyncBlockedReason, ThreadTweet } from "./types";
 
 interface DemoExportPayload {
@@ -89,20 +93,12 @@ function formatRetryAfterMs(value?: number): string | null {
 }
 
 export default function App() {
-  const {
-    phase,
-    isReady,
-    offlineMode,
-    activeAccountId,
-    canSync: runtimeCanSync,
-    syncDisabledReason: runtimeSyncDisabledReason,
-    bookmarks,
-    syncStatus,
-    refresh,
-    reset,
-    unbookmark,
-    startLogin,
-  } = useRuntime();
+  const actions = useRuntimeActions();
+  const bookmarks = useAllBookmarks();
+  const displayBookmarks = useDisplayBookmarks();
+  const detailedTweetIds = useDetailedTweetIds();
+  const activeAccountId = useActiveAccountId();
+  const offlineMode = useIsOffline();
   const { themePreference, setThemePreference } = useTheme();
   const { settings, updateSettings } = useSettings();
   const [view, setView] = useState<AppView>("home");
@@ -110,24 +106,6 @@ export default function App() {
     null,
   );
   const readerOpen = selectedBookmarkRaw !== null;
-  const { prefetchedCount } = usePrefetchDetails(bookmarks, isReady, readerOpen);
-  const detailIdsRefreshKey = `${activeAccountId || "__none__"}:${prefetchedCount}:${bookmarks.length}:${syncStatus}`;
-  const { ids: detailedTweetIds, loaded: detailedIdsLoaded } = useDetailedTweetIds(
-    detailIdsRefreshKey,
-  );
-  const restrictToCachedDetails = useMemo(
-    () => shouldRestrictToCachedDetails(phase, syncStatus),
-    [phase, syncStatus],
-  );
-
-  const displayBookmarks = useMemo(() => {
-    return selectDisplayBookmarks(
-      bookmarks,
-      detailedTweetIds,
-      phase,
-      syncStatus,
-    );
-  }, [bookmarks, detailedTweetIds, phase, syncStatus]);
 
   const selectedBookmark = useMemo(() => {
     if (!selectedBookmarkRaw) return null;
@@ -202,14 +180,14 @@ export default function App() {
     }
   }, []);
   const handleSync = useCallback(() => {
-    refresh()
+    actions.refresh()
       .then((result) => {
         if (!result.accepted) {
           notifySyncBlocked(result.reason, result.retryAfterMs);
         }
       })
       .catch(() => {});
-  }, [notifySyncBlocked, refresh]);
+  }, [actions, notifySyncBlocked]);
   const [shuffleSeed, setShuffleSeed] = useState(0);
   const handleShuffle = useCallback(() => {
     setShuffleSeed((s) => s + 1);
@@ -268,16 +246,17 @@ export default function App() {
   const [isResetting, setIsResetting] = useState(false);
   const handleResetLocalData = useCallback(() => {
     setIsResetting(true);
-    reset();
+    actions.prepareForReset();
     resetLocalData()
       .catch(() => {})
       .finally(() => {
-        try {
-          localStorage.setItem(LS_MANUAL_SYNC_REQUIRED, "1");
-        } catch {}
         window.location.reload();
       });
-  }, [reset]);
+  }, [actions]);
+
+  useEffect(() => {
+    actions.setReaderActive(readerOpen);
+  }, [actions, readerOpen]);
 
   useKeyboardNavigation({
     selectedBookmark,
@@ -378,24 +357,6 @@ export default function App() {
     };
   }, [bookmarks, settings, themePreference]);
 
-  const bookmarksLoading =
-    phase === "loading" ||
-    (isReady && syncStatus === "loading") ||
-    (restrictToCachedDetails && !detailedIdsLoaded);
-  const hasDisplayBookmarks = displayBookmarks.length > 0;
-  const canSync = runtimeCanSync && !isResetting;
-  const syncDisabledReason = !canSync
-    ? (
-        isResetting
-          ? "Reset in progress..."
-          : runtimeSyncDisabledReason
-      )
-    : undefined;
-
-  const needsLogin =
-    (phase === "need_login" || phase === "connecting") &&
-    !hasDisplayBookmarks;
-
   const mainContent = (() => {
     if (selectedBookmark) {
       return (
@@ -414,7 +375,7 @@ export default function App() {
             restoreReadingTab();
             setView("reading");
             closeReader();
-            const { apiError } = await unbookmark(tweetId);
+            const { apiError } = await actions.unbookmark(tweetId);
             if (apiError) {
               setToast({
                 message: "Removed locally. Unbookmark it on X to fully remove.",
@@ -425,7 +386,6 @@ export default function App() {
           }}
           onMarkAsRead={markReadingProgressCompleted}
           onMarkAsUnread={markReadingProgressUncompleted}
-          onLogin={offlineMode ? startLogin : undefined}
         />
       );
     }
@@ -434,23 +394,17 @@ export default function App() {
         <BookmarksList
           continueReadingItems={continueReading}
           unreadBookmarks={allUnread}
-          syncing={syncStatus === "syncing"}
-          syncDisabled={!canSync}
-          authPhase={phase}
           activeTab={readingTab}
           onTabChange={handleReadingTabChange}
           onOpenBookmark={openBookmark}
           onSync={handleSync}
           onBack={() => setView("home")}
-          offlineMode={offlineMode}
-          onLogin={offlineMode ? startLogin : undefined}
         />
       );
     }
     return (
       <NewTabHome
         bookmarks={displayBookmarks}
-        syncStatus={syncStatus}
         onSync={handleSync}
         detailedTweetIds={detailedTweetIds}
         showTopSites={settings.showTopSites}
@@ -463,13 +417,7 @@ export default function App() {
         onOpenBookmark={openBookmark}
         onOpenSettings={() => setSettingsOpen(true)}
         onOpenReading={() => { restoreReadingTab(); setView("reading"); }}
-        offlineMode={offlineMode}
-        authPhase={phase}
-        onLogin={needsLogin || offlineMode ? startLogin : undefined}
-        bookmarksLoading={bookmarksLoading}
         isResetting={isResetting}
-        canSync={canSync}
-        syncDisabledReason={syncDisabledReason}
       />
     );
   })();

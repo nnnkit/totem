@@ -138,6 +138,7 @@ export interface TweetDetailCache {
 }
 
 export type AuthState = "authenticated" | "stale" | "logged_out";
+export type AuthPhase = "loading" | "need_login" | "connecting" | "ready";
 export type SessionState = "unknown" | "logged_in" | "logged_out";
 export type ApiCapabilityState = "unknown" | "ready" | "blocked";
 

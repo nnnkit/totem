@@ -8,17 +8,11 @@ import {
 } from "@phosphor-icons/react";
 import { TotemLogo } from "./TotemLogo";
 import { SearchEnginePicker } from "./SearchEnginePicker";
-import type { AuthPhase } from "../hooks/useAuth";
 import type {
   BackgroundMode,
   Bookmark,
   SearchEngineId,
-  SyncStatus,
 } from "../types";
-import {
-  getEffectiveHomeAuthPhase,
-  shouldShowHomeCardButtons,
-} from "./new-tab-home-state";
 import { SEARCH_ENGINES } from "../lib/search-engines";
 import { hasChromeSearch } from "../lib/chrome";
 import { formatClock } from "../lib/time";
@@ -31,12 +25,19 @@ import { cn } from "../lib/cn";
 import { Button } from "./ui/Button";
 import { useWallpaper } from "../hooks/useWallpaper";
 import { useTopSites } from "../hooks/useTopSites";
+import {
+  useFooterState,
+  useIsOffline,
+  useRuntimeActions,
+  useSyncButtonState,
+  type FooterState,
+  type SyncButtonState,
+} from "../stores/selectors";
 
 import { CLOCK_UPDATE_MS } from "../lib/constants";
 
 interface Props {
   bookmarks: Bookmark[];
-  syncStatus: SyncStatus;
   onSync: () => void;
   detailedTweetIds: Set<string>;
   showTopSites: boolean;
@@ -49,13 +50,11 @@ interface Props {
   onOpenBookmark: (bookmark: Bookmark) => void;
   onOpenSettings: () => void;
   onOpenReading: () => void;
-  offlineMode?: boolean;
-  authPhase?: AuthPhase;
-  onLogin?: () => Promise<void>;
-  bookmarksLoading?: boolean;
   isResetting?: boolean;
-  canSync?: boolean;
-  syncDisabledReason?: string;
+  footerStateOverride?: FooterState;
+  syncButtonStateOverride?: SyncButtonState;
+  offlineModeOverride?: boolean;
+  onLogin?: () => void;
 }
 
 interface DecoratedBookmark {
@@ -68,7 +67,6 @@ interface DecoratedBookmark {
 
 export function NewTabHome({
   bookmarks,
-  syncStatus,
   onSync,
   detailedTweetIds,
   showTopSites,
@@ -81,13 +79,11 @@ export function NewTabHome({
   onOpenBookmark,
   onOpenSettings,
   onOpenReading,
-  offlineMode,
-  authPhase,
-  onLogin,
-  bookmarksLoading,
   isResetting,
-  canSync = true,
-  syncDisabledReason,
+  footerStateOverride,
+  syncButtonStateOverride,
+  offlineModeOverride,
+  onLogin,
 }: Props) {
   const [now, setNow] = useState(() => new Date());
   const [imgLoaded, setImgLoaded] = useState(false);
@@ -98,6 +94,9 @@ export function NewTabHome({
   const prevWallpaperUrlRef = useRef<string | null>(null);
   const { wallpaperUrl, wallpaperCredit, gradientCss } = useWallpaper(backgroundMode);
   const { sites: topSites } = useTopSites(topSitesLimit, showTopSites);
+  const actions = useRuntimeActions();
+  const runtimeSyncButton = useSyncButtonState();
+  const runtimeOfflineMode = useIsOffline();
 
   const { items, unreadItems } = useMemo(() => {
     const allItems: DecoratedBookmark[] = bookmarks.map((bookmark) => ({
@@ -119,6 +118,10 @@ export function NewTabHome({
     const index = Math.floor(mountSeed * pool.length);
     return pool[index];
   }, [items, unreadItems, mountSeed]);
+  const runtimeFooterState = useFooterState(Boolean(currentItem), isResetting);
+  const syncButton = syncButtonStateOverride ?? runtimeSyncButton;
+  const offlineMode = offlineModeOverride ?? runtimeOfflineMode;
+  const footerState = footerStateOverride ?? runtimeFooterState;
 
   const showWallpaper = Boolean(wallpaperUrl && !imgError);
 
@@ -180,28 +183,252 @@ export function NewTabHome({
     [surpriseMe],
   );
 
-  const hasCurrentItem = Boolean(currentItem);
-  const effectiveAuthPhase = getEffectiveHomeAuthPhase(
-    authPhase,
-    hasCurrentItem,
-  );
-  const showCardButtons = shouldShowHomeCardButtons(
-    hasCurrentItem,
-    effectiveAuthPhase,
-  );
-  const syncing = syncStatus === "syncing";
-  const syncDisabled = syncing || !canSync;
-  const syncTitle =
-    syncing
-      ? "Syncing bookmarks..."
-      : syncDisabledReason || "Sync bookmarks";
-  const showSyncButton = authPhase
-    ? authPhase === "ready"
-    : !offlineMode;
+  const showCardButtons = footerState === "bookmark_card";
 
   const cardBase =
     "relative min-h-40 overflow-hidden rounded px-6 py-6 bg-main-bg shadow-glass backdrop-blur-lg transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 max-sm:min-h-36 max-sm:px-4 max-sm:py-4";
   const cardCentered = cn(cardBase, "text-center");
+  const handleLoginButton = useCallback(() => {
+    if (onLogin) {
+      onLogin();
+      return;
+    }
+    window.open("https://x.com/i/bookmarks", "_blank", "noopener,noreferrer");
+    void actions.startLogin();
+  }, [actions, onLogin]);
+  const handleLoginHint = useCallback(() => {
+    if (onLogin) {
+      onLogin();
+      return;
+    }
+    void actions.startLogin();
+  }, [actions, onLogin]);
+
+  const renderFooterCard = () => {
+    switch (footerState) {
+      case "loading":
+        return (
+          <article className={cn(cardBase, "flex items-center justify-center")}>
+            <div className="animate-logo-shine">
+              <TotemLogo className="size-10" />
+            </div>
+          </article>
+        );
+      case "connecting":
+        return (
+          <article className={cardCentered}>
+            <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
+              Connecting to X&hellip;
+            </p>
+            <div className="mt-4 flex justify-center">
+              <svg
+                viewBox="0 0 24 24"
+                className="size-6 animate-spin text-accent"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round" />
+              </svg>
+            </div>
+            <p className="mt-4 text-pretty text-base text-home-empty">
+              Syncing your session in the background.
+            </p>
+          </article>
+        );
+      case "preparing_sync":
+        return (
+          <article className={cardCentered}>
+            <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
+              Finishing X setup
+            </p>
+            <p className="mt-4 text-pretty text-base text-home-empty">
+              We found your account, but bookmark sync is not ready yet. Open X once to finish
+              connecting bookmarks.
+            </p>
+            <Button
+              className="mt-6 border-0 bg-home-accent text-white hover:opacity-90"
+              onClick={handleLoginButton}
+            >
+              Open X
+            </Button>
+          </article>
+        );
+      case "need_login":
+        return (
+          <article className={cardCentered}>
+            <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
+              Log in to start reading
+            </p>
+            <p className="mt-4 text-pretty text-base text-home-empty">
+              Sign in to your X account to sync and read your saved posts.
+            </p>
+            <Button
+              className="mt-6 border-0 bg-home-accent text-white hover:opacity-90"
+              onClick={handleLoginButton}
+            >
+              Log in to X
+            </Button>
+          </article>
+        );
+      case "bookmark_card":
+        if (!currentItem) return null;
+        return (
+          <article
+            className={cn(
+              cardBase,
+              "cursor-pointer p-4 hover:bg-main-bg-hover max-sm:py-3.5",
+              cardEngaged && "bg-main-bg-hover",
+            )}
+            onMouseEnter={() => setCardEngaged(true)}
+            onMouseLeave={() => setCardEngaged(false)}
+            onFocusCapture={() => setCardEngaged(true)}
+            onBlurCapture={(event) => {
+              const nextTarget =
+                event.relatedTarget instanceof Node ? event.relatedTarget : null;
+              if (!nextTarget || !event.currentTarget.contains(nextTarget)) {
+                setCardEngaged(false);
+              }
+            }}
+            onClick={() => openItem(currentItem)}
+            onKeyDown={(event) => {
+              if (event.key === " ") {
+                event.preventDefault();
+                event.stopPropagation();
+                openItem(currentItem);
+              }
+            }}
+            tabIndex={0}
+            role="button"
+            aria-label={`Read ${currentItem.title} by @${
+              currentItem.bookmark.author.screenName
+            }${
+              currentItem.minutes !== null ? `, ${currentItem.minutes} min read` : ""
+            }`}
+          >
+            <div className="flex min-h-32 flex-col translate-y-0 opacity-100 transition-all duration-200 ease-overlay-in max-sm:min-h-28">
+              <div className="flex justify-between">
+                <div className="flex items-center gap-1.5">
+                  <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
+                    your next read
+                  </p>
+                  {offlineMode && (
+                    <span title="Not signed in — showing cached bookmarks">
+                      <LinkBreakIcon className="size-4 animate-offline-pulse text-muted" />
+                    </span>
+                  )}
+                </div>
+                <kbd className="ml-2 border-home-secondary-border bg-accent-tint text-home-fg-muted shadow-kbd">
+                  Space
+                </kbd>
+              </div>
+              <div className="mt-4 flex flex-col gap-1">
+                <h2 className="capitalize font-serif line-clamp-2 text-balance text-lg font-medium leading-snug text-home-fg-secondary max-sm:text-base lg:text-xl">
+                  {currentItem.title}
+                </h2>
+                <p className="line-clamp-1 text-xs text-home-description/80">
+                  {currentItem.excerpt}
+                </p>
+              </div>
+              <div className="mt-auto flex items-center gap-2.5 pt-3">
+                <img
+                  src={currentItem.bookmark.author.profileImageUrl}
+                  alt=""
+                  className="size-6 shrink-0 rounded-full"
+                />
+                <div className="min-w-0 flex flex-col gap-1">
+                  <p className="truncate text-xxs font-medium text-home-fg-secondary">
+                    {currentItem.bookmark.author.name}
+                  </p>
+                  <p className="truncate text-xxs text-home-fg-muted">
+                    @{currentItem.bookmark.author.screenName}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </article>
+        );
+      case "syncing_bootstrap":
+        return (
+          <article className={cardCentered}>
+            <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
+              Syncing your bookmarks&hellip;
+            </p>
+            <div className="mt-4 flex justify-center">
+              <svg
+                viewBox="0 0 24 24"
+                className="size-6 animate-spin text-accent"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round" />
+              </svg>
+            </div>
+            <p className="mt-4 text-pretty text-base text-home-empty">
+              Fetching bookmarks from your account. This may take a moment.
+            </p>
+          </article>
+        );
+      case "sync_error":
+        return (
+          <article className={cardCentered}>
+            <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
+              Something went wrong
+            </p>
+            <p className="mt-4 text-pretty text-base text-home-empty">
+              Could not sync your bookmarks. Check your connection and try again.
+            </p>
+            <Button
+              type="button"
+              onClick={onSync}
+              disabled={syncButton.disabled}
+              className="mt-6 border-0 bg-home-accent text-white hover:opacity-90"
+            >
+              Try again
+            </Button>
+          </article>
+        );
+      case "empty_offline":
+        return (
+          <article className={cardCentered}>
+            <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
+              Cached reading only
+            </p>
+            <p className="mt-4 text-pretty text-base text-home-empty">
+              Log in to X to sync the rest of your bookmarks and refresh this device.
+            </p>
+            <Button
+              type="button"
+              onClick={handleLoginButton}
+              className="mt-6 border-0 bg-home-accent text-white hover:opacity-90"
+            >
+              Log in to X
+            </Button>
+          </article>
+        );
+      case "empty_can_sync":
+      default:
+        return (
+          <article className={cardCentered}>
+            <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
+              Your reading list is quiet
+            </p>
+            <p className="mt-4 text-pretty text-base text-home-empty">
+              No bookmarks yet. Bookmark posts on X, then sync to start reading.
+            </p>
+            <Button
+              type="button"
+              onClick={onSync}
+              disabled={syncButton.disabled}
+              className="mt-6 border-0 bg-home-accent text-white hover:opacity-90"
+            >
+              Sync bookmarks
+            </Button>
+          </article>
+        );
+    }
+  };
 
   return (
     <div className="totem-home relative flex h-dvh flex-col overflow-hidden bg-surface text-home-fg">
@@ -230,18 +457,18 @@ export function NewTabHome({
       <header className="relative z-20 flex w-full items-center justify-between px-6 pt-5 sm:px-8">
         <TotemLogo className="size-8" />
         <div className="flex items-center gap-2">
-          {showSyncButton && (
+          {syncButton.visible && (
             <Button
               type="button"
               variant="ghost"
               size="icon"
               onClick={onSync}
-              disabled={syncDisabled}
+              disabled={syncButton.disabled}
               className="border border-transparent bg-transparent text-on-bg-muted hover:border-white/15 hover:bg-white/5 hover:text-on-bg disabled:cursor-default disabled:opacity-60"
               aria-label="Sync bookmarks"
-              title={syncTitle}
+              title={syncButton.title}
             >
-              <span className={cn(syncing && "animate-spin")}>
+              <span className={cn(syncButton.syncing && "animate-spin")}>
                 <ArrowsClockwiseIcon className="size-5" />
               </span>
             </Button>
@@ -363,197 +590,7 @@ export function NewTabHome({
         </main>
 
         <footer className="mx-auto w-full max-w-lg space-y-6 pb-6">
-          {(bookmarksLoading || isResetting) && !currentItem ? (
-            <article className={cn(cardBase, "flex items-center justify-center")}>
-              <div className="animate-logo-shine">
-                <TotemLogo className="size-10" />
-              </div>
-            </article>
-          ) : effectiveAuthPhase === "connecting" ? (
-            <article className={cardCentered}>
-              <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
-                Connecting to X&hellip;
-              </p>
-              <div className="mt-4 flex justify-center">
-                <svg
-                  viewBox="0 0 24 24"
-                  className="size-6 animate-spin text-accent"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                >
-                  <path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round" />
-                </svg>
-              </div>
-              <p className="mt-4 text-pretty text-base text-home-empty">
-                Syncing your session in the background.
-              </p>
-            </article>
-          ) : effectiveAuthPhase === "need_login" ? (
-            <article className={cardCentered}>
-              <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
-                Log in to start reading
-              </p>
-              <p className="mt-4 text-pretty text-base text-home-empty">
-                Sign in to your X account to sync and read your saved posts.
-              </p>
-              <Button
-                className="mt-6 border-0 bg-home-accent text-white hover:opacity-90"
-                onClick={() => {
-                  window.open("https://x.com/i/bookmarks", "_blank", "noopener,noreferrer");
-                  onLogin?.().catch(() => {});
-                }}
-              >
-                Log in to X
-              </Button>
-            </article>
-          ) : currentItem ? (
-              <article
-                className={cn(
-                  cardBase,
-                  "p-4 max-sm:py-3.5 cursor-pointer hover:bg-main-bg-hover",
-                  cardEngaged && "bg-main-bg-hover",
-                )}
-                onMouseEnter={() => setCardEngaged(true)}
-                onMouseLeave={() => setCardEngaged(false)}
-                onFocusCapture={() => setCardEngaged(true)}
-                onBlurCapture={(event) => {
-                  const nextTarget =
-                    event.relatedTarget instanceof Node
-                      ? event.relatedTarget
-                      : null;
-                  if (
-                    !nextTarget ||
-                    !event.currentTarget.contains(nextTarget)
-                  ) {
-                    setCardEngaged(false);
-                  }
-                }}
-                onClick={() => openItem(currentItem)}
-                onKeyDown={(event) => {
-                  if (event.key === " ") {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    openItem(currentItem);
-                  }
-                }}
-                tabIndex={0}
-                role="button"
-                aria-label={`Read ${currentItem.title} by @${
-                  currentItem.bookmark.author.screenName
-                }${
-                  currentItem.minutes !== null
-                    ? `, ${currentItem.minutes} min read`
-                    : ""
-                }`}
-              >
-                <div className="flex min-h-32 flex-col translate-y-0 opacity-100 transition-all duration-200 ease-overlay-in max-sm:min-h-28">
-                  <div className="flex justify-between">
-                    <div className="flex items-center gap-1.5">
-                      <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
-                        your next read
-                      </p>
-                      {offlineMode && (
-                        <span title="Not signed in — showing cached bookmarks">
-                          <LinkBreakIcon className="size-4 animate-offline-pulse text-muted" />
-                        </span>
-                      )}
-                    </div>
-                    <kbd className="ml-2 border-home-secondary-border bg-accent-tint text-home-fg-muted shadow-kbd">
-                      Space
-                    </kbd>
-                  </div>
-                  <div className="flex flex-col gap-1 mt-4">
-                    <h2 className="capitalize font-serif line-clamp-2 text-balance text-lg font-medium leading-snug text-home-fg-secondary max-sm:text-base lg:text-xl">
-                      {currentItem.title}
-                    </h2>
-                    <p className="line-clamp-1 text-xs text-home-description/80">
-                      {currentItem.excerpt}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2.5 mt-auto pt-3">
-                    <img
-                      src={currentItem.bookmark.author.profileImageUrl}
-                      alt=""
-                      className="size-6 shrink-0 rounded-full"
-                    />
-                    <div className="min-w-0 flex flex-col gap-1">
-                      <p className="truncate text-xxs font-medium text-home-fg-secondary">
-                        {currentItem.bookmark.author.name}
-                      </p>
-                      <p className="truncate text-xxs text-home-fg-muted">
-                        @{currentItem.bookmark.author.screenName}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </article>
-          ) : syncStatus === "syncing" ? (
-            <article className={cardCentered}>
-              <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
-                Syncing your bookmarks&hellip;
-              </p>
-              <div className="mt-4 flex justify-center">
-                <svg
-                  viewBox="0 0 24 24"
-                  className="size-6 animate-spin text-accent"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                >
-                  <path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round" />
-                </svg>
-              </div>
-              <p className="mt-4 text-pretty text-base text-home-empty">
-                Fetching bookmarks from your account. This may take a moment.
-              </p>
-            </article>
-          ) : syncStatus === "reauthing" ? (
-            <article className={cardCentered}>
-              <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
-                Something went wrong
-              </p>
-              <p className="mt-4 text-pretty text-base text-home-empty">
-                Reconnecting to your account&hellip;
-              </p>
-            </article>
-          ) : syncStatus === "error" ? (
-            <article className={cardCentered}>
-              <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
-                Something went wrong
-              </p>
-              <p className="mt-4 text-pretty text-base text-home-empty">
-                Could not sync your bookmarks. Check your connection and try
-                again.
-              </p>
-              <Button
-                type="button"
-                onClick={onSync}
-                disabled={syncDisabled}
-                className="mt-6 border-0 bg-home-accent text-white hover:opacity-90"
-              >
-                Try again
-              </Button>
-            </article>
-          ) : (
-            <article className={cardCentered}>
-              <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
-                Your reading list is quiet
-              </p>
-              <p className="mt-4 text-pretty text-base text-home-empty">
-                No bookmarks yet. Bookmark posts on X, then sync to start
-                reading.
-              </p>
-              <Button
-                type="button"
-                onClick={onSync}
-                disabled={syncDisabled}
-                className="mt-6 border-0 bg-home-accent text-white hover:opacity-90"
-              >
-                Sync bookmarks
-              </Button>
-            </article>
-          )}
+          {renderFooterCard()}
 
           <div
             className={cn(
@@ -595,9 +632,7 @@ export function NewTabHome({
               href="https://x.com/i/bookmarks"
               target="_blank"
               rel="noopener noreferrer"
-              onClick={() => {
-                onLogin?.().catch(() => {});
-              }}
+              onClick={handleLoginHint}
               className="underline hover:text-muted"
             >
               Log in
