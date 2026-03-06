@@ -21,7 +21,7 @@
     "release:check": "pnpm release:version:check && pnpm package:extension",
     "release:prepare": "node scripts/prepare-release.mjs",
     "test": "vitest run",
-    "test:reliability": "vitest run src/hooks/__tests__/sync-state-machine.test.ts src/api/__tests__/parsers.bookmarks.test.ts src/lib/__tests__/reconcile.test.ts",
+    "test:reliability": "vitest run src/stores/__tests__/runtime-store.test.ts src/api/__tests__/parsers.bookmarks.test.ts src/lib/__tests__/reconcile.test.ts",
     "ci:verify": "pnpm test && pnpm build"
   },
   "dependencies": {

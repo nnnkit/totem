@@ -1,7 +1,6 @@
 // ── Sync policy ─────────────────────────────────────────────
 // Centralized config for all sync behavior. Tune these values
-// instead of hunting through service-worker.js, sync-orchestrator.ts,
-// useBookmarks.ts, and timing.ts.
+// here instead of hunting through service worker and runtime code.
 
 // ── Fetch budget ────────────────────────────────────────────
 /** Bookmarks returned per API page (X API default). */

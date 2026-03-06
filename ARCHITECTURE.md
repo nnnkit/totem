@@ -486,7 +486,6 @@ This keeps home, reading list, and reader aligned.
 - `src/lib/reconcile.ts`
 - `src/lib/fetch-queue.ts`
 - `src/lib/bookmark-event-plan.ts`
-- `src/lib/sync-orchestrator.ts`
 
 ### Components
 
