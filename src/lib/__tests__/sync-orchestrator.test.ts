@@ -184,6 +184,38 @@ describe("sync orchestrator", () => {
     expect(afterBackoff.decision.mode).toBe("quick");
   });
 
+  it("does not apply manual cooldown after an incomplete full sync", () => {
+    const initial = createEmptySyncOrchestratorState();
+    const now = 3_900_000;
+
+    const first = reserve(initial, {
+      accountId: "acct_a",
+      trigger: "manual",
+      requestedMode: "full",
+      localCount: 100,
+    }, now);
+    expect(first.decision.allow).toBe(true);
+
+    const incomplete = completeSyncReservation(first.state, {
+      accountId: "acct_a",
+      leaseId: first.decision.leaseId || "",
+      mode: "full",
+      status: "failure",
+      trigger: "manual",
+      errorCode: "INCOMPLETE_FULL_SYNC",
+    }, now + 2_000);
+
+    const retry = reserve(incomplete, {
+      accountId: "acct_a",
+      trigger: "manual",
+      requestedMode: "full",
+      localCount: 100,
+    }, now + 3_000);
+    expect(retry.decision.allow).toBe(true);
+    expect(retry.decision.mode).toBe("full");
+    expect(retry.decision.reason).toBe("manual");
+  });
+
   it("isolates lock/cooldown by account", () => {
     const initial = createEmptySyncOrchestratorState();
     const now = 4_000_000;

@@ -374,6 +374,7 @@ export function completeSyncReservation(
   };
   const failureCode = typeof input.errorCode === "string" ? input.errorCode : "";
   const isRateLimited = failureCode === "RATE_LIMITED";
+  const isIncompleteFullSync = failureCode === "INCOMPLETE_FULL_SYNC";
 
   if (input.status === "success") {
     nextAccount.lastSuccessAt = now;
@@ -392,7 +393,7 @@ export function completeSyncReservation(
   } else if (input.status !== "skipped") {
     nextAccount.lastError = input.status;
     nextAccount.lastFailureCode = failureCode || null;
-    if (input.trigger === "manual") {
+    if (input.trigger === "manual" && !isIncompleteFullSync) {
       nextAccount.manualCooldownUntil = Math.max(
         nextAccount.manualCooldownUntil,
         now + SYNC_ORCHESTRATOR_MANUAL_FAILURE_RETRY_MS,

@@ -875,6 +875,7 @@ async function handleSyncPolicyComplete(message = {}) {
         ? message.errorCode.slice(0, 120)
         : "";
     const isRateLimited = errorCode === "RATE_LIMITED";
+    const isIncompleteFullSync = errorCode === "INCOMPLETE_FULL_SYNC";
 
     const state = await readSyncOrchestratorState();
     const account = state.accounts[accountKey];
@@ -930,7 +931,7 @@ async function handleSyncPolicyComplete(message = {}) {
     } else if (status !== "skipped") {
       next.lastError = status;
       next.lastFailureCode = errorCode || null;
-      if (trigger === "manual") {
+      if (trigger === "manual" && !isIncompleteFullSync) {
         next.manualCooldownUntil = Math.max(
           Number(next.manualCooldownUntil || 0),
           now + SYNC_ORCHESTRATOR_MANUAL_FAILURE_RETRY_MS,

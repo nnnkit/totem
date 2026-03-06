@@ -236,6 +236,36 @@ describe("runtime-store boot", () => {
     expect(mocks.setActiveAccountId).toHaveBeenCalledWith("acct-1");
   });
 
+  it("automatically resumes a partial seeded import on boot", async () => {
+    localStorage.setItem(LS_BOOT_SYNC_POLICY, "manual_only_until_seeded");
+    const cached = createBookmark("tweet-1");
+    mocks.getRuntimeSnapshot.mockResolvedValue(runtimeSnapshot({
+      sessionState: "logged_in",
+      authPhase: "ready",
+      capability: {
+        bookmarksApi: "ready",
+        detailApi: "unknown",
+      },
+    }));
+    mocks.getAllBookmarks.mockResolvedValue([cached]);
+    mocks.getDetailedTweetIds.mockResolvedValue(new Set(["tweet-1"]));
+    mocks.reserveSyncRun.mockResolvedValue({
+      allow: false,
+      mode: null,
+      reason: "not_ready",
+    });
+
+    const store = createRuntimeStore();
+    await store.getState().actions.boot();
+
+    expect(mocks.reserveSyncRun).toHaveBeenCalledWith({
+      accountId: "acct-1",
+      trigger: "manual",
+      localCount: 1,
+      requestedMode: "full",
+    });
+  });
+
   it("ignores stale boot results after dispose invalidates the generation", async () => {
     const firstBoot = deferred<RuntimeSnapshot>();
     mocks.getRuntimeSnapshot.mockImplementationOnce(() => firstBoot.promise);

@@ -390,6 +390,13 @@ function shouldAutoSync(state: RuntimeState): boolean {
     state.capability.bookmarksApi === "ready";
 }
 
+function shouldResumeSeedSync(state: RuntimeState): boolean {
+  return state.bootPolicy === "manual_only_until_seeded" &&
+    state.bookmarks.length > 0 &&
+    state.authPhase === "ready" &&
+    state.capability.bookmarksApi === "ready";
+}
+
 function shouldSkipHydrationForLoggedOutReset(
   state: RuntimeState,
   phase: AuthPhase,
@@ -431,6 +438,7 @@ export function createRuntimeStore() {
   let processingBookmarkEvents = false;
   let authRequestId = 0;
   let cleanupStarted = false;
+  let resumedSeedSyncBootGeneration = -1;
 
   const useRuntimeStoreBase = create<RuntimeState>((set, get) => {
     const setRuntimeState = (
@@ -527,6 +535,25 @@ export function createRuntimeStore() {
       })().catch(() => {});
     };
 
+    const maybeStartAutomaticSync = () => {
+      const state = get();
+      if (state.syncStatus === "syncing") return;
+
+      if (shouldResumeSeedSync(state)) {
+        if (resumedSeedSyncBootGeneration === state.bootGeneration) return;
+        resumedSeedSyncBootGeneration = state.bootGeneration;
+        void sync({
+          trigger: "manual",
+          requestedMode: "full",
+        }).catch(() => {});
+        return;
+      }
+
+      if (shouldAutoSync(state)) {
+        void sync({ trigger: "auto" }).catch(() => {});
+      }
+    };
+
     const hydrateCurrentAccount = async (
       bootGeneration: number,
       allowAutoSync: boolean,
@@ -562,8 +589,8 @@ export function createRuntimeStore() {
         syncStatus: state.syncStatus === "syncing" ? state.syncStatus : "idle",
       }));
 
-      if (allowAutoSync && shouldAutoSync(get())) {
-        void sync({ trigger: "auto" }).catch(() => {});
+      if (allowAutoSync) {
+        maybeStartAutomaticSync();
       }
 
       if (get().authPhase === "ready") {
@@ -683,8 +710,8 @@ export function createRuntimeStore() {
         return;
       }
 
-      if (options.allowAutoSync && shouldAutoSync(get())) {
-        void sync({ trigger: "auto" }).catch(() => {});
+      if (options.allowAutoSync) {
+        maybeStartAutomaticSync();
       }
 
       prefetchController.reconcile();
@@ -1071,7 +1098,6 @@ export function createRuntimeStore() {
       refresh: async () => sync({ trigger: "manual" }),
 
       handleBookmarkEvents: async () => {
-        if (get().bootPolicy === "manual_only_until_seeded") return;
         if (processingBookmarkEvents) return;
         if (get().authPhase !== "ready") return;
 
