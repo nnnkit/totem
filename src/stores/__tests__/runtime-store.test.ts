@@ -5,6 +5,7 @@ import {
   selectRuntimeMode,
 } from "../runtime-store";
 import type { Bookmark, RuntimeSnapshot } from "../../types";
+import { LS_BOOT_SYNC_POLICY } from "../../lib/storage-keys";
 
 const mocks = vi.hoisted(() => ({
   getRuntimeSnapshot: vi.fn<() => Promise<RuntimeSnapshot>>(),
@@ -202,6 +203,22 @@ describe("runtime-store boot", () => {
     expect(state.detailedIdsLoaded).toBe(true);
     expect(selectRuntimeMode(state)).toBe("offline_empty");
     expect(selectDisplayBookmarks(state)).toEqual([]);
+  });
+
+  it("skips hydration after reset when logged out and manual sync is required", async () => {
+    localStorage.setItem(LS_BOOT_SYNC_POLICY, "manual_only_until_seeded");
+
+    const store = createRuntimeStore();
+    await store.getState().actions.boot();
+
+    const state = store.getState();
+    expect(selectRuntimeMode(state)).toBe("offline_empty");
+    expect(state.bookmarksLoaded).toBe(true);
+    expect(state.detailedIdsLoaded).toBe(true);
+    expect(state.bookmarks).toEqual([]);
+    expect(state.detailedTweetIds).toEqual(new Set());
+    expect(mocks.getAllBookmarks).not.toHaveBeenCalled();
+    expect(mocks.getDetailedTweetIds).not.toHaveBeenCalled();
   });
 
   it("settles to offline_cached when logged out and cached details exist", async () => {

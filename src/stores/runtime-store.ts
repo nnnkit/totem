@@ -390,6 +390,13 @@ function shouldAutoSync(state: RuntimeState): boolean {
     state.capability.bookmarksApi === "ready";
 }
 
+function shouldSkipHydrationForLoggedOutReset(
+  state: RuntimeState,
+  phase: AuthPhase,
+): boolean {
+  return phase === "need_login" && state.bootPolicy === "manual_only_until_seeded";
+}
+
 function createInitialState(actions: RuntimeActions): RuntimeState {
   return {
     authPhase: "loading",
@@ -620,7 +627,9 @@ export function createRuntimeStore() {
       }
 
       const accountChanged = nextAccountId !== state.activeAccountId;
+      const skipHydrationForLoggedOutReset = shouldSkipHydrationForLoggedOutReset(state, phase);
       const needsHydration = options.allowHydration &&
+        !skipHydrationForLoggedOutReset &&
         (accountChanged || !state.bookmarksLoaded || !state.detailedIdsLoaded);
 
       if (needsHydration) {
@@ -644,10 +653,21 @@ export function createRuntimeStore() {
         hasQueryId: payload.hasQueryId,
         authRetryDelayMs,
         bootGeneration: nextBootGeneration,
-        bookmarksLoaded: needsHydration ? false : state.bookmarksLoaded,
-        detailedIdsLoaded: needsHydration ? false : state.detailedIdsLoaded,
-        bookmarks: needsHydration ? [] : state.bookmarks,
-        detailedTweetIds: needsHydration ? new Set<string>() : state.detailedTweetIds,
+        bookmarksLoaded: skipHydrationForLoggedOutReset
+          ? true
+          : needsHydration
+            ? false
+            : state.bookmarksLoaded,
+        detailedIdsLoaded: skipHydrationForLoggedOutReset
+          ? true
+          : needsHydration
+            ? false
+            : state.detailedIdsLoaded,
+        bookmarks: skipHydrationForLoggedOutReset || needsHydration ? [] : state.bookmarks,
+        detailedTweetIds:
+          skipHydrationForLoggedOutReset || needsHydration
+            ? new Set<string>()
+            : state.detailedTweetIds,
         syncStatus:
           phase === "need_login" && state.syncStatus === "syncing"
             ? "idle"
