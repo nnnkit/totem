@@ -8,6 +8,10 @@ import { useContinueReading } from "../../../src/hooks/useContinueReading";
 import { useTheme, type ThemePreference } from "../../../src/hooks/useTheme";
 import { pickRelatedBookmarks } from "../../../src/lib/related";
 import { LS_READING_TAB } from "../../../src/lib/storage-keys";
+import type {
+  FooterState,
+  SyncButtonState,
+} from "../../../src/stores/selectors";
 import {
   clearAllLocalData,
   ensureReadingProgressExists,
@@ -253,6 +257,21 @@ export function DemoNewTabApp() {
     () => new Set(continueReading.map((item) => item.progress.tweetId)),
     [continueReading],
   );
+  const demoSyncButtonState = useMemo<SyncButtonState>(
+    () => ({
+      visible: true,
+      disabled: syncStatus === "syncing",
+      syncing: syncStatus === "syncing",
+      title: syncStatus === "syncing" ? "Syncing bookmarks..." : "Sync bookmarks",
+    }),
+    [syncStatus],
+  );
+  const demoFooterState = useMemo<FooterState>(() => {
+    if (bookmarks.length > 0) return "bookmark_card";
+    if (syncStatus === "syncing") return "syncing_bootstrap";
+    if (syncStatus === "error") return "sync_error";
+    return "empty_can_sync";
+  }, [bookmarks.length, syncStatus]);
 
   useEffect(() => {
     let cancelled = false;
@@ -398,6 +417,19 @@ export function DemoNewTabApp() {
       syncTimeoutRef.current = null;
     }, 900);
   }, []);
+  const loadDetail = useCallback(
+    async (tweetId: string) => {
+      const detail = seedDetails[tweetId];
+      if (!detail) {
+        throw new Error("DETAIL_ERROR");
+      }
+      return {
+        focalTweet: detail.focalTweet,
+        thread: detail.thread,
+      };
+    },
+    [seedDetails],
+  );
 
   const openBookmark = useCallback(
     (bookmark: Bookmark) => {
@@ -502,6 +534,7 @@ export function DemoNewTabApp() {
           onDeleteBookmark={handleDeleteBookmark}
           onMarkAsRead={handleMarkAsRead}
           onMarkAsUnread={handleMarkAsUnread}
+          loadDetail={loadDetail}
         />
       );
     }
@@ -511,12 +544,13 @@ export function DemoNewTabApp() {
         <BookmarksList
           continueReadingItems={continueReading}
           unreadBookmarks={allUnread}
-          syncing={syncStatus === "syncing"}
           activeTab={readingTab}
           onTabChange={handleReadingTabChange}
           onOpenBookmark={openBookmark}
           onSync={handleSync}
           onBack={() => setView("home")}
+          syncButtonStateOverride={demoSyncButtonState}
+          offlineModeOverride={false}
         />
       );
     }
@@ -524,7 +558,6 @@ export function DemoNewTabApp() {
     return (
       <NewTabHome
         bookmarks={bookmarks}
-        syncStatus={syncStatus}
         onSync={handleSync}
         detailedTweetIds={detailedTweetIds}
         showTopSites={settings.showTopSites}
@@ -540,6 +573,9 @@ export function DemoNewTabApp() {
           restoreReadingTab();
           setView("reading");
         }}
+        footerStateOverride={demoFooterState}
+        syncButtonStateOverride={demoSyncButtonState}
+        offlineModeOverride={false}
       />
     );
   })();

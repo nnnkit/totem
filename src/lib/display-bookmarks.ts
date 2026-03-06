@@ -1,5 +1,4 @@
-import type { AuthPhase } from "../hooks/useAuth";
-import type { SyncStatus } from "../types";
+import type { AuthPhase, SyncStatus } from "../types";
 
 interface HasTweetId {
   tweetId: string;

@@ -7,8 +7,11 @@ import {
   MoonIcon,
 } from "@phosphor-icons/react";
 import type { Bookmark, Highlight, SelectionRange, ThreadTweet } from "../types";
-import { fetchTweetDetail } from "../api/core/posts";
 import { cn } from "../lib/cn";
+import {
+  useReaderAvailabilityState,
+  useRuntimeActions,
+} from "../stores/selectors";
 
 import { resolveTweetKind } from "./reader/utils";
 import { TweetContent } from "./reader/TweetContent";
@@ -32,6 +35,10 @@ interface Props {
   onMarkAsRead?: (tweetId: string) => void;
   onMarkAsUnread?: (tweetId: string) => void;
   onLogin?: () => void;
+  loadDetail?: (tweetId: string) => Promise<{
+    focalTweet: Bookmark | null;
+    thread: ThreadTweet[];
+  }>;
 }
 
 interface NotePanelState {
@@ -52,9 +59,11 @@ export function BookmarkReader({
   onMarkAsRead,
   onMarkAsUnread,
   onLogin,
+  loadDetail,
 }: Props) {
   const articleRef = useRef<HTMLElement>(null);
   const { resolvedTheme, setThemePreference } = useTheme();
+  const actions = useRuntimeActions();
   const [readOverride, setReadOverride] = useState<boolean | null>(null);
   const [resolvedBookmark, setResolvedBookmark] = useState<Bookmark | null>(
     null,
@@ -67,6 +76,7 @@ export function BookmarkReader({
     contentReady: !detailLoading,
   });
   const effectiveMarkedRead = readOverride ?? isCompleted;
+  const readerAvailability = useReaderAvailabilityState(detailError);
 
   useEffect(() => {
     let cancelled = false;
@@ -76,7 +86,7 @@ export function BookmarkReader({
     setDetailError(null);
     setDetailLoading(true);
 
-    fetchTweetDetail(bookmark.tweetId)
+    (loadDetail ?? actions.loadReaderDetail)(bookmark.tweetId)
       .then((detail) => {
         if (cancelled) return;
 
@@ -104,7 +114,7 @@ export function BookmarkReader({
     return () => {
       cancelled = true;
     };
-  }, [bookmark.tweetId, bookmark.sortIndex]);
+  }, [actions, bookmark.tweetId, bookmark.sortIndex, loadDetail]);
 
   const { addHighlight, removeHighlight, updateHighlightNote, getHighlight, applyNow, setPendingNoteId } =
     useHighlights({
@@ -246,6 +256,7 @@ export function BookmarkReader({
           detailThread={detailThread}
           detailLoading={detailLoading}
           detailError={detailError}
+          detailErrorKind={readerAvailability.errorKind}
           relatedBookmarks={relatedBookmarks}
           onOpenBookmark={onOpenBookmark}
           onShuffle={onShuffle}
@@ -253,7 +264,11 @@ export function BookmarkReader({
           onToggleRead={onMarkAsRead ? handleToggleRead : undefined}
           isMarkedRead={effectiveMarkedRead}
           onDeleteBookmark={onDeleteBookmark}
-          onLogin={onLogin}
+          onLogin={onLogin ?? (
+            readerAvailability.canLogin
+              ? () => { void actions.startLogin(); }
+              : undefined
+          )}
         />
       </article>
 

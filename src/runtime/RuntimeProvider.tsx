@@ -1,192 +1,90 @@
+import { useEffect, type PropsWithChildren } from "react";
 import {
-  createContext,
-  useContext,
-  useMemo,
-  type PropsWithChildren,
-} from "react";
-import { useAuth, type AuthPhase } from "../hooks/useAuth";
-import { useBookmarks, useDetailedTweetIds } from "../hooks/useBookmarks";
-import type {
-  ApiCapability,
-  Bookmark,
-  SyncBlockedReason,
-  SyncRequestResult,
-  SessionState,
-  SyncStatus,
-} from "../types";
-
-export type RuntimeMode =
-  | "booting"
-  | "online_ready"
-  | "online_degraded"
-  | "offline_cached"
-  | "offline_empty";
-
-interface RuntimeContextValue {
-  phase: AuthPhase;
-  sessionState: SessionState;
-  capability: ApiCapability;
-  activeAccountId: string | null;
-  hasQueryId: boolean;
-  syncStatus: SyncStatus;
-  bookmarks: Bookmark[];
-  runtimeMode: RuntimeMode;
-  isReady: boolean;
-  offlineMode: boolean;
-  canSync: boolean;
-  syncBlockedReason: SyncBlockedReason | null;
-  syncDisabledReason?: string;
-  startLogin: () => Promise<void>;
-  refresh: () => Promise<SyncRequestResult>;
-  reset: () => void;
-  unbookmark: (tweetId: string) => Promise<{ apiError?: string }>;
-}
-
-const RuntimeContext = createContext<RuntimeContextValue | null>(null);
-
-function deriveRuntimeMode(
-  phase: AuthPhase,
-  syncStatus: SyncStatus,
-  hasDisplayableCache: boolean,
-  capability: ApiCapability,
-): RuntimeMode {
-  if (phase === "loading" || phase === "connecting") {
-    return "booting";
-  }
-
-  if (phase === "need_login") {
-    return hasDisplayableCache ? "offline_cached" : "offline_empty";
-  }
-
-  if (syncStatus === "reauthing") {
-    return hasDisplayableCache ? "offline_cached" : "offline_empty";
-  }
-
-  if (capability.bookmarksApi === "ready") {
-    return "online_ready";
-  }
-
-  return "online_degraded";
-}
-
-function describeBlockedReason(reason: SyncBlockedReason | null): string | undefined {
-  switch (reason) {
-    case "in_flight":
-      return "A sync is already running.";
-    case "cooldown":
-      return "You can resync only once every few minutes.";
-    case "rate_limited":
-      return "Sync is temporarily paused. Try again in a few minutes.";
-    case "no_account":
-      return "Account context is not available yet.";
-    case "not_ready":
-      return "Sync is not ready yet.";
-    default:
-      return undefined;
-  }
-}
-
-function deriveSyncDisabledReason(
-  mode: RuntimeMode,
-  phase: AuthPhase,
-  blockedReason: SyncBlockedReason | null,
-): string | undefined {
-  const blocked = describeBlockedReason(blockedReason);
-  if (blocked) return blocked;
-
-  switch (mode) {
-    case "booting":
-      return phase === "connecting" ? "Connecting to X..." : "Loading...";
-    case "online_degraded":
-      return "Preparing X API...";
-    case "offline_cached":
-    case "offline_empty":
-      return "Log in to X to sync bookmarks";
-    case "online_ready":
-    default:
-      return undefined;
-  }
-}
+  AUTH_CONNECTING_TIMEOUT_MS,
+  AUTH_HEARTBEAT_MS,
+} from "../lib/constants";
+import {
+  CS_ACCOUNT_CONTEXT_ID,
+  CS_AUTH_HEADERS,
+  CS_AUTH_STATE,
+  CS_BOOKMARK_EVENTS,
+  CS_USER_ID,
+} from "../lib/storage-keys";
+import {
+  useAuthPhase,
+  useAuthRetryDelayMs,
+  useRuntimeActions,
+} from "../stores/selectors";
 
 export function RuntimeProvider({ children }: PropsWithChildren) {
-  const {
-    phase,
-    sessionState,
-    capability,
-    activeAccountId,
-    hasQueryId,
-    startLogin,
-  } = useAuth();
-  const syncReady = phase === "ready";
-  const { bookmarks, syncStatus, syncBlockedReason, refresh, reset, unbookmark } = useBookmarks(
-    syncReady,
-    activeAccountId,
-  );
-  const detailsRefreshKey = `${activeAccountId || "__none__"}:${bookmarks.length}:${syncStatus}`;
-  const { ids: detailedTweetIds, loaded: detailedIdsLoaded } = useDetailedTweetIds(
-    detailsRefreshKey,
-  );
-  const hasDisplayableCache = useMemo(() => {
-    if (bookmarks.length === 0) return false;
-    if (!detailedIdsLoaded) return true;
-    return bookmarks.some((bookmark) => detailedTweetIds.has(bookmark.tweetId));
-  }, [bookmarks, detailedIdsLoaded, detailedTweetIds]);
+  const actions = useRuntimeActions();
+  const authPhase = useAuthPhase();
+  const authRetryDelayMs = useAuthRetryDelayMs();
 
-  const runtimeMode = useMemo(
-    () => deriveRuntimeMode(phase, syncStatus, hasDisplayableCache, capability),
-    [phase, syncStatus, hasDisplayableCache, capability],
-  );
-
-  const value = useMemo<RuntimeContextValue>(() => {
-    const canSync = phase === "ready";
-    return {
-      phase,
-      sessionState,
-      capability,
-      activeAccountId,
-      hasQueryId,
-      syncStatus,
-      bookmarks,
-      runtimeMode,
-      isReady: phase === "ready",
-      offlineMode: runtimeMode === "offline_cached",
-      canSync,
-      syncBlockedReason,
-      syncDisabledReason: canSync
-        ? undefined
-        : deriveSyncDisabledReason(runtimeMode, phase, syncBlockedReason),
-      startLogin,
-      refresh,
-      reset,
-      unbookmark,
+  useEffect(() => {
+    void actions.boot();
+    return () => {
+      actions.dispose();
     };
-  }, [
-    phase,
-    sessionState,
-    capability,
-    activeAccountId,
-    hasQueryId,
-    syncStatus,
-    bookmarks,
-    runtimeMode,
-    syncBlockedReason,
-    startLogin,
-    refresh,
-    reset,
-    unbookmark,
-  ]);
+  }, [actions]);
 
-  return (
-    <RuntimeContext.Provider value={value}>
-      {children}
-    </RuntimeContext.Provider>
-  );
-}
+  useEffect(() => {
+    if (authPhase !== "ready") return;
+    const id = setInterval(() => {
+      void actions.checkAuth();
+    }, AUTH_HEARTBEAT_MS);
+    return () => clearInterval(id);
+  }, [actions, authPhase]);
 
-export function useRuntime(): RuntimeContextValue {
-  const value = useContext(RuntimeContext);
-  if (!value) {
-    throw new Error("useRuntime must be used within RuntimeProvider");
-  }
-  return value;
+  useEffect(() => {
+    if (typeof authRetryDelayMs !== "number" || authRetryDelayMs <= 0) return;
+    const id = setTimeout(() => {
+      void actions.checkAuth();
+    }, authRetryDelayMs);
+    return () => clearTimeout(id);
+  }, [actions, authRetryDelayMs]);
+
+  useEffect(() => {
+    if (authPhase !== "connecting") return;
+    const id = setTimeout(() => {
+      actions.connectingTimeout();
+    }, AUTH_CONNECTING_TIMEOUT_MS);
+    return () => clearTimeout(id);
+  }, [actions, authPhase]);
+
+  useEffect(() => {
+    const listener = (
+      changes: Record<string, chrome.storage.StorageChange>,
+      areaName: string,
+    ) => {
+      if (areaName !== "local") return;
+
+      const hasAuthChange = Boolean(
+        changes[CS_AUTH_HEADERS] ||
+        changes[CS_AUTH_STATE] ||
+        changes[CS_USER_ID] ||
+        changes[CS_ACCOUNT_CONTEXT_ID],
+      );
+      if (hasAuthChange) {
+        void actions.checkAuth();
+      }
+
+      if (changes[CS_BOOKMARK_EVENTS]) {
+        void actions.handleBookmarkEvents();
+      }
+    };
+
+    chrome.storage.onChanged.addListener(listener);
+    return () => chrome.storage.onChanged.removeListener(listener);
+  }, [actions]);
+
+  useEffect(() => {
+    const onPageHide = () => {
+      actions.releaseLease();
+    };
+    window.addEventListener("pagehide", onPageHide);
+    return () => window.removeEventListener("pagehide", onPageHide);
+  }, [actions]);
+
+  return <>{children}</>;
 }

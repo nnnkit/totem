@@ -11,13 +11,18 @@ import { useHotkeys } from "react-hotkeys-hook";
 import { ArrowLeftIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
 import type { Bookmark } from "../types";
 import type { ContinueReadingItem } from "../hooks/useContinueReading";
-import type { AuthPhase } from "../hooks/useAuth";
 import { useBookmarkSearch } from "../hooks/useBookmarkSearch";
 import { pickTitle, inferKindBadge } from "../lib/bookmark-utils";
 import { timeAgo, sortIndexToTimestamp } from "../lib/time";
 import { cn } from "../lib/cn";
 import { NEW_BADGE_CUTOFF_MS } from "../lib/constants";
 import { getHighlightCountsByTweetIds, type HighlightCounts } from "../db";
+import {
+  useIsOffline,
+  useRuntimeActions,
+  useSyncButtonState,
+  type SyncButtonState,
+} from "../stores/selectors";
 import { Button } from "./ui/Button";
 import { Input } from "./ui/Input";
 import { Badge } from "./ui/Badge";
@@ -28,15 +33,13 @@ export type ReadingTab = "continue" | "read" | "unread";
 interface Props {
   continueReadingItems: ContinueReadingItem[];
   unreadBookmarks: Bookmark[];
-  syncing: boolean;
-  syncDisabled?: boolean;
   activeTab: ReadingTab;
   onTabChange: (tab: ReadingTab) => void;
   onOpenBookmark: (bookmark: Bookmark) => void;
   onSync: () => void;
   onBack: () => void;
-  offlineMode?: boolean;
-  authPhase?: AuthPhase;
+  syncButtonStateOverride?: SyncButtonState;
+  offlineModeOverride?: boolean;
   onLogin?: () => void;
 }
 
@@ -79,20 +82,26 @@ const TabButton = forwardRef<HTMLButtonElement, TabButtonProps>(
 export function BookmarksList({
   continueReadingItems,
   unreadBookmarks,
-  syncing,
-  syncDisabled = false,
   activeTab,
   onTabChange,
   onOpenBookmark,
   onSync,
   onBack,
-  offlineMode,
-  authPhase,
+  syncButtonStateOverride,
+  offlineModeOverride,
   onLogin,
 }: Props) {
   const containerWidthClass = "max-w-3xl";
   const bookmarkItemBase =
     "bookmark-list-item flex w-full items-center gap-3 rounded border p-3 text-left transition-colors hover:bg-surface-hover";
+  const runtimeSyncButton = useSyncButtonState();
+  const runtimeOfflineMode = useIsOffline();
+  const actions = useRuntimeActions();
+  const syncButton = syncButtonStateOverride ?? runtimeSyncButton;
+  const offlineMode = offlineModeOverride ?? runtimeOfflineMode;
+  const isPreparingSync = !offlineMode &&
+    syncButton.disabled &&
+    syncButton.title === "Preparing X API...";
   const [focusedIndex, setFocusedIndex] = useState(-1);
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const tabListRef = useRef<HTMLDivElement>(null);
@@ -322,9 +331,15 @@ export function BookmarksList({
   );
 
   let continueIdx = 0;
-  const showSyncControls = authPhase
-    ? authPhase === "ready"
-    : !offlineMode;
+  const showSyncControls = syncButton.visible;
+  const handleOpenX = useCallback(() => {
+    if (onLogin) {
+      onLogin();
+      return;
+    }
+    window.open("https://x.com/i/bookmarks", "_blank", "noopener,noreferrer");
+    void actions.startLogin();
+  }, [actions, onLogin]);
 
   return (
     <div className="min-h-dvh bg-surface">
@@ -445,15 +460,22 @@ export function BookmarksList({
             ) : (
               <div className="flex flex-col items-center justify-center py-20 text-center">
                 <p className="text-muted text-lg text-pretty">
-                  All caught up! No unread bookmarks.
+                  {isPreparingSync
+                    ? "Finishing X setup. Open X once to enable bookmark sync."
+                    : "All caught up! No unread bookmarks."}
                 </p>
                 {showSyncControls && (
                   <Button
                     onClick={onSync}
-                    disabled={syncing || syncDisabled}
+                    disabled={syncButton.disabled}
                     className="mt-4"
                   >
                     Sync new bookmarks
+                  </Button>
+                )}
+                {isPreparingSync && (
+                  <Button onClick={handleOpenX} className="mt-4">
+                    Open X
                   </Button>
                 )}
               </div>
@@ -613,7 +635,14 @@ export function BookmarksList({
         )}
         {offlineMode && (
           <div className="mt-8">
-            <OfflineBanner onLogin={onLogin} />
+            <OfflineBanner onLogin={() => {
+              if (onLogin) {
+                onLogin();
+                return;
+              }
+              void actions.startLogin();
+            }}
+            />
           </div>
         )}
       </main>

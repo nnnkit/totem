@@ -4,6 +4,7 @@ import {
   IDB_DATABASE_NAME,
   LEGACY_IDB_DATABASE_NAME,
   LOCAL_STORAGE_KEYS,
+  LS_BOOT_SYNC_POLICY,
   CHROME_SYNC_KEYS,
   LEGACY_LOCAL_STORAGE_KEY_MAP,
   LEGACY_CHROME_SYNC_KEY_MAP,
@@ -77,6 +78,33 @@ const CHROME_SYNC_RESET_KEYS = Array.from(
   ]),
 );
 
+const RESET_DB_DELETE_TIMEOUT_MS = 3000;
+
+function deleteDatabaseWithTimeout(dbName: string): Promise<void> {
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve();
+    };
+
+    const timer = setTimeout(finish, RESET_DB_DELETE_TIMEOUT_MS);
+
+    try {
+      const request = indexedDB.deleteDatabase(dbName);
+      request.onsuccess = () => finish();
+      request.onerror = () => finish();
+      request.onblocked = () => {
+        // Another tab may still hold the DB open; rely on the timeout fallback.
+      };
+    } catch {
+      finish();
+    }
+  });
+}
+
 export async function resetLocalData(): Promise<void> {
   // 0. Notify service worker with hard 2s timeout — never hangs
   try {
@@ -92,12 +120,11 @@ export async function resetLocalData(): Promise<void> {
   // 2. Delete databases entirely (skip clearAllLocalData — it needs an active connection)
   const accountDbNames = await getAccountDatabaseNames();
   const allDbNames = Array.from(new Set([...IDB_DATABASE_NAMES, ...accountDbNames]));
-  for (const dbName of allDbNames) {
-    try { indexedDB.deleteDatabase(dbName); } catch {}
-  }
+  await Promise.all(allDbNames.map((dbName) => deleteDatabaseWithTimeout(dbName)));
 
   // 3. Remove all known localStorage keys
   for (const key of LOCAL_STORAGE_RESET_KEYS) {
+    if (key === LS_BOOT_SYNC_POLICY) continue;
     localStorage.removeItem(key);
   }
 

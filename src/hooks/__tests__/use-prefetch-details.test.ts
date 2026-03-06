@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { runPrefetchLoop } from "../usePrefetchDetails";
+import { runPrefetchLoop } from "../../stores/prefetch-controller";
 
 describe("runPrefetchLoop", () => {
   it("continues prefetching after an individual fetch failure", async () => {
