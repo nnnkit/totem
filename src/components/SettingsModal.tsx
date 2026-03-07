@@ -188,23 +188,29 @@ export function SettingsModal({
               </div>
               <div className="mt-3">
                 {confirmingReset ? (
-                  <div className="flex gap-2">
-                    <Button
-                      variant="secondary"
-                      onClick={() => setConfirmingReset(false)}
-                      disabled={resetting}
-                      className="flex-1"
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      onClick={handleResetLocalData}
-                      disabled={resetting}
-                      className="flex-1 border border-red-500/30"
-                    >
-                      {resetting ? "Resetting..." : "Confirm reset"}
-                    </Button>
+                  <div className="space-y-2">
+                    <p className="text-xxs leading-4 text-muted/75">
+                      Deletes all highlights, notes, and reading status on this
+                      device. This can&apos;t be undone.
+                    </p>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="secondary"
+                        onClick={() => setConfirmingReset(false)}
+                        disabled={resetting}
+                        className="flex-1"
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        onClick={handleResetLocalData}
+                        disabled={resetting}
+                        className="flex-1 border border-red-500/30"
+                      >
+                        {resetting ? "Resetting..." : "Confirm reset"}
+                      </Button>
+                    </div>
                   </div>
                 ) : (
                   <Button
