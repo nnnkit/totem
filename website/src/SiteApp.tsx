@@ -8,11 +8,13 @@ import {
 } from "react";
 import { cn } from "../../src/lib/cn";
 import { TotemLogo } from "../../src/components/TotemLogo";
-import cleanReaderImage from "./feature-previews/clean-reader.jpg";
-import highlightsNotesImage from "./feature-previews/highlights-notes.jpg";
-import keyboardShortcutsImage from "./feature-previews/keyboard-shortcuts.jpg";
-import readingStatesImage from "./feature-previews/reading-states.jpg";
-import worksOfflineImage from "./feature-previews/works-offline.jpg";
+import {
+  SITE_COPY,
+  SITE_LINKS,
+  type FAQItem,
+  type PolicySection as PolicySectionData,
+  type PolicySectionItem,
+} from "./site-content";
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 
@@ -34,141 +36,6 @@ export type SitePage = "landing" | "privacy" | "demo";
 interface SiteAppProps {
   page: SitePage;
 }
-
-// Set this once the Chrome Web Store listing is live. Falls back to GitHub release path when empty.
-const CHROME_WEB_STORE_INSTALL_URL = "";
-const DEMO_VIDEO_URL = "https://www.youtube.com/watch?v=dummy";
-const DEMO_VIDEO_EMBED_URL =
-  "https://www.youtube.com/embed/dQw4w9WgXcQ?rel=0&modestbranding=1";
-const GITHUB_RELEASE_URL = "https://github.com/nnnkit/totem/releases/latest";
-const HAS_WEB_STORE_INSTALL = Boolean(CHROME_WEB_STORE_INSTALL_URL);
-const INSTALL_URL = HAS_WEB_STORE_INSTALL
-  ? CHROME_WEB_STORE_INSTALL_URL
-  : GITHUB_RELEASE_URL;
-
-const INSTALL_BUTTON_LABEL = HAS_WEB_STORE_INSTALL
-  ? "Install from Chrome Web Store"
-  : "Install extension";
-
-const FINAL_INSTALL_BUTTON_LABEL = HAS_WEB_STORE_INSTALL
-  ? "Install from Chrome Web Store"
-  : "Install extension";
-
-type FeatureItem = {
-  title: string;
-  body: string;
-  image: string;
-  alt: string;
-  wide?: boolean;
-};
-
-type FAQItem = {
-  question: string;
-  answer: string;
-};
-
-const FEATURES: FeatureItem[] = [
-  {
-    title: "Clean reader, zero feed noise",
-    body: "Read saved posts in a calmer layout made for long-form scanning.",
-    image: cleanReaderImage,
-    alt: "Totem clean reader view showing saved X bookmarks without feed distractions.",
-  },
-  {
-    title: "Unread, Continue, and Read states",
-    body: "Your queue auto-organizes so you always know what to pick next.",
-    image: readingStatesImage,
-    alt: "Totem reading states showing unread, continue, and read progress.",
-  },
-  {
-    title: "Highlight and save notes",
-    body: "Select text while reading and keep notes where the insight happened.",
-    image: highlightsNotesImage,
-    alt: "Totem highlights and notes feature in the reader.",
-  },
-  {
-    title: "Keep reading offline",
-    body: "Continue reading when X is unavailable or your connection drops.",
-    image: worksOfflineImage,
-    alt: "Totem interface running with offline-ready cached reading queue.",
-  },
-];
-
-const FAQ_ITEMS: FAQItem[] = [
-  {
-    question: "Does Totem need my X password?",
-    answer:
-      "No. Totem uses your existing X account in the same browser profile, so just log in to X there and open it once.",
-  },
-  {
-    question: "Does Totem upload my notes or reading history anywhere?",
-    answer:
-      "No. Totem has no backend of its own, and your highlights, notes, and reading progress stay on this device.",
-  },
-  {
-    question: "Why don’t my bookmarks appear right away?",
-    answer:
-      "First sync can take a moment because Totem has to connect to your X account and build the local reading queue. Click Sync and give it a minute before trying again.",
-  },
-  {
-    question: "Why does sync say it is already running or temporarily paused?",
-    answer:
-      "Totem spaces sync attempts so it does not start duplicate work or hit X too quickly. Wait a minute, then try Sync again.",
-  },
-  {
-    question: "Why isn’t Totem opening on every new tab?",
-    answer:
-      "Another extension, another browser profile, or a managed browser setting may be taking over your new tab page. Check that Totem is enabled in this profile and disable any other new-tab extensions.",
-  },
-  {
-    question: "Why does it work in one browser profile but not another?",
-    answer:
-      "Extensions, X logins, and optional permissions are separate per browser profile. Install Totem and log in to X in the exact profile where you want to use it.",
-  },
-  {
-    question: "Why am I seeing “Offline mode”?",
-    answer:
-      "Totem is showing bookmarks already saved on this device because you are logged out of X.",
-  },
-  {
-    question:
-      "What happens to my highlights, notes, and read state if I log out of X?",
-    answer:
-      "Your reading state, highlights and notes will stays on the device. You can access it until you reset local data.",
-  },
-  {
-    question:
-      "Why did the browser ask for permission when I turned on Quick Links?",
-    answer:
-      "Quick Links uses your browser’s top sites and favicon access, so the browser asks before Totem can show that data.",
-  },
-  {
-    question:
-      "If I turn a feature off, does the browser revoke that permission automatically?",
-    answer:
-      "No. Turning the feature off stops Totem from using it, but the browser keeps the permission until you remove it in extension settings.",
-  },
-  {
-    question: "How do I reset Totem on this device?",
-    answer:
-      "Open Settings in the new tab page, choose Reset local data, then confirm the reset. Remember you will loose all the local state like highlights, notes and reading status.",
-  },
-  {
-    question: "What does Reset local data delete?",
-    answer:
-      "It clears the local bookmarks cache, highlights, notes, reading progress, and all other saved state on that device.",
-  },
-  {
-    question: "Why did my highlights, notes, or read progress disappear?",
-    answer:
-      "That usually means Totem was reset, you changed browser profiles, or you are looking on a different device.",
-  },
-  {
-    question: "What should I do if Totem looks stuck?",
-    answer:
-      "Open X once, return to Totem, and try Sync again. If it still does not recover, use Reset local data.",
-  },
-];
 
 type SiteButtonVariant = "primary" | "secondary";
 type SiteButtonSize = "default" | "pill";
@@ -366,6 +233,7 @@ function SiteLayout({
 }) {
   const [scrolled, setScrolled] = useState(false);
   const demoHref = page === "landing" ? "#demo" : "/#demo";
+  const { footer, header } = SITE_COPY;
 
   useEffect(() => {
     let rafId = 0;
@@ -406,25 +274,28 @@ function SiteLayout({
           <a
             href="/"
             className="flex items-center gap-2.5 no-underline"
-            aria-label="Totem homepage"
+            aria-label={header.brandAriaLabel}
           >
             <TotemLogo className="size-7" />
             <span className="text-sm font-bold tracking-tight text-neutral-900">
-              Totem
+              {header.brandName}
             </span>
           </a>
 
-          <nav className="flex items-center gap-2" aria-label="Primary">
+          <nav
+            className="flex items-center gap-2"
+            aria-label={header.navAriaLabel}
+          >
             <SiteButtonLink
-              href={INSTALL_URL}
+              href={SITE_LINKS.installUrl}
               target="_blank"
               variant="primary"
               size="pill"
             >
-              Install Totem
+              {header.installLabel}
             </SiteButtonLink>
             <SiteButtonLink href={demoHref} variant="secondary" size="pill">
-              See Demo
+              {header.demoLabel}
             </SiteButtonLink>
           </nav>
         </div>
@@ -438,30 +309,28 @@ function SiteLayout({
             <a
               href="/"
               className="flex items-center gap-2 no-underline"
-              aria-label="Totem homepage"
+              aria-label={footer.brandAriaLabel}
             >
               <TotemLogo className="size-5" />
               <span className="text-xs font-semibold tracking-tight text-neutral-700">
-                Totem
+                {header.brandName}
               </span>
             </a>
-            <p className="text-xs text-neutral-500">
-              Read your X bookmarks, not the feed.
-            </p>
+            <p className="text-xs text-neutral-500">{footer.tagline}</p>
           </div>
 
-          <nav className="flex items-center gap-5" aria-label="Footer links">
-            <a href="/privacy" className={siteFooterLinkClass}>
-              Privacy Policy
+          <nav className="flex items-center gap-5" aria-label={footer.navAriaLabel}>
+            <a href={SITE_LINKS.privacyUrl} className={siteFooterLinkClass}>
+              {footer.privacyLabel}
             </a>
             <a
-              href="mailto:support@usetotem.app"
+              href={`mailto:${SITE_LINKS.supportEmail}`}
               className={siteFooterLinkClass}
             >
-              Contact
+              {footer.contactLabel}
             </a>
             <a
-              href="https://github.com/nnnkit/totem"
+              href={SITE_LINKS.githubRepoUrl}
               target="_blank"
               rel="noopener noreferrer"
               className={cn(
@@ -470,11 +339,11 @@ function SiteLayout({
               )}
             >
               <GitHubIcon className="size-3.5" />
-              GitHub
+              {footer.githubLabel}
             </a>
           </nav>
 
-          <p className="text-xs text-neutral-500">&copy; 2026 Totem</p>
+          <p className="text-xs text-neutral-500">{footer.copyright}</p>
         </div>
       </footer>
     </div>
@@ -484,14 +353,15 @@ function SiteLayout({
 // ─── Demo Browser Mockup ──────────────────────────────────────────────────────
 
 function DemoBrowser() {
+  const { browser } = SITE_COPY;
   const [opened, setOpened] = useState(true);
   const [frameReady, setFrameReady] = useState(false);
-  const [tabTitle, setTabTitle] = useState("Totem");
+  const [tabTitle, setTabTitle] = useState(browser.defaultTabTitle);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
     if (!opened) {
-      setTabTitle("Totem");
+      setTabTitle(browser.defaultTabTitle);
       setFrameReady(false);
       return;
     }
@@ -502,7 +372,9 @@ function DemoBrowser() {
         if (!raw) return;
 
         const display =
-          raw === "New Tab" || raw.startsWith("Totem Demo") ? "Totem" : raw;
+          raw === browser.newTabTitle || raw.startsWith(browser.demoTabTitlePrefix)
+            ? browser.defaultTabTitle
+            : raw;
         setTabTitle(display);
       } catch {
         // Ignore cross-origin access while the iframe is booting.
@@ -510,7 +382,7 @@ function DemoBrowser() {
     }, 400);
 
     return () => window.clearInterval(interval);
-  }, [opened]);
+  }, [browser.defaultTabTitle, browser.demoTabTitlePrefix, browser.newTabTitle, opened]);
 
   return (
     <div className="site-browser-shell">
@@ -532,7 +404,7 @@ function DemoBrowser() {
                 setOpened(false);
               }}
               className="site-browser-close-button"
-              aria-label="Close tab"
+              aria-label={browser.closeTabLabel}
             >
               <svg
                 viewBox="0 0 12 12"
@@ -553,7 +425,7 @@ function DemoBrowser() {
               type="button"
               onClick={() => setOpened(true)}
               className="site-browser-launcher-button"
-              aria-label="Open new tab"
+              aria-label={browser.launcherLabel}
             >
               <svg
                 viewBox="0 0 12 12"
@@ -566,7 +438,7 @@ function DemoBrowser() {
                 <line x1="6" y1="1" x2="6" y2="11" />
                 <line x1="1" y1="6" x2="11" y2="6" />
               </svg>
-              <span>New tab</span>
+              <span>{browser.launcherText}</span>
             </button>
             <div className="site-browser-pointer">
               <svg width="18" height="22" viewBox="0 0 24 30" fill="none">
@@ -585,11 +457,15 @@ function DemoBrowser() {
         <button
           type="button"
           onClick={() => {
-            window.open("/demo-page", "_blank", "noopener,noreferrer");
+            window.open(
+              SITE_LINKS.demoPageUrl,
+              "_blank",
+              "noopener,noreferrer",
+            );
           }}
           className="site-browser-action-button"
-          aria-label="Open full-page demo"
-          title="Open full-page demo"
+          aria-label={browser.fullPageDemoAriaLabel}
+          title={browser.fullPageDemoTitle}
         >
           <svg
             viewBox="0 0 20 20"
@@ -638,7 +514,7 @@ function DemoBrowser() {
           onClick={() => setOpened(true)}
         >
           <div className="site-browser-glow" />
-          <p className="site-browser-hint">Click &quot;New tab&quot; above</p>
+          <p className="site-browser-hint">{browser.closedHint}</p>
         </div>
       ) : (
         <div className="site-browser-stage site-browser-screen">
@@ -646,15 +522,17 @@ function DemoBrowser() {
             <div className="site-browser-loading">
               <div className="px-6 text-center">
                 <SiteEyebrow tone="inverse" className="text-white/45">
-                  Totem Demo
+                  {browser.loadingEyebrow}
                 </SiteEyebrow>
-                <p className="mt-2 text-sm text-white/80">Loading preview...</p>
+                <p className="mt-2 text-sm text-white/80">
+                  {browser.loadingText}
+                </p>
               </div>
             </div>
           )}
           <iframe
             ref={iframeRef}
-            title="Totem New Tab demo"
+            title={browser.frameTitle}
             src="demo.html"
             onLoad={() => setFrameReady(true)}
             className={cn(
@@ -699,54 +577,56 @@ function FAQDisclosure({ item }: { item: FAQItem }) {
 // ─── Landing Page ─────────────────────────────────────────────────────────────
 
 function LandingPage() {
+  const { faq, features, hero, demo } = SITE_COPY.landing;
+
   return (
     <SiteLayout page="landing">
       <main>
         <SiteSection containerClassName="max-w-6xl py-20 sm:py-28">
           <div className="grid gap-10 lg:grid-cols-2 lg:items-start">
             <div>
-              <SiteEyebrow className="mb-4">Chrome Extension</SiteEyebrow>
+              <SiteEyebrow className="mb-4">{hero.eyebrow}</SiteEyebrow>
               <SiteHeading as="h1" size="hero" className="mb-5 max-w-xl">
-                Read your X bookmarks, not the feed.
+                {hero.title}
               </SiteHeading>
               <p className="mb-8 max-w-2xl text-lg leading-relaxed text-neutral-500">
-                Open a new tab to read your saved posts. No feed, no algorithmic
-                noise.
+                {hero.description}
               </p>
               <div className="mb-8 flex flex-wrap gap-3">
                 <SiteButtonLink
-                  href={INSTALL_URL}
+                  href={SITE_LINKS.installUrl}
                   target="_blank"
                   variant="primary"
                 >
-                  {INSTALL_BUTTON_LABEL}
+                  {hero.installButtonLabel}
                 </SiteButtonLink>
                 <SiteButtonLink
-                  href={DEMO_VIDEO_URL}
+                  href={SITE_LINKS.demoVideoUrl}
                   target="_blank"
                   variant="secondary"
                 >
-                  Watch demo video
+                  {hero.videoButtonLabel}
                 </SiteButtonLink>
               </div>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-medium text-neutral-400">
-                <span>No account</span>
-                <span aria-hidden="true" className="text-neutral-300">
-                  •
-                </span>
-                <span>No backend</span>
-                <span aria-hidden="true" className="text-neutral-300">
-                  •
-                </span>
-                <span>Local-first</span>
+                {hero.chips.map((chip, index) => (
+                  <span key={chip} className="contents">
+                    {index > 0 ? (
+                      <span aria-hidden="true" className="text-neutral-300">
+                        •
+                      </span>
+                    ) : null}
+                    <span>{chip}</span>
+                  </span>
+                ))}
               </div>
             </div>
 
             <aside className="lg:pt-2">
               <SiteCard className="overflow-hidden bg-neutral-950 shadow-site-frame">
                 <iframe
-                  title="Totem quick walkthrough video"
-                  src={DEMO_VIDEO_EMBED_URL}
+                  title={hero.videoTitle}
+                  src={SITE_LINKS.demoVideoEmbedUrl}
                   className="block aspect-video w-full border-0"
                   loading="lazy"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
@@ -760,7 +640,7 @@ function LandingPage() {
         <section id="demo" className="bg-neutral-950 py-16 sm:py-20">
           <div className="mx-auto mb-8 w-full max-w-5xl px-6">
             <SiteEyebrow tone="inverse" className="mb-3">
-              Live demo
+              {demo.eyebrow}
             </SiteEyebrow>
             <SiteHeading
               as="h2"
@@ -768,16 +648,15 @@ function LandingPage() {
               tone="inverse"
               className="mb-3 max-w-lg"
             >
-              See the experience before you install.
+              {demo.title}
             </SiteHeading>
             <p className="max-w-2xl text-sm leading-relaxed text-neutral-500">
-              Click the New tab button in the mock browser to open Totem. If
-              this looks useful, install now.{" "}
+              {demo.description}{" "}
               <SiteBodyLink
-                href="/demo-page"
+                href={SITE_LINKS.demoPageUrl}
                 className="text-white/70 hover:text-white"
               >
-                Open full-page demo &rarr;
+                {demo.linkLabel}
               </SiteBodyLink>
             </p>
           </div>
@@ -787,25 +666,25 @@ function LandingPage() {
           </div>
 
           <div className="mx-auto mt-4 w-full max-w-5xl px-6">
-            <p className="text-sm text-neutral-600">
-              Works offline after first sync and keeps your reading state local.
-            </p>
+            <p className="text-sm text-neutral-600">{demo.note}</p>
           </div>
         </section>
 
         <SiteSection className="py-16 sm:py-20">
-          <SiteEyebrow className="mb-3 text-center">Features</SiteEyebrow>
+          <SiteEyebrow className="mb-3 text-center">
+            {features.eyebrow}
+          </SiteEyebrow>
           <div className="mx-auto mb-10 max-w-3xl text-center">
             <SiteHeading as="h2" size="section" className="mb-3">
-              Features you will love.
+              {features.title}
             </SiteHeading>
             <p className="text-lg leading-relaxed text-neutral-400">
-              Discover more once you install.
+              {features.description}
             </p>
           </div>
 
           <div className="grid gap-5 md:grid-cols-2">
-            {FEATURES.map((feature) => (
+            {features.items.map((feature) => (
               <SiteCard
                 as="article"
                 key={feature.title}
@@ -841,32 +720,33 @@ function LandingPage() {
           <div className="max-w-4xl">
             <div className="mb-8 max-w-3xl">
               <SiteHeading as="h2" size="section">
-                FAQ
+                {faq.title}
               </SiteHeading>
               <p className="mt-3 text-sm leading-relaxed text-neutral-500">
-                Totem does not ask for your X password and does not run its own
-                backend. Your notes and reading state stay local on this device.
-                For the full breakdown of permissions and storage, read the{" "}
-                <SiteBodyLink href="/privacy">privacy page</SiteBodyLink>.
+                {faq.introBefore}
+                <SiteBodyLink href={SITE_LINKS.privacyUrl}>
+                  {faq.introLinkLabel}
+                </SiteBodyLink>
+                {faq.introAfter}
               </p>
             </div>
 
             <div className="space-y-3">
-              {FAQ_ITEMS.map((item) => (
+              {faq.items.map((item) => (
                 <FAQDisclosure key={item.question} item={item} />
               ))}
             </div>
 
             <SiteCard className="mt-5 p-5">
               <p className="m-0 text-sm font-medium text-neutral-900">
-                Still stuck?
+                {faq.supportTitle}
               </p>
               <p className="m-0 mt-2 text-sm leading-relaxed text-neutral-600">
-                Email{" "}
-                <SiteBodyLink href="mailto:support@usetotem.app">
-                  support@usetotem.app
+                {faq.supportLead}
+                <SiteBodyLink href={`mailto:${SITE_LINKS.supportEmail}`}>
+                  {SITE_LINKS.supportEmail}
                 </SiteBodyLink>{" "}
-                with a screenshot and what your browser or Totem is showing.
+                {faq.supportTail}
               </p>
             </SiteCard>
           </div>
@@ -875,18 +755,15 @@ function LandingPage() {
         <section className="bg-neutral-900 py-14">
           <div className="mx-auto w-full max-w-xl px-6 text-center">
             <SiteHeading as="h2" size="section" tone="inverse" className="mb-3">
-              Ready to start reading your bookmarks?
+              {faq.finalCtaTitle}
             </SiteHeading>
-            <p className="mb-8 text-sm text-white/70">
-              No account required. No subscription. Just install and open a new
-              tab.
-            </p>
+            <p className="mb-8 text-sm text-white/70">{faq.finalCtaDescription}</p>
             <SiteButtonLink
-              href={INSTALL_URL}
+              href={SITE_LINKS.installUrl}
               target="_blank"
               variant="secondary"
             >
-              {FINAL_INSTALL_BUTTON_LABEL}
+              {faq.finalCtaButtonLabel}
             </SiteButtonLink>
           </div>
         </section>
@@ -898,187 +775,69 @@ function LandingPage() {
 // ─── Privacy Page ─────────────────────────────────────────────────────────────
 
 function PrivacyPage() {
+  const { privacy } = SITE_COPY;
+
   return (
     <SiteLayout page="privacy">
       <main className="mx-auto max-w-3xl px-6 py-16 sm:py-20">
         <div className="mb-10">
-          <SiteEyebrow className="mb-2">Totem Legal</SiteEyebrow>
+          <SiteEyebrow className="mb-2">{privacy.eyebrow}</SiteEyebrow>
           <SiteHeading as="h1" size="page" className="mb-2">
-            Privacy Policy
+            {privacy.title}
           </SiteHeading>
           <p className="text-sm text-neutral-400">
-            Last updated: March 2, 2026
+            {privacy.lastUpdatedLabel} {privacy.lastUpdated}
           </p>
         </div>
 
         <div className="flex flex-col gap-5">
-          <PolicySection title="1. Data Totem accesses and stores">
-            <ul>
-              <li>
-                X authentication headers captured from your own authenticated
-                x.com GraphQL requests (including authorization, cookie,
-                x-csrf-token, and related X client headers when present).
-              </li>
-              <li>X user ID derived from your existing session cookie.</li>
-              <li>
-                Bookmark data and tweet detail content fetched from X so you can
-                read saved posts in Totem.
-              </li>
-              <li>
-                Bookmark mutation signals from x.com (CreateBookmark /
-                DeleteBookmark events, and tweet IDs when available) to keep
-                local data in sync.
-              </li>
-              <li>
-                Reading progress, highlights, notes, and local preferences (for
-                example theme, search engine choice, quick-link settings, and
-                other new-tab UI state).
-              </li>
-              <li>
-                If you enable quick links: top-site URLs from Chrome's topSites
-                API and favicon URLs generated by Chrome.
-              </li>
-            </ul>
-          </PolicySection>
-
-          <PolicySection title="2. Where data is stored">
-            <ul>
-              <li>
-                IndexedDB stores bookmarks, tweet detail cache, reading
-                progress, and highlights/notes.
-              </li>
-              <li>
-                chrome.storage.local stores runtime/auth state (including
-                captured auth headers), mutation event queue, and GraphQL
-                endpoint catalog metadata.
-              </li>
-              <li>
-                chrome.storage.sync stores theme and settings (when sync storage
-                is available).
-              </li>
-              <li>
-                localStorage stores small local UI keys (for example selected
-                reading tab and wallpaper index).
-              </li>
-              <li>
-                Totem does not operate a backend database for your extension
-                data.
-              </li>
-            </ul>
-          </PolicySection>
-
-          <PolicySection title="3. Network use and sharing">
-            <ul>
-              <li>
-                Totem sends authenticated API requests to x.com to fetch
-                bookmarks and tweet details, and to delete bookmarks when you
-                choose to unbookmark in Totem.
-              </li>
-              <li>
-                Totem may fetch x.com / abs.twimg.com bundles to discover
-                GraphQL query IDs when needed for compatibility.
-              </li>
-              <li>
-                Search queries are sent directly to your chosen search provider
-                (or browser default search) when you submit a search.
-              </li>
-              <li>
-                Totem does not send analytics or behavioral telemetry to a
-                Totem-operated server, does not sell personal data, and does not
-                share data with ad/tracking platforms.
-              </li>
-            </ul>
-          </PolicySection>
-
-          <PolicySection title="4. Why permissions are used">
-            <ul>
-              <li>
-                <strong>storage</strong>: stores local bookmarks/cache/progress,
-                auth/runtime state, and settings.
-              </li>
-              <li>
-                <strong>webRequest / declarativeNetRequest</strong>: enables
-                capture of required auth/request metadata and authenticated
-                requests to X.
-              </li>
-              <li>
-                <strong>host permission (x.com)</strong>: required to read your
-                own bookmark data, run content scripts on x.com, and detect
-                account context.
-              </li>
-              <li>
-                <strong>optional permissions</strong> (topSites, favicon,
-                search) are requested on demand when you enable related
-                features.
-              </li>
-            </ul>
-          </PolicySection>
-
-          <PolicySection title="5. Data retention">
-            <ul>
-              <li>
-                Tweet detail cache: up to 30 days, then removed by cleanup
-                logic.
-              </li>
-              <li>Bookmark mutation event cache: up to 14 days.</li>
-              <li>GraphQL endpoint catalog entries: up to 30 days.</li>
-              <li>
-                Auth headers are refreshed from live x.com traffic and may
-                remain in local storage until session/auth state changes or you
-                remove the extension.
-              </li>
-            </ul>
-          </PolicySection>
-
-          <PolicySection title="6. Your control">
-            <ul>
-              <li>You can remove the extension at any time.</li>
-              <li>You can reset Totem local data from settings.</li>
-              <li>
-                Optional permission grants are managed by Chrome. Turning a
-                feature off in Totem stops using it, but does not automatically
-                revoke the permission from Chrome.
-              </li>
-              <li>
-                To revoke optional permissions, use Chrome extension permission
-                controls for Totem.
-              </li>
-              <li>
-                Reset local data clears bookmark/content caches and most local
-                state, but currently preserves auth/query metadata used for
-                account continuity.
-              </li>
-            </ul>
-          </PolicySection>
-
-          <PolicySection title="7. Contact">
-            <p>
-              For privacy questions, email{" "}
-              <SiteBodyLink href="mailto:support@usetotem.app">
-                support@usetotem.app
-              </SiteBodyLink>
-              .
-            </p>
-          </PolicySection>
+          {privacy.sections.map((section) => (
+            <PolicySectionCard key={section.title} section={section} />
+          ))}
         </div>
       </main>
     </SiteLayout>
   );
 }
 
-function PolicySection({
-  title,
-  children,
+function renderPolicySectionItem(
+  item: PolicySectionItem,
+  index: number,
+) {
+  if (typeof item === "string") {
+    return <li key={`${index}-${item.slice(0, 24)}`}>{item}</li>;
+  }
+
+  return (
+    <li key={`${index}-${item.label}`}>
+      <strong>{item.label}</strong>: {item.text}
+    </li>
+  );
+}
+
+function PolicySectionCard({
+  section,
 }: {
-  title: string;
-  children: ReactNode;
+  section: PolicySectionData;
 }) {
   return (
     <SiteCard as="section" className="p-5 shadow-none">
       <SiteHeading as="h2" size="card" className="mb-3 mt-0">
-        {title}
+        {section.title}
       </SiteHeading>
-      <div className="site-legal-copy">{children}</div>
+      <div className="site-legal-copy">
+        {"items" in section ? (
+          <ul>{section.items.map(renderPolicySectionItem)}</ul>
+        ) : (
+          <p>
+            {section.contactLead}
+            <SiteBodyLink href={`mailto:${section.email}`}>
+              {section.email}
+            </SiteBodyLink>
+            {section.contactTail}
+          </p>
+        )}
+      </div>
     </SiteCard>
   );
 }
@@ -1086,6 +845,7 @@ function PolicySection({
 // ─── Demo Page ────────────────────────────────────────────────────────────────
 
 function DemoPage() {
+  const { browser, demoPage } = SITE_COPY;
   const [frameReady, setFrameReady] = useState(false);
 
   return (
@@ -1094,14 +854,14 @@ function DemoPage() {
         <div className="site-browser-loading">
           <div className="px-6 text-center">
             <SiteEyebrow tone="inverse" className="text-white/45">
-              Totem Demo
+              {demoPage.loadingEyebrow}
             </SiteEyebrow>
-            <p className="mt-2 text-sm text-white/80">Loading preview...</p>
+            <p className="mt-2 text-sm text-white/80">{demoPage.loadingText}</p>
           </div>
         </div>
       )}
       <iframe
-        title="Totem New Tab demo"
+        title={browser.frameTitle}
         src="demo.html"
         onLoad={() => setFrameReady(true)}
         className={cn(
