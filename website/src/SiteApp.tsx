@@ -94,25 +94,99 @@ const FEATURES: FeatureItem[] = [
   },
 ];
 
-const INSTALL_FAQ: FAQItem[] = [
+const FAQ_ITEMS: FAQItem[] = [
   {
-    question: "Will this need my X password?",
+    question: "Does Totem need my X password?",
     answer:
-      "No. Totem uses your existing logged-in session in Chrome to access your bookmarks.",
+      "No. Totem uses your existing X account in the same browser profile, so just log in to X there and open it once.",
   },
   {
-    question: "Does this use my data?",
+    question: "Does Totem upload my notes or reading history anywhere?",
     answer:
-      "It only uses your bookmarks and local reading state to work as your reading queue.",
+      "No. Totem has no backend of its own, and your highlights, notes, and reading progress stay on this device.",
   },
   {
-    question: "How quickly does it show my bookmarks?",
+    question: "Why don’t my bookmarks appear right away?",
     answer:
-      "Most users can view saved items quickly after install, with fuller sync during normal usage.",
+      "First sync can take a moment because Totem has to connect to your X account and build the local reading queue. Click Sync and give it a minute before trying again.",
   },
   {
-    question: "Can I uninstall cleanly?",
-    answer: "Yes. Removing Totem removes extension state from your browser.",
+    question: "What does “Finishing X setup” mean?",
+    answer:
+      "It means Totem found your X account, but bookmark access is not ready until X has been opened once in this browser profile. Open X, let it load, then come back to Totem.",
+  },
+  {
+    question: "Why does sync say it is already running or temporarily paused?",
+    answer:
+      "Totem spaces sync attempts so it does not start duplicate work or hit X too quickly. Wait a minute, then try Sync again.",
+  },
+  {
+    question: "Why isn’t Totem opening on every new tab?",
+    answer:
+      "Another extension, another browser profile, or a managed browser setting may be taking over your new tab page. Check that Totem is enabled in this profile and disable any other new-tab extensions.",
+  },
+  {
+    question: "Which browsers are supported?",
+    answer:
+      "Totem is built for supported desktop browser extension use first, so you should treat Firefox and Safari as unsupported.",
+  },
+  {
+    question: "Why does it work in one browser profile but not another?",
+    answer:
+      "Extensions, X logins, and optional permissions are separate per browser profile. Install Totem and log in to X in the exact profile where you want to use it.",
+  },
+  {
+    question: "Why am I seeing “Offline mode” or “Cached reading only”?",
+    answer:
+      "Totem is showing bookmarks already saved on this device because X is unavailable or you are not connected right now. Open X and log back in if you want full syncing again.",
+  },
+  {
+    question: "Why won’t the full thread load for a bookmark?",
+    answer:
+      "That bookmark’s full detail is not cached yet, or Totem needs to reconnect to X before it can load the rest. Open X once, come back online, and reopen the bookmark.",
+  },
+  {
+    question:
+      "What happens to my highlights, notes, and read state if I log out of X?",
+    answer:
+      "Your reading state stays on this device, but logged-out mode can limit access to bookmarks that were not cached yet.",
+  },
+  {
+    question:
+      "Why did the browser ask for permission when I turned on Quick Links?",
+    answer:
+      "Quick Links uses your browser’s top sites and favicon access, so the browser asks before Totem can show that data.",
+  },
+  {
+    question: "Why are Quick Links empty even after I enabled them?",
+    answer:
+      "Your browser may not have enough top-site history yet, or the permission may not have been granted for this profile. Confirm the permission, browse normally for a while, then reopen a new tab.",
+  },
+  {
+    question:
+      "If I turn a feature off, does the browser revoke that permission automatically?",
+    answer:
+      "No. Turning the feature off stops Totem from using it, but the browser keeps the permission until you remove it in extension settings.",
+  },
+  {
+    question: "How do I reset Totem on this device?",
+    answer:
+      "Open Settings in the new tab page, choose Reset local data, then confirm the reset.",
+  },
+  {
+    question: "What does Reset local data delete?",
+    answer:
+      "It clears the local bookmarks cache, highlights, notes, reading progress, and most saved Totem state on that device.",
+  },
+  {
+    question: "Why did my highlights, notes, or read progress disappear?",
+    answer:
+      "That usually means Totem was reset, you changed browser profiles, or you are looking on a different device.",
+  },
+  {
+    question: "What should I do if Totem looks stuck?",
+    answer:
+      "Open X once, return to Totem, and try Sync again. If it still does not recover, use Reset local data.",
   },
 ];
 
@@ -170,9 +244,6 @@ function SiteLayout({
               <span className="flex flex-col leading-tight">
                 <span className="font-bold text-neutral-900 text-[0.95rem] tracking-tight">
                   Totem
-                </span>
-                <span className="text-[0.68rem] text-neutral-500 tracking-[0.08em]">
-                  Read your X bookmarks, not the feed.
                 </span>
               </span>
             </a>
@@ -450,6 +521,34 @@ function DemoBrowser() {
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
+function FAQDisclosure({ item }: { item: FAQItem }) {
+  return (
+    <details className="rounded-xl border border-neutral-200 bg-white transition-colors open:border-neutral-300">
+      <summary
+        className="flex min-h-11 cursor-pointer list-none items-start gap-3 px-4 py-3.5 [&::-webkit-details-marker]:hidden"
+        style={{ listStyle: "none" }}
+      >
+        <div className="min-w-0 flex-1">
+          <h4 className="m-0 text-[0.96rem] leading-snug tracking-tight text-neutral-900">
+            {item.question}
+          </h4>
+        </div>
+        <span
+          aria-hidden="true"
+          className="pt-0.5 text-lg leading-none text-neutral-300"
+        >
+          +
+        </span>
+      </summary>
+      <div className="border-t border-neutral-200 px-4 py-3.5">
+        <p className="m-0 text-sm leading-relaxed text-neutral-600">
+          {item.answer}
+        </p>
+      </div>
+    </details>
+  );
+}
+
 // ─── Landing Page ─────────────────────────────────────────────────────────────
 
 function LandingPage() {
@@ -550,16 +649,11 @@ function LandingPage() {
             Features
           </p>
           <h2 className="font-[Newsreader,serif] text-[clamp(1.95rem,3.7vw,3rem)] leading-tight tracking-tight text-neutral-900 mb-3 text-center text-balance">
-            <span className="block">
-              Five practical features you will love.
-            </span>
+            <span className="block">Features you will love.</span>
             <span className="block text-neutral-400">
               (Discover more once you install.)
             </span>
           </h2>
-          <p className="text-neutral-500 text-[0.98rem] leading-relaxed max-w-[60ch] mx-auto text-center mb-10 text-balance">
-            Everything below is already in the extension today.
-          </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {FEATURES.map((feature) => (
               <article
@@ -601,44 +695,45 @@ function LandingPage() {
 
         {/* ── Trust & FAQ ────────────────────────────────────────── */}
         <section id="faq" className="max-w-5xl mx-auto px-6 py-16 sm:py-20">
-          <div className="grid gap-8 md:grid-cols-[1.05fr,1fr]">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-400 mb-3">
-                What this extension will and won&apos;t do
-              </p>
-              <h2 className="font-[Newsreader,serif] text-[1.8rem] leading-tight tracking-tight text-neutral-900 mb-4 text-balance">
-                Permission trust, in plain language.
+          <div className="max-w-4xl">
+            <div className="mb-8 max-w-3xl">
+              <h2 className="m-0 font-[Newsreader,serif] text-[clamp(1.85rem,3.6vw,2.8rem)] leading-tight tracking-tight text-neutral-900">
+                FAQ
               </h2>
-              <div className="rounded-xl border border-neutral-200 bg-neutral-100 p-4">
-                <p className="text-sm text-neutral-600 m-0">
-                  The extension only needs access required to read your own X
-                  bookmarks and cache your reading data.
-                </p>
-                <p className="text-sm text-neutral-600 m-0 mt-2">
-                  It does not create an account, store your feed, or upload your
-                  notes anywhere.
-                </p>
-              </div>
-            </div>
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-400 mb-3">
-                Quick questions
+              <p className="m-0 mt-3 text-sm leading-relaxed text-neutral-500">
+                Totem does not ask for your X password and does not run its own
+                backend. Your notes and reading state stay local on this device.
+                For the full breakdown of permissions and storage, read the{" "}
+                <a
+                  href="/privacy"
+                  className="text-neutral-900 underline underline-offset-2 hover:text-neutral-700 transition-colors"
+                >
+                  privacy page
+                </a>
+                .
               </p>
-              <div className="flex flex-col gap-4">
-                {INSTALL_FAQ.map((item) => (
-                  <article
-                    key={item.question}
-                    className="rounded-xl border border-neutral-200 p-4"
-                  >
-                    <h3 className="text-[1rem] leading-snug tracking-tight text-neutral-900 mb-2">
-                      {item.question}
-                    </h3>
-                    <p className="text-sm text-neutral-600 m-0 leading-relaxed">
-                      {item.answer}
-                    </p>
-                  </article>
-                ))}
-              </div>
+            </div>
+
+            <div className="space-y-3">
+              {FAQ_ITEMS.map((item) => (
+                <FAQDisclosure key={item.question} item={item} />
+              ))}
+            </div>
+
+            <div className="mt-5 rounded-2xl border border-neutral-200 bg-white p-5">
+              <p className="m-0 text-sm font-medium text-neutral-900">
+                Still stuck?
+              </p>
+              <p className="m-0 mt-2 text-sm leading-relaxed text-neutral-600">
+                Email{" "}
+                <a
+                  href="mailto:support@usetotem.app"
+                  className="text-neutral-900 underline underline-offset-2 hover:text-neutral-700 transition-colors"
+                >
+                  support@usetotem.app
+                </a>{" "}
+                with a screenshot and what your browser or Totem is showing.
+              </p>
             </div>
           </div>
         </section>
