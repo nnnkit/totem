@@ -1,6 +1,6 @@
 @theme {
   --font-site-sans: "Space Grotesk", var(--font-sans);
-  --font-site-serif: "Newsreader", Georgia, serif;
+  --font-site-serif: var(--font-serif);
 
   --shadow-site-card: 0 16px 36px rgba(0, 0, 0, 0.06);
   --shadow-site-frame: 0 18px 50px rgba(0, 0, 0, 0.14);

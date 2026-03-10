@@ -85,13 +85,6 @@ const FEATURES: FeatureItem[] = [
     body: "Select text while reading and keep notes where the insight happened.",
     image: highlightsNotesImage,
     alt: "Totem highlights and notes feature in the reader.",
-    wide: true,
-  },
-  {
-    title: "Speed through with shortcuts",
-    body: "Navigate and triage quickly without breaking focus.",
-    image: keyboardShortcutsImage,
-    alt: "Totem keyboard shortcuts helping users move through saved bookmarks faster.",
   },
   {
     title: "Keep reading offline",
@@ -196,10 +189,10 @@ const siteButtonSizeClasses: Record<SiteButtonSize, string> = {
 };
 
 const siteHeadingClasses: Record<SiteHeadingSize, string> = {
-  hero: "text-balance text-4xl leading-none sm:text-5xl lg:text-6xl",
-  section: "text-balance text-3xl leading-tight sm:text-4xl lg:text-5xl",
-  page: "text-4xl leading-none sm:text-5xl",
-  card: "text-xl leading-tight",
+  hero: "text-balance text-5xl leading-tight",
+  section: "text-balance text-4xl leading-tight",
+  page: "text-balance text-4xl leading-tight",
+  card: "text-2xl leading-tight",
 };
 
 const siteBodyLinkClass =
@@ -308,7 +301,7 @@ function SiteHeading({
   return (
     <Component
       className={cn(
-        "font-site-serif tracking-tight",
+        "font-serif tracking-tight",
         siteHeadingClasses[size],
         tone === "inverse" ? "text-white" : "text-neutral-900",
         className,
