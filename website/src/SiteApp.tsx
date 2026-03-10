@@ -1,4 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type AnchorHTMLAttributes,
+  type ElementType,
+  type ReactNode,
+} from "react";
 import { cn } from "../../src/lib/cn";
 import { TotemLogo } from "../../src/components/TotemLogo";
 import cleanReaderImage from "./feature-previews/clean-reader.jpg";
@@ -111,11 +118,6 @@ const FAQ_ITEMS: FAQItem[] = [
       "First sync can take a moment because Totem has to connect to your X account and build the local reading queue. Click Sync and give it a minute before trying again.",
   },
   {
-    question: "What does “Finishing X setup” mean?",
-    answer:
-      "It means Totem found your X account, but bookmark access is not ready until X has been opened once in this browser profile. Open X, let it load, then come back to Totem.",
-  },
-  {
     question: "Why does sync say it is already running or temporarily paused?",
     answer:
       "Totem spaces sync attempts so it does not start duplicate work or hit X too quickly. Wait a minute, then try Sync again.",
@@ -126,41 +128,26 @@ const FAQ_ITEMS: FAQItem[] = [
       "Another extension, another browser profile, or a managed browser setting may be taking over your new tab page. Check that Totem is enabled in this profile and disable any other new-tab extensions.",
   },
   {
-    question: "Which browsers are supported?",
-    answer:
-      "Totem is built for supported desktop browser extension use first, so you should treat Firefox and Safari as unsupported.",
-  },
-  {
     question: "Why does it work in one browser profile but not another?",
     answer:
       "Extensions, X logins, and optional permissions are separate per browser profile. Install Totem and log in to X in the exact profile where you want to use it.",
   },
   {
-    question: "Why am I seeing “Offline mode” or “Cached reading only”?",
+    question: "Why am I seeing “Offline mode”?",
     answer:
-      "Totem is showing bookmarks already saved on this device because X is unavailable or you are not connected right now. Open X and log back in if you want full syncing again.",
-  },
-  {
-    question: "Why won’t the full thread load for a bookmark?",
-    answer:
-      "That bookmark’s full detail is not cached yet, or Totem needs to reconnect to X before it can load the rest. Open X once, come back online, and reopen the bookmark.",
+      "Totem is showing bookmarks already saved on this device because you are logged out of X.",
   },
   {
     question:
       "What happens to my highlights, notes, and read state if I log out of X?",
     answer:
-      "Your reading state stays on this device, but logged-out mode can limit access to bookmarks that were not cached yet.",
+      "Your reading state, highlights and notes will stays on the device. You can access it until you reset local data.",
   },
   {
     question:
       "Why did the browser ask for permission when I turned on Quick Links?",
     answer:
       "Quick Links uses your browser’s top sites and favicon access, so the browser asks before Totem can show that data.",
-  },
-  {
-    question: "Why are Quick Links empty even after I enabled them?",
-    answer:
-      "Your browser may not have enough top-site history yet, or the permission may not have been granted for this profile. Confirm the permission, browse normally for a while, then reopen a new tab.",
   },
   {
     question:
@@ -171,12 +158,12 @@ const FAQ_ITEMS: FAQItem[] = [
   {
     question: "How do I reset Totem on this device?",
     answer:
-      "Open Settings in the new tab page, choose Reset local data, then confirm the reset.",
+      "Open Settings in the new tab page, choose Reset local data, then confirm the reset. Remember you will loose all the local state like highlights, notes and reading status.",
   },
   {
     question: "What does Reset local data delete?",
     answer:
-      "It clears the local bookmarks cache, highlights, notes, reading progress, and most saved Totem state on that device.",
+      "It clears the local bookmarks cache, highlights, notes, reading progress, and all other saved state on that device.",
   },
   {
     question: "Why did my highlights, notes, or read progress disappear?",
@@ -190,20 +177,207 @@ const FAQ_ITEMS: FAQItem[] = [
   },
 ];
 
+type SiteButtonVariant = "primary" | "secondary";
+type SiteButtonSize = "default" | "pill";
+type SiteHeadingSize = "hero" | "section" | "page" | "card";
+
+const siteButtonBaseClass =
+  "inline-flex items-center justify-center gap-2 no-underline font-semibold transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30 focus-visible:ring-offset-2";
+
+const siteButtonVariantClasses: Record<SiteButtonVariant, string> = {
+  primary: "bg-accent text-white hover:bg-accent-700",
+  secondary:
+    "border border-neutral-200 bg-white text-neutral-900 hover:bg-neutral-100",
+};
+
+const siteButtonSizeClasses: Record<SiteButtonSize, string> = {
+  default: "h-11 rounded-xl px-6 text-sm",
+  pill: "h-10 rounded-full px-4 text-sm",
+};
+
+const siteHeadingClasses: Record<SiteHeadingSize, string> = {
+  hero: "text-balance text-4xl leading-none sm:text-5xl lg:text-6xl",
+  section: "text-balance text-3xl leading-tight sm:text-4xl lg:text-5xl",
+  page: "text-4xl leading-none sm:text-5xl",
+  card: "text-xl leading-tight",
+};
+
+const siteBodyLinkClass =
+  "font-medium text-neutral-900 underline underline-offset-4 transition-colors duration-200 hover:text-neutral-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30 focus-visible:ring-offset-2";
+
+const siteFooterLinkClass =
+  "rounded-sm text-xs text-neutral-600 no-underline transition-colors duration-200 hover:text-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30";
+
+function SiteButtonLink({
+  variant = "primary",
+  size = "default",
+  className,
+  target,
+  rel,
+  children,
+  ...props
+}: AnchorHTMLAttributes<HTMLAnchorElement> & {
+  variant?: SiteButtonVariant;
+  size?: SiteButtonSize;
+  children: ReactNode;
+}) {
+  const safeRel = target === "_blank" ? (rel ?? "noopener noreferrer") : rel;
+
+  return (
+    <a
+      {...props}
+      target={target}
+      rel={safeRel}
+      className={cn(
+        siteButtonBaseClass,
+        siteButtonVariantClasses[variant],
+        siteButtonSizeClasses[size],
+        className,
+      )}
+    >
+      {children}
+    </a>
+  );
+}
+
+function SiteBodyLink({
+  className,
+  target,
+  rel,
+  children,
+  ...props
+}: AnchorHTMLAttributes<HTMLAnchorElement> & { children: ReactNode }) {
+  const safeRel = target === "_blank" ? (rel ?? "noopener noreferrer") : rel;
+
+  return (
+    <a
+      {...props}
+      target={target}
+      rel={safeRel}
+      className={cn(siteBodyLinkClass, className)}
+    >
+      {children}
+    </a>
+  );
+}
+
+function SiteEyebrow({
+  tone = "default",
+  className,
+  children,
+}: {
+  tone?: "default" | "muted" | "inverse";
+  className?: string;
+  children: ReactNode;
+}) {
+  const toneClass =
+    tone === "inverse"
+      ? "text-white/60"
+      : tone === "muted"
+        ? "text-neutral-500"
+        : "text-neutral-400";
+
+  return (
+    <p
+      className={cn(
+        "text-xs font-semibold uppercase tracking-widest",
+        toneClass,
+        className,
+      )}
+    >
+      {children}
+    </p>
+  );
+}
+
+function SiteHeading({
+  as,
+  size = "section",
+  tone = "default",
+  className,
+  children,
+}: {
+  as?: ElementType;
+  size?: SiteHeadingSize;
+  tone?: "default" | "inverse";
+  className?: string;
+  children: ReactNode;
+}) {
+  const Component = (as ?? "h2") as ElementType;
+
+  return (
+    <Component
+      className={cn(
+        "font-site-serif tracking-tight",
+        siteHeadingClasses[size],
+        tone === "inverse" ? "text-white" : "text-neutral-900",
+        className,
+      )}
+    >
+      {children}
+    </Component>
+  );
+}
+
+function SiteSection({
+  id,
+  className,
+  containerClassName,
+  children,
+}: {
+  id?: string;
+  className?: string;
+  containerClassName?: string;
+  children: ReactNode;
+}) {
+  return (
+    <section id={id} className={className}>
+      <div className={cn("mx-auto w-full max-w-5xl px-6", containerClassName)}>
+        {children}
+      </div>
+    </section>
+  );
+}
+
+function SiteCard({
+  as,
+  className,
+  children,
+}: {
+  as?: ElementType;
+  className?: string;
+  children: ReactNode;
+}) {
+  const Component = (as ?? "div") as ElementType;
+
+  return (
+    <Component
+      className={cn(
+        "rounded-2xl border border-neutral-200 bg-white shadow-site-card",
+        className,
+      )}
+    >
+      {children}
+    </Component>
+  );
+}
+
 // ─── Layout ───────────────────────────────────────────────────────────────────
 
 function SiteLayout({
-  page: _page,
+  page,
   children,
 }: {
   page: SitePage;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   const [scrolled, setScrolled] = useState(false);
+  const demoHref = page === "landing" ? "#demo" : "/#demo";
 
   useEffect(() => {
     let rafId = 0;
     let ticking = false;
+
     const updateScrollState = () => {
       ticking = false;
       setScrolled((current) => {
@@ -211,13 +385,16 @@ function SiteLayout({
         return current === next ? current : next;
       });
     };
+
     const handleScroll = () => {
       if (ticking) return;
       ticking = true;
       rafId = window.requestAnimationFrame(updateScrollState);
     };
+
     handleScroll();
     window.addEventListener("scroll", handleScroll, { passive: true });
+
     return () => {
       window.removeEventListener("scroll", handleScroll);
       if (rafId) window.cancelAnimationFrame(rafId);
@@ -225,53 +402,45 @@ function SiteLayout({
   }, []);
 
   return (
-    <div className="min-h-dvh bg-white text-neutral-900 font-[Space_Grotesk,sans-serif]">
-      {/* ── Header ─────────────────────────────────────────────────── */}
+    <div className="min-h-dvh bg-white font-site-sans text-neutral-900">
       <header
         className={cn(
           "sticky top-0 z-50 border-b border-neutral-200 transition-colors duration-200",
-          scrolled ? "bg-white/90 backdrop-blur-lg" : "bg-white",
+          scrolled ? "bg-white/90 backdrop-blur-md" : "bg-white",
         )}
       >
-        <div className="max-w-5xl mx-auto px-6 py-2.5">
-          <div className="flex items-center justify-between gap-2">
-            <a
-              href="/"
-              className="flex items-center gap-2.5 no-underline"
-              aria-label="Totem homepage"
+        <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-4 px-6 py-2.5">
+          <a
+            href="/"
+            className="flex items-center gap-2.5 no-underline"
+            aria-label="Totem homepage"
+          >
+            <TotemLogo className="size-7" />
+            <span className="text-sm font-bold tracking-tight text-neutral-900">
+              Totem
+            </span>
+          </a>
+
+          <nav className="flex items-center gap-2" aria-label="Primary">
+            <SiteButtonLink
+              href={INSTALL_URL}
+              target="_blank"
+              variant="primary"
+              size="pill"
             >
-              <TotemLogo className="size-7" />
-              <span className="flex flex-col leading-tight">
-                <span className="font-bold text-neutral-900 text-[0.95rem] tracking-tight">
-                  Totem
-                </span>
-              </span>
-            </a>
-            <nav className="flex items-center gap-1" aria-label="Primary">
-              <a
-                href={INSTALL_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="ml-1 inline-flex items-center px-4 py-1.5 rounded-full bg-neutral-900 text-white text-sm font-semibold no-underline transition-all hover:bg-neutral-800 active:scale-[0.97]"
-              >
-                Install Totem
-              </a>
-              <a
-                href="#demo"
-                className="ml-1 inline-flex items-center px-4 py-1.5 rounded-full border border-neutral-200 text-sm font-semibold text-neutral-700 no-underline transition-colors hover:text-neutral-900 hover:bg-neutral-50"
-              >
-                See Demo
-              </a>
-            </nav>
-          </div>
+              Install Totem
+            </SiteButtonLink>
+            <SiteButtonLink href={demoHref} variant="secondary" size="pill">
+              See Demo
+            </SiteButtonLink>
+          </nav>
         </div>
       </header>
 
       {children}
 
-      {/* ── Footer ─────────────────────────────────────────────────── */}
       <footer className="border-t border-neutral-200">
-        <div className="max-w-5xl mx-auto px-6 py-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-sm text-neutral-600">
+        <div className="mx-auto flex w-full max-w-5xl flex-col gap-4 px-6 py-8 text-sm text-neutral-600 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-col gap-1.5">
             <a
               href="/"
@@ -279,27 +448,22 @@ function SiteLayout({
               aria-label="Totem homepage"
             >
               <TotemLogo className="size-5" />
-              <span className="font-semibold text-neutral-700 text-xs tracking-tight">
+              <span className="text-xs font-semibold tracking-tight text-neutral-700">
                 Totem
               </span>
             </a>
-            <p className="text-neutral-500 text-xs">
+            <p className="text-xs text-neutral-500">
               Read your X bookmarks, not the feed.
             </p>
           </div>
-          <nav
-            className="flex items-center gap-5 text-xs"
-            aria-label="Footer links"
-          >
-            <a
-              href="/privacy"
-              className="no-underline text-neutral-600 hover:text-neutral-900 transition-colors"
-            >
+
+          <nav className="flex items-center gap-5" aria-label="Footer links">
+            <a href="/privacy" className={siteFooterLinkClass}>
               Privacy Policy
             </a>
             <a
               href="mailto:support@usetotem.app"
-              className="no-underline text-neutral-600 hover:text-neutral-900 transition-colors"
+              className={siteFooterLinkClass}
             >
               Contact
             </a>
@@ -307,12 +471,16 @@ function SiteLayout({
               href="https://github.com/nnnkit/totem"
               target="_blank"
               rel="noopener noreferrer"
-              className="no-underline text-neutral-600 hover:text-neutral-900 transition-colors flex items-center gap-1.5"
+              className={cn(
+                siteFooterLinkClass,
+                "inline-flex items-center gap-1.5",
+              )}
             >
               <GitHubIcon className="size-3.5" />
               GitHub
             </a>
           </nav>
+
           <p className="text-xs text-neutral-500">&copy; 2026 Totem</p>
         </div>
       </footer>
@@ -328,7 +496,6 @@ function DemoBrowser() {
   const [tabTitle, setTabTitle] = useState("Totem");
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
-  // Poll iframe document.title to reflect it in the fake tab
   useEffect(() => {
     if (!opened) {
       setTabTitle("Totem");
@@ -336,42 +503,42 @@ function DemoBrowser() {
       return;
     }
 
-    const interval = setInterval(() => {
+    const interval = window.setInterval(() => {
       try {
         const raw = iframeRef.current?.contentDocument?.title;
         if (!raw) return;
-        // BookmarkReader resets to "New Tab" on unmount — show "Totem" instead
+
         const display =
           raw === "New Tab" || raw.startsWith("Totem Demo") ? "Totem" : raw;
         setTabTitle(display);
       } catch {
-        // cross-origin — ignore
+        // Ignore cross-origin access while the iframe is booting.
       }
     }, 400);
 
-    return () => clearInterval(interval);
+    return () => window.clearInterval(interval);
   }, [opened]);
 
   return (
-    <div className="overflow-hidden rounded-[28px] border border-white/[0.08] bg-[#20232b] shadow-[0_32px_90px_rgba(0,0,0,0.48)]">
-      {/* ── Tab strip ─────────────────────────────────────────── */}
-      <div className="flex items-end gap-4 px-5 pt-3 bg-[#242730] border-b border-white/[0.04]">
-        <div className="flex items-center gap-2.5 pb-2.5" aria-hidden="true">
+    <div className="site-browser-shell">
+      <div className="site-browser-strip">
+        <div className="site-browser-window-controls" aria-hidden="true">
           <span className="size-3 rounded-full bg-[#ff5f57]" />
           <span className="size-3 rounded-full bg-[#febc2e]" />
           <span className="size-3 rounded-full bg-[#28c840]" />
         </div>
 
         {opened ? (
-          <div className="flex items-center gap-2 px-3.5 h-[42px] rounded-t-xl bg-[#343843] text-white/85 text-[12px] font-medium min-w-[170px] max-w-[260px] -mb-px border border-white/[0.08] border-b-transparent">
+          <div className="site-browser-tab">
             <TotemLogo className="size-4 shrink-0" />
             <span className="truncate">{tabTitle}</span>
             <button
-              onClick={(e) => {
-                e.stopPropagation();
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
                 setOpened(false);
               }}
-              className="ml-auto size-5 flex items-center justify-center rounded-md text-white/35 hover:text-white/75 hover:bg-white/10 transition-colors cursor-pointer"
+              className="site-browser-close-button"
               aria-label="Close tab"
             >
               <svg
@@ -388,10 +555,11 @@ function DemoBrowser() {
             </button>
           </div>
         ) : (
-          <div className="relative -mb-px flex items-center">
+          <div className="site-browser-launcher">
             <button
+              type="button"
               onClick={() => setOpened(true)}
-              className="relative inline-flex items-center gap-2.5 h-[42px] px-5 rounded-t-xl bg-[#3a3f4a] text-white/80 hover:text-white hover:bg-[#454b58] transition-colors cursor-pointer text-[12px] font-medium border border-white/[0.08] border-b-transparent"
+              className="site-browser-launcher-button"
               aria-label="Open new tab"
             >
               <svg
@@ -407,10 +575,7 @@ function DemoBrowser() {
               </svg>
               <span>New tab</span>
             </button>
-            <div
-              className="absolute -right-3 top-[20px] pointer-events-none animate-bounce"
-              style={{ animationDuration: "1.6s" }}
-            >
+            <div className="site-browser-pointer">
               <svg width="18" height="22" viewBox="0 0 24 30" fill="none">
                 <path
                   d="M7 1L7 19L11.5 15.5L15 23L17.5 22L14 14.5L19.5 13.5L7 1Z"
@@ -423,12 +588,13 @@ function DemoBrowser() {
             </div>
           </div>
         )}
+
         <button
           type="button"
           onClick={() => {
             window.open("/demo-page", "_blank", "noopener,noreferrer");
           }}
-          className="ml-auto mb-2.5 flex items-center justify-center size-6 rounded-md text-white/45 hover:text-white/80 hover:bg-white/8 transition-colors cursor-pointer"
+          className="site-browser-action-button"
           aria-label="Open full-page demo"
           title="Open full-page demo"
         >
@@ -449,10 +615,9 @@ function DemoBrowser() {
         </button>
       </div>
 
-      {/* ── Toolbar ───────────────────────────────────────────── */}
-      <div className="flex items-center gap-2.5 px-5 h-9 bg-[#2b2f38] border-b border-white/[0.06]">
-        <div className="flex items-center gap-1.5" aria-hidden="true">
-          <span className="flex items-center justify-center size-6 rounded-md text-white/25">
+      <div className="site-browser-toolbar">
+        <div className="site-browser-nav" aria-hidden="true">
+          <span className="site-browser-nav-button">
             <svg viewBox="0 0 20 20" className="size-3.5" fill="currentColor">
               <path
                 fillRule="evenodd"
@@ -461,7 +626,7 @@ function DemoBrowser() {
               />
             </svg>
           </span>
-          <span className="flex items-center justify-center size-6 rounded-md text-white/25">
+          <span className="site-browser-nav-button">
             <svg viewBox="0 0 20 20" className="size-3.5" fill="currentColor">
               <path
                 fillRule="evenodd"
@@ -471,32 +636,25 @@ function DemoBrowser() {
             </svg>
           </span>
         </div>
-        <div className="flex-1 h-7 rounded-full bg-[#1f222b] border border-white/[0.05]" />
+        <div className="site-browser-urlbar" />
       </div>
 
-      {/* ── Content area ─────────────────────────────────────── */}
       {!opened ? (
         <div
-          className="relative cursor-pointer bg-[#1f222b]"
-          style={{ minHeight: "clamp(540px, 65vh, 760px)" }}
+          className="site-browser-stage site-browser-closed-stage"
           onClick={() => setOpened(true)}
         >
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_10%,rgba(255,255,255,0.03),transparent_58%)]" />
-          <p className="absolute left-5 bottom-4 text-[11px] tracking-[0.08em] uppercase text-white/28">
-            Click &quot;New tab&quot; above
-          </p>
+          <div className="site-browser-glow" />
+          <p className="site-browser-hint">Click &quot;New tab&quot; above</p>
         </div>
       ) : (
-        <div
-          className="relative block w-full overflow-hidden bg-[#0a0f16]"
-          style={{ minHeight: "clamp(540px, 65vh, 760px)" }}
-        >
+        <div className="site-browser-stage site-browser-screen">
           {!frameReady && (
-            <div className="absolute inset-0 z-10 grid place-items-center bg-[#0a0f16]">
-              <div className="text-center px-6">
-                <p className="text-[11px] uppercase tracking-[0.16em] text-white/45">
+            <div className="site-browser-loading">
+              <div className="px-6 text-center">
+                <SiteEyebrow tone="inverse" className="text-white/45">
                   Totem Demo
-                </p>
+                </SiteEyebrow>
                 <p className="mt-2 text-sm text-white/80">Loading preview...</p>
               </div>
             </div>
@@ -507,10 +665,9 @@ function DemoBrowser() {
             src="demo.html"
             onLoad={() => setFrameReady(true)}
             className={cn(
-              "block w-full border-0 bg-[#0a0f16] animate-fade-in transition-opacity duration-200",
+              "site-browser-frame",
               frameReady ? "opacity-100" : "opacity-0",
             )}
-            style={{ minHeight: "clamp(540px, 65vh, 760px)" }}
             loading="eager"
           />
         </div>
@@ -523,13 +680,10 @@ function DemoBrowser() {
 
 function FAQDisclosure({ item }: { item: FAQItem }) {
   return (
-    <details className="rounded-xl border border-neutral-200 bg-white transition-colors open:border-neutral-300">
-      <summary
-        className="flex min-h-11 cursor-pointer list-none items-start gap-3 px-4 py-3.5 [&::-webkit-details-marker]:hidden"
-        style={{ listStyle: "none" }}
-      >
+    <details className="rounded-xl border border-neutral-200 bg-white transition-colors duration-200 open:border-neutral-300">
+      <summary className="site-summary-reset flex min-h-11 cursor-pointer items-start gap-3 px-4 py-3.5">
         <div className="min-w-0 flex-1">
-          <h4 className="m-0 text-[0.96rem] leading-snug tracking-tight text-neutral-900">
+          <h4 className="m-0 text-base leading-snug tracking-tight text-neutral-900">
             {item.question}
           </h4>
         </div>
@@ -555,162 +709,152 @@ function LandingPage() {
   return (
     <SiteLayout page="landing">
       <main>
-        {/* ── Hero ──────────────────────────────────────────────── */}
-        <section className="max-w-6xl mx-auto px-6 pt-20 pb-16 sm:pt-28 sm:pb-20">
-          <div className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr] lg:items-start">
+        <SiteSection containerClassName="max-w-6xl py-20 sm:py-28">
+          <div className="grid gap-10 lg:grid-cols-2 lg:items-start">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-400 mb-4">
-                Chrome Extension
-              </p>
-              <h1 className="font-[Newsreader,serif] text-[clamp(2.25rem,5vw,3.125rem)] leading-[1.05] tracking-tight text-neutral-900 mb-5 max-w-[18ch] text-balance">
+              <SiteEyebrow className="mb-4">Chrome Extension</SiteEyebrow>
+              <SiteHeading as="h1" size="hero" className="mb-5 max-w-xl">
                 Read your X bookmarks, not the feed.
-              </h1>
-              <p className="text-neutral-500 text-lg leading-relaxed max-w-[48ch] mb-8">
+              </SiteHeading>
+              <p className="mb-8 max-w-2xl text-lg leading-relaxed text-neutral-500">
                 Open a new tab to read your saved posts. No feed, no algorithmic
                 noise.
               </p>
-              <div className="flex flex-wrap gap-3 mb-8">
-                <a
+              <div className="mb-8 flex flex-wrap gap-3">
+                <SiteButtonLink
                   href={INSTALL_URL}
                   target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center h-11 px-6 rounded-xl bg-accent-400 text-white font-semibold text-[0.95rem] no-underline transition-all hover:bg-accent-500 active:scale-[0.97]"
+                  variant="primary"
                 >
                   {INSTALL_BUTTON_LABEL}
-                </a>
-                <a
+                </SiteButtonLink>
+                <SiteButtonLink
                   href={DEMO_VIDEO_URL}
                   target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center h-11 px-6 rounded-xl border border-neutral-200 bg-white text-neutral-900 text-[0.95rem] no-underline font-semibold transition-all hover:bg-neutral-100"
+                  variant="secondary"
                 >
                   Watch demo video
-                </a>
+                </SiteButtonLink>
               </div>
-              <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-neutral-400 font-medium">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-medium text-neutral-400">
                 <span>No account</span>
-                <span className="text-neutral-200">|</span>
+                <span aria-hidden="true" className="text-neutral-300">
+                  •
+                </span>
                 <span>No backend</span>
-                <span className="text-neutral-200">|</span>
+                <span aria-hidden="true" className="text-neutral-300">
+                  •
+                </span>
                 <span>Local-first</span>
               </div>
             </div>
+
             <aside className="lg:pt-2">
-              <div className="overflow-hidden rounded-2xl border border-neutral-200 bg-neutral-950 shadow-[0_18px_50px_rgba(0,0,0,0.14)]">
+              <SiteCard className="overflow-hidden bg-neutral-950 shadow-site-frame">
                 <iframe
                   title="Totem quick walkthrough video"
                   src={DEMO_VIDEO_EMBED_URL}
-                  className="block w-full aspect-[16/10] border-0"
+                  className="block aspect-video w-full border-0"
                   loading="lazy"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                   allowFullScreen
                 />
-              </div>
+              </SiteCard>
             </aside>
           </div>
-        </section>
+        </SiteSection>
 
-        {/* ── Demo ──────────────────────────────────────────────── */}
-        <section id="demo" className="w-full bg-neutral-950 py-16 sm:py-20">
-          <div className="max-w-5xl mx-auto px-6 mb-8">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500 mb-3">
+        <section id="demo" className="bg-neutral-950 py-16 sm:py-20">
+          <div className="mx-auto mb-8 w-full max-w-5xl px-6">
+            <SiteEyebrow tone="inverse" className="mb-3">
               Live demo
-            </p>
-            <h2 className="font-[Newsreader,serif] text-[clamp(1.8rem,3.5vw,2.8rem)] leading-tight tracking-tight text-white mb-3 max-w-[22ch]">
+            </SiteEyebrow>
+            <SiteHeading
+              as="h2"
+              size="section"
+              tone="inverse"
+              className="mb-3 max-w-lg"
+            >
               See the experience before you install.
-            </h2>
-            <p className="text-neutral-500 text-sm max-w-[52ch]">
+            </SiteHeading>
+            <p className="max-w-2xl text-sm leading-relaxed text-neutral-500">
               Click the New tab button in the mock browser to open Totem. If
               this looks useful, install now.{" "}
-              <a
+              <SiteBodyLink
                 href="/demo-page"
-                className="text-white/70 underline underline-offset-2 hover:text-white transition-colors"
+                className="text-white/70 hover:text-white"
               >
                 Open full-page demo &rarr;
-              </a>
+              </SiteBodyLink>
             </p>
           </div>
 
-          {/* Browser — wider than content, bleeds out */}
-          <div className="max-w-[1400px] mx-auto px-3 sm:px-6">
+          <div className="mx-auto w-full max-w-7xl px-3 sm:px-6">
             <DemoBrowser />
           </div>
 
-          <div className="max-w-5xl mx-auto px-6">
-            <p className="text-neutral-600 text-sm mt-4">
+          <div className="mx-auto mt-4 w-full max-w-5xl px-6">
+            <p className="text-sm text-neutral-600">
               Works offline after first sync and keeps your reading state local.
             </p>
           </div>
         </section>
 
-        {/* ── Features ─────────────────────────────────────────── */}
-        <section className="max-w-5xl mx-auto px-6 py-16 sm:py-20">
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-400 mb-3 text-center">
-            Features
-          </p>
-          <h2 className="font-[Newsreader,serif] text-[clamp(1.95rem,3.7vw,3rem)] leading-tight tracking-tight text-neutral-900 mb-3 text-center text-balance">
-            <span className="block">Features you will love.</span>
-            <span className="block text-neutral-400">
-              (Discover more once you install.)
-            </span>
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <SiteSection className="py-16 sm:py-20">
+          <SiteEyebrow className="mb-3 text-center">Features</SiteEyebrow>
+          <div className="mx-auto mb-10 max-w-3xl text-center">
+            <SiteHeading as="h2" size="section" className="mb-3">
+              Features you will love.
+            </SiteHeading>
+            <p className="text-lg leading-relaxed text-neutral-400">
+              Discover more once you install.
+            </p>
+          </div>
+
+          <div className="grid gap-5 md:grid-cols-2">
             {FEATURES.map((feature) => (
-              <article
+              <SiteCard
+                as="article"
                 key={feature.title}
-                className={cn(
-                  "rounded-2xl border border-neutral-200 bg-white shadow-[0_16px_36px_rgba(0,0,0,0.06)]",
-                  feature.wide ? "md:col-span-2 p-4 sm:p-4" : "p-3 sm:p-3",
-                )}
+                className={cn(feature.wide && "md:col-span-2", "p-4")}
               >
                 <img
                   src={feature.image}
                   alt={feature.alt}
-                  className={cn(
-                    "w-full object-cover rounded-xl border border-neutral-200 mb-4",
-                    feature.wide ? "aspect-21/9" : "aspect-16/10",
-                  )}
+                  className="mb-4 aspect-video w-full rounded-xl border border-neutral-200 object-cover"
                   loading="lazy"
                 />
-                <h3
-                  className={cn(
-                    "text-[1.2rem] leading-tight tracking-tight text-neutral-900 mb-2 font-[Newsreader,serif]",
-                    feature.wide && "text-center",
-                  )}
+                <SiteHeading
+                  as="h3"
+                  size="card"
+                  className={cn("mb-2", feature.wide && "text-center")}
                 >
                   {feature.title}
-                </h3>
+                </SiteHeading>
                 <p
                   className={cn(
-                    "text-[0.96rem] text-neutral-600 leading-relaxed",
-                    feature.wide && "text-center max-w-[62ch] mx-auto",
+                    "text-sm leading-relaxed text-neutral-600",
+                    feature.wide && "mx-auto max-w-3xl text-center",
                   )}
                 >
                   {feature.body}
                 </p>
-              </article>
+              </SiteCard>
             ))}
           </div>
-        </section>
+        </SiteSection>
 
-        {/* ── Trust & FAQ ────────────────────────────────────────── */}
-        <section id="faq" className="max-w-5xl mx-auto px-6 py-16 sm:py-20">
+        <SiteSection id="faq" className="py-16 sm:py-20">
           <div className="max-w-4xl">
             <div className="mb-8 max-w-3xl">
-              <h2 className="m-0 font-[Newsreader,serif] text-[clamp(1.85rem,3.6vw,2.8rem)] leading-tight tracking-tight text-neutral-900">
+              <SiteHeading as="h2" size="section">
                 FAQ
-              </h2>
-              <p className="m-0 mt-3 text-sm leading-relaxed text-neutral-500">
+              </SiteHeading>
+              <p className="mt-3 text-sm leading-relaxed text-neutral-500">
                 Totem does not ask for your X password and does not run its own
                 backend. Your notes and reading state stay local on this device.
                 For the full breakdown of permissions and storage, read the{" "}
-                <a
-                  href="/privacy"
-                  className="text-neutral-900 underline underline-offset-2 hover:text-neutral-700 transition-colors"
-                >
-                  privacy page
-                </a>
-                .
+                <SiteBodyLink href="/privacy">privacy page</SiteBodyLink>.
               </p>
             </div>
 
@@ -720,42 +864,37 @@ function LandingPage() {
               ))}
             </div>
 
-            <div className="mt-5 rounded-2xl border border-neutral-200 bg-white p-5">
+            <SiteCard className="mt-5 p-5">
               <p className="m-0 text-sm font-medium text-neutral-900">
                 Still stuck?
               </p>
               <p className="m-0 mt-2 text-sm leading-relaxed text-neutral-600">
                 Email{" "}
-                <a
-                  href="mailto:support@usetotem.app"
-                  className="text-neutral-900 underline underline-offset-2 hover:text-neutral-700 transition-colors"
-                >
+                <SiteBodyLink href="mailto:support@usetotem.app">
                   support@usetotem.app
-                </a>{" "}
+                </SiteBodyLink>{" "}
                 with a screenshot and what your browser or Totem is showing.
               </p>
-            </div>
+            </SiteCard>
           </div>
-        </section>
+        </SiteSection>
 
-        {/* ── Final CTA ─────────────────────────────────────────── */}
-        <section className="w-full bg-neutral-900 py-14">
-          <div className="max-w-xl mx-auto px-6 text-center">
-            <h2 className="font-[Newsreader,serif] text-[clamp(1.8rem,3.5vw,2.8rem)] leading-tight tracking-tight text-white mb-3">
+        <section className="bg-neutral-900 py-14">
+          <div className="mx-auto w-full max-w-xl px-6 text-center">
+            <SiteHeading as="h2" size="section" tone="inverse" className="mb-3">
               Ready to start reading your bookmarks?
-            </h2>
-            <p className="text-white/70 text-sm mb-8">
+            </SiteHeading>
+            <p className="mb-8 text-sm text-white/70">
               No account required. No subscription. Just install and open a new
               tab.
             </p>
-            <a
+            <SiteButtonLink
               href={INSTALL_URL}
               target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center h-11 px-7 rounded-xl bg-white text-neutral-900 font-semibold text-[0.95rem] no-underline transition-all hover:bg-neutral-100 active:scale-[0.97]"
+              variant="secondary"
             >
               {FINAL_INSTALL_BUTTON_LABEL}
-            </a>
+            </SiteButtonLink>
           </div>
         </section>
       </main>
@@ -768,21 +907,17 @@ function LandingPage() {
 function PrivacyPage() {
   return (
     <SiteLayout page="privacy">
-      <main className="max-w-3xl mx-auto px-6 py-16 sm:py-20">
-        {/* Header */}
+      <main className="mx-auto max-w-3xl px-6 py-16 sm:py-20">
         <div className="mb-10">
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-400 mb-2">
-            Totem Legal
-          </p>
-          <h1 className="font-[Newsreader,serif] text-[clamp(2rem,4vw,3rem)] leading-none tracking-tight text-neutral-900 mb-2">
+          <SiteEyebrow className="mb-2">Totem Legal</SiteEyebrow>
+          <SiteHeading as="h1" size="page" className="mb-2">
             Privacy Policy
-          </h1>
+          </SiteHeading>
           <p className="text-sm text-neutral-400">
             Last updated: March 2, 2026
           </p>
         </div>
 
-        {/* Sections */}
         <div className="flex flex-col gap-5">
           <PolicySection title="1. Data Totem accesses and stores">
             <ul>
@@ -926,12 +1061,9 @@ function PrivacyPage() {
           <PolicySection title="7. Contact">
             <p>
               For privacy questions, email{" "}
-              <a
-                href="mailto:support@usetotem.app"
-                className="text-neutral-900 underline underline-offset-2"
-              >
+              <SiteBodyLink href="mailto:support@usetotem.app">
                 support@usetotem.app
-              </a>
+              </SiteBodyLink>
               .
             </p>
           </PolicySection>
@@ -946,17 +1078,15 @@ function PolicySection({
   children,
 }: {
   title: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
-    <section className="border border-neutral-100 rounded-xl p-5">
-      <h2 className="font-[Newsreader,serif] text-xl tracking-tight text-neutral-900 mb-3 mt-0">
+    <SiteCard as="section" className="p-5 shadow-none">
+      <SiteHeading as="h2" size="card" className="mb-3 mt-0">
         {title}
-      </h2>
-      <div className="text-sm text-neutral-500 leading-relaxed [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:flex [&_ul]:flex-col [&_ul]:gap-2 [&_ul]:m-0 [&_p]:m-0 [&_strong]:text-neutral-700">
-        {children}
-      </div>
-    </section>
+      </SiteHeading>
+      <div className="site-legal-copy">{children}</div>
+    </SiteCard>
   );
 }
 
@@ -966,13 +1096,13 @@ function DemoPage() {
   const [frameReady, setFrameReady] = useState(false);
 
   return (
-    <div className="fixed inset-0 bg-[#0a0f16]">
+    <div className="site-demo-page">
       {!frameReady && (
-        <div className="absolute inset-0 z-10 grid place-items-center bg-[#0a0f16]">
-          <div className="text-center px-6">
-            <p className="text-[11px] uppercase tracking-[0.16em] text-white/45">
+        <div className="site-browser-loading">
+          <div className="px-6 text-center">
+            <SiteEyebrow tone="inverse" className="text-white/45">
               Totem Demo
-            </p>
+            </SiteEyebrow>
             <p className="mt-2 text-sm text-white/80">Loading preview...</p>
           </div>
         </div>
@@ -982,7 +1112,7 @@ function DemoPage() {
         src="demo.html"
         onLoad={() => setFrameReady(true)}
         className={cn(
-          "absolute inset-0 block w-full h-full border-0 transition-opacity duration-200",
+          "absolute inset-0 h-full w-full border-0 transition-opacity duration-200",
           frameReady ? "opacity-100" : "opacity-0",
         )}
         loading="eager"

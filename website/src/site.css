@@ -1,0 +1,287 @@
+@theme {
+  --font-site-sans: "Space Grotesk", var(--font-sans);
+  --font-site-serif: "Newsreader", Georgia, serif;
+
+  --shadow-site-card: 0 16px 36px rgba(0, 0, 0, 0.06);
+  --shadow-site-frame: 0 18px 50px rgba(0, 0, 0, 0.14);
+  --shadow-site-browser: 0 32px 90px rgba(0, 0, 0, 0.48);
+
+  --color-site-demo-bg: #0a0f16;
+  --color-site-browser-field: #1f222b;
+
+  --animate-site-demo-pointer: site-demo-pointer 1.6s ease-in-out infinite;
+
+  @keyframes site-demo-pointer {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+
+    50% {
+      transform: translateY(-0.35rem);
+    }
+  }
+}
+
+@layer components {
+  .site-summary-reset {
+    list-style: none;
+  }
+
+  .site-summary-reset::-webkit-details-marker {
+    display: none;
+  }
+
+  .site-legal-copy {
+    color: rgb(82 82 91);
+    font-size: 0.875rem;
+    line-height: 1.625;
+  }
+
+  .site-legal-copy ul {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin: 0;
+    padding-left: 1.25rem;
+    list-style: disc;
+  }
+
+  .site-legal-copy p {
+    margin: 0;
+  }
+
+  .site-legal-copy strong {
+    color: rgb(64 64 64);
+  }
+
+  .site-browser-shell {
+    overflow: hidden;
+    border: 1px solid rgb(255 255 255 / 0.08);
+    border-radius: 1.5rem;
+    background-color: #20232b;
+    box-shadow: var(--shadow-site-browser);
+  }
+
+  .site-browser-strip {
+    display: flex;
+    align-items: flex-end;
+    gap: 1rem;
+    padding: 0.75rem 1.25rem 0;
+    border-bottom: 1px solid rgb(255 255 255 / 0.04);
+    background-color: #242730;
+  }
+
+  .site-browser-window-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding-bottom: 0.625rem;
+  }
+
+  .site-browser-tab {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 10rem;
+    max-width: 16rem;
+    height: 2.75rem;
+    margin-bottom: -1px;
+    padding: 0 0.875rem;
+    border: 1px solid rgb(255 255 255 / 0.08);
+    border-bottom-color: transparent;
+    border-radius: 0.75rem 0.75rem 0 0;
+    background-color: #343843;
+    color: rgb(255 255 255 / 0.85);
+    font-size: 0.75rem;
+    line-height: 1rem;
+    font-weight: 500;
+  }
+
+  .site-browser-launcher {
+    position: relative;
+    display: flex;
+    align-items: center;
+    margin-bottom: -1px;
+  }
+
+  .site-browser-launcher-button {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.625rem;
+    height: 2.75rem;
+    padding: 0 1.25rem;
+    border: 1px solid rgb(255 255 255 / 0.08);
+    border-bottom-color: transparent;
+    border-radius: 0.75rem 0.75rem 0 0;
+    background-color: #3a3f4a;
+    color: rgb(255 255 255 / 0.8);
+    cursor: pointer;
+    font-size: 0.75rem;
+    line-height: 1rem;
+    font-weight: 500;
+    transition:
+      background-color 200ms,
+      border-color 200ms,
+      color 200ms;
+  }
+
+  .site-browser-launcher-button:hover {
+    background-color: #454b58;
+    color: rgb(255 255 255);
+  }
+
+  .site-browser-pointer {
+    position: absolute;
+    top: 1.25rem;
+    right: -0.75rem;
+    pointer-events: none;
+    animation: var(--animate-site-demo-pointer);
+  }
+
+  .site-browser-close-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.25rem;
+    height: 1.25rem;
+    margin-left: auto;
+    padding: 0;
+    border: 0;
+    border-radius: 0.375rem;
+    background: transparent;
+    color: rgb(255 255 255 / 0.35);
+    cursor: pointer;
+    transition:
+      background-color 200ms,
+      color 200ms;
+  }
+
+  .site-browser-close-button:hover {
+    background-color: rgb(255 255 255 / 0.1);
+    color: rgb(255 255 255 / 0.75);
+  }
+
+  .site-browser-action-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    margin-bottom: 0.625rem;
+    margin-left: auto;
+    padding: 0;
+    border: 0;
+    border-radius: 0.375rem;
+    background: transparent;
+    color: rgb(255 255 255 / 0.45);
+    cursor: pointer;
+    transition:
+      background-color 200ms,
+      color 200ms;
+  }
+
+  .site-browser-action-button:hover {
+    background-color: rgb(255 255 255 / 0.1);
+    color: rgb(255 255 255 / 0.8);
+  }
+
+  .site-browser-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    height: 2.25rem;
+    padding: 0 1.25rem;
+    border-bottom: 1px solid rgb(255 255 255 / 0.06);
+    background-color: #2b2f38;
+  }
+
+  .site-browser-nav {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+  }
+
+  .site-browser-nav-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 0.375rem;
+    color: rgb(255 255 255 / 0.25);
+  }
+
+  .site-browser-urlbar {
+    flex: 1;
+    height: 1.75rem;
+    border: 1px solid rgb(255 255 255 / 0.05);
+    border-radius: 9999px;
+    background-color: var(--color-site-browser-field);
+  }
+
+  .site-browser-stage {
+    min-height: clamp(34rem, 65vh, 47.5rem);
+  }
+
+  .site-browser-closed-stage {
+    position: relative;
+    cursor: pointer;
+    background-color: var(--color-site-browser-field);
+  }
+
+  .site-browser-glow {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(
+      circle at 50% 10%,
+      rgba(255, 255, 255, 0.03),
+      transparent 58%
+    );
+  }
+
+  .site-browser-hint {
+    position: absolute;
+    left: 1.25rem;
+    bottom: 1rem;
+    color: rgb(255 255 255 / 0.3);
+    font-size: 0.75rem;
+    line-height: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  .site-browser-screen {
+    position: relative;
+    display: block;
+    width: 100%;
+    overflow: hidden;
+    background-color: var(--color-site-demo-bg);
+  }
+
+  .site-browser-loading {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    display: grid;
+    place-items: center;
+    background-color: var(--color-site-demo-bg);
+  }
+
+  .site-browser-frame {
+    display: block;
+    width: 100%;
+    min-height: inherit;
+    border: 0;
+    background-color: var(--color-site-demo-bg);
+    animation: var(--animate-fade-in);
+    transition: opacity 200ms;
+  }
+
+  .site-demo-page {
+    position: fixed;
+    inset: 0;
+    background-color: var(--color-site-demo-bg);
+  }
+}

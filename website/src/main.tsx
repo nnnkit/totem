@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { SiteApp, type SitePage } from "./SiteApp";
 import "../../src/index.css";
+import "./site.css";
 
 const root = document.getElementById("root");
 
