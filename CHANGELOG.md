@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.13] - 2026-03-11
+
+- feat: update title
+
 ## [1.1.12] - 2026-03-11
 
 - Maintenance release.

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Totem: X Bookmarks Reader",
-  "version": "1.1.12",
+  "version": "1.1.13",
   "description": "Read your saved X (Twitter) bookmarks in a clean, distraction-free reader.",
   "icons": {
     "16": "icons/icon-16.png",
