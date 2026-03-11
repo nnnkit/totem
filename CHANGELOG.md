@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.10] - 2026-03-11
+
+- fix: footer
+- feat" add support to website
+- feat: add support
+- fix: improve font sizes
+- feat: improve faq and refactor css
+- fix: faq and words
+- fix: update images
+- fix: show confirm delete message
+
 ## [1.1.9] - 2026-03-06
 
 - update: archetecture
