@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Totem",
+  "name": "Totem: X Bookmarks Reader",
   "version": "1.1.12",
-  "description": "Read your X bookmarks, not the feed.",
+  "description": "Read your saved X (Twitter) bookmarks in a clean, distraction-free reader.",
   "icons": {
     "16": "icons/icon-16.png",
     "48": "icons/icon-48.png",
@@ -49,7 +49,7 @@
     "service_worker": "service-worker.js"
   },
   "action": {
-    "default_title": "Totem",
+    "default_title": "Totem: X Bookmarks Reader",
     "default_icon": {
       "16": "icons/icon-16.png",
       "48": "icons/icon-48.png"
