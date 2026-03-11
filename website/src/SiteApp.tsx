@@ -1,8 +1,4 @@
-import {
-  EnvelopeSimpleIcon,
-  InfoIcon,
-  XLogoIcon,
-} from "@phosphor-icons/react";
+import { EnvelopeSimpleIcon, XLogoIcon } from "@phosphor-icons/react";
 import {
   useEffect,
   useRef,
@@ -13,7 +9,6 @@ import {
 } from "react";
 import { cn } from "../../src/lib/cn";
 import { TotemLogo } from "../../src/components/TotemLogo";
-import { Popover, PopoverContent } from "../../src/components/ui/Popover";
 import {
   SITE_COPY,
   SITE_LINKS,
@@ -124,52 +119,6 @@ function SiteBodyLink({
     >
       {children}
     </a>
-  );
-}
-
-function FooterSupportPopover() {
-  return (
-    <Popover.Root>
-      <Popover.Trigger
-        type="button"
-        className="flex size-8 items-center justify-center rounded-sm text-neutral-500 transition-colors duration-200 hover:text-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30 focus-visible:ring-offset-2"
-        aria-label="Support"
-        title="Support"
-      >
-        <InfoIcon className="size-3.5" />
-      </Popover.Trigger>
-      <Popover.Portal>
-        <Popover.Positioner
-          side="top"
-          align="end"
-          sideOffset={10}
-          positionMethod="fixed"
-          className="z-50"
-        >
-          <PopoverContent className="w-44 p-1.5">
-            <p className="px-3 py-2 text-xs font-semibold uppercase tracking-extra-wide text-muted">
-              Support
-            </p>
-            <a
-              href={SITE_LINKS.supportEmailUrl}
-              className="flex min-h-10 items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground no-underline transition-colors hover:bg-surface-hover"
-            >
-              <EnvelopeSimpleIcon className="size-4 text-muted" />
-              <span>Email</span>
-            </a>
-            <a
-              href={SITE_LINKS.supportXUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex min-h-10 items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground no-underline transition-colors hover:bg-surface-hover"
-            >
-              <XLogoIcon className="size-4 text-muted" />
-              <span>{SITE_LINKS.supportXHandle}</span>
-            </a>
-          </PopoverContent>
-        </Popover.Positioner>
-      </Popover.Portal>
-    </Popover.Root>
   );
 }
 
@@ -368,14 +317,39 @@ function SiteLayout({
                 {header.brandName}
               </span>
             </a>
-            <p className="text-xs text-neutral-500">{footer.tagline}</p>
           </div>
 
-          <nav className="flex items-center gap-5" aria-label={footer.navAriaLabel}>
+          <nav
+            className="flex items-center gap-5"
+            aria-label={footer.navAriaLabel}
+          >
             <a href={SITE_LINKS.privacyUrl} className={siteFooterLinkClass}>
               {footer.privacyLabel}
             </a>
-            <FooterSupportPopover />
+            <a
+              href={SITE_LINKS.supportEmailUrl}
+              className={cn(
+                siteFooterLinkClass,
+                "inline-flex items-center justify-center",
+              )}
+              aria-label="Email support"
+              title="Email support"
+            >
+              <EnvelopeSimpleIcon className="size-3.5" />
+            </a>
+            <a
+              href={SITE_LINKS.supportXUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={cn(
+                siteFooterLinkClass,
+                "inline-flex items-center justify-center",
+              )}
+              aria-label={`Open ${SITE_LINKS.supportXHandle} on X`}
+              title={SITE_LINKS.supportXHandle}
+            >
+              <XLogoIcon className="size-3.5" />
+            </a>
             <a
               href={SITE_LINKS.githubRepoUrl}
               target="_blank"
@@ -386,7 +360,6 @@ function SiteLayout({
               )}
             >
               <GitHubIcon className="size-3.5" />
-              {footer.githubLabel}
             </a>
           </nav>
 
@@ -419,7 +392,8 @@ function DemoBrowser() {
         if (!raw) return;
 
         const display =
-          raw === browser.newTabTitle || raw.startsWith(browser.demoTabTitlePrefix)
+          raw === browser.newTabTitle ||
+          raw.startsWith(browser.demoTabTitlePrefix)
             ? browser.defaultTabTitle
             : raw;
         setTabTitle(display);
@@ -429,7 +403,12 @@ function DemoBrowser() {
     }, 400);
 
     return () => window.clearInterval(interval);
-  }, [browser.defaultTabTitle, browser.demoTabTitlePrefix, browser.newTabTitle, opened]);
+  }, [
+    browser.defaultTabTitle,
+    browser.demoTabTitlePrefix,
+    browser.newTabTitle,
+    opened,
+  ]);
 
   return (
     <div className="site-browser-shell">
@@ -776,23 +755,6 @@ function LandingPage() {
                 <FAQDisclosure key={item.question} item={item} />
               ))}
             </div>
-
-            <SiteCard className="mt-5 p-5">
-              <p className="m-0 text-sm font-medium text-neutral-900">
-                {faq.supportTitle}
-              </p>
-              <p className="m-0 mt-2 text-sm leading-relaxed text-neutral-600">
-                {faq.supportLead}
-                <SiteBodyLink href={SITE_LINKS.supportEmailUrl}>
-                  {SITE_LINKS.supportEmail}
-                </SiteBodyLink>
-                {faq.supportMiddle}
-                <SiteBodyLink href={SITE_LINKS.supportXUrl} target="_blank">
-                  {SITE_LINKS.supportXHandle}
-                </SiteBodyLink>{" "}
-                {faq.supportTail}
-              </p>
-            </SiteCard>
           </div>
         </SiteSection>
 
@@ -801,7 +763,9 @@ function LandingPage() {
             <SiteHeading as="h2" size="section" tone="inverse" className="mb-3">
               {faq.finalCtaTitle}
             </SiteHeading>
-            <p className="mb-8 text-sm text-white/70">{faq.finalCtaDescription}</p>
+            <p className="mb-8 text-sm text-white/70">
+              {faq.finalCtaDescription}
+            </p>
             <SiteButtonLink
               href={SITE_LINKS.installUrl}
               target="_blank"
@@ -844,10 +808,7 @@ function PrivacyPage() {
   );
 }
 
-function renderPolicySectionItem(
-  item: PolicySectionItem,
-  index: number,
-) {
+function renderPolicySectionItem(item: PolicySectionItem, index: number) {
   if (typeof item === "string") {
     return <li key={`${index}-${item.slice(0, 24)}`}>{item}</li>;
   }
@@ -859,11 +820,7 @@ function renderPolicySectionItem(
   );
 }
 
-function PolicySectionCard({
-  section,
-}: {
-  section: PolicySectionData;
-}) {
+function PolicySectionCard({ section }: { section: PolicySectionData }) {
   return (
     <SiteCard as="section" className="p-5 shadow-none">
       <SiteHeading as="h2" size="card" className="mb-3 mt-0">

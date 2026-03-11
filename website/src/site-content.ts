@@ -101,7 +101,6 @@ export const SITE_COPY = {
   },
   footer: {
     brandAriaLabel: "Totem homepage",
-    tagline: "Read your X bookmarks, not the feed.",
     navAriaLabel: "Footer links",
     privacyLabel: "Privacy Policy",
     githubLabel: "GitHub",
@@ -154,7 +153,8 @@ export const SITE_COPY = {
             "First sync can take a moment because Totem has to connect to your X account and build the local reading queue. Click Sync and give it a minute before trying again.",
         },
         {
-          question: "Why does sync say it is already running or temporarily paused?",
+          question:
+            "Why does sync say it is already running or temporarily paused?",
           answer:
             "Totem spaces sync attempts so it does not start duplicate work or hit X too quickly. Wait a minute, then try Sync again.",
         },
@@ -212,11 +212,6 @@ export const SITE_COPY = {
             "Open X once, return to Totem, and try Sync again. If it still does not recover, use Reset local data.",
         },
       ] satisfies FAQItem[],
-      supportTitle: "Still stuck?",
-      supportLead: "Email ",
-      supportMiddle: " or message ",
-      supportTail:
-        " with a screenshot and what your browser or Totem is showing.",
       finalCtaTitle: "Ready to start reading your bookmarks?",
       finalCtaDescription:
         "No account required. No subscription. Just install and open a new tab.",
