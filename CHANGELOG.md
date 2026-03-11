@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.11] - 2026-03-11
+
+- feat: improve privacy and remove comments
+
 ## [1.1.10] - 2026-03-11
 
 - fix: footer
