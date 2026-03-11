@@ -1,4 +1,9 @@
 import {
+  EnvelopeSimpleIcon,
+  InfoIcon,
+  XLogoIcon,
+} from "@phosphor-icons/react";
+import {
   useEffect,
   useRef,
   useState,
@@ -8,6 +13,7 @@ import {
 } from "react";
 import { cn } from "../../src/lib/cn";
 import { TotemLogo } from "../../src/components/TotemLogo";
+import { Popover, PopoverContent } from "../../src/components/ui/Popover";
 import {
   SITE_COPY,
   SITE_LINKS,
@@ -118,6 +124,52 @@ function SiteBodyLink({
     >
       {children}
     </a>
+  );
+}
+
+function FooterSupportPopover() {
+  return (
+    <Popover.Root>
+      <Popover.Trigger
+        type="button"
+        className="flex size-8 items-center justify-center rounded-sm text-neutral-500 transition-colors duration-200 hover:text-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30 focus-visible:ring-offset-2"
+        aria-label="Support"
+        title="Support"
+      >
+        <InfoIcon className="size-3.5" />
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Positioner
+          side="top"
+          align="end"
+          sideOffset={10}
+          positionMethod="fixed"
+          className="z-50"
+        >
+          <PopoverContent className="w-44 p-1.5">
+            <p className="px-3 py-2 text-xs font-semibold uppercase tracking-extra-wide text-muted">
+              Support
+            </p>
+            <a
+              href={SITE_LINKS.supportEmailUrl}
+              className="flex min-h-10 items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground no-underline transition-colors hover:bg-surface-hover"
+            >
+              <EnvelopeSimpleIcon className="size-4 text-muted" />
+              <span>Email</span>
+            </a>
+            <a
+              href={SITE_LINKS.supportXUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex min-h-10 items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground no-underline transition-colors hover:bg-surface-hover"
+            >
+              <XLogoIcon className="size-4 text-muted" />
+              <span>{SITE_LINKS.supportXHandle}</span>
+            </a>
+          </PopoverContent>
+        </Popover.Positioner>
+      </Popover.Portal>
+    </Popover.Root>
   );
 }
 
@@ -323,20 +375,7 @@ function SiteLayout({
             <a href={SITE_LINKS.privacyUrl} className={siteFooterLinkClass}>
               {footer.privacyLabel}
             </a>
-            <a
-              href={SITE_LINKS.supportEmailUrl}
-              className={siteFooterLinkClass}
-            >
-              {footer.contactLabel}
-            </a>
-            <a
-              href={SITE_LINKS.supportXUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={siteFooterLinkClass}
-            >
-              {footer.xLabel}
-            </a>
+            <FooterSupportPopover />
             <a
               href={SITE_LINKS.githubRepoUrl}
               target="_blank"

@@ -104,8 +104,6 @@ export const SITE_COPY = {
     tagline: "Read your X bookmarks, not the feed.",
     navAriaLabel: "Footer links",
     privacyLabel: "Privacy Policy",
-    contactLabel: "Email",
-    xLabel: SUPPORT_X_HANDLE,
     githubLabel: "GitHub",
     copyright: "© 2026 Totem",
   },
