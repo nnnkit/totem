@@ -15,9 +15,9 @@ import {
   type FAQItem,
   type PolicySection as PolicySectionData,
   type PolicySectionItem,
+  type PrivacyPermission,
+  type PrivacySummaryItem,
 } from "./site-content";
-
-// ─── Icons ────────────────────────────────────────────────────────────────────
 
 function GitHubIcon({ className }: { className?: string }) {
   return (
@@ -223,8 +223,6 @@ function SiteCard({
   );
 }
 
-// ─── Layout ───────────────────────────────────────────────────────────────────
-
 function SiteLayout({
   page,
   children,
@@ -278,7 +276,7 @@ function SiteLayout({
             aria-label={header.brandAriaLabel}
           >
             <TotemLogo className="size-7" />
-            <span className="text-sm font-bold tracking-tight text-neutral-900">
+            <span className="text-sm font-bold text-neutral-900">
               {header.brandName}
             </span>
           </a>
@@ -313,7 +311,7 @@ function SiteLayout({
               aria-label={footer.brandAriaLabel}
             >
               <TotemLogo className="size-5" />
-              <span className="text-xs font-semibold tracking-tight text-neutral-700">
+              <span className="text-xs font-semibold text-neutral-700">
                 {header.brandName}
               </span>
             </a>
@@ -369,8 +367,6 @@ function SiteLayout({
     </div>
   );
 }
-
-// ─── Demo Browser Mockup ──────────────────────────────────────────────────────
 
 function DemoBrowser() {
   const { browser } = SITE_COPY;
@@ -573,8 +569,6 @@ function DemoBrowser() {
   );
 }
 
-// ─── Data ─────────────────────────────────────────────────────────────────────
-
 function FAQDisclosure({ item }: { item: FAQItem }) {
   return (
     <details className="rounded-xl border border-neutral-200 bg-white transition-colors duration-200 open:border-neutral-300">
@@ -599,8 +593,6 @@ function FAQDisclosure({ item }: { item: FAQItem }) {
     </details>
   );
 }
-
-// ─── Landing Page ─────────────────────────────────────────────────────────────
 
 function LandingPage() {
   const { faq, features, hero, demo } = SITE_COPY.landing;
@@ -780,31 +772,167 @@ function LandingPage() {
   );
 }
 
-// ─── Privacy Page ─────────────────────────────────────────────────────────────
-
 function PrivacyPage() {
   const { privacy } = SITE_COPY;
 
   return (
     <SiteLayout page="privacy">
-      <main className="mx-auto max-w-3xl px-6 py-16 sm:py-20">
-        <div className="mb-10">
-          <SiteEyebrow className="mb-2">{privacy.eyebrow}</SiteEyebrow>
-          <SiteHeading as="h1" size="page" className="mb-2">
+      {/* ── Hero ── */}
+      <section className="site-privacy-hero">
+        <div className="mx-auto max-w-5xl px-6 pb-14 pt-20 sm:pb-20 sm:pt-28">
+          <div className="mb-6 flex items-baseline gap-3">
+            <SiteEyebrow tone="inverse">{privacy.eyebrow}</SiteEyebrow>
+            <span className="text-xs text-white/30">
+              {privacy.lastUpdatedLabel} {privacy.lastUpdated}
+            </span>
+          </div>
+
+          <SiteHeading as="h1" size="hero" tone="inverse" className="mb-6 max-w-3xl">
             {privacy.title}
           </SiteHeading>
-          <p className="text-sm text-neutral-400">
-            {privacy.lastUpdatedLabel} {privacy.lastUpdated}
-          </p>
-        </div>
 
-        <div className="flex flex-col gap-5">
-          {privacy.sections.map((section) => (
-            <PolicySectionCard key={section.title} section={section} />
-          ))}
+          <p className="mb-3 max-w-2xl text-lg leading-relaxed text-white/65 text-pretty">
+            {privacy.introTitle}
+          </p>
+
+          <p className="max-w-2xl text-sm leading-relaxed text-white/35 text-pretty">
+            {privacy.introBody}
+          </p>
+
+          <div className="site-privacy-promises">
+            {privacy.reassuranceItems.map((item) => (
+              <div key={item} className="site-privacy-promise">
+                <span className="site-privacy-promise-icon" aria-hidden="true">
+                  <svg
+                    width="10"
+                    height="10"
+                    viewBox="0 0 10 10"
+                    fill="none"
+                  >
+                    <path
+                      d="M1.5 5.5L4 8L8.5 2"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </span>
+                <span>{item}</span>
+              </div>
+            ))}
+          </div>
         </div>
+      </section>
+
+      <main className="mx-auto max-w-5xl px-6 pb-20">
+        {/* ── Short version ── */}
+        <section className="site-privacy-section">
+          <div className="site-privacy-section-header">
+            <span className="site-privacy-section-rule" />
+            <SiteHeading as="h2" size="card">
+              {privacy.summaryTitle}
+            </SiteHeading>
+          </div>
+          <div className="site-privacy-summary-grid">
+            {privacy.summaryItems.map((item, i) => (
+              <PrivacySummaryCard key={item.title} item={item} index={i} />
+            ))}
+          </div>
+        </section>
+
+        {/* ── Permissions ── */}
+        <section className="site-privacy-section">
+          <div className="site-privacy-section-header">
+            <span className="site-privacy-section-rule" />
+            <SiteHeading as="h2" size="card">
+              {privacy.permissionsTitle}
+            </SiteHeading>
+          </div>
+          <p className="site-privacy-body mb-8 max-w-3xl">
+            {privacy.permissionsIntro}
+          </p>
+          <div className="site-privacy-permissions-grid">
+            {privacy.permissions.map((permission) => (
+              <PrivacyPermissionCard
+                key={permission.name}
+                permission={permission}
+              />
+            ))}
+          </div>
+        </section>
+
+        {/* ── Policy details ── */}
+        <section className="site-privacy-section">
+          <div className="site-privacy-section-header">
+            <span className="site-privacy-section-rule" />
+            <SiteHeading as="h2" size="card">
+              Full policy
+            </SiteHeading>
+          </div>
+          <div className="site-privacy-detail-stack">
+            {privacy.sections.map((section) => (
+              <PolicySectionCard key={section.title} section={section} />
+            ))}
+          </div>
+        </section>
       </main>
     </SiteLayout>
+  );
+}
+
+function PrivacySummaryCard({
+  item,
+  index,
+}: {
+  item: PrivacySummaryItem;
+  index: number;
+}) {
+  return (
+    <div className="site-privacy-summary-card">
+      <span className="site-privacy-summary-index" aria-hidden="true">
+        {String(index + 1).padStart(2, "0")}
+      </span>
+      <p className="site-privacy-summary-title">{item.title}</p>
+      <p className="site-privacy-body mt-2">{item.body}</p>
+    </div>
+  );
+}
+
+function PrivacyPermissionCard({
+  permission,
+}: {
+  permission: PrivacyPermission;
+}) {
+  const isOptional = permission.access === "Optional";
+
+  return (
+    <div className="site-privacy-permission-card">
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <h3 className="site-privacy-permission-name">{permission.name}</h3>
+        <span
+          className={cn(
+            "site-privacy-access-badge",
+            isOptional
+              ? "site-privacy-access-badge--optional"
+              : "site-privacy-access-badge--required",
+          )}
+        >
+          {permission.access}
+        </span>
+      </div>
+
+      <dl className="site-privacy-permission-meta">
+        <div>
+          <dt>Why</dt>
+          <dd>{permission.reason}</dd>
+        </div>
+        <div>
+          <dt>What it does</dt>
+          <dd>{permission.use}</dd>
+        </div>
+      </dl>
+    </div>
   );
 }
 
@@ -822,28 +950,14 @@ function renderPolicySectionItem(item: PolicySectionItem, index: number) {
 
 function PolicySectionCard({ section }: { section: PolicySectionData }) {
   return (
-    <SiteCard as="section" className="p-5 shadow-none">
-      <SiteHeading as="h2" size="card" className="mb-3 mt-0">
-        {section.title}
-      </SiteHeading>
+    <article className="site-privacy-detail-card">
+      <h3 className="site-privacy-detail-title">{section.title}</h3>
       <div className="site-legal-copy">
-        {"items" in section ? (
-          <ul>{section.items.map(renderPolicySectionItem)}</ul>
-        ) : (
-          <p>
-            {section.contactLead}
-            <SiteBodyLink href={`mailto:${section.email}`}>
-              {section.email}
-            </SiteBodyLink>
-            {section.contactTail}
-          </p>
-        )}
+        <ul>{section.items.map(renderPolicySectionItem)}</ul>
       </div>
-    </SiteCard>
+    </article>
   );
 }
-
-// ─── Demo Page ────────────────────────────────────────────────────────────────
 
 function DemoPage() {
   const { browser, demoPage } = SITE_COPY;
@@ -874,8 +988,6 @@ function DemoPage() {
     </div>
   );
 }
-
-// ─── Entry ────────────────────────────────────────────────────────────────────
 
 export function SiteApp({ page }: SiteAppProps) {
   if (page === "privacy") return <PrivacyPage />;

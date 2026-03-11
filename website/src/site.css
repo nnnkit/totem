@@ -32,19 +32,249 @@
     display: none;
   }
 
+  /* ── Privacy hero ── */
+
+  .site-privacy-hero {
+    background: rgb(15 15 18);
+    color: rgb(255 255 255);
+  }
+
+  .site-privacy-promises {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.25rem;
+    margin-top: 3rem;
+    padding-top: 1.75rem;
+    border-top: 1px solid rgb(255 255 255 / 0.08);
+  }
+
+  @media (min-width: 40rem) {
+    .site-privacy-promises {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.5rem 2rem;
+    }
+  }
+
+  @media (min-width: 64rem) {
+    .site-privacy-promises {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.5rem 3rem;
+    }
+  }
+
+  .site-privacy-promise {
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+    padding: 0.35rem 0;
+    color: rgb(255 255 255 / 0.5);
+    font-size: 0.8rem;
+    line-height: 1.5;
+  }
+
+  .site-privacy-promise-icon {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    size: 1.05rem;
+    border-radius: 50%;
+    background: rgb(34 197 94 / 0.15);
+    color: rgb(74 222 128);
+    position: relative;
+    top: 0.1em;
+  }
+
+  .site-privacy-body {
+    margin: 0;
+    color: rgb(100 100 110);
+    font-size: 0.95rem;
+    line-height: 1.8;
+    text-wrap: pretty;
+  }
+
+  /* ── Section structure ── */
+
+  .site-privacy-section {
+    padding-top: 3.5rem;
+  }
+
+  .site-privacy-section-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .site-privacy-section-rule {
+    flex: 1;
+    height: 1px;
+    background: rgb(228 228 231);
+    order: 1;
+  }
+
+  /* ── Summary cards ── */
+
+  .site-privacy-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+    gap: 1px;
+    border-radius: 1rem;
+    overflow: hidden;
+    border: 1px solid rgb(228 228 231);
+    background: rgb(228 228 231);
+  }
+
+  .site-privacy-summary-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    padding: 1.5rem 1.5rem 1.75rem;
+    background: rgb(255 255 255);
+  }
+
+  .site-privacy-summary-index {
+    display: block;
+    margin-bottom: 0.75rem;
+    font-family: var(--font-site-sans);
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1;
+    color: rgb(212 210 205);
+  }
+
+  .site-privacy-summary-title {
+    margin: 0;
+    color: rgb(24 24 27);
+    font-size: 0.95rem;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+
+  /* ── Permission cards ── */
+
+  .site-privacy-permissions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+    gap: 1rem;
+  }
+
+  .site-privacy-permission-card {
+    padding: 1.5rem;
+    border: 1px solid rgb(228 228 231);
+    border-radius: 1rem;
+    background: rgb(255 255 255);
+  }
+
+  .site-privacy-permission-name {
+    margin: 0;
+    font-family: var(--font-site-sans);
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: rgb(24 24 27);
+    word-break: break-all;
+  }
+
+  .site-privacy-access-badge {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    height: 1.6rem;
+    padding: 0 0.65rem;
+    border-radius: 9999px;
+    font-size: 0.65rem;
+    line-height: 1;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  .site-privacy-access-badge--required {
+    background: rgb(220 252 231);
+    color: rgb(22 101 52);
+  }
+
+  .site-privacy-access-badge--optional {
+    background: rgb(254 249 195);
+    color: rgb(133 77 14);
+  }
+
+  .site-privacy-permission-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin: 0;
+  }
+
+  .site-privacy-permission-meta div + div {
+    padding-top: 1rem;
+    border-top: 1px solid rgb(243 243 243);
+  }
+
+  .site-privacy-permission-meta dt {
+    margin: 0 0 0.35rem;
+    color: rgb(140 140 150);
+    font-size: 0.68rem;
+    line-height: 1;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  .site-privacy-permission-meta dd {
+    margin: 0;
+    color: rgb(80 80 90);
+    font-size: 0.9rem;
+    line-height: 1.65;
+  }
+
+  /* ── Policy detail sections ── */
+
+  .site-privacy-detail-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .site-privacy-detail-card {
+    padding: 2rem 0;
+    border-bottom: 1px solid rgb(235 235 240);
+  }
+
+  .site-privacy-detail-card:first-child {
+    padding-top: 0;
+  }
+
+  .site-privacy-detail-card:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  .site-privacy-detail-title {
+    margin: 0 0 1rem;
+    font-family: var(--font-site-sans);
+    font-size: 1.2rem;
+    font-weight: 600;
+    line-height: 1.3;
+    color: rgb(24 24 27);
+  }
+
   .site-legal-copy {
-    color: rgb(82 82 91);
-    font-size: 0.875rem;
-    line-height: 1.625;
+    color: rgb(90 90 100);
+    font-size: 0.9rem;
+    line-height: 1.75;
   }
 
   .site-legal-copy ul {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.6rem;
     margin: 0;
-    padding-left: 1.25rem;
+    padding-left: 1.1rem;
     list-style: disc;
+  }
+
+  .site-legal-copy li::marker {
+    color: rgb(200 200 210);
   }
 
   .site-legal-copy p {
@@ -52,7 +282,8 @@
   }
 
   .site-legal-copy strong {
-    color: rgb(64 64 64);
+    color: rgb(50 50 55);
+    font-weight: 600;
   }
 
   .site-browser-shell {

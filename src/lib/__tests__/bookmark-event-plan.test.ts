@@ -15,16 +15,12 @@ function makeEvent(
 }
 
 describe("resolveBookmarkEventPlan", () => {
-  // ── Empty ──
-
   it("returns empty plan for no events", () => {
     const plan = resolveBookmarkEventPlan([]);
     expect(plan.idsToDelete).toEqual([]);
     expect(plan.needsPageFetch).toBe(false);
     expect(plan.ackIds).toEqual([]);
   });
-
-  // ── Delete: happy path ──
 
   it("deletes by tweetId when available", () => {
     const events = [
@@ -61,8 +57,6 @@ describe("resolveBookmarkEventPlan", () => {
     expect(plan.ackIds).toEqual(["d1", "d2"]);
   });
 
-  // ── Delete: all empty tweetIds (rare) ──
-
   it("acks delete events with empty tweetIds gracefully", () => {
     const events = [
       makeEvent({ id: "d1", type: "DeleteBookmark", tweetId: "" }),
@@ -74,8 +68,6 @@ describe("resolveBookmarkEventPlan", () => {
     expect(plan.ackIds).toEqual(["d1"]);
   });
 
-  // ── Delete: multiple tweetIds ──
-
   it("collects multiple delete tweetIds", () => {
     const events = [
       makeEvent({ id: "d1", type: "DeleteBookmark", tweetId: "111" }),
@@ -86,8 +78,6 @@ describe("resolveBookmarkEventPlan", () => {
     expect(plan.idsToDelete).toEqual(["111", "222"]);
     expect(plan.ackIds).toEqual(["d1", "d2"]);
   });
-
-  // ── Create: fetches a small page ──
 
   it("triggers page fetch for create events", () => {
     const events = [
@@ -121,8 +111,6 @@ describe("resolveBookmarkEventPlan", () => {
     expect(plan.needsPageFetch).toBe(true);
     expect(plan.ackIds).toEqual(["c1", "c2", "c3"]);
   });
-
-  // ── Mixed: create + delete in same batch ──
 
   it("handles create and delete in the same batch", () => {
     const events = [

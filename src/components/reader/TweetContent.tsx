@@ -201,8 +201,6 @@ function ThreadTweets({ tweets }: ThreadTweetsProps) {
   );
 }
 
-/* ── Action bar (Substack-style social bar) ── */
-
 interface ActionBarProps {
   viewOnXUrl: string;
   onToggleRead?: () => void;
@@ -304,8 +302,6 @@ function DetailErrorNotice({ errorKind, onLogin }: DetailErrorNoticeProps) {
     </div>
   );
 }
-
-/* ── Main component ── */
 
 interface Props {
   displayBookmark: Bookmark;

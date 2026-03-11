@@ -41,7 +41,6 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           target={opensNewTab ? "_blank" : undefined}
           rel={opensNewTab ? "noopener noreferrer" : undefined}
           className={classes}
-          // forward only aria/data attrs that make sense on <a>
           aria-label={props["aria-label"]}
           title={props.title}
         >

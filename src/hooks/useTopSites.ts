@@ -45,9 +45,7 @@ export function useTopSites(limit = 8, enabled = true) {
         };
       });
       setSites(mapped);
-    } catch {
-      // topSites unavailable
-    } finally {
+    } catch {} finally {
       setLoading(false);
     }
   }, [limit, enabled]);

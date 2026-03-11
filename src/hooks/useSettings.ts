@@ -68,9 +68,7 @@ export function useSettings() {
         if (!cancelled && !userPatchedRef.current) {
           setSettings(normalizeSettings(stored[SYNC_SETTINGS]));
         }
-      } catch {
-        // fallback to defaults
-      }
+      } catch {}
     };
 
     load();

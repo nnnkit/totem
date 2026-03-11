@@ -1,19 +1,7 @@
-/**
- * Central registry of all client-side storage keys used by the extension.
- * Convention: totem_ prefix + snake_case.
- *
- * Service worker (public/service-worker.js) and content scripts cannot import
- * from here — keep string literals there in sync manually.
- *
- * Legacy xbt_* keys are migrated at runtime for backward compatibility.
- */
-
-// ── IndexedDB ──────────────────────────────────────────────────────
 export const IDB_DATABASE_NAME = "totem";
 export const LEGACY_IDB_DATABASE_NAME = "xbt";
 export const IDB_ACCOUNT_DATABASE_PREFIX = "totem_acct_";
 
-// ── localStorage ───────────────────────────────────────────────────
 export const LS_READING_TAB = "totem_reading_tab";
 export const LS_WALLPAPER_INDEX = "totem_wallpaper_index";
 export const LS_MANUAL_SYNC_REQUIRED = "totem_manual_sync_required";
@@ -27,7 +15,6 @@ export const LOCAL_STORAGE_KEYS = [
   "totem_has_bookmarks", // legacy — kept for reset cleanup
 ] as const;
 
-// ── chrome.storage.local (shared between app + service worker) ─────
 export const CS_DB_CLEANUP_AT = "totem_db_cleanup_at";
 export const CS_LAST_RECONCILE = "totem_last_reconcile";
 export const CS_LAST_SYNC = "totem_last_sync";
@@ -44,7 +31,6 @@ export const CS_SYNC_AUTO_ENABLED = "totem_sync_auto_enabled";
 export const CS_RUNTIME_AUDIT = "totem_runtime_audit";
 export const CS_RUNTIME_STATE_V2 = "totem_runtime_state_v2";
 
-// ── chrome.storage.local (service-worker only) ─────────────────────
 // These are written/read exclusively by public/service-worker.js.
 // Listed here so reset (chrome.storage.local.clear()) covers them.
 //   totem_graphql_catalog    – captured GraphQL endpoint catalog
@@ -53,7 +39,6 @@ export const CS_RUNTIME_STATE_V2 = "totem_runtime_state_v2";
 //   totem_last_mutation      – last bookmark mutation debug info (write-only debug)
 //   totem_last_mutation_done – last completed mutation debug info (write-only debug)
 
-// ── chrome.storage.sync ────────────────────────────────────────────
 export const SYNC_SETTINGS = "totem_settings";
 export const SYNC_THEME = "totem_theme";
 
@@ -62,7 +47,6 @@ export const CHROME_SYNC_KEYS = [
   SYNC_THEME,
 ] as const;
 
-// ── Legacy key maps (xbt_ → totem_) ───────────────────────────────
 export const LEGACY_LOCAL_STORAGE_KEY_MAP = {
   xbt_reading_tab: LS_READING_TAB,
   xbt_wallpaper_index: LS_WALLPAPER_INDEX,

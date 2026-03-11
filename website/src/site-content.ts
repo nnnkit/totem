@@ -29,17 +29,22 @@ export type PolicySectionItem =
       text: string;
     };
 
-export type PolicySection =
-  | {
-      title: string;
-      items: readonly PolicySectionItem[];
-    }
-  | {
-      title: string;
-      contactLead: string;
-      email: string;
-      contactTail: string;
-    };
+export type PolicySection = {
+  title: string;
+  items: readonly PolicySectionItem[];
+};
+
+export type PrivacySummaryItem = {
+  title: string;
+  body: string;
+};
+
+export type PrivacyPermission = {
+  name: string;
+  reason: string;
+  use: string;
+  access: string;
+};
 
 const chromeWebStoreInstallUrl = "";
 const demoVideoEmbedUrl =
@@ -233,86 +238,141 @@ export const SITE_COPY = {
     loadingText: "Loading preview...",
   },
   privacy: {
-    eyebrow: "Totem Legal",
-    title: "Privacy Policy",
+    eyebrow: "Privacy Policy",
+    title: "Your data never leaves your browser.",
     lastUpdatedLabel: "Last updated:",
-    lastUpdated: "March 2, 2026",
+    lastUpdated: "March 11, 2026",
+    introTitle:
+      "Totem is local-first. There is no Totem backend, no account to create, and no data to sync to our servers — because we don't have any.",
+    introBody:
+      "Totem reads your own X bookmarks from your existing browser session and turns them into a reading queue right inside your new tab. Everything stays on your device.",
+    summaryTitle: "Short version",
+    summaryItems: [
+      {
+        title: "Stored on your device",
+        body: "Bookmarks cache, tweet details, reading progress, highlights, notes, settings, and the auth/runtime metadata Totem needs to stay connected.",
+      },
+      {
+        title: "Sent to X only",
+        body: "Authenticated requests to x.com to fetch your bookmarks, fetch tweet details, and delete a bookmark when you do that inside Totem. Nothing goes anywhere else.",
+      },
+      {
+        title: "Sent only when you search",
+        body: "Your query goes directly to your chosen search provider, or to Chrome's default search if you enable that option and submit a search.",
+      },
+      {
+        title: "Optional features",
+        body: "Quick Links uses optional topSites and favicon permissions. Default-search integration uses the optional search permission.",
+      },
+    ] satisfies PrivacySummaryItem[],
+    reassuranceTitle: "No backend. No tracking. No exceptions.",
+    reassuranceItems: [
+      "No Totem-operated server ever sees your data.",
+      "No analytics or behavioral telemetry is collected.",
+      "No personal data is sold or shared with third parties.",
+      "No X password is ever requested — Totem uses your existing session.",
+    ] as const,
+    permissionsTitle: "Permissions explained",
+    permissionsIntro:
+      "Each permission maps to a specific feature. Optional permissions are requested only when you turn on the feature that needs them.",
+    permissions: [
+      {
+        name: "storage",
+        reason:
+          "Totem needs local storage so your reading queue and notes work like an on-device app.",
+        use:
+          "Stores bookmarks and tweet detail cache, reading progress, highlights, notes, settings, and runtime/auth metadata in browser storage.",
+        access: "Always on",
+      },
+      {
+        name: "webRequest",
+        reason:
+          "Totem needs to read the auth headers already present in your own x.com session.",
+        use:
+          "Observes your x.com requests so Totem can capture the authorization, cookie, and CSRF headers required to load your own bookmarks locally.",
+        access: "Always on",
+      },
+      {
+        name: "declarativeNetRequest",
+        reason:
+          "Totem needs its X requests to match the authenticated browser session you already have.",
+        use:
+          "Applies the required request headers when Totem asks x.com for bookmarks, tweet details, or bookmark deletions.",
+        access: "Always on",
+      },
+      {
+        name: "https://x.com/*",
+        reason:
+          "Totem only works against your own account on x.com, so it needs permission to operate there.",
+        use:
+          "Lets Totem run content scripts on x.com, detect account context, and observe bookmark activity needed to keep local data in sync.",
+        access: "Always on",
+      },
+      {
+        name: "topSites",
+        reason:
+          "Quick Links can show the sites you visit most often on the new tab page.",
+        use:
+          "Reads Chrome's top-sites list only after you enable Quick Links.",
+        access: "Optional",
+      },
+      {
+        name: "favicon",
+        reason:
+          "Quick Links are easier to scan when Chrome can show each site's icon.",
+        use:
+          "Lets Chrome provide favicon images for the sites shown in Quick Links.",
+        access: "Optional",
+      },
+      {
+        name: "search",
+        reason:
+          "Some people want Totem's search bar to use Chrome's default search engine instead of a fixed provider.",
+        use:
+          "Lets Totem hand your search query to Chrome's default search only when you choose that mode and submit a search.",
+        access: "Optional",
+      },
+    ] satisfies PrivacyPermission[],
     sections: [
       {
-        title: "1. Data Totem accesses and stores",
+        title: "What Totem stores",
         items: [
-          "X authentication headers captured from your own authenticated x.com GraphQL requests (including authorization, cookie, x-csrf-token, and related X client headers when present).",
-          "X user ID derived from your existing session cookie.",
-          "Bookmark data and tweet detail content fetched from X so you can read saved posts in Totem.",
-          "Bookmark mutation signals from x.com (CreateBookmark / DeleteBookmark events, and tweet IDs when available) to keep local data in sync.",
-          "Reading progress, highlights, notes, and local preferences (for example theme, search engine choice, quick-link settings, and other new-tab UI state).",
-          "If you enable quick links: top-site URLs from Chrome's topSites API and favicon URLs generated by Chrome.",
+          "IndexedDB stores bookmarks, tweet detail cache, reading progress, highlights, and notes.",
+          "chrome.storage.local stores runtime and auth state, including captured auth headers, bookmark mutation queue data, and GraphQL endpoint catalog metadata.",
+          "chrome.storage.sync stores theme and settings when Chrome sync storage is available.",
+          "localStorage stores small UI preferences such as the selected reading tab and wallpaper choice.",
+          "Totem does not run a backend database for extension data.",
         ],
       },
       {
-        title: "2. Where data is stored",
+        title: "What Totem sends over the network",
         items: [
-          "IndexedDB stores bookmarks, tweet detail cache, reading progress, and highlights/notes.",
-          "chrome.storage.local stores runtime/auth state (including captured auth headers), mutation event queue, and GraphQL endpoint catalog metadata.",
-          "chrome.storage.sync stores theme and settings (when sync storage is available).",
-          "localStorage stores small local UI keys (for example selected reading tab and wallpaper index).",
-          "Totem does not operate a backend database for your extension data.",
+          "Totem sends authenticated API requests to x.com to fetch bookmarks and tweet details, and to delete bookmarks when you choose to unbookmark inside Totem.",
+          "Totem may fetch x.com or abs.twimg.com bundles to discover GraphQL query IDs when needed to stay compatible with X.",
+          "Search queries are sent directly to your chosen search provider, or to Chrome's default search if you enable that integration and submit a search.",
+          "Totem does not send analytics or behavioral telemetry to a Totem-operated server.",
+          "Totem does not sell personal data or share it with advertising or tracking platforms.",
         ],
       },
       {
-        title: "3. Network use and sharing",
+        title: "How long data stays",
         items: [
-          "Totem sends authenticated API requests to x.com to fetch bookmarks and tweet details, and to delete bookmarks when you choose to unbookmark in Totem.",
-          "Totem may fetch x.com / abs.twimg.com bundles to discover GraphQL query IDs when needed for compatibility.",
-          "Search queries are sent directly to your chosen search provider (or browser default search) when you submit a search.",
-          "Totem does not send analytics or behavioral telemetry to a Totem-operated server, does not sell personal data, and does not share data with ad/tracking platforms.",
-        ],
-      },
-      {
-        title: "4. Why permissions are used",
-        items: [
-          {
-            label: "storage",
-            text: "stores local bookmarks/cache/progress, auth/runtime state, and settings.",
-          },
-          {
-            label: "webRequest / declarativeNetRequest",
-            text: "enables capture of required auth/request metadata and authenticated requests to X.",
-          },
-          {
-            label: "host permission (x.com)",
-            text: "required to read your own bookmark data, run content scripts on x.com, and detect account context.",
-          },
-          {
-            label: "optional permissions",
-            text: "topSites, favicon, and search are requested on demand when you enable related features.",
-          },
-        ],
-      },
-      {
-        title: "5. Data retention",
-        items: [
-          "Tweet detail cache: up to 30 days, then removed by cleanup logic.",
-          "Bookmark mutation event cache: up to 14 days.",
-          "GraphQL endpoint catalog entries: up to 30 days.",
+          "Tweet detail cache stays for up to 30 days, then cleanup logic removes older entries.",
+          "Bookmark mutation event cache stays for up to 14 days.",
+          "GraphQL endpoint catalog entries stay for up to 30 days.",
           "Auth headers are refreshed from live x.com traffic and may remain in local storage until session/auth state changes or you remove the extension.",
         ],
       },
       {
-        title: "6. Your control",
+        title: "Your controls",
         items: [
           "You can remove the extension at any time.",
           "You can reset Totem local data from settings.",
+          "Reset local data clears bookmark and content caches plus most local state, but currently preserves auth and query metadata used for account continuity.",
           "Optional permission grants are managed by Chrome. Turning a feature off in Totem stops using it, but does not automatically revoke the permission from Chrome.",
           "To revoke optional permissions, use Chrome extension permission controls for Totem.",
-          "Reset local data clears bookmark/content caches and most local state, but currently preserves auth/query metadata used for account continuity.",
+          "If you use Totem in another browser profile, that profile has its own X login, extension data, and optional permission grants.",
         ],
-      },
-      {
-        title: "7. Contact",
-        contactLead: "For privacy questions, email ",
-        email: SUPPORT_EMAIL,
-        contactTail: ".",
       },
     ] satisfies PolicySection[],
   },

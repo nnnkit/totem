@@ -106,7 +106,6 @@ function deleteDatabaseWithTimeout(dbName: string): Promise<void> {
 }
 
 export async function resetLocalData(): Promise<void> {
-  // 0. Notify service worker with hard 2s timeout — never hangs
   try {
     await Promise.race([
       chrome.runtime.sendMessage({ type: "RESET_SW_STATE" }),
@@ -114,21 +113,17 @@ export async function resetLocalData(): Promise<void> {
     ]);
   } catch {}
 
-  // 1. Close DB connection first (prevents blocking transactions)
   closeDb();
 
-  // 2. Delete databases entirely (skip clearAllLocalData — it needs an active connection)
   const accountDbNames = await getAccountDatabaseNames();
   const allDbNames = Array.from(new Set([...IDB_DATABASE_NAMES, ...accountDbNames]));
   await Promise.all(allDbNames.map((dbName) => deleteDatabaseWithTimeout(dbName)));
 
-  // 3. Remove all known localStorage keys
   for (const key of LOCAL_STORAGE_RESET_KEYS) {
     if (key === LS_BOOT_SYNC_POLICY) continue;
     localStorage.removeItem(key);
   }
 
-  // 4. Clear chrome.storage (bounded with 3s timeout)
   try {
     await Promise.race([
       Promise.all([

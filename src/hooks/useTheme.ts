@@ -56,9 +56,7 @@ export function useTheme() {
         if (!cancelled) {
           setThemePreference(normalizeThemePreference(stored[SYNC_THEME]));
         }
-      } catch {
-        // Use default system preference if sync storage is not available.
-      }
+      } catch {}
     };
 
     loadPreference();

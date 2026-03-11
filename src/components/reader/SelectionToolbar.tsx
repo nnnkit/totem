@@ -6,8 +6,6 @@ import { Button } from "../ui/Button";
 import { PopoverContent, Popover } from "../ui/Popover";
 import { Separator } from "../ui/Separator";
 
-// --- Selection detection utilities ---
-
 function getTextOffsetInSection(section: Element, node: Node, offset: number): number {
   const walker = document.createTreeWalker(section, NodeFilter.SHOW_TEXT);
   let charCount = 0;
@@ -109,8 +107,6 @@ function serializeSelection(selection: Selection, container: HTMLElement): Selec
     };
   });
 }
-
-// --- Component ---
 
 interface ToolbarState {
   ranges: SelectionRange[];
