@@ -324,10 +324,18 @@ function SiteLayout({
               {footer.privacyLabel}
             </a>
             <a
-              href={`mailto:${SITE_LINKS.supportEmail}`}
+              href={SITE_LINKS.supportEmailUrl}
               className={siteFooterLinkClass}
             >
               {footer.contactLabel}
+            </a>
+            <a
+              href={SITE_LINKS.supportXUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={siteFooterLinkClass}
+            >
+              {footer.xLabel}
             </a>
             <a
               href={SITE_LINKS.githubRepoUrl}
@@ -356,7 +364,7 @@ function DemoBrowser() {
   const { browser } = SITE_COPY;
   const [opened, setOpened] = useState(true);
   const [frameReady, setFrameReady] = useState(false);
-  const [tabTitle, setTabTitle] = useState(browser.defaultTabTitle);
+  const [tabTitle, setTabTitle] = useState<string>(browser.defaultTabTitle);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
@@ -600,13 +608,6 @@ function LandingPage() {
                 >
                   {hero.installButtonLabel}
                 </SiteButtonLink>
-                <SiteButtonLink
-                  href={SITE_LINKS.demoVideoUrl}
-                  target="_blank"
-                  variant="secondary"
-                >
-                  {hero.videoButtonLabel}
-                </SiteButtonLink>
               </div>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-medium text-neutral-400">
                 {hero.chips.map((chip, index) => (
@@ -743,8 +744,12 @@ function LandingPage() {
               </p>
               <p className="m-0 mt-2 text-sm leading-relaxed text-neutral-600">
                 {faq.supportLead}
-                <SiteBodyLink href={`mailto:${SITE_LINKS.supportEmail}`}>
+                <SiteBodyLink href={SITE_LINKS.supportEmailUrl}>
                   {SITE_LINKS.supportEmail}
+                </SiteBodyLink>
+                {faq.supportMiddle}
+                <SiteBodyLink href={SITE_LINKS.supportXUrl} target="_blank">
+                  {SITE_LINKS.supportXHandle}
                 </SiteBodyLink>{" "}
                 {faq.supportTail}
               </p>

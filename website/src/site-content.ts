@@ -2,6 +2,12 @@ import cleanReaderImage from "./feature-previews/clean-reader.jpg";
 import highlightsNotesImage from "./feature-previews/highlights-notes.jpg";
 import readingStatesImage from "./feature-previews/reading-states.jpg";
 import worksOfflineImage from "./feature-previews/works-offline.jpg";
+import {
+  SUPPORT_EMAIL,
+  SUPPORT_EMAIL_URL,
+  SUPPORT_X_HANDLE,
+  SUPPORT_X_URL,
+} from "../../src/lib/constants/support";
 
 export type FeatureItem = {
   title: string;
@@ -36,9 +42,8 @@ export type PolicySection =
     };
 
 const chromeWebStoreInstallUrl = "";
-const demoVideoUrl = "https://www.youtube.com/watch?v=dummy";
 const demoVideoEmbedUrl =
-  "https://www.youtube.com/embed/dQw4w9WgXcQ?rel=0&modestbranding=1";
+  "https://www.youtube.com/embed/75RNtgMHsPA?rel=0&modestbranding=1";
 const githubReleaseUrl = "https://github.com/nnnkit/totem/releases/latest";
 const hasWebStoreInstall = Boolean(chromeWebStoreInstallUrl);
 const installUrl = hasWebStoreInstall
@@ -47,14 +52,42 @@ const installUrl = hasWebStoreInstall
 const installButtonLabel = hasWebStoreInstall
   ? "Install from Chrome Web Store"
   : "Install extension";
+const featureItems: FeatureItem[] = [
+  {
+    title: "Clean reader, zero feed noise",
+    body: "Read saved posts in a calmer layout made for long-form scanning.",
+    image: cleanReaderImage,
+    alt: "Totem clean reader view showing saved X bookmarks without feed distractions.",
+  },
+  {
+    title: "Unread, Continue, and Read states",
+    body: "Your queue auto-organizes so you always know what to pick next.",
+    image: readingStatesImage,
+    alt: "Totem reading states showing unread, continue, and read progress.",
+  },
+  {
+    title: "Highlight and save notes",
+    body: "Select text while reading and keep notes where the insight happened.",
+    image: highlightsNotesImage,
+    alt: "Totem highlights and notes feature in the reader.",
+  },
+  {
+    title: "Keep reading offline",
+    body: "Continue reading when X is unavailable or your connection drops.",
+    image: worksOfflineImage,
+    alt: "Totem interface running with offline-ready cached reading queue.",
+  },
+];
 
 export const SITE_LINKS = {
   installUrl,
-  demoVideoUrl,
   demoVideoEmbedUrl,
   demoPageUrl: "/demo-page",
   privacyUrl: "/privacy",
-  supportEmail: "support@usetotem.app",
+  supportEmail: SUPPORT_EMAIL,
+  supportEmailUrl: SUPPORT_EMAIL_URL,
+  supportXHandle: SUPPORT_X_HANDLE,
+  supportXUrl: SUPPORT_X_URL,
   githubRepoUrl: "https://github.com/nnnkit/totem",
 } as const;
 
@@ -71,7 +104,8 @@ export const SITE_COPY = {
     tagline: "Read your X bookmarks, not the feed.",
     navAriaLabel: "Footer links",
     privacyLabel: "Privacy Policy",
-    contactLabel: "Contact",
+    contactLabel: "Email",
+    xLabel: SUPPORT_X_HANDLE,
     githubLabel: "GitHub",
     copyright: "© 2026 Totem",
   },
@@ -82,7 +116,6 @@ export const SITE_COPY = {
       description:
         "Open a new tab to read your saved posts. No feed, no algorithmic noise.",
       installButtonLabel: installButtonLabel,
-      videoButtonLabel: "Watch demo video",
       videoTitle: "Totem quick walkthrough video",
       chips: ["No account", "No backend", "Local-first"],
     },
@@ -98,32 +131,7 @@ export const SITE_COPY = {
       eyebrow: "Features",
       title: "Features you will love.",
       description: "Discover more once you install.",
-      items: [
-        {
-          title: "Clean reader, zero feed noise",
-          body: "Read saved posts in a calmer layout made for long-form scanning.",
-          image: cleanReaderImage,
-          alt: "Totem clean reader view showing saved X bookmarks without feed distractions.",
-        },
-        {
-          title: "Unread, Continue, and Read states",
-          body: "Your queue auto-organizes so you always know what to pick next.",
-          image: readingStatesImage,
-          alt: "Totem reading states showing unread, continue, and read progress.",
-        },
-        {
-          title: "Highlight and save notes",
-          body: "Select text while reading and keep notes where the insight happened.",
-          image: highlightsNotesImage,
-          alt: "Totem highlights and notes feature in the reader.",
-        },
-        {
-          title: "Keep reading offline",
-          body: "Continue reading when X is unavailable or your connection drops.",
-          image: worksOfflineImage,
-          alt: "Totem interface running with offline-ready cached reading queue.",
-        },
-      ] satisfies FeatureItem[],
+      items: featureItems,
     },
     faq: {
       title: "FAQ",
@@ -208,6 +216,7 @@ export const SITE_COPY = {
       ] satisfies FAQItem[],
       supportTitle: "Still stuck?",
       supportLead: "Email ",
+      supportMiddle: " or message ",
       supportTail:
         " with a screenshot and what your browser or Totem is showing.",
       finalCtaTitle: "Ready to start reading your bookmarks?",
@@ -309,7 +318,7 @@ export const SITE_COPY = {
       {
         title: "7. Contact",
         contactLead: "For privacy questions, email ",
-        email: "support@usetotem.app",
+        email: SUPPORT_EMAIL,
         contactTail: ".",
       },
     ] satisfies PolicySection[],

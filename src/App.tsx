@@ -244,15 +244,24 @@ export default function App() {
   }, [refreshContinueReading]);
 
   const [isResetting, setIsResetting] = useState(false);
-  const handleResetLocalData = useCallback(() => {
+  const handleResetLocalData = useCallback(async () => {
+    if (isResetting) return;
     setIsResetting(true);
     actions.prepareForReset();
-    resetLocalData()
-      .catch(() => {})
-      .finally(() => {
-        window.location.reload();
-      });
-  }, [actions]);
+    try {
+      await resetLocalData();
+    } catch {
+      // Reset is best-effort. The in-memory state is already cleared above.
+    } finally {
+      refreshContinueReading();
+      restoreReadingTab();
+      setSelectedBookmark(null);
+      setView("home");
+      setSettingsOpen(false);
+      setIsResetting(false);
+      window.location.reload();
+    }
+  }, [actions, isResetting, refreshContinueReading, restoreReadingTab]);
 
   useEffect(() => {
     actions.setReaderActive(readerOpen);
@@ -427,6 +436,7 @@ export default function App() {
       {mainContent}
       <SettingsModal
         open={settingsOpen}
+        isResetting={isResetting}
         onClose={() => setSettingsOpen(false)}
         settings={settings}
         onUpdateSettings={updateSettings}

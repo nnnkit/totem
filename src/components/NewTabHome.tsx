@@ -2,17 +2,16 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import {
   ArrowsClockwiseIcon,
+  EnvelopeSimpleIcon,
   GearSixIcon,
+  InfoIcon,
   LinkBreakIcon,
   MagnifyingGlassIcon,
+  XLogoIcon,
 } from "@phosphor-icons/react";
 import { TotemLogo } from "./TotemLogo";
 import { SearchEnginePicker } from "./SearchEnginePicker";
-import type {
-  BackgroundMode,
-  Bookmark,
-  SearchEngineId,
-} from "../types";
+import type { BackgroundMode, Bookmark, SearchEngineId } from "../types";
 import { SEARCH_ENGINES } from "../lib/search-engines";
 import { hasChromeSearch } from "../lib/chrome";
 import { formatClock } from "../lib/time";
@@ -23,6 +22,12 @@ import {
 } from "../lib/bookmark-utils";
 import { cn } from "../lib/cn";
 import { Button } from "./ui/Button";
+import {
+  SUPPORT_EMAIL_URL,
+  SUPPORT_X_HANDLE,
+  SUPPORT_X_URL,
+} from "../lib/constants/support";
+import { Popover, PopoverContent } from "./ui/Popover";
 import { useWallpaper } from "../hooks/useWallpaper";
 import { useTopSites } from "../hooks/useTopSites";
 import {
@@ -92,7 +97,8 @@ export function NewTabHome({
   const [mountSeed] = useState(() => Math.random());
   const searchRef = useRef<HTMLInputElement>(null);
   const prevWallpaperUrlRef = useRef<string | null>(null);
-  const { wallpaperUrl, wallpaperCredit, gradientCss } = useWallpaper(backgroundMode);
+  const { wallpaperUrl, wallpaperCredit, gradientCss } =
+    useWallpaper(backgroundMode);
   const { sites: topSites } = useTopSites(topSitesLimit, showTopSites);
   const actions = useRuntimeActions();
   const runtimeSyncButton = useSyncButtonState();
@@ -243,8 +249,8 @@ export function NewTabHome({
               Finishing X setup
             </p>
             <p className="mt-4 text-pretty text-base text-home-empty">
-              We found your account, but bookmark sync is not ready yet. Open X once to finish
-              connecting bookmarks.
+              We found your account, but bookmark sync is not ready yet. Open X
+              once to finish connecting bookmarks.
             </p>
             <Button
               className="mt-6 border-0 bg-home-accent text-white hover:opacity-90"
@@ -285,7 +291,9 @@ export function NewTabHome({
             onFocusCapture={() => setCardEngaged(true)}
             onBlurCapture={(event) => {
               const nextTarget =
-                event.relatedTarget instanceof Node ? event.relatedTarget : null;
+                event.relatedTarget instanceof Node
+                  ? event.relatedTarget
+                  : null;
               if (!nextTarget || !event.currentTarget.contains(nextTarget)) {
                 setCardEngaged(false);
               }
@@ -303,7 +311,9 @@ export function NewTabHome({
             aria-label={`Read ${currentItem.title} by @${
               currentItem.bookmark.author.screenName
             }${
-              currentItem.minutes !== null ? `, ${currentItem.minutes} min read` : ""
+              currentItem.minutes !== null
+                ? `, ${currentItem.minutes} min read`
+                : ""
             }`}
           >
             <div className="flex min-h-32 flex-col translate-y-0 opacity-100 transition-all duration-200 ease-overlay-in max-sm:min-h-28">
@@ -377,7 +387,8 @@ export function NewTabHome({
               Something went wrong
             </p>
             <p className="mt-4 text-pretty text-base text-home-empty">
-              Could not sync your bookmarks. Check your connection and try again.
+              Could not sync your bookmarks. Check your connection and try
+              again.
             </p>
             <Button
               type="button"
@@ -396,7 +407,8 @@ export function NewTabHome({
               Cached reading only
             </p>
             <p className="mt-4 text-pretty text-base text-home-empty">
-              Log in to X to sync the rest of your bookmarks and refresh this device.
+              Log in to X to sync the rest of your bookmarks and refresh this
+              device.
             </p>
             <Button
               type="button"
@@ -654,6 +666,50 @@ export function NewTabHome({
             </a>
           </p>
         )}
+
+        <div className="fixed right-5 bottom-5 z-20 sm:right-6 sm:bottom-6">
+          <Popover.Root>
+            <Popover.Trigger
+              type="button"
+              className="flex size-11 items-center justify-center text-on-bg-ghost transition-colors duration-150 ease-hover hover:text-on-bg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80"
+              aria-label="Support"
+              title="Support"
+            >
+              <InfoIcon className="size-4" />
+            </Popover.Trigger>
+            <Popover.Portal>
+              <Popover.Positioner
+                side="top"
+                align="end"
+                sideOffset={10}
+                positionMethod="fixed"
+                className="z-30"
+              >
+                <PopoverContent className="w-44 p-1.5 backdrop-blur-md">
+                  <p className="px-3 py-2 text-xs font-semibold uppercase tracking-extra-wide text-muted">
+                    Support
+                  </p>
+                  <a
+                    href={SUPPORT_EMAIL_URL}
+                    className="flex min-h-10 items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground transition-colors hover:bg-surface-hover"
+                  >
+                    <EnvelopeSimpleIcon className="size-4 text-muted" />
+                    <span>Email</span>
+                  </a>
+                  <a
+                    href={SUPPORT_X_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex min-h-10 items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground transition-colors hover:bg-surface-hover"
+                  >
+                    <XLogoIcon className="size-4 text-muted" />
+                    <span>{SUPPORT_X_HANDLE}</span>
+                  </a>
+                </PopoverContent>
+              </Popover.Positioner>
+            </Popover.Portal>
+          </Popover.Root>
+        </div>
       </div>
     </div>
   );

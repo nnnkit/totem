@@ -1,5 +1,10 @@
 import { useState } from "react";
-import { MonitorIcon, MoonIcon, SunIcon, XIcon } from "@phosphor-icons/react";
+import {
+  MonitorIcon,
+  MoonIcon,
+  SunIcon,
+  XIcon,
+} from "@phosphor-icons/react";
 import { ToggleGroup } from "@base-ui/react/toggle-group";
 import { Toggle } from "@base-ui/react/toggle";
 import type { UserSettings } from "../types";
@@ -12,6 +17,7 @@ import { Select } from "./ui/Select";
 
 interface Props {
   open: boolean;
+  isResetting?: boolean;
   onClose: () => void;
   settings: UserSettings;
   onUpdateSettings: (patch: Partial<UserSettings>) => void;
@@ -25,6 +31,7 @@ const toggleBase =
 
 export function SettingsModal({
   open,
+  isResetting = false,
   onClose,
   settings,
   onUpdateSettings,
@@ -32,19 +39,23 @@ export function SettingsModal({
   onThemePreferenceChange,
   onResetLocalData,
 }: Props) {
-  const [resetting, setResetting] = useState(false);
   const [confirmingReset, setConfirmingReset] = useState(false);
 
+  const handleClose = () => {
+    setConfirmingReset(false);
+    onClose();
+  };
+
   const handleResetLocalData = () => {
-    if (resetting) return;
-    setResetting(true);
+    if (isResetting) return;
+    setConfirmingReset(false);
     onResetLocalData();
   };
 
   return (
     <Modal
       open={open}
-      onClose={onClose}
+      onClose={handleClose}
       className="bg-black/50"
       ariaLabelledBy="settings-title"
     >
@@ -65,7 +76,7 @@ export function SettingsModal({
             <Button
               variant="ghost"
               size="icon"
-              onClick={onClose}
+              onClick={handleClose}
               className="-mr-2"
               aria-label="Close settings"
               title="Close"
@@ -197,7 +208,7 @@ export function SettingsModal({
                       <Button
                         variant="secondary"
                         onClick={() => setConfirmingReset(false)}
-                        disabled={resetting}
+                        disabled={isResetting}
                         className="flex-1"
                       >
                         Cancel
@@ -205,10 +216,10 @@ export function SettingsModal({
                       <Button
                         variant="destructive"
                         onClick={handleResetLocalData}
-                        disabled={resetting}
+                        disabled={isResetting}
                         className="flex-1 border border-red-500/30"
                       >
-                        {resetting ? "Resetting..." : "Confirm reset"}
+                        {isResetting ? "Resetting..." : "Confirm reset"}
                       </Button>
                     </div>
                   </div>
@@ -216,9 +227,10 @@ export function SettingsModal({
                   <Button
                     variant="secondary"
                     onClick={() => setConfirmingReset(true)}
+                    disabled={isResetting}
                     className="w-full"
                   >
-                    Reset local data
+                    {isResetting ? "Resetting..." : "Reset local data"}
                   </Button>
                 )}
               </div>

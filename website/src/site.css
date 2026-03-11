@@ -222,7 +222,7 @@
   }
 
   .site-browser-stage {
-    min-height: clamp(34rem, 65vh, 47.5rem);
+    min-height: clamp(36rem, 68vh, 50rem);
   }
 
   .site-browser-closed-stage {
