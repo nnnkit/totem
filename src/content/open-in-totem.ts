@@ -326,10 +326,10 @@ function startObserver() {
   scanDocument();
   if (!(document.body instanceof HTMLElement)) return;
 
+  const root = document.querySelector<HTMLElement>('main[role="main"]') || document.body;
+
   const observer = new MutationObserver((mutations) => {
     for (const mutation of mutations) {
-      scheduleFromNode(mutation.target);
-
       if (mutation.type === "childList") {
         for (const node of mutation.addedNodes) {
           scheduleFromNode(node);
@@ -338,11 +338,9 @@ function startObserver() {
     }
   });
 
-  observer.observe(document.body, {
+  observer.observe(root, {
     childList: true,
     subtree: true,
-    attributes: true,
-    attributeFilter: ["href", "aria-label", "title", "data-testid"],
   });
 }
 

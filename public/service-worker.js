@@ -1126,32 +1126,6 @@ function isQueryIdStale(json) {
   );
 }
 
-function hasGraphqlErrors(json) {
-  return Array.isArray(json?.errors) && json.errors.length > 0;
-}
-
-function summarizeGraphqlErrors(json) {
-  if (!hasGraphqlErrors(json)) return "";
-  return json.errors
-    .map((error) => {
-      if (!error || typeof error !== "object") return "";
-      const message =
-        typeof error.message === "string" && error.message
-          ? error.message
-          : typeof error.code === "string" && error.code
-            ? error.code
-            : "";
-      const extensionCode =
-        typeof error.extensions?.code === "string" ? error.extensions.code : "";
-      return extensionCode && extensionCode !== message
-        ? `${extensionCode}: ${message}`.trim()
-        : message;
-    })
-    .filter(Boolean)
-    .join("; ")
-    .slice(0, 240);
-}
-
 async function discoverQueryIdFromBundles(operationName) {
   const resp = await fetch("https://x.com", { credentials: "include" });
   if (!resp.ok) return null;

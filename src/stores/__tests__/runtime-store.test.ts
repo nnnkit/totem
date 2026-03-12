@@ -35,7 +35,7 @@ vi.mock("../../api/core/auth", () => ({
 
 vi.mock("../../api/core/bookmarks", () => ({
   ackBookmarkEvents: mocks.ackBookmarkEvents,
-deleteBookmark: mocks.deleteBookmark,
+  deleteBookmark: mocks.deleteBookmark,
   fetchBookmarkPage: mocks.fetchBookmarkPage,
   getBookmarkEvents: mocks.getBookmarkEvents,
   queueBookmarkMutation: mocks.queueBookmarkMutation,

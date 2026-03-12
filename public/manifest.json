@@ -51,7 +51,8 @@
       "js": [
         "assets/open-in-totem.js"
       ],
-      "run_at": "document_idle"
+      "run_at": "document_idle",
+      "world": "ISOLATED"
     }
   ],
   "background": {

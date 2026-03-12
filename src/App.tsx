@@ -152,12 +152,12 @@ function ExternalReaderShell({
           ) : (
             <div className="rounded-2xl border border-border bg-surface-card p-8">
               <h1 className="text-balance text-xl font-semibold text-foreground">
-                Couldn&apos;t open this post in Totem.
+                Couldn't open this post in Totem.
               </h1>
               <p className="mt-3 text-pretty text-sm text-muted">
                 {availability.errorKind === "auth"
                   ? "Your X session is unavailable for tweet detail loading."
-                  : "Totem couldn&apos;t fetch the full tweet detail right now."}
+                  : "Totem couldn't fetch the full tweet detail right now."}
               </p>
               <div className="mt-6 flex flex-wrap items-center gap-3">
                 <Button variant="secondary" size="sm" onClick={onRetry}>
@@ -197,8 +197,11 @@ export default function App() {
   const [externalReader, setExternalReader] = useState<ExternalReaderState | null>(
     null,
   );
+  const didTransitionRef = useRef(false);
   const readerOpen = selectedBookmarkRaw !== null || externalReader !== null;
 
+  // Returns the live version from displayBookmarks so the reader sees
+  // updated fields (metrics, bookmarked state) without re-selection.
   const selectedBookmark = useMemo(() => {
     if (!selectedBookmarkRaw) return null;
     return displayBookmarks.find((b) => b.tweetId === selectedBookmarkRaw.tweetId) || null;
@@ -397,18 +400,14 @@ export default function App() {
       error: null,
       mutation: "idle",
     });
-  }, [appMode, clearPendingReadParam, displayBookmarks, externalReader?.tweetId, openBookmark]);
-
-  useEffect(() => {
-    if (externalReader?.status !== "loading") return;
 
     let cancelled = false;
-    actions.loadReaderDetail(externalReader.tweetId)
+    actions.loadReaderDetail(readTweetId)
       .then((detail) => {
         if (cancelled) return;
         if (!detail.focalTweet) {
           setExternalReader({
-            tweetId: externalReader.tweetId,
+            tweetId: readTweetId,
             status: "error",
             bookmark: null,
             thread: [],
@@ -419,7 +418,7 @@ export default function App() {
         }
 
         setExternalReader({
-          tweetId: externalReader.tweetId,
+          tweetId: readTweetId,
           status: "ready",
           bookmark: detail.focalTweet,
           thread: detail.thread,
@@ -430,7 +429,7 @@ export default function App() {
       .catch((error) => {
         if (cancelled) return;
         setExternalReader({
-          tweetId: externalReader.tweetId,
+          tweetId: readTweetId,
           status: "error",
           bookmark: null,
           thread: [],
@@ -442,14 +441,19 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, [actions, externalReader]);
+  }, [actions, appMode, clearPendingReadParam, displayBookmarks, externalReader?.tweetId, openBookmark]);
 
   useEffect(() => {
-    if (externalReader?.status !== "ready" || !externalReader.bookmark) return;
+    if (externalReader?.status !== "ready" || !externalReader.bookmark) {
+      didTransitionRef.current = false;
+      return;
+    }
+    if (didTransitionRef.current) return;
     const syncedBookmark = displayBookmarks.find(
       (bookmark) => bookmark.tweetId === externalReader.bookmark?.tweetId,
     );
     if (syncedBookmark) {
+      didTransitionRef.current = true;
       openBookmark(syncedBookmark);
     }
   }, [displayBookmarks, externalReader, openBookmark]);
