@@ -2011,117 +2011,6 @@ async function handleDeleteBookmark(tweetId, _retried = false, _queryIdRetried =
   return { ok: true, queryId, data: json };
 }
 
-async function handleCreateBookmark(
-  tweetId,
-  _retried = false,
-  _queryIdRetried = false,
-  _clientTransactionRetried = false,
-) {
-  if (!tweetId) throw new Error("MISSING_TWEET_ID");
-
-  const stored = await chrome.storage.local.get(["totem_auth_headers"]);
-  if (!stored.totem_auth_headers?.authorization) throw new Error("NO_AUTH");
-
-  const queryId = await resolveQueryId("CreateBookmark");
-  if (!queryId) throw new Error("NO_QUERY_ID");
-  const requestHeaders = await buildHeaders({
-    includeClientTransactionId: !_clientTransactionRetried,
-  });
-
-  const url = `https://x.com/i/api/graphql/${queryId}/CreateBookmark`;
-  trackExtensionInitiatedRequest(url);
-  let response;
-  try {
-    response = await fetch(url, {
-      method: "POST",
-      credentials: "include",
-      headers: requestHeaders,
-      body: JSON.stringify({
-        variables: { tweet_id: tweetId },
-        queryId,
-      }),
-    });
-  } catch (error) {
-    if (
-      !_clientTransactionRetried &&
-      typeof requestHeaders["x-client-transaction-id"] === "string" &&
-      requestHeaders["x-client-transaction-id"]
-    ) {
-      return handleCreateBookmark(tweetId, _retried, _queryIdRetried, true);
-    }
-    throw error;
-  }
-
-  if (response.status === 401 || response.status === 403) {
-    if (!_retried) {
-      await chrome.storage.local.remove(["totem_auth_headers", "totem_auth_time"]);
-      const success = await reAuthSilently();
-      if (success) {
-        return handleCreateBookmark(
-          tweetId,
-          true,
-          _queryIdRetried,
-          _clientTransactionRetried,
-        );
-      }
-    }
-    await markAuthLoggedOut(`create_${response.status}`, true);
-    throw new Error("AUTH_EXPIRED");
-  }
-
-  if (!response.ok) {
-    if (
-      !_clientTransactionRetried &&
-      typeof requestHeaders["x-client-transaction-id"] === "string" &&
-      requestHeaders["x-client-transaction-id"]
-    ) {
-      return handleCreateBookmark(tweetId, _retried, _queryIdRetried, true);
-    }
-    if (!_queryIdRetried && response.status === 400) {
-      const freshId = await forceRediscoverQueryId("CreateBookmark");
-      if (freshId && freshId !== queryId) {
-        return handleCreateBookmark(
-          tweetId,
-          _retried,
-          true,
-          _clientTransactionRetried,
-        );
-      }
-    }
-    const body = await response.text().catch(() => "");
-    throw new Error(`CREATE_BOOKMARK_${response.status}: ${body.slice(0, 200)}`);
-  }
-
-  const json = await response.json().catch(() => null);
-  await markAuthAuthenticated("create_ok");
-
-  if (!_queryIdRetried && isQueryIdStale(json)) {
-    const freshId = await forceRediscoverQueryId("CreateBookmark");
-    if (freshId) {
-      return handleCreateBookmark(
-        tweetId,
-        _retried,
-        true,
-        _clientTransactionRetried,
-      );
-    }
-  }
-
-  if (hasGraphqlErrors(json)) {
-    if (
-      !_clientTransactionRetried &&
-      typeof requestHeaders["x-client-transaction-id"] === "string" &&
-      requestHeaders["x-client-transaction-id"]
-    ) {
-      return handleCreateBookmark(tweetId, _retried, _queryIdRetried, true);
-    }
-    const summary = summarizeGraphqlErrors(json);
-    throw new Error(summary ? `CREATE_BOOKMARK_GQL: ${summary}` : "CREATE_BOOKMARK_GQL");
-  }
-
-  return { ok: true, queryId, data: json };
-}
-
 function parseFeatureSet(raw) {
   if (raw && typeof raw === "object") return raw;
   if (typeof raw === "string") {
@@ -2485,12 +2374,6 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   }
   if (message.type === "DELETE_BOOKMARK") {
     handleDeleteBookmark(message.tweetId)
-      .then(sendResponse)
-      .catch((err) => sendResponse({ error: err.message }));
-    return true;
-  }
-  if (message.type === "CREATE_BOOKMARK") {
-    handleCreateBookmark(message.tweetId)
       .then(sendResponse)
       .catch((err) => sendResponse({ error: err.message }));
     return true;

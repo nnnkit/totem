@@ -454,54 +454,6 @@ export default function App() {
     }
   }, [displayBookmarks, externalReader, openBookmark]);
 
-  const handleExternalBookmark = useCallback(async () => {
-    if (externalReader?.status !== "ready" || !externalReader.bookmark) return;
-    if (externalReader.mutation !== "idle") return;
-
-    const tweetId = externalReader.bookmark.tweetId;
-    const tweetUrl = `https://x.com/i/web/status/${tweetId}`;
-
-    setExternalReader((current) => current?.status === "ready"
-      ? { ...current, mutation: "bookmarking" }
-      : current);
-
-    const result = await actions.bookmark(tweetId);
-    if (result.bookmark) {
-      openBookmark(result.bookmark);
-      return;
-    }
-
-    setExternalReader((current) => {
-      if (current?.status !== "ready" || !current.bookmark) return current;
-      return {
-        ...current,
-        mutation: "idle",
-        bookmark: result.createdOnX
-          ? { ...current.bookmark, bookmarked: true }
-          : current.bookmark,
-      };
-    });
-
-    if (result.apiError) {
-      setToast({
-        message: result.createdOnX
-          ? "Saved on X, but Totem could not sync it yet."
-          : "Could not bookmark this post right now.",
-        linkUrl: tweetUrl,
-        linkLabel: "Open on X",
-      });
-      return;
-    }
-
-    if (result.createdOnX) {
-      setToast({
-        message: "Saved on X. Totem will show the synced bookmark after the next refresh.",
-        linkUrl: tweetUrl,
-        linkLabel: "Open on X",
-      });
-    }
-  }, [actions, externalReader, openBookmark]);
-
   const handleExternalUnbookmark = useCallback(async () => {
     if (externalReader?.status !== "ready" || !externalReader.bookmark) return;
     if (externalReader.mutation !== "idle") return;
@@ -663,25 +615,16 @@ export default function App() {
           onOpenBookmark={openBookmark}
           onBack={closeReader}
           onShuffle={handleShuffle}
-          bookmarkAction={offlineMode ? undefined : {
-            label:
-              externalReader.mutation === "bookmarking"
-                ? "Bookmarking..."
-                : externalReader.mutation === "unbookmarking"
-                  ? "Removing..."
-                  : externalReader.bookmark.bookmarked
-                    ? "Unbookmark"
-                    : "Bookmark",
-            active: externalReader.bookmark.bookmarked,
-            pending: externalReader.mutation !== "idle",
-            onClick: externalReader.bookmark.bookmarked
-              ? () => {
-                void handleExternalUnbookmark();
+          bookmarkAction={
+            !offlineMode && externalReader.bookmark.bookmarked
+              ? {
+                label: externalReader.mutation === "unbookmarking" ? "Removing..." : "Unbookmark",
+                active: true,
+                pending: externalReader.mutation === "unbookmarking",
+                onClick: () => { void handleExternalUnbookmark(); },
               }
-              : () => {
-                void handleExternalBookmark();
-              },
-          }}
+              : undefined
+          }
           loadDetail={async (tweetId) => {
             if (tweetId === externalReader.tweetId && externalReader.bookmark) {
               return {

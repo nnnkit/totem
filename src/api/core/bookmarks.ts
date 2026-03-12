@@ -75,14 +75,6 @@ export async function deleteBookmark(tweetId: string): Promise<void> {
   if (response?.error) throw new Error(runtimeError(response));
 }
 
-export async function createBookmark(tweetId: string): Promise<void> {
-  const response = (await chrome.runtime.sendMessage({
-    type: "CREATE_BOOKMARK",
-    tweetId,
-  })) as RuntimeResponse;
-  if (response?.error) throw new Error(runtimeError(response));
-}
-
 export async function queueBookmarkMutation(
   operation: BookmarkChangeType,
   tweetId: string,

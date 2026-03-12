@@ -41,7 +41,6 @@ function makeState(overrides: Partial<RuntimeState> = {}): RuntimeState {
       refresh: async () => ({ accepted: true }),
       handleBookmarkEvents: noop,
       prepareForReset: vi.fn(),
-      bookmark: async () => ({ bookmark: null, createdOnX: false }),
       unbookmark: async () => ({}),
       releaseLease: vi.fn(),
       setReaderActive: vi.fn(),

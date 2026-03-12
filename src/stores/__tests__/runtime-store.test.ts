@@ -11,7 +11,6 @@ import type { RuntimeState } from "../runtime-store";
 const mocks = vi.hoisted(() => ({
   getRuntimeSnapshot: vi.fn<() => Promise<RuntimeSnapshot>>(),
   checkAuth: vi.fn(),
-  createBookmark: vi.fn(),
   deleteBookmark: vi.fn(),
   fetchBookmarkPage: vi.fn(),
   getBookmarkEvents: vi.fn(),
@@ -36,8 +35,7 @@ vi.mock("../../api/core/auth", () => ({
 
 vi.mock("../../api/core/bookmarks", () => ({
   ackBookmarkEvents: mocks.ackBookmarkEvents,
-  createBookmark: mocks.createBookmark,
-  deleteBookmark: mocks.deleteBookmark,
+deleteBookmark: mocks.deleteBookmark,
   fetchBookmarkPage: mocks.fetchBookmarkPage,
   getBookmarkEvents: mocks.getBookmarkEvents,
   queueBookmarkMutation: mocks.queueBookmarkMutation,
@@ -177,7 +175,6 @@ beforeEach(() => {
       detailApi: "unknown",
     },
   });
-  mocks.createBookmark.mockResolvedValue(undefined);
   mocks.deleteBookmark.mockResolvedValue(undefined);
   mocks.fetchBookmarkPage.mockResolvedValue({ bookmarks: [], cursor: null, stopOnEmptyResponse: true });
   mocks.getBookmarkEvents.mockResolvedValue([]);
@@ -455,93 +452,4 @@ describe("runtime-store sync", () => {
     });
   });
 
-  it("creates a bookmark on X and merges the canonical row into runtime state", async () => {
-    vi.useFakeTimers();
-    try {
-      const store = createRuntimeStore();
-      primeReadyState(store);
-
-      const canonicalBookmark = {
-        ...createBookmark("tweet-9"),
-        bookmarked: true,
-        sortIndex: "999",
-      };
-      mocks.fetchBookmarkPage.mockResolvedValue({
-        bookmarks: [canonicalBookmark],
-        cursor: null,
-        stopOnEmptyResponse: true,
-      });
-
-      const resultPromise = store.getState().actions.bookmark("tweet-9");
-      await vi.advanceTimersByTimeAsync(1500);
-      const result = await resultPromise;
-
-      expect(mocks.createBookmark).toHaveBeenCalledWith("tweet-9");
-      expect(mocks.fetchBookmarkPage).toHaveBeenCalledWith(undefined, 20);
-      expect(result).toEqual({
-        bookmark: canonicalBookmark,
-        createdOnX: true,
-      });
-      expect(store.getState().bookmarks).toEqual([canonicalBookmark]);
-      expect(mocks.upsertBookmarks).toHaveBeenCalledWith([canonicalBookmark]);
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  it("reports a partial success when X saves the bookmark but the canonical merge fails", async () => {
-    vi.useFakeTimers();
-    try {
-      const store = createRuntimeStore();
-      primeReadyState(store);
-
-      mocks.fetchBookmarkPage.mockRejectedValue(new Error("DETAIL_ERROR_500"));
-
-      const resultPromise = store.getState().actions.bookmark("tweet-11");
-      await vi.advanceTimersByTimeAsync(1500);
-      const result = await resultPromise;
-
-      expect(result).toEqual({
-        bookmark: null,
-        createdOnX: true,
-        apiError: "DETAIL_ERROR_500",
-      });
-      expect(store.getState().bookmarks).toEqual([]);
-      expect(mocks.queueBookmarkMutation).toHaveBeenCalledWith("CreateBookmark", "tweet-11", {
-        source: "extension-runtime",
-        confirmed: true,
-      });
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  it("queues a follow-up create event when X accepts the bookmark before the row is visible", async () => {
-    vi.useFakeTimers();
-    try {
-      const store = createRuntimeStore();
-      primeReadyState(store);
-
-      mocks.fetchBookmarkPage.mockResolvedValue({
-        bookmarks: [],
-        cursor: null,
-        stopOnEmptyResponse: true,
-      });
-
-      const resultPromise = store.getState().actions.bookmark("tweet-15");
-      await vi.advanceTimersByTimeAsync(1500);
-      const result = await resultPromise;
-
-      expect(result).toEqual({
-        bookmark: null,
-        createdOnX: true,
-      });
-      expect(mocks.queueBookmarkMutation).toHaveBeenCalledWith("CreateBookmark", "tweet-15", {
-        source: "extension-runtime",
-        confirmed: true,
-      });
-    } finally {
-      vi.useRealTimers();
-    }
-  });
 });
