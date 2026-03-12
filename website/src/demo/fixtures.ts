@@ -103,6 +103,7 @@ function createBookmark(seed: BookmarkSeed): Bookmark {
     text: seed.text,
     createdAt: seed.createdAt,
     sortIndex: sortIndexFromTimestamp(seed.createdAt),
+    bookmarked: true,
     author: seed.author,
     metrics,
     media: seed.media ?? [],

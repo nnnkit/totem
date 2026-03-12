@@ -531,7 +531,11 @@ export function DemoNewTabApp() {
           onShuffle={handleShuffle}
           onPrev={hasPrev ? goToPrev : undefined}
           onNext={hasNext ? goToNext : undefined}
-          onDeleteBookmark={handleDeleteBookmark}
+          bookmarkAction={{
+            label: "Unbookmark",
+            active: true,
+            onClick: handleDeleteBookmark,
+          }}
           onMarkAsRead={handleMarkAsRead}
           onMarkAsUnread={handleMarkAsUnread}
           loadDetail={loadDetail}

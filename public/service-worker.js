@@ -6,6 +6,7 @@
 
 const CAPTURED_HEADERS = new Set([
   "authorization",
+  "accept-language",
   "cookie",
   "x-csrf-token",
   "x-client-uuid",
@@ -1035,19 +1036,6 @@ function recordWeakAuthNegativeSignal(reason) {
   return markAuthLoggedOut(reason, true).catch(() => {});
 }
 
-function incrementTransactionId(str) {
-  if (!str) return str;
-  const digits = [];
-  for (let i = 0; i < str.length; i++) {
-    if (str[i] >= "0" && str[i] <= "9") digits.push(i);
-  }
-  if (digits.length === 0) return str;
-  const idx = digits[Math.floor(Math.random() * digits.length)];
-  const bump = Math.floor(Math.random() * 8) + 1;
-  const newDigit = ((parseInt(str[idx], 10) + bump) % 10).toString();
-  return str.slice(0, idx) + newDigit + str.slice(idx + 1);
-}
-
 function reAuthSilently() {
   if (reauthInProgress) return Promise.resolve(false);
   reauthInProgress = true;
@@ -1096,12 +1084,14 @@ function reAuthSilently() {
   });
 }
 
-async function buildHeaders() {
+async function buildHeaders(options = {}) {
   const stored = await chrome.storage.local.get(["totem_auth_headers"]);
   const auth = stored.totem_auth_headers;
   if (!auth?.authorization) throw new Error("NO_AUTH");
 
+  const includeClientTransactionId = options.includeClientTransactionId !== false;
   const headers = {
+    accept: "*/*",
     authorization: auth["authorization"],
     "x-csrf-token": auth["x-csrf-token"],
     "x-twitter-active-user": auth["x-twitter-active-user"] || "yes",
@@ -1110,12 +1100,13 @@ async function buildHeaders() {
     "content-type": "application/json",
   };
 
+  if (auth["accept-language"]) headers["accept-language"] = auth["accept-language"];
   if (auth["cookie"]) headers["cookie"] = auth["cookie"];
   if (auth["x-client-uuid"]) headers["x-client-uuid"] = auth["x-client-uuid"];
-  if (auth["x-client-transaction-id"]) {
-    headers["x-client-transaction-id"] = incrementTransactionId(
-      auth["x-client-transaction-id"]
-    );
+  // x.com generates this token. Replaying the captured value is safer than
+  // mutating it into an opaque value the mutation endpoint can reject.
+  if (includeClientTransactionId && auth["x-client-transaction-id"]) {
+    headers["x-client-transaction-id"] = auth["x-client-transaction-id"];
   }
 
   return headers;
@@ -1133,6 +1124,32 @@ function isQueryIdStale(json) {
   return json.errors.some(
     (e) => e?.extensions?.code === "GRAPHQL_VALIDATION_FAILED",
   );
+}
+
+function hasGraphqlErrors(json) {
+  return Array.isArray(json?.errors) && json.errors.length > 0;
+}
+
+function summarizeGraphqlErrors(json) {
+  if (!hasGraphqlErrors(json)) return "";
+  return json.errors
+    .map((error) => {
+      if (!error || typeof error !== "object") return "";
+      const message =
+        typeof error.message === "string" && error.message
+          ? error.message
+          : typeof error.code === "string" && error.code
+            ? error.code
+            : "";
+      const extensionCode =
+        typeof error.extensions?.code === "string" ? error.extensions.code : "";
+      return extensionCode && extensionCode !== message
+        ? `${extensionCode}: ${message}`.trim()
+        : message;
+    })
+    .filter(Boolean)
+    .join("; ")
+    .slice(0, 240);
 }
 
 async function discoverQueryIdFromBundles(operationName) {
@@ -1538,11 +1555,18 @@ async function handleBookmarkMutationMessage(message) {
       ? message.operation
       : null;
   if (!operation) return { ok: false };
+  const confirmed = message?.confirmed === true;
 
   // CreateBookmark events are only pushed from onCompleted (after x.com
   // confirms success). Pushing here would trigger a page fetch before
   // x.com has processed the bookmark, finding nothing new.
-  if (operation === "CreateBookmark") return { ok: true };
+  if (operation === "CreateBookmark") {
+    if (!confirmed) return { ok: true };
+    const tweetId = typeof message?.tweetId === "string" ? message.tweetId : "";
+    const source = typeof message?.source === "string" ? message.source : "content-script";
+    await pushBookmarkEvent(operation, tweetId, source);
+    return { ok: true };
+  }
 
   const tweetId = typeof message?.tweetId === "string" ? message.tweetId : "";
   const source = typeof message?.source === "string" ? message.source : "content-script";
@@ -1987,6 +2011,117 @@ async function handleDeleteBookmark(tweetId, _retried = false, _queryIdRetried =
   return { ok: true, queryId, data: json };
 }
 
+async function handleCreateBookmark(
+  tweetId,
+  _retried = false,
+  _queryIdRetried = false,
+  _clientTransactionRetried = false,
+) {
+  if (!tweetId) throw new Error("MISSING_TWEET_ID");
+
+  const stored = await chrome.storage.local.get(["totem_auth_headers"]);
+  if (!stored.totem_auth_headers?.authorization) throw new Error("NO_AUTH");
+
+  const queryId = await resolveQueryId("CreateBookmark");
+  if (!queryId) throw new Error("NO_QUERY_ID");
+  const requestHeaders = await buildHeaders({
+    includeClientTransactionId: !_clientTransactionRetried,
+  });
+
+  const url = `https://x.com/i/api/graphql/${queryId}/CreateBookmark`;
+  trackExtensionInitiatedRequest(url);
+  let response;
+  try {
+    response = await fetch(url, {
+      method: "POST",
+      credentials: "include",
+      headers: requestHeaders,
+      body: JSON.stringify({
+        variables: { tweet_id: tweetId },
+        queryId,
+      }),
+    });
+  } catch (error) {
+    if (
+      !_clientTransactionRetried &&
+      typeof requestHeaders["x-client-transaction-id"] === "string" &&
+      requestHeaders["x-client-transaction-id"]
+    ) {
+      return handleCreateBookmark(tweetId, _retried, _queryIdRetried, true);
+    }
+    throw error;
+  }
+
+  if (response.status === 401 || response.status === 403) {
+    if (!_retried) {
+      await chrome.storage.local.remove(["totem_auth_headers", "totem_auth_time"]);
+      const success = await reAuthSilently();
+      if (success) {
+        return handleCreateBookmark(
+          tweetId,
+          true,
+          _queryIdRetried,
+          _clientTransactionRetried,
+        );
+      }
+    }
+    await markAuthLoggedOut(`create_${response.status}`, true);
+    throw new Error("AUTH_EXPIRED");
+  }
+
+  if (!response.ok) {
+    if (
+      !_clientTransactionRetried &&
+      typeof requestHeaders["x-client-transaction-id"] === "string" &&
+      requestHeaders["x-client-transaction-id"]
+    ) {
+      return handleCreateBookmark(tweetId, _retried, _queryIdRetried, true);
+    }
+    if (!_queryIdRetried && response.status === 400) {
+      const freshId = await forceRediscoverQueryId("CreateBookmark");
+      if (freshId && freshId !== queryId) {
+        return handleCreateBookmark(
+          tweetId,
+          _retried,
+          true,
+          _clientTransactionRetried,
+        );
+      }
+    }
+    const body = await response.text().catch(() => "");
+    throw new Error(`CREATE_BOOKMARK_${response.status}: ${body.slice(0, 200)}`);
+  }
+
+  const json = await response.json().catch(() => null);
+  await markAuthAuthenticated("create_ok");
+
+  if (!_queryIdRetried && isQueryIdStale(json)) {
+    const freshId = await forceRediscoverQueryId("CreateBookmark");
+    if (freshId) {
+      return handleCreateBookmark(
+        tweetId,
+        _retried,
+        true,
+        _clientTransactionRetried,
+      );
+    }
+  }
+
+  if (hasGraphqlErrors(json)) {
+    if (
+      !_clientTransactionRetried &&
+      typeof requestHeaders["x-client-transaction-id"] === "string" &&
+      requestHeaders["x-client-transaction-id"]
+    ) {
+      return handleCreateBookmark(tweetId, _retried, _queryIdRetried, true);
+    }
+    const summary = summarizeGraphqlErrors(json);
+    throw new Error(summary ? `CREATE_BOOKMARK_GQL: ${summary}` : "CREATE_BOOKMARK_GQL");
+  }
+
+  return { ok: true, queryId, data: json };
+}
+
 function parseFeatureSet(raw) {
   if (raw && typeof raw === "object") return raw;
   if (typeof raw === "string") {
@@ -2352,6 +2487,23 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     handleDeleteBookmark(message.tweetId)
       .then(sendResponse)
       .catch((err) => sendResponse({ error: err.message }));
+    return true;
+  }
+  if (message.type === "CREATE_BOOKMARK") {
+    handleCreateBookmark(message.tweetId)
+      .then(sendResponse)
+      .catch((err) => sendResponse({ error: err.message }));
+    return true;
+  }
+  if (message.type === "OPEN_TOTEM_READER") {
+    const tweetId = typeof message.tweetId === "string" ? message.tweetId : "";
+    const readParam = tweetId ? `?read=${encodeURIComponent(tweetId)}` : "";
+    chrome.tabs.create({
+      url: chrome.runtime.getURL(`reader.html${readParam}`),
+      active: true,
+    }, (tab) => {
+      sendResponse({ ok: true, tabId: tab?.id });
+    });
     return true;
   }
   if (message.type === "BOOKMARK_MUTATION") {

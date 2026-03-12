@@ -19,6 +19,14 @@ interface RuntimeResponse {
   data?: unknown;
 }
 
+interface BookmarkMutationMessage {
+  type: "BOOKMARK_MUTATION";
+  operation: BookmarkChangeType;
+  tweetId: string;
+  source?: string;
+  confirmed?: boolean;
+}
+
 function runtimeError(response: RuntimeResponse): string {
   return response.error || "API_ERROR";
 }
@@ -64,6 +72,32 @@ export async function deleteBookmark(tweetId: string): Promise<void> {
     type: "DELETE_BOOKMARK",
     tweetId,
   })) as RuntimeResponse;
+  if (response?.error) throw new Error(runtimeError(response));
+}
+
+export async function createBookmark(tweetId: string): Promise<void> {
+  const response = (await chrome.runtime.sendMessage({
+    type: "CREATE_BOOKMARK",
+    tweetId,
+  })) as RuntimeResponse;
+  if (response?.error) throw new Error(runtimeError(response));
+}
+
+export async function queueBookmarkMutation(
+  operation: BookmarkChangeType,
+  tweetId: string,
+  options: {
+    source?: string;
+    confirmed?: boolean;
+  } = {},
+): Promise<void> {
+  const response = (await chrome.runtime.sendMessage({
+    type: "BOOKMARK_MUTATION",
+    operation,
+    tweetId,
+    source: options.source,
+    confirmed: options.confirmed,
+  } satisfies BookmarkMutationMessage)) as RuntimeResponse;
   if (response?.error) throw new Error(runtimeError(response));
 }
 

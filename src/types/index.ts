@@ -113,6 +113,7 @@ export interface Bookmark {
   text: string;
   createdAt: number;
   sortIndex: string;
+  bookmarked: boolean;
   author: Author;
   metrics: Metrics;
   media: Media[];

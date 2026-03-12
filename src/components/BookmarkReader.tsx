@@ -31,7 +31,12 @@ interface Props {
   onShuffle?: () => void;
   onPrev?: () => void;
   onNext?: () => void;
-  onDeleteBookmark?: () => void;
+  bookmarkAction?: {
+    label: string;
+    onClick: () => void;
+    active?: boolean;
+    pending?: boolean;
+  };
   onMarkAsRead?: (tweetId: string) => void;
   onMarkAsUnread?: (tweetId: string) => void;
   onLogin?: () => void;
@@ -55,7 +60,7 @@ export function BookmarkReader({
   onShuffle,
   onPrev,
   onNext,
-  onDeleteBookmark,
+  bookmarkAction,
   onMarkAsRead,
   onMarkAsUnread,
   onLogin,
@@ -94,6 +99,7 @@ export function BookmarkReader({
           setResolvedBookmark({
             ...detail.focalTweet,
             sortIndex: bookmark.sortIndex,
+            bookmarked: bookmark.bookmarked,
           });
         }
 
@@ -183,10 +189,21 @@ export function BookmarkReader({
     }
   }, [effectiveMarkedRead, onMarkAsRead, onMarkAsUnread, bookmark.tweetId]);
 
-  const displayBookmark = resolvedBookmark || bookmark;
+  const displayBookmark = useMemo(() => {
+    if (!resolvedBookmark) return bookmark;
+    return {
+      ...resolvedBookmark,
+      sortIndex: bookmark.sortIndex,
+      bookmarked: bookmark.bookmarked,
+    };
+  }, [bookmark, resolvedBookmark]);
   const displayKind = useMemo(
     () => resolveTweetKind(displayBookmark),
     [displayBookmark],
+  );
+  const defaultDocumentTitle = useMemo(
+    () => window.location.pathname.endsWith("reader.html") ? "Totem Reader" : "New Tab",
+    [],
   );
 
   useEffect(() => {
@@ -196,9 +213,9 @@ export function BookmarkReader({
       "Post";
     document.title = title;
     return () => {
-      document.title = "New Tab";
+      document.title = defaultDocumentTitle;
     };
-  }, [displayBookmark.article?.title, displayBookmark.text]);
+  }, [defaultDocumentTitle, displayBookmark.article?.title, displayBookmark.text]);
 
   const containerWidthClass = "max-w-2xl";
 
@@ -263,7 +280,7 @@ export function BookmarkReader({
           tweetSectionIdPrefix="section-tweet"
           onToggleRead={onMarkAsRead ? handleToggleRead : undefined}
           isMarkedRead={effectiveMarkedRead}
-          onDeleteBookmark={onDeleteBookmark}
+          bookmarkAction={bookmarkAction}
           onLogin={onLogin ?? (
             readerAvailability.canLogin
               ? () => { void actions.startLogin(); }

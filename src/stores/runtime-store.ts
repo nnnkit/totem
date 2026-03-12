@@ -5,9 +5,11 @@ import {
 } from "../api/core/auth";
 import {
   ackBookmarkEvents,
+  createBookmark,
   deleteBookmark,
   fetchBookmarkPage,
   getBookmarkEvents,
+  queueBookmarkMutation,
 } from "../api/core/bookmarks";
 import { fetchTweetDetail } from "../api/core/posts";
 import {
@@ -147,6 +149,9 @@ export interface RuntimeActions {
   refresh: () => Promise<SyncRequestResult>;
   handleBookmarkEvents: () => Promise<void>;
   prepareForReset: () => void;
+  bookmark: (
+    tweetId: string,
+  ) => Promise<{ bookmark: Bookmark | null; createdOnX: boolean; apiError?: string }>;
   unbookmark: (tweetId: string) => Promise<{ apiError?: string }>;
   releaseLease: () => void;
   setReaderActive: (active: boolean) => void;
@@ -1176,6 +1181,68 @@ export function createRuntimeStore() {
           bookmarksLoaded: true,
           detailedIdsLoaded: true,
         }));
+      },
+
+      bookmark: async (tweetId: string) => {
+        if (!tweetId) {
+          return { bookmark: null, createdOnX: false };
+        }
+
+        const queueCreateEvent = async () => {
+          try {
+            await queueBookmarkMutation("CreateBookmark", tweetId, {
+              source: "extension-runtime",
+              confirmed: true,
+            });
+          } catch {}
+        };
+
+        try {
+          await createBookmark(tweetId);
+        } catch (error) {
+          return {
+            bookmark: null,
+            createdOnX: false,
+            apiError: error instanceof Error ? error.message : "Unknown error",
+          };
+        }
+
+        try {
+          await new Promise((resolve) => setTimeout(resolve, CREATE_EVENT_DELAY_MS));
+          const page = await fetchBookmarkPage(undefined, 20);
+          const canonicalBookmark =
+            page.bookmarks.find((bookmark) => bookmark.tweetId === tweetId) || null;
+
+          await chrome.storage.local.set({ [CS_LAST_SOFT_SYNC]: Date.now() });
+
+          if (!canonicalBookmark) {
+            await queueCreateEvent();
+            return { bookmark: null, createdOnX: true };
+          }
+
+          const nextByTweetId = new Map(
+            get().bookmarks.map((bookmark) => [bookmark.tweetId, bookmark] as const),
+          );
+          nextByTweetId.set(canonicalBookmark.tweetId, canonicalBookmark);
+
+          setRuntimeState({
+            bookmarks: Array.from(nextByTweetId.values()).toSorted(compareSortIndexDesc),
+          });
+
+          try {
+            await upsertBookmarks([canonicalBookmark]);
+          } catch {}
+
+          prefetchController.reconcile();
+          return { bookmark: canonicalBookmark, createdOnX: true };
+        } catch (error) {
+          await queueCreateEvent();
+          return {
+            bookmark: null,
+            createdOnX: true,
+            apiError: error instanceof Error ? error.message : "Unknown error",
+          };
+        }
       },
 
       unbookmark: async (tweetId: string) => {
