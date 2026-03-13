@@ -52,6 +52,18 @@ interface RuntimeSeed {
 const DEMO_READING_TAB_KEY = `${LS_READING_TAB}:website-demo`;
 const DEMO_DATA_URL = "data.json";
 
+function getDemoReaderHref(tweetId: string): string {
+  return `#read=${encodeURIComponent(tweetId)}`;
+}
+
+function getDemoReaderTweetId(): string | null {
+  const hash = window.location.hash.startsWith("#")
+    ? window.location.hash.slice(1)
+    : window.location.hash;
+  const tweetId = new URLSearchParams(hash).get("read")?.trim() ?? "";
+  return tweetId || null;
+}
+
 function mergeSettings(raw?: Partial<UserSettings>): UserSettings {
   if (!raw) return DEFAULT_DEMO_SETTINGS;
 
@@ -437,30 +449,43 @@ export function DemoNewTabApp() {
         .then(refreshContinueReading)
         .catch(() => {});
       setSelectedBookmark(bookmark);
+      window.location.hash = `read=${encodeURIComponent(bookmark.tweetId)}`;
     },
     [refreshContinueReading],
   );
 
   const closeReader = useCallback(() => {
     setSelectedBookmark(null);
+    window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
     refreshContinueReading();
   }, [refreshContinueReading]);
+
+  useEffect(() => {
+    const syncReaderFromHash = () => {
+      const tweetId = getDemoReaderTweetId();
+      if (!tweetId) {
+        setSelectedBookmark(null);
+        return;
+      }
+      const target = bookmarks.find((bookmark) => bookmark.tweetId === tweetId) || null;
+      setSelectedBookmark(target);
+      if (target) {
+        ensureReadingProgressExists(target.tweetId)
+          .then(refreshContinueReading)
+          .catch(() => {});
+      }
+    };
+
+    syncReaderFromHash();
+    window.addEventListener("hashchange", syncReaderFromHash);
+    return () => window.removeEventListener("hashchange", syncReaderFromHash);
+  }, [bookmarks, refreshContinueReading]);
 
   const selectedIndex = selectedBookmark
     ? bookmarks.findIndex((bookmark) => bookmark.tweetId === selectedBookmark.tweetId)
     : -1;
   const hasPrev = selectedIndex > 0;
   const hasNext = selectedIndex >= 0 && selectedIndex < bookmarks.length - 1;
-
-  const goToPrev = useCallback(() => {
-    if (selectedIndex <= 0) return;
-    setSelectedBookmark(bookmarks[selectedIndex - 1]);
-  }, [bookmarks, selectedIndex]);
-
-  const goToNext = useCallback(() => {
-    if (selectedIndex < 0 || selectedIndex >= bookmarks.length - 1) return;
-    setSelectedBookmark(bookmarks[selectedIndex + 1]);
-  }, [bookmarks, selectedIndex]);
 
   const handleShuffle = useCallback(() => {
     setShuffleSeed((seed) => seed + 1);
@@ -526,11 +551,11 @@ export function DemoNewTabApp() {
           key={selectedBookmark.tweetId}
           bookmark={selectedBookmark}
           relatedBookmarks={relatedBookmarks}
-          onOpenBookmark={openBookmark}
+          getBookmarkHref={(bookmark) => getDemoReaderHref(bookmark.tweetId)}
           onBack={closeReader}
           onShuffle={handleShuffle}
-          onPrev={hasPrev ? goToPrev : undefined}
-          onNext={hasNext ? goToNext : undefined}
+          prevHref={hasPrev ? getDemoReaderHref(bookmarks[selectedIndex - 1].tweetId) : undefined}
+          nextHref={hasNext ? getDemoReaderHref(bookmarks[selectedIndex + 1].tweetId) : undefined}
           bookmarkAction={{
             label: "Unbookmark",
             active: true,
@@ -551,6 +576,7 @@ export function DemoNewTabApp() {
           activeTab={readingTab}
           onTabChange={handleReadingTabChange}
           onOpenBookmark={openBookmark}
+          getBookmarkHref={(bookmark) => getDemoReaderHref(bookmark.tweetId)}
           onSync={handleSync}
           onBack={() => setView("home")}
           syncButtonStateOverride={demoSyncButtonState}
@@ -572,6 +598,7 @@ export function DemoNewTabApp() {
         backgroundMode={settings.backgroundMode}
         openedTweetIds={openedTweetIds}
         onOpenBookmark={openBookmark}
+        getBookmarkHref={(bookmark) => getDemoReaderHref(bookmark.tweetId)}
         onOpenSettings={() => setSettingsOpen(true)}
         onOpenReading={() => {
           restoreReadingTab();

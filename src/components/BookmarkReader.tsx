@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useHotkeys } from "react-hotkeys-hook";
 import {
   ArrowLeftIcon,
   CaretLeftIcon,
@@ -26,11 +27,11 @@ import { Button } from "./ui/Button";
 interface Props {
   bookmark: Bookmark;
   relatedBookmarks: Bookmark[];
-  onOpenBookmark: (bookmark: Bookmark) => void;
+  getBookmarkHref: (bookmark: Bookmark) => string;
   onBack: () => void;
   onShuffle?: () => void;
-  onPrev?: () => void;
-  onNext?: () => void;
+  prevHref?: string;
+  nextHref?: string;
   bookmarkAction?: {
     label: string;
     onClick: () => void;
@@ -55,11 +56,11 @@ interface NotePanelState {
 export function BookmarkReader({
   bookmark,
   relatedBookmarks,
-  onOpenBookmark,
+  getBookmarkHref,
   onBack,
   onShuffle,
-  onPrev,
-  onNext,
+  prevHref,
+  nextHref,
   bookmarkAction,
   onMarkAsRead,
   onMarkAsUnread,
@@ -206,6 +207,26 @@ export function BookmarkReader({
     [],
   );
 
+  useHotkeys("escape", () => onBack(), {
+    preventDefault: true,
+  }, [onBack]);
+
+  useHotkeys("j, ArrowRight", () => {
+    if (!nextHref) return;
+    window.location.assign(nextHref);
+  }, {
+    enabled: Boolean(nextHref),
+    preventDefault: true,
+  }, [nextHref]);
+
+  useHotkeys("k, ArrowLeft", () => {
+    if (!prevHref) return;
+    window.location.assign(prevHref);
+  }, {
+    enabled: Boolean(prevHref),
+    preventDefault: true,
+  }, [prevHref]);
+
   useEffect(() => {
     const title =
       displayBookmark.article?.title ||
@@ -241,26 +262,26 @@ export function BookmarkReader({
         </div>
       </div>
 
-      {onPrev && (
-        <button
-          onClick={onPrev}
+      {prevHref && (
+        <a
+          href={prevHref}
           aria-label="Previous post"
           title="Previous"
           className="fixed left-4 top-1/2 z-20 -translate-y-1/2 rounded bg-surface/80 p-3 text-muted shadow-md border border-border backdrop-blur-sm transition-colors hover:bg-surface-hover hover:text-foreground"
         >
           <CaretLeftIcon className="size-5" />
-        </button>
+        </a>
       )}
 
-      {onNext && (
-        <button
-          onClick={onNext}
+      {nextHref && (
+        <a
+          href={nextHref}
           aria-label="Next post"
           title="Next"
           className="fixed right-4 top-1/2 z-20 -translate-y-1/2 rounded bg-surface/80 p-3 text-muted shadow-md border border-border backdrop-blur-sm transition-colors hover:bg-surface-hover hover:text-foreground"
         >
           <CaretRightIcon className="size-5" />
-        </button>
+        </a>
       )}
 
       <article
@@ -275,7 +296,7 @@ export function BookmarkReader({
           detailError={detailError}
           detailErrorKind={readerAvailability.errorKind}
           relatedBookmarks={relatedBookmarks}
-          onOpenBookmark={onOpenBookmark}
+          getBookmarkHref={getBookmarkHref}
           onShuffle={onShuffle}
           tweetSectionIdPrefix="section-tweet"
           onToggleRead={onMarkAsRead ? handleToggleRead : undefined}

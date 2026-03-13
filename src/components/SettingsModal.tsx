@@ -28,6 +28,10 @@ interface Props {
 
 const toggleBase =
   "flex items-center justify-center h-7 text-sm font-medium rounded transition-colors transition-shadow text-muted hover:text-foreground data-[pressed]:bg-surface-card data-[pressed]:text-accent data-[pressed]:shadow-sm cursor-default";
+const TOP_SITES_LIMIT_OPTIONS = [3, 4, 5, 6, 8, 10].map((value) => ({
+  value: String(value),
+  label: String(value),
+}));
 
 export function SettingsModal({
   open,
@@ -181,19 +185,16 @@ export function SettingsModal({
                   <div className="flex items-center justify-between pl-4 min-h-10">
                     <span className="text-sm text-muted">Max quick links</span>
                     <Select
-                      value={settings.topSitesLimit}
-                      onChange={(e) =>
+                      value={String(settings.topSitesLimit)}
+                      onValueChange={(value) =>
                         onUpdateSettings({
-                          topSitesLimit: Number(e.target.value),
+                          topSitesLimit: Number(value),
                         })
                       }
-                    >
-                      {[3, 4, 5, 6, 8, 10].map((n) => (
-                        <option key={n} value={n}>
-                          {n}
-                        </option>
-                      ))}
-                    </Select>
+                      options={TOP_SITES_LIMIT_OPTIONS}
+                      ariaLabel="Max quick links"
+                      className="min-w-[4.5rem] justify-between"
+                    />
                   </div>
                 )}
               </div>

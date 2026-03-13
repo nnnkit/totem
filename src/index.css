@@ -257,6 +257,8 @@
         --highlight-bg-hover: rgba(226, 128, 103, 0.26);
         --highlight-bg-active: rgba(226, 128, 103, 0.3);
         --highlight-underline: rgba(226, 128, 103, 0.75);
+        --note-pill-bg: rgba(73, 109, 146, 0.12);
+        --note-pill-fg: #44627f;
 
     }
 
@@ -302,6 +304,8 @@
             --highlight-bg-hover: rgba(226, 128, 103, 0.3);
             --highlight-bg-active: rgba(226, 128, 103, 0.38);
             --highlight-underline: rgba(226, 128, 103, 0.75);
+            --note-pill-bg: rgba(124, 165, 206, 0.18);
+            --note-pill-fg: #c5ddf3;
 
         }
     }
@@ -345,6 +349,8 @@
         --highlight-bg-hover: rgba(226, 128, 103, 0.3);
         --highlight-bg-active: rgba(226, 128, 103, 0.38);
         --highlight-underline: rgba(226, 128, 103, 0.75);
+        --note-pill-bg: rgba(124, 165, 206, 0.18);
+        --note-pill-fg: #c5ddf3;
 
     }
 

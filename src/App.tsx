@@ -1,7 +1,6 @@
-import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { useTheme } from "./hooks/useTheme";
 import { useSettings } from "./hooks/useSettings";
-import { useKeyboardNavigation } from "./hooks/useKeyboard";
 import {
   ensureReadingProgressExists,
   markReadingProgressCompleted,
@@ -11,10 +10,21 @@ import {
 } from "./db";
 import { pickRelatedBookmarks } from "./lib/related";
 import { resetLocalData } from "./lib/reset";
+import {
+  getNewTabUrl,
+  getNewTabView,
+  getReaderReturnSurface,
+  getReaderTweetId,
+  getReaderUrl,
+  isReaderRoute,
+  type ReturnSurface,
+} from "./lib/reader-navigation";
+import { resolveReaderRouteBookmarks } from "./lib/reader-route";
+import type { ReadingTab } from "./lib/reading-list";
 import { LS_READING_TAB } from "./lib/storage-keys";
 import { NewTabHome } from "./components/NewTabHome";
 import { BookmarkReader } from "./components/BookmarkReader";
-import { BookmarksList, type ReadingTab } from "./components/BookmarksList";
+import { BookmarksList } from "./components/BookmarksList";
 import { SettingsModal } from "./components/SettingsModal";
 import { Toast } from "./components/ui/Toast";
 import { Button } from "./components/ui/Button";
@@ -88,6 +98,27 @@ interface ExternalReaderState {
 }
 
 type AppView = "home" | "reading";
+
+function readStoredReadingTab(): ReadingTab {
+  const stored = localStorage.getItem(LS_READING_TAB);
+  if (stored === "unread" || stored === "continue" || stored === "read") {
+    return stored;
+  }
+  return "unread";
+}
+
+function openBookmarkInCurrentTab(tweetId: string, returnSurface: ReturnSurface) {
+  window.location.assign(getReaderUrl(tweetId, undefined, returnSurface));
+}
+
+function goToNewTab(returnSurface: ReturnSurface = "home") {
+  window.location.replace(
+    getNewTabUrl(
+      undefined,
+      returnSurface === "reading" ? returnSurface : undefined,
+    ),
+  );
+}
 
 function formatRetryAfterMs(value?: number): string | null {
   if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
@@ -177,9 +208,8 @@ function ExternalReaderShell({
   );
 }
 
-export default function App() {
+function NewTabRouteApp() {
   const actions = useRuntimeActions();
-  const appMode = useAppMode();
   const bookmarks = useAllBookmarks();
   const displayBookmarks = useDisplayBookmarks();
   const detailedTweetIds = useDetailedTweetIds();
@@ -187,25 +217,13 @@ export default function App() {
   const offlineMode = useIsOffline();
   const { themePreference, setThemePreference } = useTheme();
   const { settings, updateSettings } = useSettings();
-  const [view, setView] = useState<AppView>("home");
-  const pendingReadTweetIdRef = useRef<string | null>(
-    new URLSearchParams(window.location.search).get("read"),
+  const [view, setView] = useState<AppView>(() =>
+    getNewTabView() === "reading" ? "reading" : "home"
   );
-  const [selectedBookmarkRaw, setSelectedBookmark] = useState<Bookmark | null>(
-    null,
-  );
-  const [externalReader, setExternalReader] = useState<ExternalReaderState | null>(
-    null,
-  );
-  const didTransitionRef = useRef(false);
-  const readerOpen = selectedBookmarkRaw !== null || externalReader !== null;
-
-  // Returns the live version from displayBookmarks so the reader sees
-  // updated fields (metrics, bookmarked state) without re-selection.
-  const selectedBookmark = useMemo(() => {
-    if (!selectedBookmarkRaw) return null;
-    return displayBookmarks.find((b) => b.tweetId === selectedBookmarkRaw.tweetId) || null;
-  }, [selectedBookmarkRaw, displayBookmarks]);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [readingTab, setReadingTab] = useState<ReadingTab>(() => readStoredReadingTab());
+  const [toast, setToast] = useState<ToastState | null>(null);
+  const [isResetting, setIsResetting] = useState(false);
 
   const {
     continueReading,
@@ -215,27 +233,16 @@ export default function App() {
     displayBookmarks,
     `${activeAccountId || "__none__"}:${displayBookmarks.length}:${offlineMode ? "offline" : "online"}`,
   );
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [readingTab, setReadingTab] = useState<ReadingTab>(() => {
-    const stored = localStorage.getItem(LS_READING_TAB);
-    if (stored === "unread" || stored === "continue" || stored === "read") return stored;
-    return "unread";
-  });
 
   const restoreReadingTab = useCallback(() => {
-    const stored = localStorage.getItem(LS_READING_TAB);
-    if (stored === "unread" || stored === "continue" || stored === "read") {
-      setReadingTab(stored);
-    } else {
-      setReadingTab("unread");
-    }
+    setReadingTab(readStoredReadingTab());
   }, []);
 
   const handleReadingTabChange = useCallback((tab: ReadingTab) => {
     setReadingTab(tab);
     localStorage.setItem(LS_READING_TAB, tab);
   }, []);
-  const [toast, setToast] = useState<ToastState | null>(null);
+
   const notifySyncBlocked = useCallback((reason?: string, retryAfterMs?: number) => {
     const code = reason as SyncBlockedReason | undefined;
     const retryIn = formatRetryAfterMs(retryAfterMs);
@@ -271,6 +278,7 @@ export default function App() {
         return;
     }
   }, []);
+
   const handleSync = useCallback(() => {
     actions.refresh()
       .then((result) => {
@@ -280,76 +288,28 @@ export default function App() {
       })
       .catch(() => {});
   }, [actions, notifySyncBlocked]);
-  const [shuffleSeed, setShuffleSeed] = useState(0);
-  const handleShuffle = useCallback(() => {
-    setShuffleSeed((s) => s + 1);
-  }, []);
-
-  const relatedBookmarks = useMemo(
-    () => pickRelatedBookmarks(selectedBookmark, displayBookmarks, 3, shuffleSeed > 0),
-    [selectedBookmark, displayBookmarks, shuffleSeed],
-  );
-  const externalReaderBookmark = externalReader?.status === "ready"
-    ? externalReader.bookmark
-    : null;
-  const externalRelatedBookmarks = useMemo(
-    () => pickRelatedBookmarks(externalReaderBookmark, displayBookmarks, 3, shuffleSeed > 0),
-    [displayBookmarks, externalReaderBookmark, shuffleSeed],
-  );
 
   const openedTweetIds = useMemo(
     () => new Set(continueReading.map((item) => item.progress.tweetId)),
     [continueReading],
   );
 
-  const openBookmark = useCallback(
-    (bookmark: Bookmark) => {
-      setExternalReader(null);
-      ensureReadingProgressExists(bookmark.tweetId)
-        .then(refreshContinueReading)
-        .catch(() => {});
-      setSelectedBookmark(bookmark);
-    },
-    [refreshContinueReading],
-  );
-
-  const selectedIndex = selectedBookmark
-    ? displayBookmarks.findIndex((b) => b.id === selectedBookmark.id)
-    : -1;
-  const hasPrev = selectedIndex > 0;
-  const hasNext = selectedIndex >= 0 && selectedIndex < displayBookmarks.length - 1;
-
-  const bookmarksRef = useRef(displayBookmarks);
-  bookmarksRef.current = displayBookmarks;
-  const selectedBookmarkRef = useRef(selectedBookmark);
-  selectedBookmarkRef.current = selectedBookmark;
-
-  const goToPrev = useCallback(() => {
-    const bk = bookmarksRef.current;
-    const sel = selectedBookmarkRef.current;
-    const idx = bk.findIndex((b) => b.id === sel?.id);
-    if (idx > 0) setSelectedBookmark(bk[idx - 1]);
+  const openBookmarkFromHome = useCallback((bookmark: Bookmark) => {
+    openBookmarkInCurrentTab(bookmark.tweetId, "home");
   }, []);
 
-  const goToNext = useCallback(() => {
-    const bk = bookmarksRef.current;
-    const sel = selectedBookmarkRef.current;
-    const idx = bk.findIndex((b) => b.id === sel?.id);
-    if (idx >= 0 && idx < bk.length - 1) setSelectedBookmark(bk[idx + 1]);
+  const openBookmarkFromReading = useCallback((bookmark: Bookmark) => {
+    openBookmarkInCurrentTab(bookmark.tweetId, "reading");
   }, []);
 
-  const closeReader = useCallback(() => {
-    setExternalReader(null);
-    setSelectedBookmark(null);
-    refreshContinueReading();
-  }, [refreshContinueReading]);
-
-  const clearPendingReadParam = useCallback(() => {
-    pendingReadTweetIdRef.current = null;
-    window.history.replaceState({}, "", window.location.pathname);
+  const getHomeBookmarkHref = useCallback((bookmark: Bookmark) => {
+    return getReaderUrl(bookmark.tweetId, undefined, "home");
   }, []);
 
-  const [isResetting, setIsResetting] = useState(false);
+  const getReadingBookmarkHref = useCallback((bookmark: Bookmark) => {
+    return getReaderUrl(bookmark.tweetId, undefined, "reading");
+  }, []);
+
   const handleResetLocalData = useCallback(async () => {
     if (isResetting) return;
     setIsResetting(true);
@@ -357,12 +317,9 @@ export default function App() {
     try {
       await resetLocalData();
     } catch {
-      // Reset is best-effort. The in-memory state is already cleared above.
     } finally {
       refreshContinueReading();
       restoreReadingTab();
-      setExternalReader(null);
-      setSelectedBookmark(null);
       setView("home");
       setSettingsOpen(false);
       setIsResetting(false);
@@ -371,127 +328,13 @@ export default function App() {
   }, [actions, isResetting, refreshContinueReading, restoreReadingTab]);
 
   useEffect(() => {
-    actions.setReaderActive(readerOpen);
-  }, [actions, readerOpen]);
-
-  useKeyboardNavigation({
-    selectedBookmark,
-    filteredBookmarks: displayBookmarks,
-    closeReader,
-    setSelectedBookmark,
-  });
+    actions.setReaderActive(false);
+  }, [actions]);
 
   useEffect(() => {
-    const readTweetId = pendingReadTweetIdRef.current;
-    if (!readTweetId || appMode === "initializing") return;
-    const target = displayBookmarks.find((b) => b.tweetId === readTweetId);
-    if (target) {
-      clearPendingReadParam();
-      openBookmark(target);
-      return;
-    }
-    if (externalReader?.tweetId === readTweetId) return;
-    clearPendingReadParam();
-    setExternalReader({
-      tweetId: readTweetId,
-      status: "loading",
-      bookmark: null,
-      thread: [],
-      error: null,
-      mutation: "idle",
-    });
-
-    let cancelled = false;
-    actions.loadReaderDetail(readTweetId)
-      .then((detail) => {
-        if (cancelled) return;
-        if (!detail.focalTweet) {
-          setExternalReader({
-            tweetId: readTweetId,
-            status: "error",
-            bookmark: null,
-            thread: [],
-            error: "DETAIL_NOT_FOUND",
-            mutation: "idle",
-          });
-          return;
-        }
-
-        setExternalReader({
-          tweetId: readTweetId,
-          status: "ready",
-          bookmark: detail.focalTweet,
-          thread: detail.thread,
-          error: null,
-          mutation: "idle",
-        });
-      })
-      .catch((error) => {
-        if (cancelled) return;
-        setExternalReader({
-          tweetId: readTweetId,
-          status: "error",
-          bookmark: null,
-          thread: [],
-          error: error instanceof Error ? error.message : "DETAIL_ERROR",
-          mutation: "idle",
-        });
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [actions, appMode, clearPendingReadParam, displayBookmarks, externalReader?.tweetId, openBookmark]);
-
-  useEffect(() => {
-    if (externalReader?.status !== "ready" || !externalReader.bookmark) {
-      didTransitionRef.current = false;
-      return;
-    }
-    if (didTransitionRef.current) return;
-    const syncedBookmark = displayBookmarks.find(
-      (bookmark) => bookmark.tweetId === externalReader.bookmark?.tweetId,
-    );
-    if (syncedBookmark) {
-      didTransitionRef.current = true;
-      openBookmark(syncedBookmark);
-    }
-  }, [displayBookmarks, externalReader, openBookmark]);
-
-  const handleExternalUnbookmark = useCallback(async () => {
-    if (externalReader?.status !== "ready" || !externalReader.bookmark) return;
-    if (externalReader.mutation !== "idle") return;
-
-    const tweetId = externalReader.bookmark.tweetId;
-    setExternalReader((current) => current?.status === "ready"
-      ? { ...current, mutation: "unbookmarking" }
-      : current);
-
-    const { apiError } = await actions.unbookmark(tweetId);
-    if (apiError) {
-      setExternalReader((current) => current?.status === "ready"
-        ? { ...current, mutation: "idle" }
-        : current);
-      setToast({
-        message: "Could not remove this bookmark right now.",
-        linkUrl: `https://x.com/i/web/status/${tweetId}`,
-        linkLabel: "Open on X",
-      });
-      return;
-    }
-
-    setExternalReader((current) => {
-      if (current?.status !== "ready" || !current.bookmark) return current;
-      return {
-        ...current,
-        mutation: "idle",
-        bookmark: {
-          ...current.bookmark,
-          bookmarked: false,
-        },
-      };
-    });
-  }, [actions, externalReader]);
+    if (getNewTabView() === null) return;
+    window.history.replaceState({}, "", getNewTabUrl());
+  }, []);
 
   useEffect(() => {
     window.totemExportDemoData = async () => {
@@ -547,22 +390,16 @@ export default function App() {
         `export const DEMO_THREAD_LOOKUP = ${JSON.stringify(payload.threadByTweetId, null, 2)};`,
       ].join("\n\n");
 
-      // eslint-disable-next-line no-console
       console.log("[Totem] Demo export JSON (copy this):");
-      // eslint-disable-next-line no-console
       console.log(json);
-      // eslint-disable-next-line no-console
       console.log("[Totem] Demo fixture snippet:");
-      // eslint-disable-next-line no-console
       console.log(snippet);
 
       if (navigator.clipboard?.writeText) {
         try {
           await navigator.clipboard.writeText(json);
-          // eslint-disable-next-line no-console
           console.log("[Totem] Copied JSON to clipboard.");
         } catch {
-          // Clipboard may be blocked by browser policy; JSON is still logged.
         }
       }
 
@@ -574,110 +411,20 @@ export default function App() {
     };
   }, [bookmarks, settings, themePreference]);
 
-  const mainContent = (() => {
-    if (selectedBookmark) {
-      return (
-        <BookmarkReader
-          key={selectedBookmark.tweetId}
-          bookmark={selectedBookmark}
-          relatedBookmarks={relatedBookmarks}
-          onOpenBookmark={openBookmark}
-          onBack={closeReader}
-          onShuffle={handleShuffle}
-          onPrev={hasPrev ? goToPrev : undefined}
-          onNext={hasNext ? goToNext : undefined}
-          bookmarkAction={offlineMode ? undefined : {
-            label: "Unbookmark",
-            active: true,
-            onClick: async () => {
-              const tweetId = selectedBookmark.tweetId;
-              const tweetUrl = `https://x.com/i/web/status/${tweetId}`;
-              restoreReadingTab();
-              setView("reading");
-              closeReader();
-              const { apiError } = await actions.unbookmark(tweetId);
-              if (apiError) {
-                setToast({
-                  message: "Removed locally. Unbookmark it on X to fully remove.",
-                  linkUrl: tweetUrl,
-                  linkLabel: "Open on X",
-                });
-              }
-            },
-          }}
-          onMarkAsRead={markReadingProgressCompleted}
-          onMarkAsUnread={markReadingProgressUncompleted}
-        />
-      );
-    }
-    if (externalReader?.status === "ready" && externalReader.bookmark) {
-      return (
-        <BookmarkReader
-          key={`external-${externalReader.tweetId}-${externalReader.bookmark.bookmarked ? "saved" : "draft"}`}
-          bookmark={externalReader.bookmark}
-          relatedBookmarks={externalRelatedBookmarks}
-          onOpenBookmark={openBookmark}
-          onBack={closeReader}
-          onShuffle={handleShuffle}
-          bookmarkAction={
-            !offlineMode && externalReader.bookmark.bookmarked
-              ? {
-                label: externalReader.mutation === "unbookmarking" ? "Removing..." : "Unbookmark",
-                active: true,
-                pending: externalReader.mutation === "unbookmarking",
-                onClick: () => { void handleExternalUnbookmark(); },
-              }
-              : undefined
-          }
-          loadDetail={async (tweetId) => {
-            if (tweetId === externalReader.tweetId && externalReader.bookmark) {
-              return {
-                focalTweet: externalReader.bookmark,
-                thread: externalReader.thread,
-              };
-            }
-            return actions.loadReaderDetail(tweetId);
-          }}
-        />
-      );
-    }
-    if (externalReader?.status === "loading" || externalReader?.status === "error") {
-      return (
-        <ExternalReaderShell
-          tweetId={externalReader.tweetId}
-          status={externalReader.status}
-          error={externalReader.error}
-          onBack={closeReader}
-          onRetry={() => {
-            setExternalReader((current) => current
-              ? {
-                ...current,
-                status: "loading",
-                error: null,
-                mutation: "idle",
-              }
-              : current);
-          }}
-          onLogin={() => {
-            void actions.startLogin();
-          }}
-        />
-      );
-    }
-    if (view === "reading") {
-      return (
-        <BookmarksList
-          continueReadingItems={continueReading}
-          unreadBookmarks={allUnread}
-          activeTab={readingTab}
-          onTabChange={handleReadingTabChange}
-          onOpenBookmark={openBookmark}
-          onSync={handleSync}
-          onBack={() => setView("home")}
-        />
-      );
-    }
-    return (
+  const mainContent = view === "reading"
+    ? (
+      <BookmarksList
+        continueReadingItems={continueReading}
+        unreadBookmarks={allUnread}
+        activeTab={readingTab}
+        onTabChange={handleReadingTabChange}
+        onOpenBookmark={openBookmarkFromReading}
+        getBookmarkHref={getReadingBookmarkHref}
+        onSync={handleSync}
+        onBack={() => setView("home")}
+      />
+    )
+    : (
       <NewTabHome
         bookmarks={displayBookmarks}
         onSync={handleSync}
@@ -689,13 +436,16 @@ export default function App() {
         topSitesLimit={settings.topSitesLimit}
         backgroundMode={settings.backgroundMode}
         openedTweetIds={openedTweetIds}
-        onOpenBookmark={openBookmark}
+        onOpenBookmark={openBookmarkFromHome}
+        getBookmarkHref={getHomeBookmarkHref}
         onOpenSettings={() => setSettingsOpen(true)}
-        onOpenReading={() => { restoreReadingTab(); setView("reading"); }}
+        onOpenReading={() => {
+          restoreReadingTab();
+          setView("reading");
+        }}
         isResetting={isResetting}
       />
     );
-  })();
 
   return (
     <>
@@ -720,4 +470,293 @@ export default function App() {
       )}
     </>
   );
+}
+
+function ReaderRouteApp() {
+  const actions = useRuntimeActions();
+  const appMode = useAppMode();
+  const allBookmarks = useAllBookmarks();
+  const displayBookmarks = useDisplayBookmarks();
+  const offlineMode = useIsOffline();
+  const readTweetId = useMemo(() => getReaderTweetId(), []);
+  const returnSurface = useMemo(() => getReaderReturnSurface(), []);
+  const [toast, setToast] = useState<ToastState | null>(null);
+  const [retryKey, setRetryKey] = useState(0);
+  const [shuffleSeed, setShuffleSeed] = useState(0);
+  const [localMutation, setLocalMutation] = useState<"idle" | "unbookmarking">("idle");
+  const [localBookmarkSnapshot, setLocalBookmarkSnapshot] = useState<Bookmark | null>(null);
+  const [externalReader, setExternalReader] = useState<ExternalReaderState | null>(null);
+
+  const {
+    localBookmark,
+    hiddenBookmark,
+    prevBookmark,
+    nextBookmark,
+  } = useMemo(
+    () =>
+      resolveReaderRouteBookmarks(readTweetId, displayBookmarks, allBookmarks),
+    [allBookmarks, displayBookmarks, readTweetId],
+  );
+
+  useEffect(() => {
+    actions.setReaderActive(true);
+    return () => {
+      actions.setReaderActive(false);
+    };
+  }, [actions]);
+
+  useEffect(() => {
+    if (!readTweetId) {
+      goToNewTab(returnSurface);
+      return;
+    }
+    if (appMode === "initializing") {
+      return;
+    }
+    if (hiddenBookmark) {
+      goToNewTab(returnSurface);
+      return;
+    }
+    ensureReadingProgressExists(readTweetId).catch(() => {});
+  }, [appMode, hiddenBookmark, readTweetId, returnSurface]);
+
+  useEffect(() => {
+    if (!localBookmark) return;
+    setLocalBookmarkSnapshot(localBookmark);
+    setLocalMutation("idle");
+  }, [localBookmark]);
+
+  useEffect(() => {
+    if (!readTweetId || appMode === "initializing") return;
+    if (localBookmark) {
+      setExternalReader(null);
+      return;
+    }
+    if (hiddenBookmark) {
+      setExternalReader(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    setExternalReader({
+      tweetId: readTweetId,
+      status: "loading",
+      bookmark: null,
+      thread: [],
+      error: null,
+      mutation: "idle",
+    });
+
+    actions.loadReaderDetail(readTweetId)
+      .then((detail) => {
+        if (cancelled) return;
+        if (!detail.focalTweet) {
+          setExternalReader({
+            tweetId: readTweetId,
+            status: "error",
+            bookmark: null,
+            thread: [],
+            error: "DETAIL_NOT_FOUND",
+            mutation: "idle",
+          });
+          return;
+        }
+
+        setExternalReader({
+          tweetId: readTweetId,
+          status: "ready",
+          bookmark: detail.focalTweet,
+          thread: detail.thread,
+          error: null,
+          mutation: "idle",
+        });
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        setExternalReader({
+          tweetId: readTweetId,
+          status: "error",
+          bookmark: null,
+          thread: [],
+          error: error instanceof Error ? error.message : "DETAIL_ERROR",
+          mutation: "idle",
+        });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [actions, appMode, hiddenBookmark, localBookmark, readTweetId, retryKey]);
+
+  const displayBookmark = localBookmark ||
+    localBookmarkSnapshot ||
+    (externalReader?.status === "ready" ? externalReader.bookmark : null);
+
+  const relatedBookmarks = useMemo(
+    () => pickRelatedBookmarks(displayBookmark, displayBookmarks, 3, shuffleSeed > 0),
+    [displayBookmark, displayBookmarks, shuffleSeed],
+  );
+
+  const handleBack = useCallback(() => {
+    goToNewTab(returnSurface);
+  }, [returnSurface]);
+
+  const getBookmarkHref = useCallback((bookmark: Bookmark) => {
+    return getReaderUrl(bookmark.tweetId, undefined, returnSurface);
+  }, [returnSurface]);
+
+  const handleUnbookmark = useCallback(async () => {
+    if (!displayBookmark) return;
+
+    const tweetId = displayBookmark.tweetId;
+    const tweetUrl = `https://x.com/i/web/status/${tweetId}`;
+    const hasLocalSource = Boolean(localBookmark || localBookmarkSnapshot);
+
+    if (hasLocalSource) {
+      setLocalMutation("unbookmarking");
+      setLocalBookmarkSnapshot({
+        ...(localBookmarkSnapshot || displayBookmark),
+        bookmarked: false,
+      });
+    } else {
+      setExternalReader((current) => current?.status === "ready"
+        ? { ...current, mutation: "unbookmarking" }
+        : current);
+    }
+
+    const { apiError } = await actions.unbookmark(tweetId);
+
+    if (hasLocalSource) {
+      setLocalMutation("idle");
+      if (apiError) {
+        setToast({
+          message: "Removed locally. Unbookmark it on X to fully remove.",
+          linkUrl: tweetUrl,
+          linkLabel: "Open on X",
+        });
+      }
+      return;
+    }
+
+    if (apiError) {
+      setExternalReader((current) => current?.status === "ready"
+        ? { ...current, mutation: "idle" }
+        : current);
+      setToast({
+        message: "Could not remove this bookmark right now.",
+        linkUrl: tweetUrl,
+        linkLabel: "Open on X",
+      });
+      return;
+    }
+
+    setExternalReader((current) => {
+      if (current?.status !== "ready" || !current.bookmark) return current;
+      return {
+        ...current,
+        mutation: "idle",
+        bookmark: {
+          ...current.bookmark,
+          bookmarked: false,
+        },
+      };
+    });
+  }, [actions, displayBookmark, localBookmark, localBookmarkSnapshot]);
+
+  const bookmarkAction = !offlineMode && displayBookmark?.bookmarked
+    ? {
+      label:
+        localMutation === "unbookmarking" || externalReader?.mutation === "unbookmarking"
+          ? "Removing..."
+          : "Unbookmark",
+      active: true,
+      pending: localMutation === "unbookmarking" || externalReader?.mutation === "unbookmarking",
+      onClick: () => {
+        void handleUnbookmark();
+      },
+    }
+    : undefined;
+
+  if (!readTweetId) {
+    return null;
+  }
+
+  if (displayBookmark) {
+    return (
+      <>
+        <BookmarkReader
+          key={displayBookmark.tweetId}
+          bookmark={displayBookmark}
+          relatedBookmarks={relatedBookmarks}
+          getBookmarkHref={getBookmarkHref}
+          onBack={handleBack}
+          onShuffle={() => setShuffleSeed((seed) => seed + 1)}
+          prevHref={
+            prevBookmark
+              ? getReaderUrl(prevBookmark.tweetId, undefined, returnSurface)
+              : undefined
+          }
+          nextHref={
+            nextBookmark
+              ? getReaderUrl(nextBookmark.tweetId, undefined, returnSurface)
+              : undefined
+          }
+          bookmarkAction={bookmarkAction}
+          onMarkAsRead={markReadingProgressCompleted}
+          onMarkAsUnread={markReadingProgressUncompleted}
+          loadDetail={
+            externalReader?.status === "ready" && externalReader.bookmark
+              ? async (tweetId) => {
+                if (tweetId === externalReader.tweetId) {
+                  return {
+                    focalTweet: externalReader.bookmark,
+                    thread: externalReader.thread,
+                  };
+                }
+                return actions.loadReaderDetail(tweetId);
+              }
+              : undefined
+          }
+        />
+        {toast && (
+          <Toast
+            message={toast.message}
+            linkUrl={toast.linkUrl}
+            linkLabel={toast.linkLabel}
+            onDismiss={() => setToast(null)}
+          />
+        )}
+      </>
+    );
+  }
+
+  return (
+    <>
+      <ExternalReaderShell
+        tweetId={readTweetId}
+        status={externalReader?.status === "error" ? "error" : "loading"}
+        error={externalReader?.error || null}
+        onBack={handleBack}
+        onRetry={() => {
+          setRetryKey((value) => value + 1);
+        }}
+        onLogin={() => {
+          void actions.startLogin();
+        }}
+      />
+      {toast && (
+        <Toast
+          message={toast.message}
+          linkUrl={toast.linkUrl}
+          linkLabel={toast.linkLabel}
+          onDismiss={() => setToast(null)}
+        />
+      )}
+    </>
+  );
+}
+
+export default function App() {
+  return isReaderRoute() ? <ReaderRouteApp /> : <NewTabRouteApp />;
 }

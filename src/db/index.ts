@@ -6,6 +6,7 @@ import type {
   Highlight,
 } from "../types";
 import { sanitizeBookmark } from "../lib/sanitize";
+import { emitReaderActivity } from "../lib/reader-activity";
 import {
   DB_ACCOUNT_PREFIX,
   DB_NAME,
@@ -389,6 +390,7 @@ export async function upsertReadingProgress(
 ): Promise<void> {
   const db = await getDb();
   await db.put(PROGRESS_STORE_NAME, progress);
+  emitReaderActivity();
 }
 
 export async function ensureReadingProgressExists(
@@ -410,6 +412,7 @@ export async function ensureReadingProgressExists(
       completed: false,
     });
   }
+  emitReaderActivity();
 }
 
 export async function markReadingProgressCompleted(
@@ -435,6 +438,7 @@ export async function markReadingProgressCompleted(
       completed: true,
     });
   }
+  emitReaderActivity();
 }
 
 export async function markReadingProgressUncompleted(
@@ -449,6 +453,7 @@ export async function markReadingProgressUncompleted(
       lastReadAt: Date.now(),
       completed: false,
     });
+    emitReaderActivity();
   }
 }
 
@@ -498,12 +503,14 @@ export async function getCompletedTweetIds(): Promise<Set<string>> {
 export async function upsertHighlight(highlight: Highlight): Promise<void> {
   const db = await getDb();
   await db.put(HIGHLIGHTS_STORE_NAME, highlight);
+  emitReaderActivity();
 }
 
 export async function deleteHighlight(id: string): Promise<void> {
   if (!id) return;
   const db = await getDb();
   await db.delete(HIGHLIGHTS_STORE_NAME, id);
+  emitReaderActivity();
 }
 
 export async function getHighlightsByTweetId(tweetId: string): Promise<Highlight[]> {
@@ -527,8 +534,13 @@ export async function getHighlightCountsByTweetIds(
   for (const tweetId of tweetIds) {
     const highlights = await index.getAll(IDBKeyRange.only(tweetId));
     if (highlights.length > 0) {
-      const notes = highlights.filter((h) => h.note).length;
-      result.set(tweetId, { highlights: highlights.length, notes });
+      const notes = highlights.filter((highlight) =>
+        highlight.type === "note" || Boolean(highlight.note)
+      ).length;
+      result.set(tweetId, {
+        highlights: highlights.length - notes,
+        notes,
+      });
     }
   }
   return result;

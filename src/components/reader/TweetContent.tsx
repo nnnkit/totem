@@ -320,7 +320,7 @@ interface Props {
   detailError: string | null;
   detailErrorKind: DetailErrorKind;
   relatedBookmarks: Bookmark[];
-  onOpenBookmark: (bookmark: Bookmark) => void;
+  getBookmarkHref: (bookmark: Bookmark) => string;
   onShuffle?: () => void;
   tweetSectionIdPrefix?: string;
   onToggleRead?: () => void;
@@ -337,7 +337,7 @@ export const TweetContent = memo(function TweetContent({
   detailError,
   detailErrorKind,
   relatedBookmarks,
-  onOpenBookmark,
+  getBookmarkHref,
   onShuffle,
   tweetSectionIdPrefix,
   onToggleRead,
@@ -401,7 +401,7 @@ export const TweetContent = memo(function TweetContent({
 
       <TweetRecommendations
         relatedBookmarks={relatedBookmarks}
-        onOpenBookmark={onOpenBookmark}
+        getBookmarkHref={getBookmarkHref}
         onShuffle={onShuffle}
       />
     </div>
