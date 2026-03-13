@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { resetLocalData } from "../reset";
-import { LS_BOOT_SYNC_POLICY, LS_READING_TAB } from "../storage-keys";
+import {
+  LS_BOOT_SYNC_POLICY,
+  LS_READING_SORTS,
+  LS_READING_TAB,
+  LS_RETURN_SURFACE,
+} from "../storage-keys";
 
 const mocks = vi.hoisted(() => ({
   closeDb: vi.fn(),
@@ -35,6 +40,12 @@ describe("resetLocalData", () => {
     const localStorageMock = createLocalStorageMock({
       [LS_BOOT_SYNC_POLICY]: "manual_only_until_seeded",
       [LS_READING_TAB]: "unread",
+      [LS_READING_SORTS]: JSON.stringify({
+        unread: "oldest",
+        continue: "recent",
+        read: "annotated",
+      }),
+      [LS_RETURN_SURFACE]: "reading",
     });
     vi.stubGlobal("localStorage", localStorageMock);
     vi.stubGlobal("chrome", {
@@ -69,5 +80,7 @@ describe("resetLocalData", () => {
     expect(mocks.closeDb).toHaveBeenCalled();
     expect(localStorage.getItem(LS_BOOT_SYNC_POLICY)).toBe("manual_only_until_seeded");
     expect(localStorage.getItem(LS_READING_TAB)).toBeNull();
+    expect(localStorage.getItem(LS_READING_SORTS)).toBeNull();
+    expect(localStorage.getItem(LS_RETURN_SURFACE)).toBeNull();
   });
 });

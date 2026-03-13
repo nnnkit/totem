@@ -205,14 +205,19 @@ interface ActionBarProps {
   viewOnXUrl: string;
   onToggleRead?: () => void;
   isMarkedRead?: boolean;
-  onDeleteBookmark?: () => void;
+  bookmarkAction?: {
+    label: string;
+    onClick: () => void;
+    active?: boolean;
+    pending?: boolean;
+  };
 }
 
 function ActionBar({
   viewOnXUrl,
   onToggleRead,
   isMarkedRead,
-  onDeleteBookmark,
+  bookmarkAction,
 }: ActionBarProps) {
   const grokUrl = buildGrokUrl(viewOnXUrl);
 
@@ -229,15 +234,19 @@ function ActionBar({
       </Button>
 
       <div className="ml-auto flex items-center gap-1">
-        {onDeleteBookmark && (
+        {bookmarkAction && (
           <Button
             variant="ghost"
             size="sm"
-            onClick={onDeleteBookmark}
-            className="hover:text-red-500"
+            onClick={bookmarkAction.onClick}
+            disabled={bookmarkAction.pending}
+            className={bookmarkAction.active ? "hover:text-red-500" : undefined}
           >
-            <BookmarkSimpleIcon weight="fill" className="size-3.5" />
-            Unbookmark
+            <BookmarkSimpleIcon
+              weight={bookmarkAction.active ? "fill" : "regular"}
+              className="size-3.5"
+            />
+            {bookmarkAction.label}
           </Button>
         )}
         {onToggleRead && (
@@ -311,12 +320,12 @@ interface Props {
   detailError: string | null;
   detailErrorKind: DetailErrorKind;
   relatedBookmarks: Bookmark[];
-  onOpenBookmark: (bookmark: Bookmark) => void;
+  getBookmarkHref: (bookmark: Bookmark) => string;
   onShuffle?: () => void;
   tweetSectionIdPrefix?: string;
   onToggleRead?: () => void;
   isMarkedRead?: boolean;
-  onDeleteBookmark?: () => void;
+  bookmarkAction?: ActionBarProps["bookmarkAction"];
   onLogin?: () => void;
 }
 
@@ -328,12 +337,12 @@ export const TweetContent = memo(function TweetContent({
   detailError,
   detailErrorKind,
   relatedBookmarks,
-  onOpenBookmark,
+  getBookmarkHref,
   onShuffle,
   tweetSectionIdPrefix,
   onToggleRead,
   isMarkedRead,
-  onDeleteBookmark,
+  bookmarkAction,
   onLogin,
 }: Props) {
   const viewOnXUrl = `https://x.com/${displayBookmark.author.screenName}/status/${displayBookmark.tweetId}`;
@@ -354,7 +363,7 @@ export const TweetContent = memo(function TweetContent({
           viewOnXUrl={viewOnXUrl}
           onToggleRead={onToggleRead}
           isMarkedRead={isMarkedRead}
-          onDeleteBookmark={onDeleteBookmark}
+          bookmarkAction={bookmarkAction}
         />
       </div>
 
@@ -386,13 +395,13 @@ export const TweetContent = memo(function TweetContent({
           viewOnXUrl={viewOnXUrl}
           onToggleRead={onToggleRead}
           isMarkedRead={isMarkedRead}
-          onDeleteBookmark={onDeleteBookmark}
+          bookmarkAction={bookmarkAction}
         />
       </div>
 
       <TweetRecommendations
         relatedBookmarks={relatedBookmarks}
-        onOpenBookmark={onOpenBookmark}
+        getBookmarkHref={getBookmarkHref}
         onShuffle={onShuffle}
       />
     </div>

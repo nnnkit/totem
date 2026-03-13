@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   deleteBookmark: vi.fn(),
   fetchBookmarkPage: vi.fn(),
   getBookmarkEvents: vi.fn(),
+  queueBookmarkMutation: vi.fn(),
   ackBookmarkEvents: vi.fn(),
   fetchTweetDetail: vi.fn(),
   reserveSyncRun: vi.fn(),
@@ -37,6 +38,7 @@ vi.mock("../../api/core/bookmarks", () => ({
   deleteBookmark: mocks.deleteBookmark,
   fetchBookmarkPage: mocks.fetchBookmarkPage,
   getBookmarkEvents: mocks.getBookmarkEvents,
+  queueBookmarkMutation: mocks.queueBookmarkMutation,
 }));
 
 vi.mock("../../api/core/posts", () => ({
@@ -65,6 +67,7 @@ function createBookmark(tweetId: string): Bookmark {
     text: `Tweet ${tweetId}`,
     createdAt: 1,
     sortIndex: tweetId,
+    bookmarked: false,
     author: {
       name: "Author",
       screenName: "author",
@@ -175,6 +178,7 @@ beforeEach(() => {
   mocks.deleteBookmark.mockResolvedValue(undefined);
   mocks.fetchBookmarkPage.mockResolvedValue({ bookmarks: [], cursor: null, stopOnEmptyResponse: true });
   mocks.getBookmarkEvents.mockResolvedValue([]);
+  mocks.queueBookmarkMutation.mockResolvedValue(undefined);
   mocks.ackBookmarkEvents.mockResolvedValue(undefined);
   mocks.fetchTweetDetail.mockResolvedValue({ focalTweet: null, thread: [] });
   mocks.reserveSyncRun.mockResolvedValue({
@@ -447,4 +451,5 @@ describe("runtime-store sync", () => {
       errorCode: undefined,
     });
   });
+
 });

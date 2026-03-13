@@ -10,6 +10,7 @@ function makeBookmark(tweetId: string): Bookmark {
     text: "",
     createdAt: 0,
     sortIndex: tweetId,
+    bookmarked: false,
     author: { name: "", screenName: "", profileImageUrl: "", verified: false },
     metrics: { likes: 0, retweets: 0, replies: 0, views: 0, bookmarks: 0 },
     media: [],

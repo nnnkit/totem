@@ -43,6 +43,16 @@
       ],
       "run_at": "document_start",
       "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://x.com/*"
+      ],
+      "js": [
+        "assets/open-in-totem.js"
+      ],
+      "run_at": "document_idle",
+      "world": "ISOLATED"
     }
   ],
   "background": {

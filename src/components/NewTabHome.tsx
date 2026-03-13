@@ -53,6 +53,7 @@ interface Props {
   backgroundMode: BackgroundMode;
   openedTweetIds: Set<string>;
   onOpenBookmark: (bookmark: Bookmark) => void;
+  getBookmarkHref: (bookmark: Bookmark) => string;
   onOpenSettings: () => void;
   onOpenReading: () => void;
   isResetting?: boolean;
@@ -82,6 +83,7 @@ export function NewTabHome({
   backgroundMode,
   openedTweetIds,
   onOpenBookmark,
+  getBookmarkHref,
   onOpenSettings,
   onOpenReading,
   isResetting,
@@ -280,10 +282,11 @@ export function NewTabHome({
       case "bookmark_card":
         if (!currentItem) return null;
         return (
-          <article
+          <a
+            href={getBookmarkHref(currentItem.bookmark)}
             className={cn(
               cardBase,
-              "cursor-pointer p-4 hover:bg-main-bg-hover max-sm:py-3.5",
+              "block cursor-pointer p-4 no-underline hover:bg-main-bg-hover max-sm:py-3.5",
               cardEngaged && "bg-main-bg-hover",
             )}
             onMouseEnter={() => setCardEngaged(true)}
@@ -298,16 +301,13 @@ export function NewTabHome({
                 setCardEngaged(false);
               }
             }}
-            onClick={() => openItem(currentItem)}
             onKeyDown={(event) => {
               if (event.key === " ") {
                 event.preventDefault();
                 event.stopPropagation();
-                openItem(currentItem);
+                onOpenBookmark(currentItem.bookmark);
               }
             }}
-            tabIndex={0}
-            role="button"
             aria-label={`Read ${currentItem.title} by @${
               currentItem.bookmark.author.screenName
             }${
@@ -356,7 +356,7 @@ export function NewTabHome({
                 </div>
               </div>
             </div>
-          </article>
+          </a>
         );
       case "syncing_bootstrap":
         return (

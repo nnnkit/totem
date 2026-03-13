@@ -12,6 +12,8 @@ export default defineConfig({
     rollupOptions: {
       input: {
         newtab: resolve(__dirname, "newtab.html"),
+        reader: resolve(__dirname, "reader.html"),
+        "open-in-totem": resolve(__dirname, "src/content/open-in-totem.ts"),
       },
       output: {
         entryFileNames: "assets/[name].js",

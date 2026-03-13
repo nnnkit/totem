@@ -745,6 +745,7 @@ function parseTweetRecord(
       text: displayText,
       createdAt: toTimestamp(legacy.created_at),
       sortIndex: sortIndex || tweetId,
+      bookmarked: legacy.bookmarked === true,
       author,
       metrics: {
         likes: toNumber(legacy.favorite_count),

@@ -63,6 +63,7 @@ describe("runtime selectors", () => {
         text: "Hello",
         createdAt: 1,
         sortIndex: "tweet-1",
+        bookmarked: false,
         author: {
           name: "Author",
           screenName: "author",

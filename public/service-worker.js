@@ -6,6 +6,7 @@
 
 const CAPTURED_HEADERS = new Set([
   "authorization",
+  "accept-language",
   "cookie",
   "x-csrf-token",
   "x-client-uuid",
@@ -1035,19 +1036,6 @@ function recordWeakAuthNegativeSignal(reason) {
   return markAuthLoggedOut(reason, true).catch(() => {});
 }
 
-function incrementTransactionId(str) {
-  if (!str) return str;
-  const digits = [];
-  for (let i = 0; i < str.length; i++) {
-    if (str[i] >= "0" && str[i] <= "9") digits.push(i);
-  }
-  if (digits.length === 0) return str;
-  const idx = digits[Math.floor(Math.random() * digits.length)];
-  const bump = Math.floor(Math.random() * 8) + 1;
-  const newDigit = ((parseInt(str[idx], 10) + bump) % 10).toString();
-  return str.slice(0, idx) + newDigit + str.slice(idx + 1);
-}
-
 function reAuthSilently() {
   if (reauthInProgress) return Promise.resolve(false);
   reauthInProgress = true;
@@ -1096,12 +1084,14 @@ function reAuthSilently() {
   });
 }
 
-async function buildHeaders() {
+async function buildHeaders(options = {}) {
   const stored = await chrome.storage.local.get(["totem_auth_headers"]);
   const auth = stored.totem_auth_headers;
   if (!auth?.authorization) throw new Error("NO_AUTH");
 
+  const includeClientTransactionId = options.includeClientTransactionId !== false;
   const headers = {
+    accept: "*/*",
     authorization: auth["authorization"],
     "x-csrf-token": auth["x-csrf-token"],
     "x-twitter-active-user": auth["x-twitter-active-user"] || "yes",
@@ -1110,12 +1100,13 @@ async function buildHeaders() {
     "content-type": "application/json",
   };
 
+  if (auth["accept-language"]) headers["accept-language"] = auth["accept-language"];
   if (auth["cookie"]) headers["cookie"] = auth["cookie"];
   if (auth["x-client-uuid"]) headers["x-client-uuid"] = auth["x-client-uuid"];
-  if (auth["x-client-transaction-id"]) {
-    headers["x-client-transaction-id"] = incrementTransactionId(
-      auth["x-client-transaction-id"]
-    );
+  // x.com generates this token. Replaying the captured value is safer than
+  // mutating it into an opaque value the mutation endpoint can reject.
+  if (includeClientTransactionId && auth["x-client-transaction-id"]) {
+    headers["x-client-transaction-id"] = auth["x-client-transaction-id"];
   }
 
   return headers;
@@ -1538,11 +1529,18 @@ async function handleBookmarkMutationMessage(message) {
       ? message.operation
       : null;
   if (!operation) return { ok: false };
+  const confirmed = message?.confirmed === true;
 
   // CreateBookmark events are only pushed from onCompleted (after x.com
   // confirms success). Pushing here would trigger a page fetch before
   // x.com has processed the bookmark, finding nothing new.
-  if (operation === "CreateBookmark") return { ok: true };
+  if (operation === "CreateBookmark") {
+    if (!confirmed) return { ok: true };
+    const tweetId = typeof message?.tweetId === "string" ? message.tweetId : "";
+    const source = typeof message?.source === "string" ? message.source : "content-script";
+    await pushBookmarkEvent(operation, tweetId, source);
+    return { ok: true };
+  }
 
   const tweetId = typeof message?.tweetId === "string" ? message.tweetId : "";
   const source = typeof message?.source === "string" ? message.source : "content-script";
@@ -2352,6 +2350,17 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     handleDeleteBookmark(message.tweetId)
       .then(sendResponse)
       .catch((err) => sendResponse({ error: err.message }));
+    return true;
+  }
+  if (message.type === "OPEN_TOTEM_READER") {
+    const tweetId = typeof message.tweetId === "string" ? message.tweetId : "";
+    const readParam = tweetId ? `?read=${encodeURIComponent(tweetId)}` : "";
+    chrome.tabs.create({
+      url: chrome.runtime.getURL(`reader.html${readParam}`),
+      active: true,
+    }, (tab) => {
+      sendResponse({ ok: true, tabId: tab?.id });
+    });
     return true;
   }
   if (message.type === "BOOKMARK_MUTATION") {

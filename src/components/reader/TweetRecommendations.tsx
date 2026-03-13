@@ -5,13 +5,13 @@ import { Button } from "../ui/Button";
 
 interface Props {
   relatedBookmarks: Bookmark[];
-  onOpenBookmark: (bookmark: Bookmark) => void;
+  getBookmarkHref: (bookmark: Bookmark) => string;
   onShuffle?: () => void;
 }
 
 export function TweetRecommendations({
   relatedBookmarks,
-  onOpenBookmark,
+  getBookmarkHref,
   onShuffle,
 }: Props) {
   if (relatedBookmarks.length === 0) return null;
@@ -37,11 +37,10 @@ export function TweetRecommendations({
 
       <div className="grid grid-cols-3 gap-2">
         {relatedBookmarks.slice(0, 3).map((related) => (
-          <button
+          <a
             key={related.tweetId}
-            type="button"
-            onClick={() => onOpenBookmark(related)}
-            className="w-full rounded border border-border bg-surface-card/60 p-2.5 text-left transition-colors hover:bg-surface-hover"
+            href={getBookmarkHref(related)}
+            className="w-full rounded border border-border bg-surface-card/60 p-2.5 text-left no-underline transition-colors hover:bg-surface-hover"
           >
             <div className="flex items-center gap-1.5">
               <img
@@ -62,7 +61,7 @@ export function TweetRecommendations({
             <p className="mt-2 line-clamp-2 text-xs leading-5 text-pretty text-foreground">
               {compactPreview(related.text)}
             </p>
-          </button>
+          </a>
         ))}
       </div>
     </section>
