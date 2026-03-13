@@ -267,6 +267,7 @@ function extractContentBlocks(
     inlineStyleRanges: parseInlineStyleRanges(block.inlineStyleRanges),
     entityRanges: parseEntityRanges(block.entityRanges),
     depth: typeof block.depth === "number" ? block.depth : 0,
+    data: parseArticleBlockData(block.data),
   }));
 
   const mediaUrlMap = mediaEntities
@@ -315,6 +316,42 @@ function extractContentBlocks(
   }
 
   return { blocks, entityMap };
+}
+
+function parseArticleBlockData(
+  value: unknown,
+): ArticleContentBlock["data"] | undefined {
+  const data = asRecord(value);
+  if (!data) return undefined;
+
+  const parseRanges = (
+    input: unknown,
+  ): Array<{ fromIndex: number; toIndex: number; text?: string }> | undefined => {
+    const items: Array<{ fromIndex: number; toIndex: number; text?: string }> = [];
+    for (const item of asRecords(input)) {
+      const fromIndex = typeof item.fromIndex === "number" ? item.fromIndex : -1;
+      const toIndex = typeof item.toIndex === "number" ? item.toIndex : -1;
+      if (fromIndex < 0 || toIndex <= fromIndex) continue;
+
+      const text = decodeHtmlEntities(asString(item.text) || "");
+      items.push({
+        fromIndex,
+        toIndex,
+        text: text || undefined,
+      });
+    }
+
+    return items.length > 0 ? items : undefined;
+  };
+
+  const urls = parseRanges(data.urls);
+  const mentions = parseRanges(data.mentions);
+  if (!urls && !mentions) return undefined;
+
+  return {
+    ...(urls ? { urls } : {}),
+    ...(mentions ? { mentions } : {}),
+  };
 }
 
 function articleTextFromNode(node: UnknownRecord): string {

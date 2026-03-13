@@ -94,6 +94,10 @@ export interface ArticleContentBlock {
   inlineStyleRanges: Array<{ offset: number; length: number; style: string }>;
   entityRanges: Array<{ offset: number; length: number; key: number }>;
   depth: number;
+  data?: {
+    urls?: Array<{ fromIndex: number; toIndex: number; text?: string }>;
+    mentions?: Array<{ fromIndex: number; toIndex: number; text?: string }>;
+  };
 }
 
 export interface ArticleContentEntity {

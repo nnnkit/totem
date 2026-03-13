@@ -132,6 +132,7 @@ export function renderBlockInlineContent(
   const italic = new Uint8Array(length);
   const code = new Uint8Array(length);
   const entityKey: (number | -1)[] = new Array(length).fill(-1);
+  const linkHref: string[] = new Array(length).fill("");
 
   for (const range of inlineStyleRanges) {
     const end = Math.min(range.offset + range.length, length);
@@ -150,12 +151,27 @@ export function renderBlockInlineContent(
     }
   }
 
+  for (const range of block.data?.urls || []) {
+    const start = Math.max(0, Math.min(range.fromIndex, length));
+    const rawEnd =
+      typeof range.toIndex === "number"
+        ? range.toIndex
+        : start + (range.text?.length || 0);
+    const end = Math.max(start, Math.min(rawEnd, length));
+    const href = sanitizeUrl((range.text || text.slice(start, end)).trim());
+    if (!href || end <= start) continue;
+    for (let i = start; i < end; i++) {
+      if (entityKey[i] < 0) linkHref[i] = href;
+    }
+  }
+
   type Segment = {
     text: string;
     bold: boolean;
     italic: boolean;
     code: boolean;
     entityKey: number;
+    linkHref: string;
   };
   const segments: Segment[] = [];
 
@@ -166,6 +182,7 @@ export function renderBlockInlineContent(
       italic: italic[i] === 1,
       code: code[i] === 1,
       entityKey: entityKey[i],
+      linkHref: linkHref[i],
     };
     const last = segments[segments.length - 1];
     if (
@@ -173,7 +190,8 @@ export function renderBlockInlineContent(
       last.bold === seg.bold &&
       last.italic === seg.italic &&
       last.code === seg.code &&
-      last.entityKey === seg.entityKey
+      last.entityKey === seg.entityKey &&
+      last.linkHref === seg.linkHref
     ) {
       last.text += seg.text;
     } else {
@@ -196,10 +214,10 @@ export function renderBlockInlineContent(
 
   const raw = segments
     .map((seg) => {
-      let html = escapeHtml(seg.text);
-      if (seg.entityKey < 0) {
-        html = linkifyMentionsAndTags(html);
-      }
+      let html =
+        seg.code || seg.linkHref || seg.entityKey >= 0
+          ? escapeHtml(seg.text)
+          : linkifyText(seg.text);
       if (seg.code) html = `<code>${html}</code>`;
       if (seg.bold && !seg.code) html = `<strong>${html}</strong>`;
       if (seg.italic) html = `<em>${html}</em>`;
@@ -211,6 +229,8 @@ export function renderBlockInlineContent(
             html = `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${html}</a>`;
           }
         }
+      } else if (seg.linkHref) {
+        html = `<a href="${escapeHtml(seg.linkHref)}" target="_blank" rel="noopener noreferrer">${html}</a>`;
       }
       return html;
     })
