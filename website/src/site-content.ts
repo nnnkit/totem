@@ -46,7 +46,8 @@ export type PrivacyPermission = {
   access: string;
 };
 
-const chromeWebStoreInstallUrl = "";
+const chromeWebStoreInstallUrl =
+  "https://chromewebstore.google.com/detail/acpkgdfhoaalmnhjifhneghcgfnjkglo";
 const demoVideoEmbedUrl =
   "https://www.youtube.com/embed/75RNtgMHsPA?rel=0&modestbranding=1";
 const githubReleaseUrl = "https://github.com/nnnkit/totem/releases/latest";
@@ -55,8 +56,8 @@ const installUrl = hasWebStoreInstall
   ? chromeWebStoreInstallUrl
   : githubReleaseUrl;
 const installButtonLabel = hasWebStoreInstall
-  ? "Install from Chrome Web Store"
-  : "Install extension";
+  ? "Install Totem"
+  : "Install Totem";
 const featureItems: FeatureItem[] = [
   {
     title: "Clean reader, zero feed noise",
