@@ -1,6 +1,11 @@
 export type ReturnSurface = "home" | "reading";
 
 const VALID_RETURN_SURFACES = new Set<ReturnSurface>(["home", "reading"]);
+const TWEET_ID_PATTERN = /^\d{1,20}$/;
+
+export function isValidTweetId(value: string): boolean {
+  return TWEET_ID_PATTERN.test(value);
+}
 
 function getBaseUrl(): string {
   if (typeof window !== "undefined") return window.location.href;
@@ -73,7 +78,8 @@ export function getNewTabView(
 
 export function getReaderTweetId(search = typeof window !== "undefined" ? window.location.search : ""): string | null {
   const tweetId = new URLSearchParams(search).get("read")?.trim() ?? "";
-  return tweetId || null;
+  if (!tweetId || !isValidTweetId(tweetId)) return null;
+  return tweetId;
 }
 
 export function isReaderRoute(pathname = typeof window !== "undefined" ? window.location.pathname : ""): boolean {

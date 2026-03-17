@@ -4,7 +4,6 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vite";
 import { fileURLToPath } from "url";
-import { shareRoutePlugin } from "../../vite.share-routes";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -36,7 +35,7 @@ function copyExtensionSiteAssets() {
 
 export default defineConfig({
   root: resolve(__dirname),
-  plugins: [react(), tailwindcss(), copyExtensionSiteAssets(), shareRoutePlugin("")],
+  plugins: [react(), tailwindcss(), copyExtensionSiteAssets()],
   publicDir: resolve(__dirname, "public"),
   base: "/",
   build: {
@@ -47,7 +46,6 @@ export default defineConfig({
       input: {
         index: resolve(__dirname, "index.html"),
         privacy: resolve(__dirname, "privacy/index.html"),
-        share: resolve(__dirname, "share/index.html"),
         demo: resolve(__dirname, "demo/index.html"),
       },
       output: {

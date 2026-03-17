@@ -11,12 +11,7 @@ if (!root) {
 }
 
 const pageAttr = root.dataset.page;
-const page: SitePage =
-  pageAttr === "privacy"
-    ? "privacy"
-    : pageAttr === "share"
-      ? "share"
-      : "landing";
+const page: SitePage = pageAttr === "privacy" ? "privacy" : "landing";
 
 createRoot(root).render(
   <StrictMode>

@@ -202,7 +202,12 @@ function stopEvent(event: MouseEvent) {
   event.stopPropagation();
 }
 
+function isValidTweetId(value: string): boolean {
+  return /^\d{1,20}$/.test(value);
+}
+
 function openTotemReader(tweetId: string) {
+  if (!isValidTweetId(tweetId)) return;
   chrome.runtime.sendMessage({
     type: "OPEN_TOTEM_READER",
     tweetId,

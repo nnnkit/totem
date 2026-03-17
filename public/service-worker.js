@@ -1529,6 +1529,10 @@ async function handleBookmarkMutationMessage(message) {
       ? message.operation
       : null;
   if (!operation) return { ok: false };
+
+  const tweetId = typeof message?.tweetId === "string" ? message.tweetId : "";
+  if (!tweetId || !/^\d{1,20}$/.test(tweetId)) return { ok: false };
+  const source = typeof message?.source === "string" ? message.source : "content-script";
   const confirmed = message?.confirmed === true;
 
   // CreateBookmark events are only pushed from onCompleted (after x.com
@@ -1536,14 +1540,10 @@ async function handleBookmarkMutationMessage(message) {
   // x.com has processed the bookmark, finding nothing new.
   if (operation === "CreateBookmark") {
     if (!confirmed) return { ok: true };
-    const tweetId = typeof message?.tweetId === "string" ? message.tweetId : "";
-    const source = typeof message?.source === "string" ? message.source : "content-script";
     await pushBookmarkEvent(operation, tweetId, source);
     return { ok: true };
   }
 
-  const tweetId = typeof message?.tweetId === "string" ? message.tweetId : "";
-  const source = typeof message?.source === "string" ? message.source : "content-script";
   await pushBookmarkEvent(operation, tweetId, source);
   return { ok: true };
 }
@@ -2287,7 +2287,19 @@ chrome.webRequest.onCompleted.addListener(
 // MESSAGE HANDLER
 // ═══════════════════════════════════════════════════════════
 
+function isExtensionOrTrustedSender(sender) {
+  // Messages from extension pages (newtab, reader, popup) have no tab/url
+  if (!sender.tab) return true;
+  // Content scripts on x.com
+  if (sender.url && /^https:\/\/x\.com(\/|$)/.test(sender.url)) return true;
+  return false;
+}
+
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (!isExtensionOrTrustedSender(_sender)) {
+    sendResponse({ error: "UNTRUSTED_SENDER" });
+    return true;
+  }
   if (message.type === "CHECK_AUTH") {
     handleCheckAuth().then(sendResponse);
     return true;
@@ -2354,7 +2366,11 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   }
   if (message.type === "OPEN_TOTEM_READER") {
     const tweetId = typeof message.tweetId === "string" ? message.tweetId : "";
-    const readParam = tweetId ? `?read=${encodeURIComponent(tweetId)}` : "";
+    if (!tweetId || !/^\d{1,20}$/.test(tweetId)) {
+      sendResponse({ error: "INVALID_TWEET_ID" });
+      return true;
+    }
+    const readParam = `?read=${encodeURIComponent(tweetId)}`;
     chrome.tabs.create({
       url: chrome.runtime.getURL(`reader.html${readParam}`),
       active: true,

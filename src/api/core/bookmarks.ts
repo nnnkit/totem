@@ -1,4 +1,5 @@
 import { asRecord, asString, toNumber } from "../../lib/json";
+import { isValidTweetId } from "../../lib/reader-navigation";
 import {
   parseBookmarkPagePayload,
   type BookmarkPageResult,
@@ -68,6 +69,7 @@ export async function fetchBookmarkPage(
 }
 
 export async function deleteBookmark(tweetId: string): Promise<void> {
+  if (!isValidTweetId(tweetId)) throw new Error("INVALID_TWEET_ID");
   const response = (await chrome.runtime.sendMessage({
     type: "DELETE_BOOKMARK",
     tweetId,
@@ -83,6 +85,7 @@ export async function queueBookmarkMutation(
     confirmed?: boolean;
   } = {},
 ): Promise<void> {
+  if (!isValidTweetId(tweetId)) throw new Error("INVALID_TWEET_ID");
   const response = (await chrome.runtime.sendMessage({
     type: "BOOKMARK_MUTATION",
     operation,

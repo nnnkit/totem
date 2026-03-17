@@ -51,20 +51,6 @@ const chromeWebStoreInstallUrl = "";
 const demoVideoEmbedUrl =
   "https://www.youtube.com/embed/75RNtgMHsPA?rel=0&modestbranding=1";
 const githubReleaseUrl = "https://github.com/nnnkit/totem/releases/latest";
-const configuredExtensionId = import.meta.env.VITE_TOTEM_EXTENSION_ID?.trim() ?? "";
-
-function extractExtensionIdFromInstallUrl(url: string): string {
-  try {
-    const pathnameParts = new URL(url).pathname.split("/").filter(Boolean);
-    const candidate = pathnameParts[pathnameParts.length - 1] ?? "";
-    return /^[a-p]{32}$/.test(candidate) ? candidate : "";
-  } catch {
-    return "";
-  }
-}
-
-const resolvedExtensionId =
-  configuredExtensionId || extractExtensionIdFromInstallUrl(chromeWebStoreInstallUrl);
 const hasWebStoreInstall = Boolean(chromeWebStoreInstallUrl);
 const installUrl = hasWebStoreInstall
   ? chromeWebStoreInstallUrl
@@ -109,7 +95,6 @@ export const SITE_LINKS = {
   supportXHandle: SUPPORT_X_HANDLE,
   supportXUrl: SUPPORT_X_URL,
   githubRepoUrl: "https://github.com/nnnkit/totem",
-  extensionId: resolvedExtensionId,
 } as const;
 
 export const SITE_COPY = {
@@ -238,30 +223,6 @@ export const SITE_COPY = {
         "No account required. No subscription. Just install and open a new tab.",
       finalCtaButtonLabel: installButtonLabel,
     },
-  },
-  share: {
-    eyebrow: "Totem link",
-    title: "This post opens in Totem.",
-    description:
-      "Totem is a Chrome extension for reading X bookmarks in a calmer layout. Install it in this browser to open this shared post inside the reader, or use X for now.",
-    openInTotemLabel: "Open in Totem",
-    installButtonLabel: installButtonLabel,
-    openOnXLabel: "Open on X",
-    homeButtonLabel: "Back to Totem",
-    invalidEyebrow: "Invalid link",
-    invalidTitle: "This Totem link is incomplete.",
-    invalidDescription:
-      "The shared post ID is missing or malformed. Open Totem from the homepage instead.",
-    postIdLabel: "Post ID",
-    openingLabel: "Opening Totem…",
-    missingIdMessage:
-      "Open in Totem is available once the site knows your Totem extension ID.",
-    runtimeMissingMessage:
-      "Open in Totem works only in Chromium browsers that expose the extension runtime bridge.",
-    notInstalledMessage:
-      "Totem could not be reached in this browser profile. Install or enable the extension here first.",
-    openFailedMessage:
-      "Totem did not open this post. Try installing the extension or open the post on X.",
   },
   browser: {
     defaultTabTitle: "Totem",

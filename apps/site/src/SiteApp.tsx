@@ -9,11 +9,6 @@ import {
 } from "react";
 import { cn, TotemLogo } from "@totem/app-shell";
 import {
-  getConfiguredExtensionId,
-  openSharedTweetInTotem,
-  resolveSharePageState,
-} from "./share-page";
-import {
   SITE_COPY,
   SITE_LINKS,
   type FAQItem,
@@ -36,7 +31,7 @@ function GitHubIcon({ className }: { className?: string }) {
   );
 }
 
-export type SitePage = "landing" | "privacy" | "share";
+export type SitePage = "landing" | "privacy";
 
 interface SiteAppProps {
   page: SitePage;
@@ -963,162 +958,7 @@ function PolicySectionCard({ section }: { section: PolicySectionData }) {
   );
 }
 
-function SharePage() {
-  const shareState = resolveSharePageState(
-    typeof window !== "undefined" ? window.location.pathname : "",
-    typeof window !== "undefined" ? window.location.search : "",
-  );
-  const { share } = SITE_COPY;
-  const [launchStatus, setLaunchStatus] = useState<
-    "idle" | "opening" | "missing_id" | "runtime_missing" | "unavailable"
-  >("idle");
-  const extensionId = getConfiguredExtensionId();
-
-  const launchMessage =
-    launchStatus === "missing_id"
-      ? share.missingIdMessage
-      : launchStatus === "runtime_missing"
-        ? share.runtimeMissingMessage
-        : launchStatus === "unavailable"
-          ? share.notInstalledMessage
-          : null;
-
-  return (
-    <SiteLayout page="share">
-      <main className="bg-[radial-gradient(circle_at_top,_rgba(224,122,95,0.18),_transparent_35%),linear-gradient(180deg,_#fff7f4_0%,_#ffffff_36%,_#ffffff_100%)]">
-        <SiteSection containerClassName="py-16 sm:py-24">
-          <div className="mx-auto max-w-3xl">
-            <SiteCard className="overflow-hidden rounded-[28px] border-neutral-200 bg-white/90 p-8 shadow-site-frame backdrop-blur-sm sm:p-10">
-              <div className="flex items-center gap-3">
-                <TotemLogo className="size-12 shrink-0" />
-                <div>
-                  <SiteEyebrow className="mb-2">
-                    {shareState.kind === "fallback"
-                      ? share.eyebrow
-                      : share.invalidEyebrow}
-                  </SiteEyebrow>
-                  <SiteHeading
-                    as="h1"
-                    size="page"
-                    className="text-3xl sm:text-4xl"
-                  >
-                    {shareState.kind === "fallback"
-                      ? share.title
-                      : share.invalidTitle}
-                  </SiteHeading>
-                </div>
-              </div>
-
-              <p className="mt-5 max-w-2xl text-base leading-8 text-neutral-500">
-                {shareState.kind === "fallback"
-                  ? share.description
-                  : share.invalidDescription}
-              </p>
-
-              <div className="mt-8 flex flex-wrap gap-3">
-                {shareState.kind === "fallback" ? (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (launchStatus === "opening") return;
-                        setLaunchStatus("opening");
-                        void openSharedTweetInTotem(shareState.tweetId).then(
-                          (result) => {
-                            if (result.ok) {
-                              setLaunchStatus("idle");
-                              return;
-                            }
-
-                            if (result.reason === "MISSING_EXTENSION_ID") {
-                              setLaunchStatus("missing_id");
-                              return;
-                            }
-
-                            if (result.reason === "RUNTIME_UNAVAILABLE") {
-                              setLaunchStatus("runtime_missing");
-                              return;
-                            }
-
-                            setLaunchStatus("unavailable");
-                          },
-                        );
-                      }}
-                      className={cn(
-                        siteButtonBaseClass,
-                        siteButtonVariantClasses.primary,
-                        siteButtonSizeClasses.default,
-                        launchStatus === "opening" &&
-                          "pointer-events-none opacity-70",
-                      )}
-                    >
-                      {launchStatus === "opening"
-                        ? share.openingLabel
-                        : share.openInTotemLabel}
-                    </button>
-                    <SiteButtonLink
-                      href={SITE_LINKS.installUrl}
-                      target="_blank"
-                      variant={extensionId ? "secondary" : "primary"}
-                    >
-                      {share.installButtonLabel}
-                    </SiteButtonLink>
-                    <SiteButtonLink
-                      href={shareState.tweetUrl}
-                      target="_blank"
-                      variant="secondary"
-                    >
-                      {share.openOnXLabel}
-                    </SiteButtonLink>
-                  </>
-                ) : (
-                  <>
-                    <SiteButtonLink
-                      href={SITE_LINKS.installUrl}
-                      target="_blank"
-                      variant="primary"
-                    >
-                      {share.installButtonLabel}
-                    </SiteButtonLink>
-                    <SiteButtonLink href="/" variant="secondary">
-                      {share.homeButtonLabel}
-                    </SiteButtonLink>
-                  </>
-                )}
-              </div>
-
-              {shareState.kind === "fallback" && launchMessage && (
-                <p className="mt-4 max-w-2xl text-sm leading-7 text-neutral-500">
-                  {launchMessage}
-                </p>
-              )}
-
-              {shareState.kind === "fallback" && (
-                <div className="mt-8 flex flex-wrap items-center gap-3 border-t border-neutral-200 pt-5 text-sm text-neutral-500">
-                  <span className="rounded-full bg-neutral-100 px-3 py-1 font-medium text-neutral-700">
-                    {share.postIdLabel} {shareState.tweetId}
-                  </span>
-                  <span className="text-neutral-300">•</span>
-                  <a
-                    href={shareState.shareUrl}
-                    className={siteBodyLinkClass}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Open shared link
-                  </a>
-                </div>
-              )}
-            </SiteCard>
-          </div>
-        </SiteSection>
-      </main>
-    </SiteLayout>
-  );
-}
-
 export function SiteApp({ page }: SiteAppProps) {
   if (page === "privacy") return <PrivacyPage />;
-  if (page === "share") return <SharePage />;
   return <LandingPage />;
 }
