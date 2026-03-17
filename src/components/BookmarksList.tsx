@@ -1,12 +1,11 @@
 import {
-  forwardRef,
   useCallback,
   useEffect,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
 } from "react";
+import { Tabs } from "@base-ui/react/tabs";
 import { useHotkeys } from "react-hotkeys-hook";
 import {
   ArrowLeftIcon,
@@ -59,14 +58,6 @@ interface Props {
   onLogin?: () => void;
 }
 
-interface TabButtonProps {
-  active: boolean;
-  onClick: () => void;
-  label: string;
-  count: number;
-  countClass: string;
-}
-
 interface AnnotationPillProps {
   kind: "highlight" | "note";
   count: number;
@@ -77,34 +68,6 @@ const SORT_OPTIONS: SelectOption[] = [
   { value: "oldest", label: "Oldest" },
   { value: "annotated", label: "Annotated" },
 ];
-
-const TabButton = forwardRef<HTMLButtonElement, TabButtonProps>(
-  ({ active, onClick, label, count, countClass }, ref) => (
-    <button
-      ref={ref}
-      type="button"
-      role="tab"
-      aria-selected={active}
-      onClick={onClick}
-      className={cn(
-        "px-4 py-2.5 text-sm font-medium transition-colors outline-none",
-        active ? "text-foreground" : "text-muted hover:text-foreground",
-      )}
-    >
-      {label}
-      {count > 0 && (
-        <span
-          className={cn(
-            "ml-1.5 inline-flex items-center justify-center rounded px-1.5 text-xs tabular-nums",
-            countClass,
-          )}
-        >
-          {count}
-        </span>
-      )}
-    </button>
-  ),
-);
 
 function AnnotationPill({ kind, count }: AnnotationPillProps) {
   if (count <= 0) {
@@ -189,12 +152,7 @@ export function BookmarksList({
   const [sortPreferences, setSortPreferences] =
     useState<ReadingSortPreferences>(() => readStoredReadingSortPreferences());
   const itemRefs = useRef<(HTMLAnchorElement | null)[]>([]);
-  const tabListRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const continueTabRef = useRef<HTMLButtonElement>(null);
-  const readTabRef = useRef<HTMLButtonElement>(null);
-  const unreadTabRef = useRef<HTMLButtonElement>(null);
-  const [indicator, setIndicator] = useState({ left: 0, width: 0 });
 
   useEffect(() => {
     setFocusedIndex(-1);
@@ -234,30 +192,6 @@ export function BookmarksList({
     { preventDefault: true },
   );
 
-  const tabRefs: Record<
-    ReadingTab,
-    React.RefObject<HTMLButtonElement | null>
-  > = {
-    continue: continueTabRef,
-    read: readTabRef,
-    unread: unreadTabRef,
-  };
-
-  const updateIndicator = useCallback(() => {
-    const container = tabListRef.current;
-    const tab = tabRefs[activeTab].current;
-    if (!container || !tab) return;
-    const containerRect = container.getBoundingClientRect();
-    const tabRect = tab.getBoundingClientRect();
-    setIndicator({
-      left: tabRect.left - containerRect.left,
-      width: tabRect.width,
-    });
-  }, [activeTab]);
-
-  useLayoutEffect(() => {
-    updateIndicator();
-  }, [updateIndicator]);
 
   const { inProgress, completed } = useMemo(() => {
     const nextInProgress: ContinueReadingItem[] = [];
@@ -558,54 +492,73 @@ export function BookmarksList({
           </div>
         </div>
 
-        <div
-          ref={tabListRef}
-          className={cn("relative mx-auto flex px-4", containerWidthClass)}
-          role="tablist"
+        <Tabs.Root
+          value={activeTab}
+          onValueChange={(value) => onTabChange(value as ReadingTab)}
+          className={cn("mx-auto px-4", containerWidthClass)}
         >
-          <TabButton
-            ref={unreadTabRef}
-            active={activeTab === "unread"}
-            onClick={() => onTabChange("unread")}
-            label="Unread"
-            count={sortedUnread.length}
-            countClass="bg-muted/10 text-muted"
-          />
-          <TabButton
-            ref={continueTabRef}
-            active={activeTab === "continue"}
-            onClick={() => onTabChange("continue")}
-            label="Reading"
-            count={sortedInProgress.length}
-            countClass="bg-accent-surface text-accent"
-          />
-          <TabButton
-            ref={readTabRef}
-            active={activeTab === "read"}
-            onClick={() => onTabChange("read")}
-            label="Read"
-            count={sortedCompleted.length}
-            countClass="bg-success/10 text-success"
-          />
-          <span
-            className="absolute bottom-0 h-0.5 rounded-full bg-accent transition-all duration-200 ease-tab"
-            style={{ left: indicator.left, width: indicator.width }}
-          />
-        </div>
+          <Tabs.List className="relative flex">
+            <Tabs.Tab
+              value="unread"
+              className={cn(
+                "px-4 py-2.5 text-sm font-medium transition-colors outline-none select-none",
+                "text-muted hover:text-foreground data-[active]:text-foreground",
+              )}
+            >
+              Unread
+              {sortedUnread.length > 0 && (
+                <span className="ml-1.5 inline-flex items-center justify-center rounded px-1.5 text-xs tabular-nums bg-muted/10 text-muted">
+                  {sortedUnread.length}
+                </span>
+              )}
+            </Tabs.Tab>
+            <Tabs.Tab
+              value="continue"
+              className={cn(
+                "px-4 py-2.5 text-sm font-medium transition-colors outline-none select-none",
+                "text-muted hover:text-foreground data-[active]:text-foreground",
+              )}
+            >
+              Reading
+              {sortedInProgress.length > 0 && (
+                <span className="ml-1.5 inline-flex items-center justify-center rounded px-1.5 text-xs tabular-nums bg-accent-surface text-accent">
+                  {sortedInProgress.length}
+                </span>
+              )}
+            </Tabs.Tab>
+            <Tabs.Tab
+              value="read"
+              className={cn(
+                "px-4 py-2.5 text-sm font-medium transition-colors outline-none select-none",
+                "text-muted hover:text-foreground data-[active]:text-foreground",
+              )}
+            >
+              Read
+              {sortedCompleted.length > 0 && (
+                <span className="ml-1.5 inline-flex items-center justify-center rounded px-1.5 text-xs tabular-nums bg-success/10 text-success">
+                  {sortedCompleted.length}
+                </span>
+              )}
+            </Tabs.Tab>
+            <Tabs.Indicator className="absolute bottom-0 h-0.5 w-[var(--active-tab-width)] translate-x-[var(--active-tab-left)] rounded-full bg-accent transition-all duration-200 ease-tab" />
+          </Tabs.List>
+        </Tabs.Root>
       </div>
 
       <main className={cn(containerWidthClass, "mx-auto px-4 pb-16 pt-4")}>
-        <div className="mb-4 flex justify-end">
-          <Select
-            value={activeSort}
-            onValueChange={handleSortChange}
-            options={SORT_OPTIONS}
-            ariaLabel="Sort bookmarks"
-            leadingIcon={<ArrowsDownUpIcon weight="bold" className="size-4" />}
-            className="w-36 shrink-0 border-border/70 bg-surface/45 hover:bg-surface/55"
-            popupClassName="w-36"
-          />
-        </div>
+        {visibleBookmarks.length > 0 && (
+          <div className="mb-4 flex justify-end">
+            <Select
+              value={activeSort}
+              onValueChange={handleSortChange}
+              options={SORT_OPTIONS}
+              ariaLabel="Sort bookmarks"
+              leadingIcon={<ArrowsDownUpIcon weight="bold" className="size-4" />}
+              className="w-36 shrink-0 border-border/70 bg-surface/45 hover:bg-surface/55"
+              popupClassName="w-36"
+            />
+          </div>
+        )}
 
         {activeTab === "unread" && (
           <>
@@ -669,6 +622,7 @@ export function BookmarksList({
                 </p>
                 {showSyncControls && (
                   <Button
+                    variant="ghost"
                     onClick={onSync}
                     disabled={syncButton.disabled}
                     className="mt-4"
@@ -677,7 +631,7 @@ export function BookmarksList({
                   </Button>
                 )}
                 {isPreparingSync && (
-                  <Button onClick={handleOpenX} className="mt-4">
+                  <Button variant="ghost" onClick={handleOpenX} className="mt-4">
                     Open X
                   </Button>
                 )}
@@ -746,7 +700,7 @@ export function BookmarksList({
                 <p className="text-lg text-muted text-pretty">
                   No reading in progress. Pick something to read.
                 </p>
-                <Button onClick={() => onTabChange("unread")} className="mt-4">
+                <Button variant="ghost" onClick={() => onTabChange("unread")} className="mt-4">
                   Start reading
                 </Button>
               </div>
@@ -815,6 +769,7 @@ export function BookmarksList({
                   Nothing finished yet. Keep reading!
                 </p>
                 <Button
+                  variant="ghost"
                   onClick={() => onTabChange("continue")}
                   className="mt-4"
                 >
