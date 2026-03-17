@@ -63,12 +63,8 @@ export function SettingsModal({
       className="bg-black/50"
       ariaLabelledBy="settings-title"
     >
-      {(closing) => (
         <div
-          className={cn(
-            "max-w-md mx-auto mt-[10vh] max-h-[80vh] flex flex-col rounded border border-border bg-surface-card shadow-xl",
-            closing ? "animate-preview-out" : "animate-preview-in",
-          )}
+          className="max-w-md mx-auto mt-[10vh] max-h-[80vh] flex flex-col rounded border border-border bg-surface-card shadow-xl animate-preview-in"
         >
           <div className="flex shrink-0 items-center justify-between px-6 pt-5 pb-3">
             <h2
@@ -238,7 +234,6 @@ export function SettingsModal({
             </section>
           </div>
         </div>
-      )}
     </Modal>
   );
 }

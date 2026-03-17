@@ -86,33 +86,23 @@ export function TweetMedia({ items, bleed = false, compact = false }: Props) {
       </div>
 
       <Modal open={!!previewImage} onClose={closePreview} className="flex items-center justify-center bg-black/80">
-        {(closing) => {
-          const img = previewRef.current;
-          if (!img) return null;
-          return (
-            <>
-              <button
-                onClick={closePreview}
-                aria-label="Close preview"
-                className={cn(
-                  "absolute right-4 top-4 z-10 flex size-10 items-center justify-center rounded-full bg-black/60 text-white transition-colors hover:bg-black/80",
-                  closing ? "animate-overlay-out" : "animate-overlay-in",
-                )}
-              >
-                <XIcon size={20} />
-              </button>
-              <img
-                src={img.src}
-                alt={img.alt}
-                className={cn(
-                  "max-h-[90vh] max-w-[90vw] object-contain",
-                  closing ? "animate-preview-out" : "animate-preview-in",
-                )}
-                onClick={(e) => e.stopPropagation()}
-              />
-            </>
-          );
-        }}
+        {previewRef.current && (
+          <>
+            <button
+              onClick={closePreview}
+              aria-label="Close preview"
+              className="absolute right-4 top-4 z-10 flex size-10 items-center justify-center rounded-full bg-black/60 text-white transition-colors hover:bg-black/80 animate-overlay-in"
+            >
+              <XIcon size={20} />
+            </button>
+            <img
+              src={previewRef.current.src}
+              alt={previewRef.current.alt}
+              className="max-h-[90vh] max-w-[90vw] object-contain animate-preview-in"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </>
+        )}
       </Modal>
     </>
   );

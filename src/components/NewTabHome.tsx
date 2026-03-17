@@ -22,6 +22,7 @@ import {
 } from "../lib/bookmark-utils";
 import { cn } from "../lib/cn";
 import { Button } from "./ui/Button";
+import { Input } from "./ui/Input";
 import {
   SUPPORT_EMAIL_URL,
   SUPPORT_X_HANDLE,
@@ -485,15 +486,16 @@ export function NewTabHome({
               </span>
             </Button>
           )}
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={onOpenSettings}
-            className="rounded border border-transparent bg-transparent p-2 text-on-bg-muted transition-colors duration-150 ease-hover hover:border-white/15 hover:bg-white/5 hover:text-on-bg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80"
+            className="border border-transparent bg-transparent text-on-bg-muted hover:border-white/15 hover:bg-white/5 hover:text-on-bg"
             aria-label="Open settings"
             title="Settings"
           >
             <GearSixIcon className="size-5" />
-          </button>
+          </Button>
         </div>
       </header>
 
@@ -554,11 +556,11 @@ export function NewTabHome({
                         onChange={onSearchEngineChange}
                       />
                     </span>
-                    <input
+                    <Input
                       ref={searchRef}
                       type="text"
                       name={engineConfig?.queryParam ?? "q"}
-                      className="w-full appearance-none border-0 bg-transparent px-3 py-3.5 text-base text-home-fg [font-family:inherit] outline-none placeholder:text-home-placeholder"
+                      className="w-full appearance-none rounded-none border-0 bg-transparent px-3 py-3.5 text-base text-home-fg [font-family:inherit] outline-none placeholder:text-home-placeholder focus:border-0"
                       placeholder="Search the web"
                       autoComplete="off"
                     />
