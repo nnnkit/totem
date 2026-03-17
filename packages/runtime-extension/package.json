@@ -1,0 +1,8 @@
+{
+  "name": "@totem/runtime-extension",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

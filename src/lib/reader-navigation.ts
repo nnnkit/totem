@@ -1,12 +1,19 @@
 export type ReturnSurface = "home" | "reading";
 
 const VALID_RETURN_SURFACES = new Set<ReturnSurface>(["home", "reading"]);
-const FALLBACK_EXTENSION_URL = "chrome-extension://extension-id/newtab.html";
+
+function getBaseUrl(): string {
+  if (typeof window !== "undefined") return window.location.href;
+  if (typeof chrome !== "undefined" && chrome.runtime?.getURL) {
+    return chrome.runtime.getURL("newtab.html");
+  }
+  return "https://localhost/newtab.html";
+}
 
 function buildExtensionUrl(
   fileName: "newtab.html" | "reader.html",
   params?: Record<string, string | null | undefined>,
-  currentUrl = typeof window !== "undefined" ? window.location.href : FALLBACK_EXTENSION_URL,
+  currentUrl = getBaseUrl(),
 ): string {
   const url = new URL(fileName, currentUrl);
   url.search = "";

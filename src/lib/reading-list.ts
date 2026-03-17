@@ -85,6 +85,7 @@ export function readStoredReadingSortPreferences(): ReadingSortPreferences {
         : DEFAULT_READING_SORT_PREFERENCES.read,
     };
   } catch {
+    console.warn("[Totem] Corrupted reading sort preferences in localStorage, using defaults");
     return DEFAULT_READING_SORT_PREFERENCES;
   }
 }

@@ -1,0 +1,10 @@
+{
+  "name": "@totem/site",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite -c vite.config.ts",
+    "build": "vite build -c vite.config.ts",
+    "preview": "vite preview -c vite.config.ts"
+  }
+}

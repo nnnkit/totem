@@ -203,10 +203,12 @@ function stopEvent(event: MouseEvent) {
 }
 
 function openTotemReader(tweetId: string) {
-  void chrome.runtime.sendMessage({
+  chrome.runtime.sendMessage({
     type: "OPEN_TOTEM_READER",
     tweetId,
-  }).catch(() => {});
+  }).catch(() => {
+    window.open(`https://x.com/i/web/status/${tweetId}`, "_blank");
+  });
 }
 
 function createButton(tweetId: string): HTMLButtonElement {
@@ -322,13 +324,16 @@ function scanDocument() {
   }
 }
 
+let activeObserver: MutationObserver | null = null;
+
 function startObserver() {
   scanDocument();
   if (!(document.body instanceof HTMLElement)) return;
 
   const root = document.querySelector<HTMLElement>('main[role="main"]') || document.body;
 
-  const observer = new MutationObserver((mutations) => {
+  activeObserver?.disconnect();
+  activeObserver = new MutationObserver((mutations) => {
     for (const mutation of mutations) {
       if (mutation.type === "childList") {
         for (const node of mutation.addedNodes) {
@@ -338,7 +343,7 @@ function startObserver() {
     }
   });
 
-  observer.observe(root, {
+  activeObserver.observe(root, {
     childList: true,
     subtree: true,
   });

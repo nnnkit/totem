@@ -207,7 +207,13 @@ export function BookmarkReader({
     [],
   );
 
-  useHotkeys("escape", () => onBack(), {
+  useHotkeys("escape", (event) => {
+    const target = event.target;
+    if (target instanceof HTMLElement && target.closest("input, textarea, [contenteditable]")) {
+      return;
+    }
+    onBack();
+  }, {
     preventDefault: true,
   }, [onBack]);
 

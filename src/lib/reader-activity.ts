@@ -24,15 +24,15 @@ export function subscribeToReaderActivity(onActivity: () => void): () => void {
     }
   };
 
-  const handleLocal = () => {
+  const handleLocal = (_event: Event) => {
     onActivity();
   };
 
   window.addEventListener("storage", handleStorage);
-  window.addEventListener(EVENT_NAME, handleLocal as EventListener);
+  window.addEventListener(EVENT_NAME, handleLocal);
 
   return () => {
     window.removeEventListener("storage", handleStorage);
-    window.removeEventListener(EVENT_NAME, handleLocal as EventListener);
+    window.removeEventListener(EVENT_NAME, handleLocal);
   };
 }

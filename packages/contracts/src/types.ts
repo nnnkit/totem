@@ -113,7 +113,6 @@ export interface Bookmark {
   text: string;
   createdAt: number;
   sortIndex: string;
-  /** Whether this tweet is still bookmarked on X (false after unbookmarking). */
   bookmarked: boolean;
   author: Author;
   metrics: Metrics;
