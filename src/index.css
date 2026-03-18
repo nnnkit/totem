@@ -221,25 +221,25 @@
     [data-theme="light"] {
         /* Surfaces */
         --accent: #c25a41;
-        --accent-surface: #fde8e2;
-        --accent-surface-hover: #fcd5ca;
-        --surface: #F7F5F0;
-        --surface-card: #FEFDFB;
-        --surface-hover: #EFEDE8;
-        --surface-link-card: #F3F1EC;
+        --accent-surface: #FDE9E3;
+        --accent-surface-hover: #FCDAD0;
+        --surface: #F8F9FA;
+        --surface-card: #FFFFFF;
+        --surface-hover: #F1F2F4;
+        --surface-link-card: #F3F4F6;
 
         /* Text */
-        --foreground: #1A1A1A;
-        --muted: #404044;
+        --foreground: #1A1B1E;
+        --muted: #5F6368;
 
         /* Borders */
-        --border: #e5e5e7;
+        --border: #E2E4E8;
 
         /* Status */
         --success: #15803d;
 
         /* Code */
-        --inline-code-bg: rgba(135, 131, 120, 0.15);
+        --inline-code-bg: rgba(131, 135, 142, 0.12);
 
         /* Syntax highlighting (sugar-high) */
         --sh-class: #2d5e9d;
