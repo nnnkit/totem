@@ -245,10 +245,13 @@ export type SearchEngineId =
   | "ecosia"
   | "default";
 
+export type NewTabSource = "random" | "pinned";
+
 export interface UserSettings {
   showTopSites: boolean;
   showSearchBar: boolean;
   topSitesLimit: number;
   backgroundMode: BackgroundMode;
   searchEngine: SearchEngineId;
+  newTabSource: NewTabSource;
 }

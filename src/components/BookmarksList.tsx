@@ -1,23 +1,26 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Tabs } from "@base-ui/react/tabs";
 import { useHotkeys } from "react-hotkeys-hook";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import {
   ArrowLeftIcon,
   ArrowsDownUpIcon,
   MagnifyingGlassIcon,
+  PushPinIcon,
 } from "@phosphor-icons/react";
 import type { Bookmark } from "../types";
+import { discoverQueryIds } from "../api/core/auth";
 import type { ContinueReadingItem } from "../hooks/useContinueReading";
 import { useBookmarkSearch } from "../hooks/useBookmarkSearch";
 import { pickTitle, inferKindBadge } from "../lib/bookmark-utils";
 import { cn } from "../lib/cn";
 import { NEW_BADGE_CUTOFF_MS } from "../lib/constants";
+import {
+  getPinnedTweetIds,
+  getPinnedTweetIdsOrdered,
+  togglePin,
+  subscribeToPinChanges,
+} from "../lib/pins";
 import {
   readStoredReadingSortPreferences,
   sortContinueReadingItems,
@@ -41,6 +44,7 @@ import { Button } from "./ui/Button";
 import { Input } from "./ui/Input";
 import { OfflineBanner } from "./ui/OfflineBanner";
 import { Select, type SelectOption } from "./ui/Select";
+import { Toast } from "./ui/Toast";
 
 export type { ReadingTab } from "../lib/reading-list";
 
@@ -58,9 +62,9 @@ interface Props {
   onLogin?: () => void;
 }
 
-interface AnnotationPillProps {
-  kind: "highlight" | "note";
-  count: number;
+interface BookmarkRow {
+  bookmark: Bookmark;
+  subtitle?: string;
 }
 
 const SORT_OPTIONS: SelectOption[] = [
@@ -69,40 +73,7 @@ const SORT_OPTIONS: SelectOption[] = [
   { value: "annotated", label: "Annotated" },
 ];
 
-function AnnotationPill({ kind, count }: AnnotationPillProps) {
-  if (count <= 0) {
-    return null;
-  }
-
-  const label = `${count} ${
-    count === 1
-      ? kind === "highlight"
-        ? "Highlight"
-        : "Note"
-      : kind === "highlight"
-        ? "Highlights"
-        : "Notes"
-  }`;
-
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium tabular-nums",
-        kind === "highlight" ? "text-accent" : undefined,
-      )}
-      style={
-        kind === "highlight"
-          ? { backgroundColor: "var(--highlight-bg)" }
-          : {
-              backgroundColor: "var(--note-pill-bg)",
-              color: "var(--note-pill-fg)",
-            }
-      }
-    >
-      {label}
-    </span>
-  );
-}
+const ITEM_HEIGHT = 64;
 
 function isReadingSort(value: string): value is ReadingSort {
   return value === "recent" || value === "oldest" || value === "annotated";
@@ -137,8 +108,6 @@ export function BookmarksList({
   onLogin,
 }: Props) {
   const containerWidthClass = "max-w-3xl";
-  const bookmarkItemBase =
-    "bookmark-list-item flex w-full items-center gap-3 rounded border p-3 text-left transition-colors hover:bg-surface-hover";
   const runtimeSyncButton = useSyncButtonState();
   const runtimeOfflineMode = useIsOffline();
   const actions = useRuntimeActions();
@@ -151,12 +120,25 @@ export function BookmarksList({
   const [focusedIndex, setFocusedIndex] = useState(-1);
   const [sortPreferences, setSortPreferences] =
     useState<ReadingSortPreferences>(() => readStoredReadingSortPreferences());
-  const itemRefs = useRef<(HTMLAnchorElement | null)[]>([]);
+  const [pinnedIds, setPinnedIds] = useState(() => getPinnedTweetIds());
+  const [pinnedOrder, setPinnedOrder] = useState(() =>
+    getPinnedTweetIdsOrdered(),
+  );
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const pinnedCardRefs = useRef<Map<number, HTMLAnchorElement>>(new Map());
 
   useEffect(() => {
     setFocusedIndex(-1);
   }, [activeTab]);
+
+  useEffect(() => {
+    return subscribeToPinChanges(() => {
+      setPinnedIds(getPinnedTweetIds());
+      setPinnedOrder(getPinnedTweetIdsOrdered());
+    });
+  }, []);
 
   const allBookmarks = useMemo(() => {
     const seen = new Set<string>();
@@ -192,7 +174,6 @@ export function BookmarksList({
     { preventDefault: true },
   );
 
-
   const { inProgress, completed } = useMemo(() => {
     const nextInProgress: ContinueReadingItem[] = [];
     const nextCompleted: ContinueReadingItem[] = [];
@@ -213,7 +194,6 @@ export function BookmarksList({
       ...unreadBookmarks,
       ...continueReadingItems.map((item) => item.bookmark),
     ];
-
     for (const bookmark of merged) {
       const timestamp = getBookmarkTimestamp(bookmark);
       if (
@@ -224,7 +204,6 @@ export function BookmarksList({
         ids.add(bookmark.tweetId);
       }
     }
-
     return ids;
   }, [unreadBookmarks, continueReadingItems]);
 
@@ -242,14 +221,10 @@ export function BookmarksList({
     let cancelled = false;
     getHighlightCountsByTweetIds(tweetIds)
       .then((counts) => {
-        if (!cancelled) {
-          setHighlightCounts(counts);
-        }
+        if (!cancelled) setHighlightCounts(counts);
       })
       .catch(() => {
-        if (!cancelled) {
-          setHighlightCounts(new Map());
-        }
+        if (!cancelled) setHighlightCounts(new Map());
       });
 
     return () => {
@@ -277,8 +252,8 @@ export function BookmarksList({
         };
       }
       return {
-        filteredUnread: unreadBookmarks.filter((bookmark) =>
-          matchingIds.has(bookmark.tweetId),
+        filteredUnread: unreadBookmarks.filter((b) =>
+          matchingIds.has(b.tweetId),
         ),
         filteredInProgress: inProgress.filter((item) =>
           matchingIds.has(item.bookmark.tweetId),
@@ -319,28 +294,74 @@ export function BookmarksList({
     [filteredCompleted, sortPreferences.read, highlightCounts],
   );
 
-  const visibleBookmarks = useMemo(() => {
+  const activeSort = sortPreferences[activeTab];
+
+  const bookmarkRows: BookmarkRow[] = useMemo(() => {
     if (activeTab === "continue") {
-      return sortedInProgress.map((item) => item.bookmark);
+      return sortedInProgress.map(({ bookmark, progress }) => ({
+        bookmark,
+        subtitle: `Last read ${timeAgo(progress.lastReadAt)}`,
+      }));
     }
     if (activeTab === "read") {
-      return sortedCompleted.map((item) => item.bookmark);
+      return sortedCompleted.map(({ bookmark, progress }) => ({
+        bookmark,
+        subtitle: `Finished ${timeAgo(progress.lastReadAt)}`,
+      }));
     }
-    return sortedUnread;
-  }, [activeTab, sortedCompleted, sortedInProgress, sortedUnread]);
+    return sortedUnread.map((bookmark) => ({ bookmark }));
+  }, [activeTab, sortedUnread, sortedInProgress, sortedCompleted]);
+
+  const pinnedBookmarks = useMemo(() => {
+    if (pinnedIds.size === 0) return [];
+    const rowByTweetId = new Map<string, BookmarkRow>();
+    for (const row of bookmarkRows) {
+      rowByTweetId.set(row.bookmark.tweetId, row);
+    }
+    const result: BookmarkRow[] = [];
+    for (const id of pinnedOrder) {
+      const row = rowByTweetId.get(id);
+      if (row) result.push(row);
+    }
+    return result;
+  }, [bookmarkRows, pinnedIds, pinnedOrder]);
+
+  const pinnedCount = pinnedBookmarks.length;
+
+  const unpinnedRows = useMemo(
+    () => bookmarkRows.filter((r) => !pinnedIds.has(r.bookmark.tweetId)),
+    [bookmarkRows, pinnedIds],
+  );
+
+  const visibleBookmarks = useMemo(() => {
+    const pinned = pinnedBookmarks.map((r) => r.bookmark);
+    const unpinned = unpinnedRows.map((r) => r.bookmark);
+    return [...pinned, ...unpinned];
+  }, [pinnedBookmarks, unpinnedRows]);
+
+  const virtualizer = useVirtualizer({
+    count: unpinnedRows.length,
+    getScrollElement: () => scrollContainerRef.current,
+    estimateSize: () => ITEM_HEIGHT,
+    overscan: 10,
+  });
 
   useEffect(() => {
-    if (focusedIndex >= 0 && focusedIndex < itemRefs.current.length) {
-      itemRefs.current[focusedIndex]?.scrollIntoView({ block: "nearest" });
+    if (focusedIndex < 0) return;
+    if (focusedIndex < pinnedCount) {
+      const el = pinnedCardRefs.current.get(focusedIndex);
+      if (el) el.scrollIntoView({ block: "nearest" });
+    } else {
+      const unpinnedIndex = focusedIndex - pinnedCount;
+      if (unpinnedIndex < unpinnedRows.length) {
+        virtualizer.scrollToIndex(unpinnedIndex, { align: "auto" });
+      }
     }
-  }, [focusedIndex]);
+  }, [focusedIndex, pinnedCount, unpinnedRows.length, virtualizer]);
 
   const ignoreListHotkeys = useCallback((event: KeyboardEvent) => {
     const target = event.target;
-    if (!(target instanceof HTMLElement)) {
-      return false;
-    }
-
+    if (!(target instanceof HTMLElement)) return false;
     return Boolean(
       target.closest(
         "input, textarea, select, button, [role='button'], [role='option'], [role='listbox']",
@@ -348,14 +369,9 @@ export function BookmarksList({
     );
   }, []);
 
-  const activeSort = sortPreferences[activeTab];
-
   const handleSortChange = useCallback(
     (nextSort: string) => {
-      if (!isReadingSort(nextSort)) {
-        return;
-      }
-
+      if (!isReadingSort(nextSort)) return;
       setSortPreferences((current) => {
         const next = { ...current, [activeTab]: nextSort };
         writeStoredReadingSortPreferences(next);
@@ -398,10 +414,7 @@ export function BookmarksList({
   useHotkeys(
     "escape",
     () => onBack(),
-    {
-      preventDefault: true,
-      ignoreEventWhen: ignoreListHotkeys,
-    },
+    { preventDefault: true, ignoreEventWhen: ignoreListHotkeys },
     [onBack],
   );
 
@@ -421,9 +434,7 @@ export function BookmarksList({
     "ArrowRight",
     () => {
       const idx = tabOrder.indexOf(activeTab);
-      if (idx < tabOrder.length - 1) {
-        onTabChange(tabOrder[idx + 1]);
-      }
+      if (idx < tabOrder.length - 1) onTabChange(tabOrder[idx + 1]);
     },
     { preventDefault: true, ignoreEventWhen: ignoreListHotkeys },
     [activeTab, onTabChange],
@@ -433,32 +444,105 @@ export function BookmarksList({
     "ArrowLeft",
     () => {
       const idx = tabOrder.indexOf(activeTab);
-      if (idx > 0) {
-        onTabChange(tabOrder[idx - 1]);
-      }
+      if (idx > 0) onTabChange(tabOrder[idx - 1]);
     },
     { preventDefault: true, ignoreEventWhen: ignoreListHotkeys },
     [activeTab, onTabChange],
   );
 
-  let readingIdx = 0;
   const showSyncControls = syncButton.visible;
 
-  const handleOpenX = useCallback(() => {
-    if (onLogin) {
-      onLogin();
-      return;
+  const handleSyncBookmarks = useCallback(() => {
+    void discoverQueryIds()
+      .then(() => actions.startLogin())
+      .then(() => actions.refresh());
+  }, [actions]);
+
+  const handleTogglePin = useCallback(
+    (tweetId: string, event: React.MouseEvent) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const result = togglePin(tweetId);
+      setPinnedIds(result.ids);
+      setPinnedOrder(getPinnedTweetIdsOrdered());
+      if (result.hitCap) {
+        setToastMessage("You can pin up to 15 bookmarks.");
+      }
+    },
+    [],
+  );
+
+  const hasItems = visibleBookmarks.length > 0;
+
+  const renderEmptyState = () => {
+    if (activeTab === "unread") {
+      return (
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <p className="text-lg text-muted text-pretty">
+            {isPreparingSync
+              ? "Almost ready. Tap below to finish connecting bookmarks."
+              : "All caught up! No unread bookmarks."}
+          </p>
+          {showSyncControls && (
+            <Button
+              variant="ghost"
+              onClick={onSync}
+              disabled={syncButton.disabled}
+              className="mt-4"
+            >
+              Sync new bookmarks
+            </Button>
+          )}
+          {isPreparingSync && (
+            <Button
+              variant="ghost"
+              onClick={handleSyncBookmarks}
+              className="mt-4"
+            >
+              Sync bookmarks
+            </Button>
+          )}
+        </div>
+      );
     }
-    window.open("https://x.com/i/bookmarks", "_blank", "noopener,noreferrer");
-    void actions.startLogin();
-  }, [actions, onLogin]);
+    if (activeTab === "continue") {
+      return (
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <p className="text-lg text-muted text-pretty">
+            No reading in progress. Pick something to read.
+          </p>
+          <Button
+            variant="ghost"
+            onClick={() => onTabChange("unread")}
+            className="mt-4"
+          >
+            Start reading
+          </Button>
+        </div>
+      );
+    }
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center">
+        <p className="text-lg text-muted text-pretty">
+          Nothing finished yet. Keep reading!
+        </p>
+        <Button
+          variant="ghost"
+          onClick={() => onTabChange("continue")}
+          className="mt-4"
+        >
+          Continue reading
+        </Button>
+      </div>
+    );
+  };
 
   return (
-    <div className="min-h-dvh bg-surface">
-      <div className="sticky top-0 z-10 border-b border-border bg-surface/80 backdrop-blur-md">
+    <div className="flex h-dvh flex-col bg-surface">
+      <div className="sticky top-0 z-10 shrink-0 border-b border-border bg-surface/80 backdrop-blur-md">
         <div
           className={cn(
-            "mx-auto flex items-center gap-3 px-4 py-3",
+            "mx-auto flex items-center gap-3 px-6 py-2.5",
             containerWidthClass,
           )}
         >
@@ -495,14 +579,14 @@ export function BookmarksList({
         <Tabs.Root
           value={activeTab}
           onValueChange={(value) => onTabChange(value as ReadingTab)}
-          className={cn("mx-auto px-4", containerWidthClass)}
+          className={cn("mx-auto px-6", containerWidthClass)}
         >
           <Tabs.List className="relative flex">
             <Tabs.Tab
               value="unread"
               className={cn(
                 "px-4 py-2.5 text-sm font-medium transition-colors outline-none select-none",
-                "text-muted hover:text-foreground data-[active]:text-foreground",
+                "text-muted hover:text-foreground data-active:text-foreground",
               )}
             >
               Unread
@@ -516,7 +600,7 @@ export function BookmarksList({
               value="continue"
               className={cn(
                 "px-4 py-2.5 text-sm font-medium transition-colors outline-none select-none",
-                "text-muted hover:text-foreground data-[active]:text-foreground",
+                "text-muted hover:text-foreground data-active:text-foreground",
               )}
             >
               Reading
@@ -530,7 +614,7 @@ export function BookmarksList({
               value="read"
               className={cn(
                 "px-4 py-2.5 text-sm font-medium transition-colors outline-none select-none",
-                "text-muted hover:text-foreground data-[active]:text-foreground",
+                "text-muted hover:text-foreground data-active:text-foreground",
               )}
             >
               Read
@@ -545,255 +629,289 @@ export function BookmarksList({
         </Tabs.Root>
       </div>
 
-      <main className={cn(containerWidthClass, "mx-auto px-4 pb-16 pt-4")}>
-        {visibleBookmarks.length > 0 && (
-          <div className="mb-4 flex justify-end">
-            <Select
-              value={activeSort}
-              onValueChange={handleSortChange}
-              options={SORT_OPTIONS}
-              ariaLabel="Sort bookmarks"
-              leadingIcon={<ArrowsDownUpIcon weight="bold" className="size-4" />}
-              className="w-36 shrink-0 border-border/70 bg-surface/45 hover:bg-surface/55"
-              popupClassName="w-36"
-            />
-          </div>
-        )}
-
-        {activeTab === "unread" && (
-          <>
-            {sortedUnread.length > 0 ? (
-              <div className="space-y-2">
-                {sortedUnread.map((bookmark, idx) => {
-                  const counts = getCounts(highlightCounts, bookmark.tweetId);
-
-                  return (
-                    <a
-                      key={bookmark.tweetId}
-                      href={getBookmarkHref(bookmark)}
-                      ref={(el) => {
-                        itemRefs.current[idx] = el;
-                      }}
-                      className={cn(
-                        "bookmark-list-item flex w-full items-center gap-3 rounded border p-3 text-left no-underline transition-colors hover:bg-surface-hover",
-                        focusedIndex === idx
-                          ? "border-accent ring-2 ring-accent/40 bg-surface-hover"
-                          : "border-border bg-surface-card",
-                      )}
-                    >
-                      <img
-                        src={bookmark.author.profileImageUrl}
-                        alt=""
-                        className="size-10 shrink-0 rounded-full"
-                      />
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <p className="truncate text-sm font-medium text-foreground">
-                            {pickTitle(bookmark)}
-                          </p>
-                          {newBookmarkIds.has(bookmark.tweetId) && (
-                            <Badge variant="accent">New</Badge>
-                          )}
-                        </div>
-                        <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-muted">
-                          <span>@{bookmark.author.screenName}</span>
-                          <span aria-hidden="true">&middot;</span>
-                          <Badge>{inferKindBadge(bookmark)}</Badge>
-                          <AnnotationPill
-                            kind="highlight"
-                            count={counts?.highlights ?? 0}
-                          />
-                          <AnnotationPill
-                            kind="note"
-                            count={counts?.notes ?? 0}
-                          />
-                        </div>
-                      </div>
-                    </a>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-20 text-center">
-                <p className="text-lg text-muted text-pretty">
-                  {isPreparingSync
-                    ? "Finishing X setup. Open X once to enable bookmark sync."
-                    : "All caught up! No unread bookmarks."}
-                </p>
-                {showSyncControls && (
-                  <Button
-                    variant="ghost"
-                    onClick={onSync}
-                    disabled={syncButton.disabled}
-                    className="mt-4"
-                  >
-                    Sync new bookmarks
-                  </Button>
-                )}
-                {isPreparingSync && (
-                  <Button variant="ghost" onClick={handleOpenX} className="mt-4">
-                    Open X
-                  </Button>
-                )}
-              </div>
-            )}
-          </>
-        )}
-
-        {activeTab === "continue" && (
-          <>
-            {sortedInProgress.length > 0 ? (
-              <div className="space-y-2">
-                {sortedInProgress.map(({ bookmark, progress }) => {
-                  const idx = readingIdx++;
-                  const counts = getCounts(highlightCounts, bookmark.tweetId);
-
-                  return (
-                    <a
-                      key={bookmark.tweetId}
-                      href={getBookmarkHref(bookmark)}
-                      ref={(el) => {
-                        itemRefs.current[idx] = el;
-                      }}
-                      className={cn(
-                        bookmarkItemBase,
-                        "no-underline",
-                        focusedIndex === idx
-                          ? "border-accent ring-2 ring-accent/40 bg-surface-hover"
-                          : "border-border bg-surface-card",
-                      )}
-                    >
-                      <img
-                        src={bookmark.author.profileImageUrl}
-                        alt=""
-                        className="size-10 shrink-0 rounded-full"
-                      />
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <p className="truncate text-sm font-medium text-foreground">
-                            {pickTitle(bookmark)}
-                          </p>
-                          {newBookmarkIds.has(bookmark.tweetId) && (
-                            <Badge variant="accent">New</Badge>
-                          )}
-                        </div>
-                        <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-muted">
-                          <span>@{bookmark.author.screenName}</span>
-                          <span aria-hidden="true">&middot;</span>
-                          <span>Last read {timeAgo(progress.lastReadAt)}</span>
-                          <AnnotationPill
-                            kind="highlight"
-                            count={counts?.highlights ?? 0}
-                          />
-                          <AnnotationPill
-                            kind="note"
-                            count={counts?.notes ?? 0}
-                          />
-                        </div>
-                      </div>
-                    </a>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-20 text-center">
-                <p className="text-lg text-muted text-pretty">
-                  No reading in progress. Pick something to read.
-                </p>
-                <Button variant="ghost" onClick={() => onTabChange("unread")} className="mt-4">
-                  Start reading
-                </Button>
-              </div>
-            )}
-          </>
-        )}
-
-        {activeTab === "read" && (
-          <>
-            {sortedCompleted.length > 0 ? (
-              <div className="space-y-2">
-                {sortedCompleted.map(({ bookmark, progress }) => {
-                  const idx = readingIdx++;
-                  const counts = getCounts(highlightCounts, bookmark.tweetId);
-
-                  return (
-                    <a
-                      key={bookmark.tweetId}
-                      href={getBookmarkHref(bookmark)}
-                      ref={(el) => {
-                        itemRefs.current[idx] = el;
-                      }}
-                      className={cn(
-                        bookmarkItemBase,
-                        "no-underline",
-                        focusedIndex === idx
-                          ? "border-accent ring-2 ring-accent/40 bg-surface-hover"
-                          : "border-border bg-surface-card",
-                      )}
-                    >
-                      <img
-                        src={bookmark.author.profileImageUrl}
-                        alt=""
-                        className="size-10 shrink-0 rounded-full"
-                      />
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <p className="truncate text-sm font-medium text-foreground">
-                            {pickTitle(bookmark)}
-                          </p>
-                          {newBookmarkIds.has(bookmark.tweetId) && (
-                            <Badge variant="accent">New</Badge>
-                          )}
-                        </div>
-                        <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-muted">
-                          <span>@{bookmark.author.screenName}</span>
-                          <span aria-hidden="true">&middot;</span>
-                          <span>Finished {timeAgo(progress.lastReadAt)}</span>
-                          <AnnotationPill
-                            kind="highlight"
-                            count={counts?.highlights ?? 0}
-                          />
-                          <AnnotationPill
-                            kind="note"
-                            count={counts?.notes ?? 0}
-                          />
-                        </div>
-                      </div>
-                    </a>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-20 text-center">
-                <p className="text-lg text-muted text-pretty">
-                  Nothing finished yet. Keep reading!
-                </p>
-                <Button
-                  variant="ghost"
-                  onClick={() => onTabChange("continue")}
-                  className="mt-4"
-                >
-                  Continue reading
-                </Button>
-              </div>
-            )}
-          </>
-        )}
-
-        {offlineMode && (
-          <div className="mt-8">
-            <OfflineBanner
-              onLogin={() => {
-                if (onLogin) {
-                  onLogin();
-                  return;
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto">
+        <main className={cn(containerWidthClass, "mx-auto px-6 pb-16 pt-4")}>
+          {hasItems && (
+            <div className="mb-4 flex justify-end">
+              <Select
+                value={activeSort}
+                onValueChange={handleSortChange}
+                options={SORT_OPTIONS}
+                ariaLabel="Sort bookmarks"
+                size="sm"
+                leadingIcon={
+                  <ArrowsDownUpIcon weight="bold" className="size-3.5" />
                 }
-                void actions.startLogin();
+                className="w-36 shrink-0 border-border/70 bg-surface/45 hover:bg-surface/55"
+                popupClassName="w-[7.5rem]"
+              />
+            </div>
+          )}
+
+          {pinnedCount > 0 && (
+            <div className="mb-2">
+              <span className="text-2xs font-medium uppercase tracking-extra-wide text-muted/40">
+                Pinned
+              </span>
+            </div>
+          )}
+          {pinnedCount > 0 && (
+            <div className="mb-4 grid grid-cols-3 gap-3">
+              {pinnedBookmarks.map((row, idx) => {
+                const { bookmark } = row;
+                const isFocused = focusedIndex === idx;
+                const counts = getCounts(highlightCounts, bookmark.tweetId);
+                const hasAnnotations =
+                  (counts?.highlights ?? 0) > 0 || (counts?.notes ?? 0) > 0;
+
+                return (
+                  <a
+                    key={bookmark.tweetId}
+                    ref={(el) => {
+                      if (el) pinnedCardRefs.current.set(idx, el);
+                      else pinnedCardRefs.current.delete(idx);
+                    }}
+                    href={getBookmarkHref(bookmark)}
+                    className={cn(
+                      "group/card relative flex flex-col gap-2 rounded-lg border border-border/50 bg-surface-card p-3 no-underline transition-colors hover:bg-surface-hover",
+                      isFocused && "bg-surface-hover ring-1 ring-accent/30",
+                    )}
+                  >
+                    <div
+                      className="flex cursor-pointer items-center gap-2"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        window.open(
+                          `https://x.com/${bookmark.author.screenName}`,
+                          "_blank",
+                          "noopener,noreferrer",
+                        );
+                      }}
+                      role="link"
+                      tabIndex={-1}
+                    >
+                      <img
+                        src={bookmark.author.profileImageUrl}
+                        alt=""
+                        className="size-5 shrink-0 rounded-full"
+                      />
+                      <span className="truncate text-xs text-muted/70 transition-colors hover:text-foreground">
+                        @{bookmark.author.screenName}
+                      </span>
+                    </div>
+                    <p className="line-clamp-2 text-xs leading-relaxed text-foreground">
+                      {pickTitle(bookmark)}
+                    </p>
+                    {hasAnnotations && (
+                      <p className="truncate text-2xs text-muted/40">
+                        {(counts?.highlights ?? 0) > 0 && (
+                          <span className="text-accent/60">
+                            {counts!.highlights}{" "}
+                            {counts!.highlights === 1
+                              ? "Highlight"
+                              : "Highlights"}
+                          </span>
+                        )}
+                        {(counts?.highlights ?? 0) > 0 &&
+                          (counts?.notes ?? 0) > 0 && <span> &middot; </span>}
+                        {(counts?.notes ?? 0) > 0 && (
+                          <span
+                            style={{ color: "var(--note-pill-fg)" }}
+                            className="opacity-60"
+                          >
+                            {counts!.notes}{" "}
+                            {counts!.notes === 1 ? "Note" : "Notes"}
+                          </span>
+                        )}
+                      </p>
+                    )}
+                    <button
+                      type="button"
+                      onClick={(e) => handleTogglePin(bookmark.tweetId, e)}
+                      className="absolute top-2 right-2 rounded p-1 text-accent opacity-0 transition-opacity group-hover/card:opacity-100 hover:text-accent/80"
+                      aria-label="Unpin bookmark"
+                      title="Unpin"
+                    >
+                      <PushPinIcon weight="fill" className="size-3" />
+                    </button>
+                  </a>
+                );
+              })}
+            </div>
+          )}
+          {pinnedCount > 0 && unpinnedRows.length > 0 && (
+            <div className="mb-4 border-t border-dashed border-border/50" />
+          )}
+
+          {hasItems ? (
+            <div
+              style={{
+                height: virtualizer.getTotalSize(),
+                width: "100%",
+                position: "relative",
               }}
-            />
-          </div>
-        )}
-      </main>
+            >
+              {virtualizer.getVirtualItems().map((virtualItem) => {
+                const row = unpinnedRows[virtualItem.index];
+                const { bookmark } = row;
+                const counts = getCounts(highlightCounts, bookmark.tweetId);
+                const isFocused =
+                  focusedIndex === virtualItem.index + pinnedCount;
+
+                return (
+                  <div
+                    key={bookmark.tweetId}
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      width: "100%",
+                      height: virtualItem.size,
+                      transform: `translateY(${virtualItem.start}px)`,
+                    }}
+                  >
+                    <a
+                      href={getBookmarkHref(bookmark)}
+                      className={cn(
+                        "group/row bookmark-list-item flex w-full items-center gap-3 rounded-lg py-3 px-3 text-left no-underline transition-colors hover:bg-surface-hover",
+                        isFocused && "bg-surface-hover",
+                      )}
+                    >
+                      <img
+                        src={bookmark.author.profileImageUrl}
+                        alt=""
+                        className="size-9 shrink-0 cursor-pointer rounded-full"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          window.open(
+                            `https://x.com/${bookmark.author.screenName}`,
+                            "_blank",
+                            "noopener,noreferrer",
+                          );
+                        }}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium text-foreground leading-snug">
+                          {pickTitle(bookmark)}
+                          {newBookmarkIds.has(bookmark.tweetId) && (
+                            <Badge
+                              variant="accent"
+                              className="ml-2 align-middle"
+                            >
+                              New
+                            </Badge>
+                          )}
+                        </p>
+                        <p className="mt-1 truncate text-xs text-muted/50">
+                          <span
+                            className="cursor-pointer transition-colors hover:text-foreground"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              e.preventDefault();
+                              window.open(
+                                `https://x.com/${bookmark.author.screenName}`,
+                                "_blank",
+                                "noopener,noreferrer",
+                              );
+                            }}
+                            role="link"
+                            tabIndex={-1}
+                          >
+                            @{bookmark.author.screenName}
+                          </span>
+                          {row.subtitle ? (
+                            <span className="text-muted/40">
+                              {" "}
+                              &middot; {row.subtitle}
+                            </span>
+                          ) : (
+                            <span className="text-muted/40">
+                              {" "}
+                              &middot; {inferKindBadge(bookmark)}
+                            </span>
+                          )}
+                          {(counts?.highlights ?? 0) > 0 && (
+                            <span className="text-muted/40">
+                              {" "}
+                              &middot;{" "}
+                              <span className="text-accent/60">
+                                {counts!.highlights}{" "}
+                                {counts!.highlights === 1
+                                  ? "Highlight"
+                                  : "Highlights"}
+                              </span>
+                            </span>
+                          )}
+                          {(counts?.notes ?? 0) > 0 && (
+                            <span className="text-muted/40">
+                              {" "}
+                              &middot;{" "}
+                              <span
+                                style={{ color: "var(--note-pill-fg)" }}
+                                className="opacity-60"
+                              >
+                                {counts!.notes}{" "}
+                                {counts!.notes === 1 ? "Note" : "Notes"}
+                              </span>
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={(e) => handleTogglePin(bookmark.tweetId, e)}
+                        className={cn(
+                          "shrink-0 rounded p-1.5 transition-[colors,opacity]",
+                          pinnedIds.has(bookmark.tweetId)
+                            ? "text-accent opacity-100 hover:text-accent/80"
+                            : "text-muted/40 opacity-0 group-hover/row:opacity-100 hover:text-muted",
+                        )}
+                        aria-label={
+                          pinnedIds.has(bookmark.tweetId)
+                            ? "Unpin bookmark"
+                            : "Pin bookmark"
+                        }
+                        title={
+                          pinnedIds.has(bookmark.tweetId) ? "Unpin" : "Pin"
+                        }
+                      >
+                        <PushPinIcon
+                          weight={
+                            pinnedIds.has(bookmark.tweetId) ? "fill" : "regular"
+                          }
+                          className="size-3.5"
+                        />
+                      </button>
+                    </a>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            renderEmptyState()
+          )}
+
+          {offlineMode && (
+            <div className="mt-8">
+              <OfflineBanner
+                onLogin={() => {
+                  if (onLogin) {
+                    onLogin();
+                    return;
+                  }
+                  void actions.startLogin();
+                }}
+              />
+            </div>
+          )}
+        </main>
+      </div>
+
+      {toastMessage && (
+        <Toast message={toastMessage} onDismiss={() => setToastMessage(null)} />
+      )}
     </div>
   );
 }

@@ -20,6 +20,7 @@ interface Props {
   placeholder?: ReactNode;
   disabled?: boolean;
   align?: "start" | "center" | "end";
+  size?: "default" | "sm";
 }
 
 export function Select({
@@ -33,7 +34,9 @@ export function Select({
   placeholder,
   disabled,
   align = "end",
+  size = "default",
 }: Props) {
+  const isSmall = size === "sm";
   return (
     <BaseSelect.Root
       items={options}
@@ -50,7 +53,10 @@ export function Select({
         aria-label={ariaLabel}
         disabled={disabled}
         className={cn(
-          "inline-flex min-h-10 w-full items-center gap-2 rounded-xl border border-border bg-surface-card px-3 text-sm text-foreground shadow-sm transition-[border-color,background-color,box-shadow] duration-150 ease-out hover:bg-surface-hover focus-visible:border-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25 disabled:cursor-not-allowed disabled:opacity-60",
+          "inline-flex w-full items-center border border-border bg-surface-card text-foreground shadow-sm transition-[border-color,background-color,box-shadow] duration-150 ease-out hover:bg-surface-hover focus-visible:border-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25 disabled:cursor-not-allowed disabled:opacity-60",
+          isSmall
+            ? "min-h-8 gap-1.5 rounded-lg px-2.5 text-xs"
+            : "min-h-10 gap-2 rounded-xl px-3 text-sm",
           className,
         )}
       >
@@ -75,11 +81,14 @@ export function Select({
           sideOffset={8}
           positionMethod="fixed"
           alignItemWithTrigger={false}
-          className="z-40 outline-none"
+          className="z-50 outline-none"
         >
           <BaseSelect.Popup
             className={cn(
-              "totem-popover max-h-80 min-w-[12rem] overflow-y-auto rounded-2xl border border-border bg-surface-card p-1 shadow-xl outline-none",
+              "totem-popover max-h-80 overflow-y-auto border border-border bg-surface-card shadow-xl outline-none",
+              isSmall
+                ? "min-w-[8rem] rounded-lg p-0.5"
+                : "min-w-[12rem] rounded-2xl p-1",
               popupClassName,
             )}
           >
@@ -90,7 +99,12 @@ export function Select({
                   value={option.value}
                   label={typeof option.label === "string" ? option.label : undefined}
                   disabled={option.disabled}
-                  className="flex min-h-10 cursor-default items-center gap-3 rounded-xl px-3 text-sm text-muted outline-none transition-colors duration-150 ease-out data-[highlighted]:bg-surface-hover data-[highlighted]:text-foreground data-[selected]:text-foreground data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50"
+                  className={cn(
+                    "flex cursor-default items-center text-muted outline-none transition-colors duration-150 ease-out data-[highlighted]:bg-surface-hover data-[highlighted]:text-foreground data-[selected]:text-foreground data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50",
+                    isSmall
+                      ? "min-h-8 gap-2 rounded-lg px-2.5 text-xs"
+                      : "min-h-10 gap-3 rounded-xl px-3 text-sm",
+                  )}
                 >
                   <BaseSelect.ItemText className="min-w-0 flex-1 truncate">
                     {option.label}

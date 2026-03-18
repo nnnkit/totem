@@ -189,10 +189,34 @@ export function SettingsModal({
                       }
                       options={TOP_SITES_LIMIT_OPTIONS}
                       ariaLabel="Max quick links"
-                      className="min-w-[4.5rem] justify-between"
+                      size="sm"
+                      className="w-[5.5rem] shrink-0 border-border/70 bg-surface/45 hover:bg-surface/55"
+                      popupClassName="w-[5.5rem]"
                     />
                   </div>
                 )}
+
+                <div className="flex items-center justify-between min-h-10">
+                  <span className="text-sm text-foreground/80">
+                    Recommended post
+                  </span>
+                  <Select
+                    value={settings.newTabSource}
+                    onValueChange={(value) =>
+                      onUpdateSettings({
+                        newTabSource: value as "random" | "pinned",
+                      })
+                    }
+                    options={[
+                      { value: "random", label: "Random" },
+                      { value: "pinned", label: "Pinned" },
+                    ]}
+                    ariaLabel="Recommended post source"
+                    size="sm"
+                    className="w-[7.5rem] shrink-0 border-border/70 bg-surface/45 hover:bg-surface/55"
+                    popupClassName="w-[7.5rem]"
+                  />
+                </div>
               </div>
               <div className="mt-3">
                 {confirmingReset ? (

@@ -596,7 +596,7 @@
 
 @utility bookmark-list-item {
     content-visibility: auto;
-    contain-intrinsic-size: 0 72px;
+    contain-intrinsic-size: 0 64px;
 }
 
 @utility prose-reader {

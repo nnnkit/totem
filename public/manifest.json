@@ -22,7 +22,7 @@
     "https://x.com/*"
   ],
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; img-src 'self' https://pbs.twimg.com https://abs.twimg.com; media-src 'self' https://video.twimg.com"
+    "extension_pages": "script-src 'self'; object-src 'self'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://pbs.twimg.com https://abs.twimg.com; media-src 'self' https://video.twimg.com"
   },
   "content_scripts": [
     {

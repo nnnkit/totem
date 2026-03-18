@@ -8,6 +8,7 @@ export const LS_RETURN_SURFACE = "totem_return_surface";
 export const LS_WALLPAPER_INDEX = "totem_wallpaper_index";
 export const LS_MANUAL_SYNC_REQUIRED = "totem_manual_sync_required";
 export const LS_BOOT_SYNC_POLICY = "totem_boot_sync_policy";
+export const LS_PINNED_TWEETS = "totem_pinned_tweets";
 
 export const LOCAL_STORAGE_KEYS = [
   LS_READING_TAB,
@@ -16,6 +17,7 @@ export const LOCAL_STORAGE_KEYS = [
   LS_WALLPAPER_INDEX,
   LS_MANUAL_SYNC_REQUIRED,
   LS_BOOT_SYNC_POLICY,
+  LS_PINNED_TWEETS,
   "totem_has_bookmarks", // legacy — kept for reset cleanup
 ] as const;
 

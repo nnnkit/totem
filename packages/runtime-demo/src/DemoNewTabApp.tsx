@@ -98,6 +98,10 @@ function mergeSettings(raw?: Partial<UserSettings>): UserSettings {
       raw.searchEngine === "default"
         ? raw.searchEngine
         : DEFAULT_DEMO_SETTINGS.searchEngine,
+    newTabSource:
+      raw.newTabSource === "random" || raw.newTabSource === "pinned"
+        ? raw.newTabSource
+        : DEFAULT_DEMO_SETTINGS.newTabSource,
   };
 }
 
@@ -599,6 +603,7 @@ export function DemoNewTabApp() {
         openedTweetIds={openedTweetIds}
         onOpenBookmark={openBookmark}
         getBookmarkHref={(bookmark) => getDemoReaderHref(bookmark.tweetId)}
+        newTabSource={settings.newTabSource}
         onOpenSettings={() => setSettingsOpen(true)}
         onOpenReading={() => {
           restoreReadingTab();

@@ -172,6 +172,7 @@ function getCookieHeaderValue(cookieHeader, name) {
 }
 
 let authTabId = null;
+let authTabCleanup = null;
 let reauthInProgress = false;
 let authWeakNegativeHits = [];
 const extensionInitiatedRequestMap = new Map();
@@ -2317,22 +2318,74 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     return true;
   }
   if (message.type === "START_AUTH_CAPTURE") {
+    // Clean up any prior auth tab + listeners
+    if (authTabCleanup) {
+      authTabCleanup();
+      authTabCleanup = null;
+    }
     if (authTabId) {
       chrome.tabs.remove(authTabId).catch(() => {});
+      authTabId = null;
     }
-    chrome.tabs.create({ url: "https://x.com/i/bookmarks", active: false }, (tab) => {
+
+    chrome.tabs.create({ url: "https://x.com/i/bookmarks", active: true }, (tab) => {
       authTabId = tab.id;
+
+      const cleanup = () => {
+        chrome.storage.local.onChanged.removeListener(onChange);
+        chrome.tabs.onRemoved.removeListener(onRemoved);
+        authTabCleanup = null;
+      };
+
+      const onChange = (changes) => {
+        const authHeaders = changes.totem_auth_headers?.newValue;
+        const hasAuth = Boolean(
+          authHeaders &&
+          typeof authHeaders === "object" &&
+          authHeaders.authorization,
+        );
+        if (hasAuth) {
+          cleanup();
+          if (authTabId) {
+            const tabToClose = authTabId;
+            authTabId = null;
+            chrome.tabs.remove(tabToClose).catch(() => {});
+          }
+        }
+      };
+
+      const onRemoved = (removedTabId) => {
+        if (removedTabId === authTabId) {
+          authTabId = null;
+          cleanup();
+        }
+      };
+
+      chrome.storage.local.onChanged.addListener(onChange);
+      chrome.tabs.onRemoved.addListener(onRemoved);
+      authTabCleanup = cleanup;
+
       sendResponse({ tabId: tab.id });
     });
     return true;
   }
   if (message.type === "CLOSE_AUTH_TAB") {
+    if (authTabCleanup) {
+      authTabCleanup();
+      authTabCleanup = null;
+    }
     if (authTabId) {
       chrome.tabs.remove(authTabId).catch(() => {});
       authTabId = null;
     }
     sendResponse({ ok: true });
     return false;
+  }
+  if (message.type === "DISCOVER_QUERY_IDS") {
+    discoverAllMissingQueryIds()
+      .then(() => sendResponse({ ok: true }))
+      .catch(() => sendResponse({ ok: false }));
+    return true;
   }
   if (message.type === "FETCH_BOOKMARKS") {
     handleFetchBookmarks(message.cursor, message.count)

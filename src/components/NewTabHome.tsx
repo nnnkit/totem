@@ -9,9 +9,16 @@ import {
   MagnifyingGlassIcon,
   XLogoIcon,
 } from "@phosphor-icons/react";
+import { discoverQueryIds, startAuthCapture } from "../api/core/auth";
 import { TotemLogo } from "./TotemLogo";
 import { SearchEnginePicker } from "./SearchEnginePicker";
-import type { BackgroundMode, Bookmark, SearchEngineId } from "../types";
+import type {
+  BackgroundMode,
+  Bookmark,
+  NewTabSource,
+  SearchEngineId,
+} from "../types";
+import { getPinnedTweetIdsOrdered } from "../lib/pins";
 import { SEARCH_ENGINES } from "../lib/search-engines";
 import { hasChromeSearch } from "../lib/chrome";
 import { formatClock } from "../lib/time";
@@ -56,6 +63,7 @@ interface Props {
   onOpenBookmark: (bookmark: Bookmark) => void;
   getBookmarkHref: (bookmark: Bookmark) => string;
   onOpenSettings: () => void;
+  newTabSource: NewTabSource;
   onOpenReading: () => void;
   isResetting?: boolean;
   footerStateOverride?: FooterState;
@@ -86,6 +94,7 @@ export function NewTabHome({
   onOpenBookmark,
   getBookmarkHref,
   onOpenSettings,
+  newTabSource,
   onOpenReading,
   isResetting,
   footerStateOverride,
@@ -122,11 +131,27 @@ export function NewTabHome({
   }, [bookmarks, detailedTweetIds, openedTweetIds]);
 
   const currentItem = useMemo(() => {
+    // When pinned source is selected, pick from pinned bookmarks
+    if (newTabSource === "pinned") {
+      const pinnedIds = getPinnedTweetIdsOrdered();
+      if (pinnedIds.length > 0) {
+        const itemsByTweetId = new Map(
+          items.map((item) => [item.bookmark.tweetId, item]),
+        );
+        // Pick the first pinned item that still exists
+        for (const id of pinnedIds) {
+          const found = itemsByTweetId.get(id);
+          if (found) return found;
+        }
+      }
+      // Fall through to random if no pinned items exist
+    }
+
     const pool = unreadItems.length > 0 ? unreadItems : items;
     if (pool.length === 0) return null;
     const index = Math.floor(mountSeed * pool.length);
     return pool[index];
-  }, [items, unreadItems, mountSeed]);
+  }, [items, unreadItems, mountSeed, newTabSource]);
   const runtimeFooterState = useFooterState(Boolean(currentItem), isResetting);
   const syncButton = syncButtonStateOverride ?? runtimeSyncButton;
   const offlineMode = offlineModeOverride ?? runtimeOfflineMode;
@@ -202,9 +227,14 @@ export function NewTabHome({
       onLogin();
       return;
     }
-    window.open("https://x.com/i/bookmarks", "_blank", "noopener,noreferrer");
+    void startAuthCapture();
     void actions.startLogin();
   }, [actions, onLogin]);
+  const handleSyncBookmarks = useCallback(() => {
+    void discoverQueryIds()
+      .then(() => actions.startLogin())
+      .then(() => actions.refresh());
+  }, [actions]);
   const handleLoginHint = useCallback(() => {
     if (onLogin) {
       onLogin();
@@ -249,17 +279,16 @@ export function NewTabHome({
         return (
           <article className={cardCentered}>
             <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
-              Finishing X setup
+              Almost ready
             </p>
             <p className="mt-4 text-pretty text-base text-home-empty">
-              We found your account, but bookmark sync is not ready yet. Open X
-              once to finish connecting bookmarks.
+              We found your account. Tap below to finish connecting bookmarks.
             </p>
             <Button
               className="mt-6 border-0 bg-home-accent text-white hover:opacity-90"
-              onClick={handleLoginButton}
+              onClick={handleSyncBookmarks}
             >
-              Open X
+              Sync bookmarks
             </Button>
           </article>
         );
@@ -317,11 +346,11 @@ export function NewTabHome({
                 : ""
             }`}
           >
-            <div className="flex min-h-32 flex-col translate-y-0 opacity-100 transition-all duration-200 ease-overlay-in max-sm:min-h-28">
+            <div className="flex min-h-32 flex-col translate-y-0 opacity-100 transition-[transform,opacity] duration-200 ease-overlay-in max-sm:min-h-28">
               <div className="flex justify-between">
                 <div className="flex items-center gap-1.5">
                   <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
-                    your next read
+                    {newTabSource === "pinned" ? "pinned" : "your next read"}
                   </p>
                   {offlineMode && (
                     <span title="Not signed in — showing cached bookmarks">
@@ -615,7 +644,7 @@ export function NewTabHome({
           >
             <Button
               variant="secondary"
-              className="bg-home-secondary-bg px-5 py-2.5 font-semibold leading-none text-home-secondary-text transition-all duration-150 ease-hover hover:bg-main-bg-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80"
+              className="bg-home-secondary-bg px-5 py-2.5 font-semibold leading-none text-home-secondary-text transition-colors duration-150 ease-hover hover:bg-main-bg-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80"
               onClick={onOpenReading}
             >
               Open reading list
@@ -625,7 +654,7 @@ export function NewTabHome({
             </Button>
             <Button
               variant="secondary"
-              className="bg-home-secondary-bg px-5 py-2.5 font-semibold leading-none text-home-secondary-text transition-all duration-150 ease-hover hover:bg-main-bg-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80"
+              className="bg-home-secondary-bg px-5 py-2.5 font-semibold leading-none text-home-secondary-text transition-colors duration-150 ease-hover hover:bg-main-bg-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80"
               onClick={surpriseMe}
             >
               Surprise me
