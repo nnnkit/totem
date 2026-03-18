@@ -2287,19 +2287,7 @@ chrome.webRequest.onCompleted.addListener(
 // MESSAGE HANDLER
 // ═══════════════════════════════════════════════════════════
 
-function isExtensionOrTrustedSender(sender) {
-  // Messages from extension pages (newtab, reader, popup) have no tab/url
-  if (!sender.tab) return true;
-  // Content scripts on x.com
-  if (sender.url && /^https:\/\/x\.com(\/|$)/.test(sender.url)) return true;
-  return false;
-}
-
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  if (!isExtensionOrTrustedSender(_sender)) {
-    sendResponse({ error: "UNTRUSTED_SENDER" });
-    return true;
-  }
   if (message.type === "CHECK_AUTH") {
     handleCheckAuth().then(sendResponse);
     return true;
