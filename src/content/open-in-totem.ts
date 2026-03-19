@@ -225,14 +225,35 @@ function createButton(tweetId: string): HTMLButtonElement {
   button.dataset.tooltip = "Open in Totem Bookmark Reader";
   button.setAttribute("aria-label", "Open in Totem");
   button.title = "Open in Totem Bookmark Reader";
-  button.innerHTML = `
-    <svg viewBox="0 0 100 100" fill="none" aria-hidden="true">
-      <rect width="100" height="100" rx="18" fill="#1c1c1e"></rect>
-      <path d="M20 80L80 80L80 20Z" fill="#e07a5f"></path>
-      <path d="M80 20L52.5 47.5L80 80Z" fill="#c96b50"></path>
-      <path d="M52.5 47.5L80 20" stroke="rgba(255,255,255,0.18)" stroke-width="1.5"></path>
-    </svg>
-  `;
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", "0 0 100 100");
+  svg.setAttribute("fill", "none");
+  svg.setAttribute("aria-hidden", "true");
+
+  const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+  rect.setAttribute("width", "100");
+  rect.setAttribute("height", "100");
+  rect.setAttribute("rx", "18");
+  rect.setAttribute("fill", "#1c1c1e");
+  svg.appendChild(rect);
+
+  const path1 = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  path1.setAttribute("d", "M20 80L80 80L80 20Z");
+  path1.setAttribute("fill", "#e07a5f");
+  svg.appendChild(path1);
+
+  const path2 = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  path2.setAttribute("d", "M80 20L52.5 47.5L80 80Z");
+  path2.setAttribute("fill", "#c96b50");
+  svg.appendChild(path2);
+
+  const path3 = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  path3.setAttribute("d", "M52.5 47.5L80 20");
+  path3.setAttribute("stroke", "rgba(255,255,255,0.18)");
+  path3.setAttribute("stroke-width", "1.5");
+  svg.appendChild(path3);
+
+  button.appendChild(svg);
 
   button.addEventListener("mousedown", (event) => {
     event.stopPropagation();

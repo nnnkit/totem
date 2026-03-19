@@ -196,8 +196,8 @@ function buildRuntimeSeed(payload: TotemSeedPayload): RuntimeSeed {
     bookmarks,
     detailByTweetId,
     readingProgress,
-      settings: mergeSettings(payload.settings),
-      themePreference: mergeTheme(payload.themePreference),
+    settings: mergeSettings(payload.settings),
+    themePreference: mergeTheme(payload.themePreference),
     source: payload.source ?? "payload",
   };
 }

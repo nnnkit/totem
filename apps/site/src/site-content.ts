@@ -335,6 +335,7 @@ export const SITE_COPY = {
         access: "Optional",
       },
     ] satisfies PrivacyPermission[],
+    fullPolicyTitle: "Full policy",
     sections: [
       {
         title: "What Totem stores",

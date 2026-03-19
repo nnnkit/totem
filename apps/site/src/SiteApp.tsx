@@ -866,7 +866,7 @@ function PrivacyPage() {
           <div className="site-privacy-section-header">
             <span className="site-privacy-section-rule" />
             <SiteHeading as="h2" size="card">
-              Full policy
+              {privacy.fullPolicyTitle}
             </SiteHeading>
           </div>
           <div className="site-privacy-detail-stack">

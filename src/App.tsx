@@ -626,7 +626,12 @@ function ReaderRouteApp() {
         : current);
     }
 
-    const { apiError } = await actions.unbookmark(tweetId);
+    let apiError: string | undefined;
+    try {
+      ({ apiError } = await actions.unbookmark(tweetId));
+    } catch {
+      apiError = "UNBOOKMARK_FAILED";
+    }
 
     if (hasLocalSource) {
       setLocalMutation("idle");

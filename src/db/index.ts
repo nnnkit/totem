@@ -305,7 +305,12 @@ export async function getAllBookmarks(): Promise<Bookmark[]> {
   }
 
   await tx.done;
-  rows.forEach(sanitizeBookmark);
+  for (const row of rows) {
+    sanitizeBookmark(row);
+    if (typeof row.bookmarked !== "boolean") {
+      row.bookmarked = true;
+    }
+  }
   return rows;
 }
 
