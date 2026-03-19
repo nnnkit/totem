@@ -9,7 +9,7 @@ import {
   MagnifyingGlassIcon,
   XLogoIcon,
 } from "@phosphor-icons/react";
-import { discoverQueryIds, startAuthCapture } from "../api/core/auth";
+import { startAuthCapture } from "../api/core/auth";
 import { TotemLogo } from "./TotemLogo";
 import { SearchEnginePicker } from "./SearchEnginePicker";
 import type {
@@ -220,7 +220,7 @@ export function NewTabHome({
   const showCardButtons = footerState === "bookmark_card";
 
   const cardBase =
-    "relative min-h-40 overflow-hidden rounded px-6 py-6 bg-main-bg shadow-glass backdrop-blur-lg transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 max-sm:min-h-36 max-sm:px-4 max-sm:py-4";
+    "relative min-h-40 overflow-hidden rounded px-6 py-6 bg-main-bg shadow-glass transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 max-sm:min-h-36 max-sm:px-4 max-sm:py-4";
   const cardCentered = cn(cardBase, "text-center");
   const handleLoginButton = useCallback(() => {
     if (onLogin) {
@@ -230,11 +230,6 @@ export function NewTabHome({
     void startAuthCapture();
     void actions.startLogin();
   }, [actions, onLogin]);
-  const handleSyncBookmarks = useCallback(() => {
-    void discoverQueryIds()
-      .then(() => actions.startLogin())
-      .then(() => actions.refresh());
-  }, [actions]);
   const handleLoginHint = useCallback(() => {
     if (onLogin) {
       onLogin();
@@ -273,23 +268,6 @@ export function NewTabHome({
             <p className="mt-4 text-pretty text-base text-home-empty">
               Syncing your session in the background.
             </p>
-          </article>
-        );
-      case "preparing_sync":
-        return (
-          <article className={cardCentered}>
-            <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
-              Almost ready
-            </p>
-            <p className="mt-4 text-pretty text-base text-home-empty">
-              We found your account. Tap below to finish connecting bookmarks.
-            </p>
-            <Button
-              className="mt-6 border-0 bg-home-accent text-white hover:opacity-90"
-              onClick={handleSyncBookmarks}
-            >
-              Sync bookmarks
-            </Button>
           </article>
         );
       case "need_login":
@@ -534,6 +512,7 @@ export function NewTabHome({
             <div className="text-center">
               <h1
                 className="font-serif text-balance text-4xl font-light leading-none tracking-tight text-on-bg tabular-nums sm:text-5xl lg:text-6xl"
+                style={{ textShadow: "0 1px 8px rgba(0,0,0,0.3), 0 2px 24px rgba(0,0,0,0.15)" }}
                 aria-label={`Current time: ${formatClock(now)}`}
               >
                 {formatClock(now)}
@@ -572,7 +551,7 @@ export function NewTabHome({
 
                 return (
                   <form
-                    className="relative mx-auto flex max-w-xl items-center rounded bg-main-bg shadow-search backdrop-blur-md"
+                    className="relative mx-auto flex max-w-xl items-center rounded bg-main-bg shadow-search"
                     action={engineConfig?.searchUrl}
                     method={isDefault ? undefined : "GET"}
                     target={isDefault ? undefined : "_blank"}
@@ -644,7 +623,7 @@ export function NewTabHome({
           >
             <Button
               variant="secondary"
-              className="bg-home-secondary-bg px-5 py-2.5 font-semibold leading-none text-home-secondary-text transition-colors duration-150 ease-hover hover:bg-main-bg-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80"
+              className="bg-home-secondary-bg px-5 py-2.5 font-semibold leading-none text-home-secondary-text shadow-glass transition-colors duration-150 ease-hover hover:bg-main-bg-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80"
               onClick={onOpenReading}
             >
               Open reading list
@@ -654,7 +633,7 @@ export function NewTabHome({
             </Button>
             <Button
               variant="secondary"
-              className="bg-home-secondary-bg px-5 py-2.5 font-semibold leading-none text-home-secondary-text transition-colors duration-150 ease-hover hover:bg-main-bg-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80"
+              className="bg-home-secondary-bg px-5 py-2.5 font-semibold leading-none text-home-secondary-text shadow-glass transition-colors duration-150 ease-hover hover:bg-main-bg-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80"
               onClick={surpriseMe}
             >
               Surprise me

@@ -71,7 +71,6 @@ export type RuntimeMode =
   | "connecting"
   | "offline_empty"
   | "offline_cached"
-  | "online_blocked"
   | "online_ready";
 
 export type BootSyncPolicy = "auto" | "manual_only_until_seeded";
@@ -95,7 +94,6 @@ export interface SyncButtonState {
 export type FooterState =
   | "loading"
   | "connecting"
-  | "preparing_sync"
   | "need_login"
   | "bookmark_card"
   | "syncing_bootstrap"
@@ -111,7 +109,6 @@ export interface ReaderAvailabilityState {
 interface AuthPayload {
   hasUser: boolean;
   hasAuth: boolean;
-  hasQueryId: boolean;
   authState: SessionAuthState;
   sessionState: SessionState;
   userId: string | null;
@@ -160,7 +157,6 @@ export interface RuntimeState {
   sessionState: SessionState;
   capability: ApiCapability;
   activeAccountId: string | null;
-  hasQueryId: boolean;
   authRetryDelayMs: number | null;
   bookmarksLoaded: boolean;
   detailedIdsLoaded: boolean;
@@ -210,7 +206,6 @@ function normalizeAuthPayloadFromSnapshot(snapshot: RuntimeSnapshot): AuthPayloa
   return {
     hasUser: snapshot.sessionState === "logged_in" && Boolean(snapshot.accountContextId),
     hasAuth: snapshot.sessionState === "logged_in",
-    hasQueryId: bookmarksApi === "ready",
     authState:
       snapshot.sessionState === "logged_out"
         ? "logged_out"
@@ -234,13 +229,12 @@ function normalizeAuthPayloadFromStatus(status: AuthStatus): AuthPayload {
         ? "logged_in"
         : "unknown");
   const bookmarksApi = status.capability?.bookmarksApi ??
-    (status.hasQueryId ? "ready" : status.hasAuth ? "blocked" : "unknown");
+    (status.hasAuth ? "ready" : "unknown");
   const detailApi = status.capability?.detailApi ?? "unknown";
 
   return {
     hasUser: status.hasUser,
     hasAuth: status.hasAuth,
-    hasQueryId: status.hasQueryId,
     authState,
     sessionState,
     userId: typeof status.userId === "string" && status.userId ? status.userId : null,
@@ -371,10 +365,6 @@ function deriveRuntimeMode(state: RuntimeState): RuntimeMode {
     return hasReadableCache(state) ? "offline_cached" : "offline_empty";
   }
 
-  if (state.capability.bookmarksApi !== "ready") {
-    return "online_blocked";
-  }
-
   return "online_ready";
 }
 
@@ -386,15 +376,13 @@ function shouldRestrictToCachedDetails(state: RuntimeState): boolean {
 
 function shouldAutoSync(state: RuntimeState): boolean {
   return state.bootPolicy === "auto" &&
-    state.authPhase === "ready" &&
-    state.capability.bookmarksApi === "ready";
+    state.authPhase === "ready";
 }
 
 function shouldResumeSeedSync(state: RuntimeState): boolean {
   return state.bootPolicy === "manual_only_until_seeded" &&
     state.bookmarks.length > 0 &&
-    state.authPhase === "ready" &&
-    state.capability.bookmarksApi === "ready";
+    state.authPhase === "ready";
 }
 
 function shouldSkipHydrationForLoggedOutReset(
@@ -414,7 +402,6 @@ function createInitialState(actions: RuntimeActions): RuntimeState {
       detailApi: "unknown",
     },
     activeAccountId: null,
-    hasQueryId: false,
     authRetryDelayMs: null,
     bookmarksLoaded: false,
     detailedIdsLoaded: false,
@@ -641,9 +628,6 @@ export function createRuntimeStore() {
       } else if (payload.sessionState === "logged_in") {
         phase = "ready";
         sessionState = "logged_in";
-        if (payload.bookmarksApi === "blocked") {
-          authRetryDelayMs = AUTH_STALE_RECHECK_MS;
-        }
       } else if (!payload.hasUser && !payload.hasAuth) {
         phase = "need_login";
         sessionState = "logged_out";
@@ -677,7 +661,6 @@ export function createRuntimeStore() {
           detailApi: payload.detailApi,
         },
         activeAccountId: nextAccountId,
-        hasQueryId: payload.hasQueryId,
         authRetryDelayMs,
         bootGeneration: nextBootGeneration,
         bookmarksLoaded: skipHydrationForLoggedOutReset
@@ -796,7 +779,7 @@ export function createRuntimeStore() {
       }
 
       const current = get();
-      if (current.authPhase !== "ready" || current.capability.bookmarksApi !== "ready") {
+      if (current.authPhase !== "ready") {
         await completeSyncRun({
           accountId: policy.accountKey || accountId,
           leaseId: policy.leaseId,
@@ -1131,24 +1114,20 @@ export function createRuntimeStore() {
 
           let createFetchSucceeded = true;
           if (plan.needsPageFetch) {
-            if (get().capability.bookmarksApi !== "ready") {
-              createFetchSucceeded = false;
-            } else {
-              try {
-                await new Promise((resolve) => setTimeout(resolve, CREATE_EVENT_DELAY_MS));
-                const page = await fetchBookmarkPage(undefined, 20);
-                const currentIds = new Set(get().bookmarks.map((bookmark) => bookmark.tweetId));
-                const deduped = page.bookmarks.filter((bookmark) => !currentIds.has(bookmark.tweetId));
-                if (deduped.length > 0) {
-                  const updated = [...get().bookmarks, ...deduped].toSorted(compareSortIndexDesc);
-                  setRuntimeState({ bookmarks: updated });
-                  await upsertBookmarks(deduped);
-                  prefetchController.reconcile();
-                }
-                await chrome.storage.local.set({ [CS_LAST_SOFT_SYNC]: Date.now() });
-              } catch {
-                createFetchSucceeded = false;
+            try {
+              await new Promise((resolve) => setTimeout(resolve, CREATE_EVENT_DELAY_MS));
+              const page = await fetchBookmarkPage(undefined, 20);
+              const currentIds = new Set(get().bookmarks.map((bookmark) => bookmark.tweetId));
+              const deduped = page.bookmarks.filter((bookmark) => !currentIds.has(bookmark.tweetId));
+              if (deduped.length > 0) {
+                const updated = [...get().bookmarks, ...deduped].toSorted(compareSortIndexDesc);
+                setRuntimeState({ bookmarks: updated });
+                await upsertBookmarks(deduped);
+                prefetchController.reconcile();
               }
+              await chrome.storage.local.set({ [CS_LAST_SOFT_SYNC]: Date.now() });
+            } catch {
+              createFetchSucceeded = false;
             }
           }
 
@@ -1296,8 +1275,6 @@ export function selectSyncButtonState(state: RuntimeState): SyncButtonState {
     title = "Updating bookmarks...";
   } else if (syncUiState.isBlocking) {
     title = "Syncing bookmarks...";
-  } else if (mode === "online_blocked") {
-    title = "Preparing X API...";
   }
 
   return {
@@ -1319,7 +1296,6 @@ export function selectFooterState(
   if (isResetting) return "loading";
   if (mode === "initializing") return "loading";
   if (mode === "connecting" && !hasCurrentItem) return "connecting";
-  if (mode === "online_blocked" && !hasCurrentItem) return "preparing_sync";
   if (mode === "offline_empty") return "need_login";
   if (hasCurrentItem) return "bookmark_card";
   if (syncUiState.isBlocking) return "syncing_bootstrap";

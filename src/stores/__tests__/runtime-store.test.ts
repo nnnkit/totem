@@ -165,7 +165,6 @@ beforeEach(() => {
   mocks.checkAuth.mockResolvedValue({
     hasUser: false,
     hasAuth: false,
-    hasQueryId: false,
     userId: null,
     accountContextId: "acct-1",
     authState: "logged_out",
@@ -338,7 +337,6 @@ describe("runtime-store sync", () => {
         detailApi: "unknown",
       },
       activeAccountId: "acct-1",
-      hasQueryId: true,
       bookmarksLoaded: true,
       detailedIdsLoaded: true,
       syncStatus: "idle",

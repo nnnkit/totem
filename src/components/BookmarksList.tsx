@@ -9,7 +9,6 @@ import {
   PushPinIcon,
 } from "@phosphor-icons/react";
 import type { Bookmark } from "../types";
-import { discoverQueryIds } from "../api/core/auth";
 import type { ContinueReadingItem } from "../hooks/useContinueReading";
 import { useBookmarkSearch } from "../hooks/useBookmarkSearch";
 import { pickTitle, inferKindBadge } from "../lib/bookmark-utils";
@@ -113,10 +112,6 @@ export function BookmarksList({
   const actions = useRuntimeActions();
   const syncButton = syncButtonStateOverride ?? runtimeSyncButton;
   const offlineMode = offlineModeOverride ?? runtimeOfflineMode;
-  const isPreparingSync =
-    !offlineMode &&
-    syncButton.disabled &&
-    syncButton.title === "Preparing X API...";
   const [focusedIndex, setFocusedIndex] = useState(-1);
   const [sortPreferences, setSortPreferences] =
     useState<ReadingSortPreferences>(() => readStoredReadingSortPreferences());
@@ -211,8 +206,22 @@ export function BookmarksList({
     Map<string, HighlightCounts>
   >(new Map());
 
+  const visibleTweetIds = useMemo(() => {
+    if (activeTab === "continue") {
+      return continueReadingItems
+        .filter((item) => !item.progress.completed)
+        .map((item) => item.bookmark.tweetId);
+    }
+    if (activeTab === "read") {
+      return continueReadingItems
+        .filter((item) => item.progress.completed)
+        .map((item) => item.bookmark.tweetId);
+    }
+    return unreadBookmarks.map((bookmark) => bookmark.tweetId);
+  }, [activeTab, continueReadingItems, unreadBookmarks]);
+
   const refreshHighlightCounts = useCallback(() => {
-    const tweetIds = allBookmarks.map((bookmark) => bookmark.tweetId);
+    const tweetIds = visibleTweetIds;
     if (tweetIds.length === 0) {
       setHighlightCounts(new Map());
       return;
@@ -230,7 +239,7 @@ export function BookmarksList({
     return () => {
       cancelled = true;
     };
-  }, [allBookmarks]);
+  }, [visibleTweetIds]);
 
   useEffect(() => {
     return refreshHighlightCounts();
@@ -452,12 +461,6 @@ export function BookmarksList({
 
   const showSyncControls = syncButton.visible;
 
-  const handleSyncBookmarks = useCallback(() => {
-    void discoverQueryIds()
-      .then(() => actions.startLogin())
-      .then(() => actions.refresh());
-  }, [actions]);
-
   const handleTogglePin = useCallback(
     (tweetId: string, event: React.MouseEvent) => {
       event.preventDefault();
@@ -479,9 +482,7 @@ export function BookmarksList({
       return (
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <p className="text-lg text-muted text-pretty">
-            {isPreparingSync
-              ? "Almost ready. Tap below to finish connecting bookmarks."
-              : "All caught up! No unread bookmarks."}
+            All caught up! No unread bookmarks.
           </p>
           {showSyncControls && (
             <Button
@@ -491,15 +492,6 @@ export function BookmarksList({
               className="mt-4"
             >
               Sync new bookmarks
-            </Button>
-          )}
-          {isPreparingSync && (
-            <Button
-              variant="ghost"
-              onClick={handleSyncBookmarks}
-              className="mt-4"
-            >
-              Sync bookmarks
             </Button>
           )}
         </div>

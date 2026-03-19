@@ -151,7 +151,6 @@ export interface ApiCapability {
 export interface AuthStatus {
   hasUser: boolean;
   hasAuth: boolean;
-  hasQueryId: boolean;
   userId: string | null;
   accountContextId?: string | null;
   authState: AuthState;

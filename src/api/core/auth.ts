@@ -61,10 +61,6 @@ export async function closeAuthTab(): Promise<void> {
   await chrome.runtime.sendMessage({ type: "CLOSE_AUTH_TAB" });
 }
 
-export async function discoverQueryIds(): Promise<void> {
-  await chrome.runtime.sendMessage({ type: "DISCOVER_QUERY_IDS" });
-}
-
 export async function checkReauthStatus(): Promise<ReauthStatus> {
   return chrome.runtime.sendMessage({ type: "REAUTH_STATUS" });
 }

@@ -450,19 +450,13 @@ async function getSessionSnapshot() {
       ? "logged_in"
       : "unknown";
 
-  const bookmarksReady = sessionState === "logged_in"
-    ? await hasCachedQueryIdNoNetwork("Bookmarks").catch(() => false)
-    : false;
-
   return {
     userId,
     accountContextId,
     authState,
     sessionState,
     capability: {
-      bookmarksApi: sessionState === "logged_in"
-        ? (bookmarksReady ? "ready" : "blocked")
-        : "unknown",
+      bookmarksApi: sessionState === "logged_in" ? "ready" : "unknown",
       detailApi: "unknown",
     },
     hasAuthHeader,
@@ -741,19 +735,8 @@ async function handleSyncPolicyReserve(message = {}) {
     }
 
     let account = state.accounts[accountKey] || createEmptySyncAccountState();
-    if (
-      trigger === "manual" &&
-      sessionSnapshot.sessionState === "logged_in" &&
-      sessionSnapshot.capability.bookmarksApi !== "ready"
-    ) {
-      await discoverAllMissingQueryIds().catch(() => {});
-      sessionSnapshot = await getSessionSnapshot();
-    }
 
-    if (
-      sessionSnapshot.sessionState !== "logged_in" ||
-      sessionSnapshot.capability.bookmarksApi !== "ready"
-    ) {
+    if (sessionSnapshot.sessionState !== "logged_in") {
       return returnBlocked("not_ready", account);
     }
 
@@ -1200,7 +1183,52 @@ async function resolveQueryId(operationName) {
     return discovered;
   }
 
+  // 4. Last resort: open x.com/i/bookmarks in a background tab and let
+  //    the webRequest listener capture the query ID from real traffic.
+  if (operationName === "Bookmarks") {
+    const tabDiscovered = await discoverQueryIdViaTab().catch(() => null);
+    if (tabDiscovered) return tabDiscovered;
+  }
+
   return null;
+}
+
+let queryIdTabDiscoveryInFlight = null;
+
+async function discoverQueryIdViaTab() {
+  if (queryIdTabDiscoveryInFlight) return queryIdTabDiscoveryInFlight;
+  queryIdTabDiscoveryInFlight = _doDiscoverQueryIdViaTab();
+  try {
+    return await queryIdTabDiscoveryInFlight;
+  } finally {
+    queryIdTabDiscoveryInFlight = null;
+  }
+}
+
+async function _doDiscoverQueryIdViaTab() {
+  let tabId = null;
+  try {
+    const tab = await chrome.tabs.create({ url: "https://x.com/i/bookmarks", active: false });
+    tabId = tab?.id;
+  } catch {
+    return null;
+  }
+
+  try {
+    const maxWait = 15000;
+    const interval = 500;
+    const start = Date.now();
+    while (Date.now() - start < maxWait) {
+      await new Promise(r => setTimeout(r, interval));
+      const cached = queryIdMemCache.get("Bookmarks");
+      if (cached && typeof cached.id === "string" && cached.id) {
+        return cached.id;
+      }
+    }
+    return null;
+  } finally {
+    if (tabId) chrome.tabs.remove(tabId).catch(() => {});
+  }
 }
 
 async function forceRediscoverQueryId(operationName) {
@@ -1211,8 +1239,16 @@ async function forceRediscoverQueryId(operationName) {
   );
   if (freshId) {
     queryIdMemCache.set(operationName, { id: freshId, ts: Date.now() });
+    return freshId;
   }
-  return freshId;
+
+  // Fallback: tab-based discovery for Bookmarks
+  if (operationName === "Bookmarks") {
+    const tabDiscovered = await discoverQueryIdViaTab().catch(() => null);
+    if (tabDiscovered) return tabDiscovered;
+  }
+
+  return null;
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1833,7 +1869,6 @@ async function handleCheckAuth() {
   return {
     hasUser,
     hasAuth: snapshot.sessionState === "logged_in" && snapshot.hasAuthHeader,
-    hasQueryId: snapshot.capability.bookmarksApi === "ready",
     userId: responseUserId,
     accountContextId: snapshot.accountContextId,
     authState: snapshot.authState,
