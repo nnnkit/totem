@@ -665,12 +665,16 @@ export function BookmarksList({
                     }}
                     href={getBookmarkHref(bookmark)}
                     className={cn(
-                      "group/card relative flex flex-col gap-2 rounded-lg border border-border/50 bg-surface-card p-3 no-underline transition-colors hover:bg-surface-hover",
+                      "group/card relative flex flex-col gap-2 overflow-hidden rounded-lg rounded-tr-[22px] bg-surface-card p-3 shadow-[inset_0_0_0_1px] shadow-border/50 no-underline transition-all duration-200",
+                      "before:pointer-events-none before:absolute before:top-0 before:right-0 before:z-[3] before:h-[26px] before:w-[26px] before:-translate-y-1/2 before:translate-x-1/2 before:rotate-45 before:bg-surface before:shadow-[0_1px_0_0] before:shadow-border/50 before:transition-all before:duration-200 before:content-['']",
+                      "after:pointer-events-none after:absolute after:top-0 after:right-0 after:z-[2] after:size-6 after:-translate-y-2 after:translate-x-2 after:rounded-bl-md after:border after:border-border/50 after:bg-surface-hover after:shadow-sm after:transition-all after:duration-200 after:content-['']",
+                      "hover:rounded-tr-[36px] hover:bg-surface-hover hover:before:h-[40px] hover:before:w-[40px] hover:after:size-[34px] hover:after:shadow-md",
                       isFocused && "bg-surface-hover ring-1 ring-accent/30",
                     )}
                   >
+                    <div className="absolute top-3 left-0 h-5 w-[3px] rounded-r-sm bg-accent" />
                     <div
-                      className="flex cursor-pointer items-center gap-2"
+                      className="relative flex cursor-pointer items-center gap-2"
                       onClick={(e) => {
                         e.stopPropagation();
                         e.preventDefault();
@@ -721,7 +725,7 @@ export function BookmarksList({
                     <button
                       type="button"
                       onClick={(e) => handleTogglePin(bookmark.tweetId, e)}
-                      className="absolute top-2 right-2 rounded p-1 text-accent opacity-0 transition-opacity group-hover/card:opacity-100 hover:text-accent/80"
+                      className="absolute bottom-2 right-2 z-[4] rounded p-1 text-accent opacity-0 transition-opacity group-hover/card:opacity-100 hover:text-accent/80"
                       aria-label="Unpin bookmark"
                       title="Unpin"
                     >
