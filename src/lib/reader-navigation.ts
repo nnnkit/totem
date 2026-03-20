@@ -76,6 +76,18 @@ export function getNewTabView(
     : null;
 }
 
+export function parseTweetIdFromHref(href: string): string {
+  if (!href) return "";
+  try {
+    const base = typeof window !== "undefined" ? window.location.origin : "https://x.com";
+    const url = new URL(href, base);
+    const match = url.pathname.match(/\/status\/(\d+)/);
+    return match?.[1] || "";
+  } catch {
+    return "";
+  }
+}
+
 export function getReaderTweetId(search = typeof window !== "undefined" ? window.location.search : ""): string | null {
   const tweetId = new URLSearchParams(search).get("read")?.trim() ?? "";
   if (!tweetId || !isValidTweetId(tweetId)) return null;

@@ -1,3 +1,5 @@
+import { isValidTweetId, parseTweetIdFromHref } from "../lib/reader-navigation";
+
 const TWEET_SELECTOR = 'article[data-testid="tweet"]';
 const BUTTON_ATTR = "data-totem-open-button";
 const STYLE_ID = "totem-open-in-totem-style";
@@ -58,32 +60,31 @@ function ensureStyles() {
     .totem-open-in-totem::after {
       content: attr(data-tooltip);
       position: absolute;
-      inset-inline-end: 0;
-      inset-block-end: calc(100% + 10px);
-      padding: 6px 9px;
-      border-radius: 999px;
-      background: rgba(17, 17, 19, 0.96);
-      color: white;
-      font-size: 12px;
-      font-weight: 500;
+      inset-block-start: calc(100% + 4px);
+      inset-inline-start: 50%;
+      translate: -50% 0;
+      padding: 4px 8px;
+      border-radius: 4px;
+      background: rgba(101, 119, 134, 0.92);
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-size: 11px;
+      font-weight: 400;
       line-height: 1;
       white-space: nowrap;
       pointer-events: none;
       opacity: 0;
-      transform: translateY(4px);
-      transition: opacity 150ms ease, transform 150ms ease;
+      transition: opacity 150ms ease;
     }
 
     @media (hover: hover) {
       .totem-open-in-totem:hover::after {
         opacity: 1;
-        transform: translateY(0);
       }
     }
 
     .totem-open-in-totem:focus-visible::after {
       opacity: 1;
-      transform: translateY(0);
     }
   `;
 
@@ -121,16 +122,6 @@ function isNestedTweet(article: HTMLElement): boolean {
   return parentArticle instanceof HTMLElement;
 }
 
-function parseTweetIdFromHref(href: string): string {
-  if (!href) return "";
-  try {
-    const url = new URL(href, window.location.origin);
-    const match = url.pathname.match(/\/status\/(\d+)/);
-    return match?.[1] || "";
-  } catch {
-    return "";
-  }
-}
 
 function findStatusLink(article: HTMLElement): HTMLAnchorElement | null {
   const links = querySameTweet<HTMLAnchorElement>(article, 'a[href*="/status/"]');
@@ -202,10 +193,6 @@ function stopEvent(event: MouseEvent) {
   event.stopPropagation();
 }
 
-function isValidTweetId(value: string): boolean {
-  return /^\d{1,20}$/.test(value);
-}
-
 function openTotemReader(tweetId: string) {
   if (!isValidTweetId(tweetId)) return;
   chrome.runtime.sendMessage({
@@ -222,9 +209,8 @@ function createButton(tweetId: string): HTMLButtonElement {
   button.className = "totem-open-in-totem";
   button.setAttribute(BUTTON_ATTR, "");
   button.dataset.totemTweetId = tweetId;
-  button.dataset.tooltip = "Open in Totem Bookmark Reader";
+  button.dataset.tooltip = "Open in Totem";
   button.setAttribute("aria-label", "Open in Totem");
-  button.title = "Open in Totem Bookmark Reader";
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   svg.setAttribute("viewBox", "0 0 100 100");
   svg.setAttribute("fill", "none");

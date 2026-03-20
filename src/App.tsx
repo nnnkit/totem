@@ -94,7 +94,7 @@ interface ExternalReaderState {
   bookmark: Bookmark | null;
   thread: ThreadTweet[];
   error: string | null;
-  mutation: "idle" | "bookmarking" | "unbookmarking";
+  mutation: "idle" | "unbookmarking";
 }
 
 type AppView = "home" | "reading";
