@@ -139,7 +139,7 @@
         }
         to {
             opacity: 0;
-            transform: scale(0.95);
+            transform: scale(0.97);
         }
     }
     @keyframes card-in {
@@ -159,7 +159,7 @@
         }
         to {
             opacity: 0;
-            transform: translateY(-8px);
+            transform: translateY(-4px);
         }
     }
     @keyframes fadeIn {
@@ -533,7 +533,7 @@
         }
         to {
             opacity: 0;
-            transform: scale(0.92) translateY(4px);
+            transform: scale(0.96) translateY(2px);
         }
     }
 
@@ -570,7 +570,7 @@
 
     button:active:not(:disabled):not([role="switch"]),
     a[role="button"]:active:not(:disabled) {
-        transform: scale(0.97);
+        transform: scale(0.96);
     }
 }
 

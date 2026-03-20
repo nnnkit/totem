@@ -28,7 +28,7 @@ function QuoteHeader({ quotedTweet }: { quotedTweet: ResolvedQuote }) {
       <img
         src={quotedTweet.author.profileImageUrl}
         alt=""
-        className="size-6 rounded-full"
+        className="size-6 rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.06)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]"
         loading="lazy"
       />
       <span className="truncate font-semibold text-foreground">

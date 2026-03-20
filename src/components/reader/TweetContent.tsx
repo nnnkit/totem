@@ -65,7 +65,7 @@ function TweetBody({
             <img
               src={tweet.retweetedTweet.author.profileImageUrl}
               alt=""
-              className="size-7 rounded-full"
+              className="size-7 rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.06)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]"
               loading="lazy"
             />
             <span className="truncate font-semibold text-foreground">
@@ -150,7 +150,7 @@ function ThreadTweets({ tweets }: ThreadTweetsProps) {
                   <img
                     src={tweet.author.profileImageUrl}
                     alt=""
-                    className="size-10 shrink-0 rounded-full"
+                    className="size-10 shrink-0 rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.06)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]"
                     loading="lazy"
                   />
                 ) : (

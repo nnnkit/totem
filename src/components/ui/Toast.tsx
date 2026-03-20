@@ -51,7 +51,7 @@ export function Toast({
         )}
         <button
           onClick={handleDismiss}
-          className="shrink-0 rounded p-1 text-muted transition-colors hover:text-foreground"
+          className="-mr-2 flex size-10 shrink-0 items-center justify-center rounded text-muted transition-colors hover:text-foreground"
           aria-label="Dismiss"
         >
           <XIcon className="size-4" />

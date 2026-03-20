@@ -40,13 +40,13 @@ export function TweetRecommendations({
           <a
             key={related.tweetId}
             href={getBookmarkHref(related)}
-            className="w-full rounded border border-border bg-surface-card/60 p-2.5 text-left no-underline transition-colors hover:bg-surface-hover"
+            className="w-full rounded bg-surface-card/60 p-2.5 text-left no-underline shadow-[0_1px_2px_rgba(0,0,0,0.04),0_2px_8px_rgba(0,0,0,0.04),inset_0_0_0_1px_rgba(0,0,0,0.06)] transition-colors hover:bg-surface-hover dark:shadow-[0_1px_2px_rgba(0,0,0,0.12),0_2px_8px_rgba(0,0,0,0.1),inset_0_0_0_1px_rgba(255,255,255,0.06)]"
           >
             <div className="flex items-center gap-1.5">
               <img
                 src={related.author.profileImageUrl}
                 alt=""
-                className="size-5 rounded-full"
+                className="size-5 rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.06)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]"
                 loading="lazy"
               />
               <div className="min-w-0">

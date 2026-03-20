@@ -25,7 +25,7 @@ function LinkPreviewCard({ url, card }: LinkPreviewCardProps) {
         <img
           src={card.imageUrl}
           alt={card.imageAlt || card.title || ""}
-          className="size-28 shrink-0 object-cover"
+          className="size-28 shrink-0 border-r border-border object-cover"
         />
       )}
       <div className="flex min-w-0 flex-col justify-center px-3 py-2.5">

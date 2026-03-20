@@ -273,7 +273,7 @@ export function BookmarkReader({
           href={prevHref}
           aria-label="Previous post"
           title="Previous"
-          className="fixed left-4 top-1/2 z-20 -translate-y-1/2 rounded bg-surface/80 p-3 text-muted shadow-md border border-border backdrop-blur-sm transition-colors hover:bg-surface-hover hover:text-foreground"
+          className="fixed left-4 top-1/2 z-20 -translate-y-1/2 rounded bg-surface/80 p-3 text-muted shadow-[0_1px_3px_rgba(0,0,0,0.08),0_4px_12px_rgba(0,0,0,0.06),inset_0_0_0_1px_rgba(0,0,0,0.06)] backdrop-blur-sm transition-colors hover:bg-surface-hover hover:text-foreground dark:shadow-[0_1px_3px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.15),inset_0_0_0_1px_rgba(255,255,255,0.08)]"
         >
           <CaretLeftIcon className="size-5" />
         </a>
@@ -284,7 +284,7 @@ export function BookmarkReader({
           href={nextHref}
           aria-label="Next post"
           title="Next"
-          className="fixed right-4 top-1/2 z-20 -translate-y-1/2 rounded bg-surface/80 p-3 text-muted shadow-md border border-border backdrop-blur-sm transition-colors hover:bg-surface-hover hover:text-foreground"
+          className="fixed right-4 top-1/2 z-20 -translate-y-1/2 rounded bg-surface/80 p-3 text-muted shadow-[0_1px_3px_rgba(0,0,0,0.08),0_4px_12px_rgba(0,0,0,0.06),inset_0_0_0_1px_rgba(0,0,0,0.06)] backdrop-blur-sm transition-colors hover:bg-surface-hover hover:text-foreground dark:shadow-[0_1px_3px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.15),inset_0_0_0_1px_rgba(255,255,255,0.08)]"
         >
           <CaretRightIcon className="size-5" />
         </a>

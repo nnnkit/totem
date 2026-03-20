@@ -27,7 +27,7 @@ interface Props {
 }
 
 const toggleBase =
-  "flex items-center justify-center h-7 text-sm font-medium rounded transition-colors transition-shadow text-muted hover:text-foreground data-[pressed]:bg-surface-card data-[pressed]:text-accent data-[pressed]:shadow-sm cursor-default";
+  "flex items-center justify-center h-7 text-sm font-medium rounded-[5px] transition-[color,box-shadow] text-muted hover:text-foreground data-[pressed]:bg-surface-card data-[pressed]:text-accent data-[pressed]:shadow-sm cursor-default";
 const TOP_SITES_LIMIT_OPTIONS = [3, 4, 5, 6, 8, 10].map((value) => ({
   value: String(value),
   label: String(value),
@@ -101,7 +101,7 @@ export function SettingsModal({
                       if (values.length)
                         onThemePreferenceChange(values[0] as ThemePreference);
                     }}
-                    className="flex gap-1 rounded bg-foreground/6 p-1"
+                    className="flex gap-1 rounded-md bg-foreground/6 p-1"
                   >
                     <Toggle
                       value="system"
