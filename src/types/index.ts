@@ -1,3 +1,6 @@
+import type { ThemePreference } from "../hooks/useTheme";
+export type { ThemePreference };
+
 export interface AuthorAffiliate {
   name: string;
   badgeUrl?: string;
@@ -244,7 +247,7 @@ export type SearchEngineId =
   | "ecosia"
   | "default";
 
-export type NewTabSource = "random" | "pinned";
+export type RecommendationSource = "random" | "pinned";
 
 export interface UserSettings {
   showTopSites: boolean;
@@ -252,5 +255,16 @@ export interface UserSettings {
   topSitesLimit: number;
   backgroundMode: BackgroundMode;
   searchEngine: SearchEngineId;
-  newTabSource: NewTabSource;
+  recommendationSource: RecommendationSource;
+}
+
+export interface TotemSeedPayload {
+  version: 1;
+  source: "extension-export" | "demo-fixture" | "demo-json";
+  generatedAt?: string;
+  bookmarks: Bookmark[];
+  detailByTweetId: Record<string, TweetDetailCache>;
+  readingProgress: ReadingProgress[];
+  settings: UserSettings;
+  themePreference: ThemePreference;
 }

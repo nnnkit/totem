@@ -1,8 +1,0 @@
-{
-  "name": "@totem/runtime-demo",
-  "private": true,
-  "type": "module",
-  "exports": {
-    ".": "./src/index.ts"
-  }
-}

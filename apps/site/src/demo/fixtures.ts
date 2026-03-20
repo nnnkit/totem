@@ -7,7 +7,7 @@ import type {
   TotemSeedPayload,
   TweetDetailCache,
   UserSettings,
-} from "@totem/contracts";
+} from "../../../../src/types";
 
 export type DemoDetailEntry = TweetDetailCache;
 export type DemoPayload = TotemSeedPayload;
@@ -18,7 +18,7 @@ export const DEFAULT_DEMO_SETTINGS: UserSettings = {
   topSitesLimit: 5,
   backgroundMode: "images",
   searchEngine: "google",
-  newTabSource: "random",
+  recommendationSource: "random",
 };
 
 interface BookmarkSeed {

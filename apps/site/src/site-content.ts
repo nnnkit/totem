@@ -1,4 +1,3 @@
-import { TOTEM_SITE_ROUTES } from "@totem/contracts";
 import cleanReaderImage from "./feature-previews/clean-reader.jpg";
 import highlightsNotesImage from "./feature-previews/highlights-notes.jpg";
 import readingStatesImage from "./feature-previews/reading-states.jpg";
@@ -61,26 +60,26 @@ const installButtonLabel = hasWebStoreInstall
   : "Install Totem";
 const featureItems: FeatureItem[] = [
   {
-    title: "Clean reader, zero feed noise",
-    body: "Read saved posts in a calmer layout made for long-form scanning.",
+    title: "Read without the noise",
+    body: "Tweets and threads in a calm layout. No sidebar, no suggested posts pulling you away.",
     image: cleanReaderImage,
     alt: "Totem clean reader view showing saved X bookmarks without feed distractions.",
   },
   {
-    title: "Unread, Continue, and Read states",
-    body: "Your queue auto-organizes so you always know what to pick next.",
+    title: "Pick up mid-thread",
+    body: "Mark anything unread, in progress, or done. Come back tomorrow — it's right where you left off.",
     image: readingStatesImage,
     alt: "Totem reading states showing unread, continue, and read progress.",
   },
   {
-    title: "Highlight and save notes",
-    body: "Select text while reading and keep notes where the insight happened.",
+    title: "Annotate while you read",
+    body: "Highlight a line, add a note. Stored on your machine. Gone when you want it gone.",
     image: highlightsNotesImage,
     alt: "Totem highlights and notes feature in the reader.",
   },
   {
-    title: "Keep reading offline",
-    body: "Continue reading when X is unavailable or your connection drops.",
+    title: "No WiFi, no problem",
+    body: "Once a bookmark loads, it's cached. Read on a plane. Read in a tunnel.",
     image: worksOfflineImage,
     alt: "Totem interface running with offline-ready cached reading queue.",
   },
@@ -89,8 +88,8 @@ const featureItems: FeatureItem[] = [
 export const SITE_LINKS = {
   installUrl,
   demoVideoEmbedUrl,
-  demoPageUrl: TOTEM_SITE_ROUTES.demo,
-  privacyUrl: TOTEM_SITE_ROUTES.privacy,
+  demoPageUrl: "/demo/",
+  privacyUrl: "/privacy/",
   supportEmail: SUPPORT_EMAIL,
   supportEmailUrl: SUPPORT_EMAIL_URL,
   supportXHandle: SUPPORT_X_HANDLE,
@@ -116,25 +115,25 @@ export const SITE_COPY = {
   landing: {
     hero: {
       eyebrow: "Chrome Extension",
-      title: "Read your X bookmarks, not the feed.",
+      title: "X wants you in the feed. Your bookmarks don't.",
       description:
-        "Open a new tab to read your saved posts. No feed, no algorithmic noise.",
+        "Totem replaces your new tab with the threads you actually saved. Runs on your existing X session. Never asks for a password.",
       installButtonLabel: installButtonLabel,
       videoTitle: "Totem quick walkthrough video",
-      chips: ["No account", "No backend", "Local-first"],
+      chips: ["No servers ever", "No password", "Local-first"],
     },
     demo: {
       eyebrow: "Live demo",
-      title: "See the experience before you install.",
+      title: "Your bookmarks, finally in front of you.",
       description:
-        "Click the New tab button in the mock browser to open Totem. If this looks useful, install now. ",
-      linkLabel: "Open full-page demo →",
-      note: "Works offline after first sync and keeps your reading state local.",
+        "This is what every new tab looks like after you install.",
+      linkLabel: "Full-page demo →",
+      note: "Uses your existing X session. Nothing leaves your browser.",
     },
     features: {
       eyebrow: "Features",
-      title: "Features you will love.",
-      description: "Discover more once you install.",
+      title: "Built for reading, not scrolling.",
+      description: "Your bookmarks deserve better.",
       items: featureItems,
     },
     faq: {
@@ -219,9 +218,9 @@ export const SITE_COPY = {
             "Open X once, return to Totem, and try Sync again. If it still does not recover, use Reset local data.",
         },
       ] satisfies FAQItem[],
-      finalCtaTitle: "Ready to start reading your bookmarks?",
+      finalCtaTitle: "Stop bookmarking. Start reading.",
       finalCtaDescription:
-        "No account required. No subscription. Just install and open a new tab.",
+        "One install. Works on the next new tab you open.",
       finalCtaButtonLabel: installButtonLabel,
     },
   },

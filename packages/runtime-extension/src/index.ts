@@ -1,1 +1,0 @@
-export { createExtensionDemoPayload } from "./payload";

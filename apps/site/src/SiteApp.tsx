@@ -7,7 +7,8 @@ import {
   type ElementType,
   type ReactNode,
 } from "react";
-import { cn, TotemLogo } from "@totem/app-shell";
+import { cn } from "../../../src/lib/cn";
+import { TotemLogo } from "../../../src/components/TotemLogo";
 import {
   SITE_COPY,
   SITE_LINKS,
