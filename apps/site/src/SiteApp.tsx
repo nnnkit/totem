@@ -32,6 +32,30 @@ function GitHubIcon({ className }: { className?: string }) {
   );
 }
 
+/** Scroll-triggered visibility hook. Fires once, then disconnects. */
+function useOnScreen(threshold = 0.15) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setVisible(true);
+          obs.disconnect();
+        }
+      },
+      { threshold },
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [threshold]);
+
+  return { ref, visible };
+}
+
 export type SitePage = "landing" | "privacy";
 
 interface SiteAppProps {
@@ -569,6 +593,115 @@ function DemoBrowser() {
   );
 }
 
+/** Stylized tweet action bar showing the "Open in Totem" button. */
+function OpenInTotemIllustration() {
+  return (
+    <div className="flex items-center justify-center rounded-xl border border-neutral-200 bg-neutral-50 py-10 sm:py-14">
+      <div className="w-full max-w-md px-6">
+        {/* Fake tweet */}
+        <div className="mb-4 flex items-start gap-3">
+          <div className="size-10 flex-shrink-0 rounded-full bg-neutral-300" />
+          <div className="min-w-0 flex-1">
+            <div className="mb-1 flex items-center gap-2">
+              <div className="h-3.5 w-24 rounded bg-neutral-300" />
+              <div className="h-3 w-16 rounded bg-neutral-200" />
+            </div>
+            <div className="space-y-1.5">
+              <div className="h-3 w-full rounded bg-neutral-200" />
+              <div className="h-3 w-full rounded bg-neutral-200" />
+              <div className="h-3 w-3/4 rounded bg-neutral-200" />
+            </div>
+          </div>
+        </div>
+        {/* Action bar */}
+        <div className="flex items-center justify-between border-t border-neutral-200 pt-3">
+          {/* Reply */}
+          <svg className="size-[18px] text-neutral-300" viewBox="0 0 256 256" fill="currentColor"><path d="M128,24A104,104,0,0,0,36.18,176.88L24.83,210.93a16,16,0,0,0,20.24,20.24l34.05-11.35A104,104,0,1,0,128,24Z" /></svg>
+          {/* Retweet */}
+          <svg className="size-[18px] text-neutral-300" viewBox="0 0 256 256" fill="currentColor"><path d="M224,48V152a8,8,0,0,1-13.66,5.66L188,135.31l-42.34,42.35a8,8,0,0,1-11.32,0L96,139.31,69.66,165.66a8,8,0,0,1-11.32-11.32l32-32a8,8,0,0,1,11.32,0L140,160.69,176.69,124l-22.35-22.34A8,8,0,0,1,160,88h56A8,8,0,0,1,224,48Z" /></svg>
+          {/* Heart */}
+          <svg className="size-[18px] text-neutral-300" viewBox="0 0 256 256" fill="currentColor"><path d="M178,40c-20.65,0-38.73,8.88-50,23.89C116.73,48.88,98.65,40,78,40a62.07,62.07,0,0,0-62,62c0,70,103.79,126.66,108.21,129a8,8,0,0,0,7.58,0C136.21,228.66,240,172,240,102A62.07,62.07,0,0,0,178,40Z" /></svg>
+          {/* Bookmark */}
+          <svg className="size-[18px] text-neutral-300" viewBox="0 0 256 256" fill="currentColor"><path d="M200,32H56A8,8,0,0,0,48,40V224a8,8,0,0,0,12.65,6.51L128,193.83l67.35,36.68A8,8,0,0,0,208,224V40A8,8,0,0,0,200,32Z" /></svg>
+          {/* Totem button — the only colored element */}
+          <div className="group relative flex items-center">
+            <TotemLogo className="size-[22px] transition-transform duration-200 group-hover:-translate-y-px" />
+            <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-neutral-900 px-2 py-1 text-[10px] font-medium text-white opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+              Open in Totem
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Fade-up on scroll into view. */
+function SiteReveal({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  const { ref, visible } = useOnScreen();
+  return (
+    <div
+      ref={ref}
+      className={cn("site-reveal", visible && "is-visible", className)}
+    >
+      {children}
+    </div>
+  );
+}
+
+/** Stagger children on scroll into view. */
+function SiteRevealStagger({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  const { ref, visible } = useOnScreen();
+  return (
+    <div
+      ref={ref}
+      className={cn(
+        "site-reveal-stagger",
+        visible && "is-visible",
+        className,
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
+/** Full section with scroll reveal. */
+function SiteRevealSection({
+  children,
+  className,
+  id,
+  as: Tag = "div",
+}: {
+  children: ReactNode;
+  className?: string;
+  id?: string;
+  as?: ElementType;
+}) {
+  const { ref, visible } = useOnScreen(0.1);
+  return (
+    <Tag
+      ref={ref}
+      id={id}
+      className={cn("site-reveal", visible && "is-visible", className)}
+    >
+      {children}
+    </Tag>
+  );
+}
+
 function FAQDisclosure({ item }: { item: FAQItem }) {
   return (
     <details className="rounded-xl border border-neutral-200 bg-white transition-colors duration-200 open:border-neutral-300">
@@ -580,15 +713,19 @@ function FAQDisclosure({ item }: { item: FAQItem }) {
         </div>
         <span
           aria-hidden="true"
-          className="pt-0.5 text-lg leading-none text-neutral-300"
+          className="site-faq-icon pt-0.5 text-lg leading-none text-neutral-300"
         >
           +
         </span>
       </summary>
-      <div className="border-t border-neutral-200 px-4 py-3.5">
-        <p className="m-0 text-sm leading-relaxed text-neutral-600">
-          {item.answer}
-        </p>
+      <div className="site-faq-content">
+        <div className="site-faq-content-inner">
+          <div className="border-t border-neutral-200 px-4 py-3.5">
+            <p className="m-0 text-sm leading-relaxed text-neutral-600">
+              {item.answer}
+            </p>
+          </div>
+        </div>
       </div>
     </details>
   );
@@ -602,7 +739,17 @@ function LandingPage() {
       <main>
         <SiteSection containerClassName="max-w-6xl py-20 sm:py-28">
           <div className="grid gap-10 lg:grid-cols-2 lg:items-start">
-            <div>
+            <div className="site-hero-stagger relative">
+              {/* Chaos icons — social feed debris that dissolves */}
+              <div className="site-hero-chaos" aria-hidden="true">
+                {/* Heart */}
+                <svg className="site-hero-chaos-icon" style={{ top: "8%", left: "72%", "--chaos-rotate": "rotate(-12deg)", animationDelay: "0ms" } as React.CSSProperties} width="20" height="20" viewBox="0 0 256 256" fill="currentColor"><path d="M178,40c-20.65,0-38.73,8.88-50,23.89C116.73,48.88,98.65,40,78,40a62.07,62.07,0,0,0-62,62c0,70,103.79,126.66,108.21,129a8,8,0,0,0,7.58,0C136.21,228.66,240,172,240,102A62.07,62.07,0,0,0,178,40Z" /></svg>
+                {/* Retweet */}
+                <svg className="site-hero-chaos-icon" style={{ top: "32%", left: "85%", "--chaos-rotate": "rotate(8deg)", animationDelay: "120ms" } as React.CSSProperties} width="18" height="18" viewBox="0 0 256 256" fill="currentColor"><path d="M224,48V152a8,8,0,0,1-13.66,5.66L188,135.31l-42.34,42.35a8,8,0,0,1-11.32,0L96,139.31,69.66,165.66a8,8,0,0,1-11.32-11.32l32-32a8,8,0,0,1,11.32,0L140,160.69,176.69,124l-22.35-22.34A8,8,0,0,1,160,88h56A8,8,0,0,1,224,48Z" /></svg>
+                {/* Bookmark */}
+                <svg className="site-hero-chaos-icon" style={{ top: "55%", left: "78%", "--chaos-rotate": "rotate(-6deg)", animationDelay: "240ms" } as React.CSSProperties} width="16" height="16" viewBox="0 0 256 256" fill="currentColor"><path d="M200,32H56A8,8,0,0,0,48,40V224a8,8,0,0,0,12.65,6.51L128,193.83l67.35,36.68A8,8,0,0,0,208,224V40A8,8,0,0,0,200,32Z" /></svg>
+              </div>
+
               <SiteEyebrow className="mb-4">{hero.eyebrow}</SiteEyebrow>
               <SiteHeading as="h1" size="hero" className="mb-5 max-w-xl">
                 {hero.title}
@@ -633,7 +780,7 @@ function LandingPage() {
               </div>
             </div>
 
-            <aside className="lg:pt-2">
+            <aside className="site-hero-aside lg:pt-2">
               <SiteCard className="overflow-hidden bg-neutral-950 shadow-site-frame">
                 <iframe
                   title={hero.videoTitle}
@@ -648,7 +795,7 @@ function LandingPage() {
           </div>
         </SiteSection>
 
-        <section id="demo" className="bg-neutral-950 py-16 sm:py-20">
+        <SiteRevealSection id="demo" className="bg-neutral-950 py-16 sm:py-20" as="section">
           <div className="mx-auto mb-8 w-full max-w-5xl px-6">
             <SiteEyebrow tone="inverse" className="mb-3">
               {demo.eyebrow}
@@ -679,34 +826,45 @@ function LandingPage() {
           <div className="mx-auto mt-4 w-full max-w-5xl px-6">
             <p className="text-sm text-neutral-600">{demo.note}</p>
           </div>
-        </section>
+        </SiteRevealSection>
 
         <SiteSection className="py-16 sm:py-20">
-          <SiteEyebrow className="mb-3 text-center">
-            {features.eyebrow}
-          </SiteEyebrow>
-          <div className="mx-auto mb-10 max-w-3xl text-center">
-            <SiteHeading as="h2" size="section" className="mb-3">
-              {features.title}
-            </SiteHeading>
-            <p className="text-lg leading-relaxed text-neutral-400">
-              {features.description}
-            </p>
-          </div>
+          <SiteReveal className="mb-10">
+            <SiteEyebrow className="mb-3 text-center">
+              {features.eyebrow}
+            </SiteEyebrow>
+            <div className="mx-auto max-w-3xl text-center">
+              <SiteHeading as="h2" size="section" className="mb-3">
+                {features.title}
+              </SiteHeading>
+              <p className="text-lg leading-relaxed text-neutral-400">
+                {features.description}
+              </p>
+            </div>
+          </SiteReveal>
 
-          <div className="grid gap-5 md:grid-cols-2">
+          <SiteRevealStagger className="grid gap-5 md:grid-cols-2">
             {features.items.map((feature) => (
               <SiteCard
                 as="article"
                 key={feature.title}
-                className={cn(feature.wide && "md:col-span-2", "p-4")}
+                className={cn(
+                  feature.wide && "md:col-span-2",
+                  "site-feature-card p-4",
+                )}
               >
-                <img
-                  src={feature.image}
-                  alt={feature.alt}
-                  className="mb-4 aspect-video w-full rounded-xl border border-neutral-200 object-cover"
-                  loading="lazy"
-                />
+                {feature.illustration === "open-in-totem" ? (
+                  <div className="mb-4">
+                    <OpenInTotemIllustration />
+                  </div>
+                ) : feature.image ? (
+                  <img
+                    src={feature.image}
+                    alt={feature.alt}
+                    className="mb-4 aspect-video w-full rounded-xl border border-neutral-200 object-cover"
+                    loading="lazy"
+                  />
+                ) : null}
                 <SiteHeading
                   as="h3"
                   size="card"
@@ -724,12 +882,12 @@ function LandingPage() {
                 </p>
               </SiteCard>
             ))}
-          </div>
+          </SiteRevealStagger>
         </SiteSection>
 
         <SiteSection id="faq" className="py-16 sm:py-20">
           <div className="max-w-4xl">
-            <div className="mb-8 max-w-3xl">
+            <SiteReveal className="mb-8 max-w-3xl">
               <SiteHeading as="h2" size="section">
                 {faq.title}
               </SiteHeading>
@@ -740,17 +898,17 @@ function LandingPage() {
                 </SiteBodyLink>
                 {faq.introAfter}
               </p>
-            </div>
+            </SiteReveal>
 
-            <div className="space-y-3">
+            <SiteRevealStagger className="space-y-3">
               {faq.items.map((item) => (
                 <FAQDisclosure key={item.question} item={item} />
               ))}
-            </div>
+            </SiteRevealStagger>
           </div>
         </SiteSection>
 
-        <section className="bg-neutral-900 py-14">
+        <SiteRevealSection className="bg-neutral-900 py-14" as="section">
           <div className="mx-auto w-full max-w-xl px-6 text-center">
             <SiteHeading as="h2" size="section" tone="inverse" className="mb-3">
               {faq.finalCtaTitle}
@@ -766,7 +924,7 @@ function LandingPage() {
               {faq.finalCtaButtonLabel}
             </SiteButtonLink>
           </div>
-        </section>
+        </SiteRevealSection>
       </main>
     </SiteLayout>
   );

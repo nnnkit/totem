@@ -21,6 +21,51 @@
       transform: translateY(-0.35rem);
     }
   }
+
+}
+
+/* ── Keyframes (outside @theme so they emit as real CSS) ── */
+
+@keyframes site-fade-in-up {
+  from {
+    opacity: 0;
+    filter: blur(4px);
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0);
+  }
+}
+
+@keyframes site-chaos-dissolve {
+  0% {
+    opacity: 0.5;
+    filter: blur(0);
+    transform: var(--chaos-rotate) translateY(0);
+  }
+  60% {
+    opacity: 0.15;
+    filter: blur(1px);
+    transform: var(--chaos-rotate) translateY(-20px);
+  }
+  100% {
+    opacity: 0;
+    filter: blur(3px);
+    transform: var(--chaos-rotate) translateY(-36px);
+  }
+}
+
+@keyframes site-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @layer components {
@@ -514,5 +559,139 @@
     position: fixed;
     inset: 0;
     background-color: var(--color-site-demo-bg);
+  }
+
+  /* ── Hero entrance stagger ── */
+
+  .site-hero-stagger > * {
+    opacity: 0;
+    animation: site-fade-in-up 500ms cubic-bezier(0.23, 1, 0.32, 1) forwards;
+  }
+
+  .site-hero-stagger > *:nth-child(1) { animation-delay: 0ms; }
+  .site-hero-stagger > *:nth-child(2) { animation-delay: 80ms; }
+  .site-hero-stagger > *:nth-child(3) { animation-delay: 160ms; }
+  .site-hero-stagger > *:nth-child(4) { animation-delay: 240ms; }
+  .site-hero-stagger > *:nth-child(5) { animation-delay: 320ms; }
+
+  .site-hero-aside {
+    opacity: 0;
+    animation: site-fade-in-up 600ms cubic-bezier(0.23, 1, 0.32, 1) 200ms forwards;
+  }
+
+  /* ── Hero chaos icons ── */
+
+  .site-hero-chaos {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+  }
+
+  .site-hero-chaos-icon {
+    position: absolute;
+    opacity: 0;
+    color: rgb(180 180 190);
+    animation: site-chaos-dissolve 800ms cubic-bezier(0.23, 1, 0.32, 1) forwards;
+  }
+
+  /* ── Scroll reveal ── */
+
+  .site-reveal {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+
+  .site-reveal.is-visible {
+    animation: site-reveal 500ms cubic-bezier(0.23, 1, 0.32, 1) forwards;
+  }
+
+  .site-reveal-stagger.is-visible > * {
+    animation: site-reveal 500ms cubic-bezier(0.23, 1, 0.32, 1) forwards;
+  }
+
+  .site-reveal-stagger > * {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+
+  .site-reveal-stagger.is-visible > *:nth-child(1) { animation-delay: 0ms; }
+  .site-reveal-stagger.is-visible > *:nth-child(2) { animation-delay: 80ms; }
+  .site-reveal-stagger.is-visible > *:nth-child(3) { animation-delay: 160ms; }
+  .site-reveal-stagger.is-visible > *:nth-child(4) { animation-delay: 240ms; }
+  .site-reveal-stagger.is-visible > *:nth-child(5) { animation-delay: 320ms; }
+  .site-reveal-stagger.is-visible > *:nth-child(6) { animation-delay: 400ms; }
+
+  /* ── Feature card hover ── */
+
+  .site-feature-card {
+    transition: transform 200ms cubic-bezier(0.23, 1, 0.32, 1), box-shadow 200ms;
+  }
+
+  .site-feature-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 20px 44px rgba(0, 0, 0, 0.08);
+  }
+
+  .site-feature-card img {
+    transition: transform 300ms cubic-bezier(0.23, 1, 0.32, 1);
+  }
+
+  .site-feature-card:hover img {
+    transform: scale(1.015);
+  }
+
+  /* ── FAQ accordion ── */
+
+  .site-faq-icon {
+    transition: transform 250ms cubic-bezier(0.23, 1, 0.32, 1);
+  }
+
+  details[open] > summary .site-faq-icon {
+    transform: rotate(45deg);
+  }
+
+  .site-faq-content {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 250ms cubic-bezier(0.33, 1, 0.68, 1);
+  }
+
+  details[open] > .site-faq-content {
+    grid-template-rows: 1fr;
+  }
+
+  .site-faq-content-inner {
+    overflow: hidden;
+  }
+
+  /* ── Reduced motion ── */
+
+  @media (prefers-reduced-motion: reduce) {
+    .site-hero-stagger > *,
+    .site-hero-aside,
+    .site-hero-chaos-icon,
+    .site-reveal,
+    .site-reveal.is-visible,
+    .site-reveal-stagger > *,
+    .site-reveal-stagger.is-visible > * {
+      opacity: 1;
+      transform: none;
+      filter: none;
+      animation: none;
+    }
+
+    .site-faq-content {
+      transition: none;
+    }
+
+    .site-faq-icon {
+      transition: none;
+    }
+
+    .site-feature-card,
+    .site-feature-card img {
+      transition: none;
+    }
   }
 }

@@ -12,9 +12,11 @@ import {
 export type FeatureItem = {
   title: string;
   body: string;
-  image: string;
-  alt: string;
+  image?: string;
+  alt?: string;
   wide?: boolean;
+  /** Inline SVG illustration instead of image */
+  illustration?: "open-in-totem";
 };
 
 export type FAQItem = {
@@ -220,7 +222,7 @@ export const SITE_COPY = {
       ] satisfies FAQItem[],
       finalCtaTitle: "Stop saving. Start reading.",
       finalCtaDescription:
-        "Install once. Every new tab is yours.",
+        "You already saved them. Now actually read them.",
       finalCtaButtonLabel: installButtonLabel,
     },
   },
