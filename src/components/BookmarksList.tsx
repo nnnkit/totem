@@ -120,6 +120,7 @@ export function BookmarksList({
     getPinnedTweetIdsOrdered(),
   );
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [showUnpinButtons, setShowUnpinButtons] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const pinnedCardRefs = useRef<Map<number, HTMLAnchorElement>>(new Map());
@@ -134,6 +135,12 @@ export function BookmarksList({
       setPinnedOrder(getPinnedTweetIdsOrdered());
     });
   }, []);
+
+  useEffect(() => {
+    if (!showUnpinButtons) return;
+    const timer = setTimeout(() => setShowUnpinButtons(false), 3000);
+    return () => clearTimeout(timer);
+  }, [showUnpinButtons]);
 
   const allBookmarks = useMemo(() => {
     const seen = new Set<string>();
@@ -336,6 +343,7 @@ export function BookmarksList({
   }, [bookmarkRows, pinnedIds, pinnedOrder]);
 
   const pinnedCount = pinnedBookmarks.length;
+  const visiblePinnedCount = activeTab === "unread" ? pinnedCount : 0;
 
   const unpinnedRows = useMemo(
     () => bookmarkRows.filter((r) => !pinnedIds.has(r.bookmark.tweetId)),
@@ -343,10 +351,11 @@ export function BookmarksList({
   );
 
   const visibleBookmarks = useMemo(() => {
-    const pinned = pinnedBookmarks.map((r) => r.bookmark);
     const unpinned = unpinnedRows.map((r) => r.bookmark);
+    if (activeTab !== "unread") return unpinned;
+    const pinned = pinnedBookmarks.map((r) => r.bookmark);
     return [...pinned, ...unpinned];
-  }, [pinnedBookmarks, unpinnedRows]);
+  }, [activeTab, pinnedBookmarks, unpinnedRows]);
 
   const virtualizer = useVirtualizer({
     count: unpinnedRows.length,
@@ -357,16 +366,16 @@ export function BookmarksList({
 
   useEffect(() => {
     if (focusedIndex < 0) return;
-    if (focusedIndex < pinnedCount) {
+    if (focusedIndex < visiblePinnedCount) {
       const el = pinnedCardRefs.current.get(focusedIndex);
       if (el) el.scrollIntoView({ block: "nearest" });
     } else {
-      const unpinnedIndex = focusedIndex - pinnedCount;
+      const unpinnedIndex = focusedIndex - visiblePinnedCount;
       if (unpinnedIndex < unpinnedRows.length) {
         virtualizer.scrollToIndex(unpinnedIndex, { align: "auto" });
       }
     }
-  }, [focusedIndex, pinnedCount, unpinnedRows.length, virtualizer]);
+  }, [focusedIndex, visiblePinnedCount, unpinnedRows.length, virtualizer]);
 
   const ignoreListHotkeys = useCallback((event: KeyboardEvent) => {
     const target = event.target;
@@ -461,18 +470,24 @@ export function BookmarksList({
 
   const showSyncControls = syncButton.visible;
 
+  const unreadIdSet = useMemo(
+    () => new Set(unreadBookmarks.map((b) => b.tweetId)),
+    [unreadBookmarks],
+  );
+
   const handleTogglePin = useCallback(
     (tweetId: string, event: React.MouseEvent) => {
       event.preventDefault();
       event.stopPropagation();
-      const result = togglePin(tweetId);
+      const result = togglePin(tweetId, unreadIdSet);
       setPinnedIds(result.ids);
       setPinnedOrder(getPinnedTweetIdsOrdered());
       if (result.hitCap) {
-        setToastMessage("You can pin up to 15 bookmarks.");
+        setToastMessage("You can pin up to 6 bookmarks.");
+        setShowUnpinButtons(true);
       }
     },
-    [],
+    [unreadIdSet],
   );
 
   const hasItems = visibleBookmarks.length > 0;
@@ -640,14 +655,14 @@ export function BookmarksList({
             </div>
           )}
 
-          {pinnedCount > 0 && (
+          {activeTab === "unread" && pinnedCount > 0 && (
             <div className="mb-2">
               <span className="text-2xs font-medium uppercase tracking-extra-wide text-muted/40">
                 Pinned
               </span>
             </div>
           )}
-          {pinnedCount > 0 && (
+          {activeTab === "unread" && pinnedCount > 0 && (
             <div className="mb-4 grid grid-cols-3 gap-3">
               {pinnedBookmarks.map((row, idx) => {
                 const { bookmark } = row;
@@ -665,7 +680,7 @@ export function BookmarksList({
                     }}
                     href={getBookmarkHref(bookmark)}
                     className={cn(
-                      "group/card relative flex flex-col gap-2 overflow-hidden rounded-lg rounded-tr-[22px] bg-surface-card p-3 shadow-[inset_0_0_0_1px] shadow-border/50 no-underline transition-all duration-200",
+                      "group/card relative flex min-w-0 flex-col gap-2 overflow-hidden rounded-lg rounded-tr-[22px] bg-surface-card p-3 shadow-[inset_0_0_0_1px] shadow-border/50 no-underline transition-all duration-200",
                       "before:pointer-events-none before:absolute before:top-0 before:right-0 before:z-[3] before:h-[26px] before:w-[26px] before:-translate-y-1/2 before:translate-x-1/2 before:rotate-45 before:bg-surface before:shadow-[0_1px_0_0] before:shadow-border/50 before:transition-all before:duration-200 before:content-['']",
                       "after:pointer-events-none after:absolute after:top-0 after:right-0 after:z-[2] after:size-6 after:-translate-y-2 after:translate-x-2 after:rounded-bl-md after:border after:border-border/50 after:bg-surface-hover after:shadow-sm after:transition-all after:duration-200 after:content-['']",
                       "hover:rounded-tr-[36px] hover:bg-surface-hover hover:before:h-[40px] hover:before:w-[40px] hover:after:size-[34px] hover:after:shadow-md",
@@ -725,7 +740,10 @@ export function BookmarksList({
                     <button
                       type="button"
                       onClick={(e) => handleTogglePin(bookmark.tweetId, e)}
-                      className="absolute bottom-2 right-2 z-[4] rounded p-1 text-accent opacity-0 transition-opacity group-hover/card:opacity-100 hover:text-accent/80"
+                      className={cn(
+                        "absolute bottom-2 right-2 z-[4] rounded p-1 text-accent transition-opacity hover:text-accent/80",
+                        showUnpinButtons ? "opacity-100" : "opacity-0 group-hover/card:opacity-100",
+                      )}
                       aria-label="Unpin bookmark"
                       title="Unpin"
                     >
@@ -736,7 +754,7 @@ export function BookmarksList({
               })}
             </div>
           )}
-          {pinnedCount > 0 && unpinnedRows.length > 0 && (
+          {activeTab === "unread" && pinnedCount > 0 && unpinnedRows.length > 0 && (
             <div className="mb-4 border-t border-dashed border-border/50" />
           )}
 
@@ -753,7 +771,7 @@ export function BookmarksList({
                 const { bookmark } = row;
                 const counts = getCounts(highlightCounts, bookmark.tweetId);
                 const isFocused =
-                  focusedIndex === virtualItem.index + pinnedCount;
+                  focusedIndex === virtualItem.index + visiblePinnedCount;
 
                 return (
                   <div

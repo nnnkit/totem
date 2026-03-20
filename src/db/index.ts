@@ -7,6 +7,7 @@ import type {
 } from "../types";
 import { sanitizeBookmark } from "../lib/sanitize";
 import { emitReaderActivity } from "../lib/reader-activity";
+import { removePin } from "../lib/pins";
 import {
   DB_ACCOUNT_PREFIX,
   DB_NAME,
@@ -417,6 +418,7 @@ export async function ensureReadingProgressExists(
       completed: false,
     });
   }
+  removePin(tweetId);
   emitReaderActivity();
 }
 
@@ -443,6 +445,7 @@ export async function markReadingProgressCompleted(
       completed: true,
     });
   }
+  removePin(tweetId);
   emitReaderActivity();
 }
 

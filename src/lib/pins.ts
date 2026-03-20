@@ -1,6 +1,6 @@
 import { LS_PINNED_TWEETS } from "./storage-keys";
 
-const MAX_PINS = 15;
+const MAX_PINS = 6;
 
 function readPinnedArray(): string[] {
   try {
@@ -28,13 +28,23 @@ export function getPinnedTweetIdsOrdered(): string[] {
 }
 
 /**
- * Toggles a pin. Returns `{ ids, hit_cap }`.
- * `hit_cap` is true when the pin was rejected because MAX_PINS was reached.
+ * Toggles a pin. Returns `{ ids, hitCap }`.
+ * `hitCap` is true when the pin was rejected because MAX_PINS was reached.
+ * Pass `unreadIds` to prune stale pins (read/reading) before checking the cap.
  */
 export function togglePin(
   tweetId: string,
+  unreadIds?: Set<string>,
 ): { ids: Set<string>; hitCap: boolean } {
-  const arr = readPinnedArray();
+  let arr = readPinnedArray();
+
+  // Prune pins that are no longer unread
+  if (unreadIds) {
+    const before = arr.length;
+    arr = arr.filter((id) => id === tweetId || unreadIds.has(id));
+    if (arr.length !== before) writePinnedArray(arr);
+  }
+
   const idx = arr.indexOf(tweetId);
 
   if (idx !== -1) {
@@ -51,6 +61,14 @@ export function togglePin(
   arr.unshift(tweetId);
   writePinnedArray(arr);
   return { ids: new Set(arr), hitCap: false };
+}
+
+export function removePin(tweetId: string): void {
+  const arr = readPinnedArray();
+  const idx = arr.indexOf(tweetId);
+  if (idx === -1) return;
+  arr.splice(idx, 1);
+  writePinnedArray(arr);
 }
 
 export function isPinned(tweetId: string): boolean {
