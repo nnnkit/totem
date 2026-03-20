@@ -30,21 +30,13 @@ export function getPinnedTweetIdsOrdered(): string[] {
 /**
  * Toggles a pin. Returns `{ ids, hitCap }`.
  * `hitCap` is true when the pin was rejected because MAX_PINS was reached.
- * Pass `unreadIds` to prune stale pins (read/reading) before checking the cap.
+ * Pass `unreadIds` so the cap only counts unread pins (reading/read pins are uncapped).
  */
 export function togglePin(
   tweetId: string,
   unreadIds?: Set<string>,
 ): { ids: Set<string>; hitCap: boolean } {
-  let arr = readPinnedArray();
-
-  // Prune pins that are no longer unread
-  if (unreadIds) {
-    const before = arr.length;
-    arr = arr.filter((id) => id === tweetId || unreadIds.has(id));
-    if (arr.length !== before) writePinnedArray(arr);
-  }
-
+  const arr = readPinnedArray();
   const idx = arr.indexOf(tweetId);
 
   if (idx !== -1) {
@@ -53,7 +45,12 @@ export function togglePin(
     return { ids: new Set(arr), hitCap: false };
   }
 
-  if (arr.length >= MAX_PINS) {
+  // Cap only applies to unread pins
+  const unreadPinCount = unreadIds
+    ? arr.filter((id) => unreadIds.has(id)).length
+    : arr.length;
+
+  if (unreadIds?.has(tweetId) && unreadPinCount >= MAX_PINS) {
     return { ids: new Set(arr), hitCap: true };
   }
 
@@ -61,14 +58,6 @@ export function togglePin(
   arr.unshift(tweetId);
   writePinnedArray(arr);
   return { ids: new Set(arr), hitCap: false };
-}
-
-export function removePin(tweetId: string): void {
-  const arr = readPinnedArray();
-  const idx = arr.indexOf(tweetId);
-  if (idx === -1) return;
-  arr.splice(idx, 1);
-  writePinnedArray(arr);
 }
 
 export function isPinned(tweetId: string): boolean {
