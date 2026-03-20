@@ -201,10 +201,10 @@ export function SettingsModal({
                     Recommended post
                   </span>
                   <Select
-                    value={settings.newTabSource}
+                    value={settings.recommendationSource}
                     onValueChange={(value) =>
                       onUpdateSettings({
-                        newTabSource: value as "random" | "pinned",
+                        recommendationSource: value as "random" | "pinned",
                       })
                     }
                     options={[

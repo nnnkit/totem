@@ -15,7 +15,7 @@ import { SearchEnginePicker } from "./SearchEnginePicker";
 import type {
   BackgroundMode,
   Bookmark,
-  NewTabSource,
+  RecommendationSource,
   SearchEngineId,
 } from "../types";
 import { getPinnedTweetIdsOrdered } from "../lib/pins";
@@ -63,7 +63,7 @@ interface Props {
   onOpenBookmark: (bookmark: Bookmark) => void;
   getBookmarkHref: (bookmark: Bookmark) => string;
   onOpenSettings: () => void;
-  newTabSource: NewTabSource;
+  recommendationSource: RecommendationSource;
   onOpenReading: () => void;
   isResetting?: boolean;
   footerStateOverride?: FooterState;
@@ -94,7 +94,7 @@ export function NewTabHome({
   onOpenBookmark,
   getBookmarkHref,
   onOpenSettings,
-  newTabSource,
+  recommendationSource,
   onOpenReading,
   isResetting,
   footerStateOverride,
@@ -132,7 +132,7 @@ export function NewTabHome({
 
   const currentItem = useMemo(() => {
     // When pinned source is selected, pick from pinned bookmarks
-    if (newTabSource === "pinned") {
+    if (recommendationSource === "pinned") {
       const pinnedIds = getPinnedTweetIdsOrdered();
       if (pinnedIds.length > 0) {
         const itemsByTweetId = new Map(
@@ -151,7 +151,7 @@ export function NewTabHome({
     if (pool.length === 0) return null;
     const index = Math.floor(mountSeed * pool.length);
     return pool[index];
-  }, [items, unreadItems, mountSeed, newTabSource]);
+  }, [items, unreadItems, mountSeed, recommendationSource]);
   const runtimeFooterState = useFooterState(Boolean(currentItem), isResetting);
   const syncButton = syncButtonStateOverride ?? runtimeSyncButton;
   const offlineMode = offlineModeOverride ?? runtimeOfflineMode;
@@ -328,7 +328,9 @@ export function NewTabHome({
               <div className="flex justify-between">
                 <div className="flex items-center gap-1.5">
                   <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
-                    {newTabSource === "pinned" ? "pinned" : "your next read"}
+                    {recommendationSource === "pinned"
+                      ? "pinned"
+                      : "your next read"}
                   </p>
                   {offlineMode && (
                     <span title="Not signed in — showing cached bookmarks">
@@ -512,7 +514,10 @@ export function NewTabHome({
             <div className="text-center">
               <h1
                 className="font-serif text-balance text-4xl font-light leading-none tracking-tight text-on-bg tabular-nums sm:text-5xl lg:text-6xl"
-                style={{ textShadow: "0 1px 8px rgba(0,0,0,0.3), 0 2px 24px rgba(0,0,0,0.15)" }}
+                style={{
+                  textShadow:
+                    "0 1px 8px rgba(0,0,0,0.3), 0 2px 24px rgba(0,0,0,0.15)",
+                }}
                 aria-label={`Current time: ${formatClock(now)}`}
               >
                 {formatClock(now)}
@@ -568,7 +573,7 @@ export function NewTabHome({
                       ref={searchRef}
                       type="text"
                       name={engineConfig?.queryParam ?? "q"}
-                      className="w-full appearance-none rounded-none border-0 bg-transparent px-3 py-3.5 text-base text-home-fg [font-family:inherit] outline-none placeholder:text-home-placeholder focus:border-0"
+                      className="w-full appearance-none rounded-none border-0 bg-transparent px-3 py-3.5 text-base text-home-fg font-[inherit] outline-none placeholder:text-home-placeholder focus:border-0"
                       placeholder="Search the web"
                       autoComplete="off"
                     />

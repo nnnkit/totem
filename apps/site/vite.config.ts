@@ -40,7 +40,7 @@ export default defineConfig({
   base: "/",
   build: {
     modulePreload: { polyfill: false },
-    outDir: resolve(__dirname, "dist"),
+    outDir: resolve(__dirname, "../../dist-website"),
     emptyOutDir: true,
     rollupOptions: {
       input: {

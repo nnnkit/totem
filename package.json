@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "pnpm build:extension",
     "build:extension": "tsc && vite build",
-    "build:website": "vite build -c vite.website.config.ts",
+    "build:website": "pnpm --filter @totem/site build",
     "build:all": "pnpm build:extension && pnpm build:website",
     "preview": "vite preview",
     "package:extension": "pnpm build:extension && node scripts/package-extension.mjs",

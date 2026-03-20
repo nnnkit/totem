@@ -60,26 +60,26 @@ const installButtonLabel = hasWebStoreInstall
   : "Install Totem";
 const featureItems: FeatureItem[] = [
   {
-    title: "Read without the noise",
-    body: "Tweets and threads in a calm layout. No sidebar, no suggested posts pulling you away.",
+    title: "Clean reader.",
+    body: "Every tweet and thread in a focused layout. No sidebar, no suggestions, no distractions.",
     image: cleanReaderImage,
     alt: "Totem clean reader view showing saved X bookmarks without feed distractions.",
   },
   {
-    title: "Pick up mid-thread",
-    body: "Mark anything unread, in progress, or done. Come back tomorrow — it's right where you left off.",
+    title: "Pick up where you left off.",
+    body: "Unread. In progress. Done. Your queue stays organized so you don't have to.",
     image: readingStatesImage,
     alt: "Totem reading states showing unread, continue, and read progress.",
   },
   {
-    title: "Annotate while you read",
-    body: "Highlight a line, add a note. Stored on your machine. Gone when you want it gone.",
+    title: "Highlight. Note. Move on.",
+    body: "Annotate anything. Everything stays on your device.",
     image: highlightsNotesImage,
     alt: "Totem highlights and notes feature in the reader.",
   },
   {
-    title: "No WiFi, no problem",
-    body: "Once a bookmark loads, it's cached. Read on a plane. Read in a tunnel.",
+    title: "Works offline.",
+    body: "Bookmarks load once and stay cached. Plane, tunnel, wherever.",
     image: worksOfflineImage,
     alt: "Totem interface running with offline-ready cached reading queue.",
   },
@@ -115,25 +115,25 @@ export const SITE_COPY = {
   landing: {
     hero: {
       eyebrow: "Chrome Extension",
-      title: "X wants you in the feed. Your bookmarks don't.",
+      title: "Read your X bookmarks, not the feed.",
       description:
-        "Totem replaces your new tab with the threads you actually saved. Runs on your existing X session. Never asks for a password.",
+        "Open a new tab to read your saved posts. No feed, no algorithmic noise.",
       installButtonLabel: installButtonLabel,
       videoTitle: "Totem quick walkthrough video",
-      chips: ["No servers ever", "No password", "Local-first"],
+      chips: ["No account", "No backend", "Local-first"],
     },
     demo: {
       eyebrow: "Live demo",
-      title: "Your bookmarks, finally in front of you.",
+      title: "See it in action.",
       description:
-        "This is what every new tab looks like after you install.",
+        "This is what every new tab looks like.",
       linkLabel: "Full-page demo →",
-      note: "Uses your existing X session. Nothing leaves your browser.",
+      note: "Runs on your existing X session. Nothing leaves your browser.",
     },
     features: {
       eyebrow: "Features",
       title: "Built for reading, not scrolling.",
-      description: "Your bookmarks deserve better.",
+      description: "Everything you need. Nothing you don't.",
       items: featureItems,
     },
     faq: {
@@ -218,9 +218,9 @@ export const SITE_COPY = {
             "Open X once, return to Totem, and try Sync again. If it still does not recover, use Reset local data.",
         },
       ] satisfies FAQItem[],
-      finalCtaTitle: "Stop bookmarking. Start reading.",
+      finalCtaTitle: "Stop saving. Start reading.",
       finalCtaDescription:
-        "One install. Works on the next new tab you open.",
+        "Install once. Every new tab is yours.",
       finalCtaButtonLabel: installButtonLabel,
     },
   },

@@ -438,7 +438,7 @@ function NewTabRouteApp() {
         openedTweetIds={openedTweetIds}
         onOpenBookmark={openBookmarkFromHome}
         getBookmarkHref={getHomeBookmarkHref}
-        newTabSource={settings.newTabSource}
+        recommendationSource={settings.recommendationSource}
         onOpenSettings={() => setSettingsOpen(true)}
         onOpenReading={() => {
           restoreReadingTab();
