@@ -138,10 +138,12 @@ export function NewTabHome({
         const itemsByTweetId = new Map(
           items.map((item) => [item.bookmark.tweetId, item]),
         );
-        // Pick the first pinned item that still exists
-        for (const id of pinnedIds) {
-          const found = itemsByTweetId.get(id);
-          if (found) return found;
+        const pinnedItems = pinnedIds
+          .map((id) => itemsByTweetId.get(id))
+          .filter(Boolean);
+        if (pinnedItems.length > 0) {
+          const index = Math.floor(mountSeed * pinnedItems.length);
+          return pinnedItems[index];
         }
       }
       // Fall through to random if no pinned items exist
