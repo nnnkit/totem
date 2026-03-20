@@ -498,7 +498,7 @@ export function BookmarksList({
     if (activeTab === "unread") {
       return (
         <div className="flex flex-col items-center justify-center py-20 text-center">
-          <p className="text-lg text-muted text-pretty">
+          <p className="text-lg text-muted text-balance">
             All caught up! No unread bookmarks.
           </p>
           {showSyncControls && (
@@ -517,7 +517,7 @@ export function BookmarksList({
     if (activeTab === "continue") {
       return (
         <div className="flex flex-col items-center justify-center py-20 text-center">
-          <p className="text-lg text-muted text-pretty">
+          <p className="text-lg text-muted text-balance">
             No reading in progress. Pick something to read.
           </p>
           <Button
@@ -532,7 +532,7 @@ export function BookmarksList({
     }
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
-        <p className="text-lg text-muted text-pretty">
+        <p className="text-lg text-muted text-balance">
           Nothing finished yet. Keep reading!
         </p>
         <Button
@@ -633,7 +633,7 @@ export function BookmarksList({
                 </span>
               )}
             </Tabs.Tab>
-            <Tabs.Indicator className="absolute bottom-0 h-0.5 w-[var(--active-tab-width)] translate-x-[var(--active-tab-left)] rounded-full bg-accent transition-all duration-200 ease-tab" />
+            <Tabs.Indicator className="absolute bottom-0 h-0.5 w-[var(--active-tab-width)] translate-x-[var(--active-tab-left)] rounded-full bg-accent transition-[width,transform] duration-200 ease-tab" />
           </Tabs.List>
         </Tabs.Root>
       </div>
@@ -682,34 +682,43 @@ export function BookmarksList({
                     }}
                     href={getBookmarkHref(bookmark)}
                     className={cn(
-                      "group/card relative flex min-w-0 flex-col gap-2 overflow-hidden rounded-lg rounded-tr-[22px] bg-surface-card p-3 shadow-[inset_0_0_0_1px] shadow-border/50 no-underline transition-all duration-200",
-                      "before:pointer-events-none before:absolute before:top-0 before:right-0 before:z-[3] before:h-[26px] before:w-[26px] before:-translate-y-1/2 before:translate-x-1/2 before:rotate-45 before:bg-surface before:shadow-[0_1px_0_0] before:shadow-border/50 before:transition-all before:duration-200 before:content-['']",
-                      "after:pointer-events-none after:absolute after:top-0 after:right-0 after:z-[2] after:size-6 after:-translate-y-2 after:translate-x-2 after:rounded-bl-md after:border after:border-border/50 after:bg-surface-hover after:shadow-sm after:transition-all after:duration-200 after:content-['']",
-                      "hover:rounded-tr-[36px] hover:bg-surface-hover hover:before:h-[40px] hover:before:w-[40px] hover:after:size-[34px] hover:after:shadow-md",
+                      "group/card relative flex min-w-0 flex-col gap-2 overflow-hidden rounded-lg rounded-tr-[22px] bg-surface-card p-3 shadow-[inset_0_0_0_1px] shadow-border/50 no-underline transition-[background-color] duration-200",
+                      "before:pointer-events-none before:absolute before:top-0 before:right-0 before:z-[3] before:h-[26px] before:w-[26px] before:-translate-y-1/2 before:translate-x-1/2 before:rotate-45 before:bg-surface before:shadow-[0_1px_0_0] before:shadow-border/50 before:transition-[height,width] before:duration-200 before:content-['']",
+                      "after:pointer-events-none after:absolute after:top-0 after:right-0 after:z-[2] after:size-6 after:-translate-y-2 after:translate-x-2 after:rounded-bl-md after:border after:border-border/50 after:bg-surface-hover after:shadow-sm after:transition-[width,height,box-shadow] after:duration-200 after:content-['']",
+                      "hover:bg-surface-hover hover:before:h-[40px] hover:before:w-[40px] hover:after:size-[34px] hover:after:shadow-md",
                       isFocused && "bg-surface-hover ring-1 ring-accent/30",
                     )}
                   >
                     <div className="absolute top-3 left-0 h-5 w-[3px] rounded-r-sm bg-accent" />
-                    <div
-                      className="relative flex cursor-pointer items-center gap-2"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        e.preventDefault();
-                        window.open(
-                          `https://x.com/${bookmark.author.screenName}`,
-                          "_blank",
-                          "noopener,noreferrer",
-                        );
-                      }}
-                      role="link"
-                      tabIndex={-1}
-                    >
+                    <div className="relative flex items-center gap-2">
                       <img
                         src={bookmark.author.profileImageUrl}
                         alt=""
-                        className="size-5 shrink-0 rounded-full"
+                        className="size-5 shrink-0 cursor-pointer rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.06)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          window.open(
+                            `https://x.com/${bookmark.author.screenName}`,
+                            "_blank",
+                            "noopener,noreferrer",
+                          );
+                        }}
                       />
-                      <span className="truncate text-xs text-muted/70 transition-colors hover:text-foreground">
+                      <span
+                        className="cursor-pointer truncate text-xs text-muted/70 transition-colors hover:text-foreground"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          window.open(
+                            `https://x.com/${bookmark.author.screenName}`,
+                            "_blank",
+                            "noopener,noreferrer",
+                          );
+                        }}
+                        role="link"
+                        tabIndex={-1}
+                      >
                         @{bookmark.author.screenName}
                       </span>
                     </div>
@@ -743,7 +752,7 @@ export function BookmarksList({
                       type="button"
                       onClick={(e) => handleTogglePin(bookmark.tweetId, e)}
                       className={cn(
-                        "absolute bottom-2 right-2 z-[4] rounded p-1 text-accent transition-opacity hover:text-accent/80",
+                        "absolute bottom-0.5 right-0.5 z-[4] flex size-10 items-center justify-center rounded text-accent transition-opacity hover:text-accent/80",
                         showUnpinButtons ? "opacity-100" : "opacity-0 group-hover/card:opacity-100",
                       )}
                       aria-label="Unpin bookmark"
@@ -797,7 +806,7 @@ export function BookmarksList({
                       <img
                         src={bookmark.author.profileImageUrl}
                         alt=""
-                        className="size-9 shrink-0 cursor-pointer rounded-full"
+                        className="size-9 shrink-0 cursor-pointer rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.06)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]"
                         onClick={(e) => {
                           e.stopPropagation();
                           e.preventDefault();
@@ -879,7 +888,7 @@ export function BookmarksList({
                         type="button"
                         onClick={(e) => handleTogglePin(bookmark.tweetId, e)}
                         className={cn(
-                          "shrink-0 rounded p-1.5 transition-[colors,opacity]",
+                          "flex size-10 shrink-0 items-center justify-center rounded transition-[color,opacity]",
                           pinnedIds.has(bookmark.tweetId)
                             ? "text-accent opacity-100 hover:text-accent/80"
                             : "text-muted/40 opacity-0 group-hover/row:opacity-100 hover:text-muted",
