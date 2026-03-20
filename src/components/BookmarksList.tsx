@@ -346,8 +346,10 @@ export function BookmarksList({
   const visiblePinnedCount = activeTab === "unread" ? pinnedCount : 0;
 
   const unpinnedRows = useMemo(
-    () => bookmarkRows.filter((r) => !pinnedIds.has(r.bookmark.tweetId)),
-    [bookmarkRows, pinnedIds],
+    () => activeTab === "unread"
+      ? bookmarkRows.filter((r) => !pinnedIds.has(r.bookmark.tweetId))
+      : bookmarkRows,
+    [activeTab, bookmarkRows, pinnedIds],
   );
 
   const visibleBookmarks = useMemo(() => {
