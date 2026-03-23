@@ -9,7 +9,6 @@ import {
   MagnifyingGlassIcon,
   XLogoIcon,
 } from "@phosphor-icons/react";
-import { startAuthCapture } from "../api/core/auth";
 import { TotemLogo } from "./TotemLogo";
 import { SearchEnginePicker } from "./SearchEnginePicker";
 import type {
@@ -229,7 +228,7 @@ export function NewTabHome({
       onLogin();
       return;
     }
-    void startAuthCapture();
+    window.open("https://x.com/i/bookmarks", "_blank", "noopener,noreferrer");
     void actions.startLogin();
   }, [actions, onLogin]);
   const handleLoginHint = useCallback(() => {

@@ -399,7 +399,7 @@ async function hasCachedQueryIdNoNetwork(operationName) {
       typeof entry.queryId === "string" &&
       entry.queryId
     ) {
-      queryIdMemCache.set(operationName, { id: entry.queryId, ts: now });
+      queryIdCacheSet(operationName, { id: entry.queryId, ts: now });
       return true;
     }
   }
@@ -1101,7 +1101,15 @@ async function buildHeaders(options = {}) {
 // ═══════════════════════════════════════════════════════════
 
 const queryIdMemCache = new Map(); // operationName → { id, ts }
+const queryIdCacheListeners = new Set(); // Set<(operationName: string) => void>
 const QUERY_ID_TTL_MS = 10 * 60 * 1000; // 10 minutes
+
+function queryIdCacheSet(operationName, entry) {
+  queryIdMemCache.set(operationName, entry);
+  for (const fn of queryIdCacheListeners) {
+    try { fn(operationName); } catch {}
+  }
+}
 
 function isQueryIdStale(json) {
   if (!json?.errors) return false;
@@ -1171,7 +1179,7 @@ async function resolveQueryId(operationName) {
   const catalog = await loadGraphqlCatalog();
   for (const entry of Object.values(catalog.endpoints || {})) {
     if (entry && entry.operation === operationName && entry.queryId) {
-      queryIdMemCache.set(operationName, { id: entry.queryId, ts: Date.now() });
+      queryIdCacheSet(operationName, { id: entry.queryId, ts: Date.now() });
       return entry.queryId;
     }
   }
@@ -1179,7 +1187,7 @@ async function resolveQueryId(operationName) {
   // 3. Discover from x.com JS bundles (network fetch, 2-5s)
   const discovered = await discoverQueryIdFromBundles(operationName).catch(() => null);
   if (discovered) {
-    queryIdMemCache.set(operationName, { id: discovered, ts: Date.now() });
+    queryIdCacheSet(operationName, { id: discovered, ts: Date.now() });
     return discovered;
   }
 
@@ -1214,20 +1222,49 @@ async function _doDiscoverQueryIdViaTab() {
     return null;
   }
 
+  const safeTabId = tabId;
+
   try {
-    const maxWait = 15000;
-    const interval = 500;
-    const start = Date.now();
-    while (Date.now() - start < maxWait) {
-      await new Promise(r => setTimeout(r, interval));
+    return await new Promise((resolve) => {
+      const timeout = setTimeout(() => {
+        cleanup();
+        resolve(null);
+      }, 15000);
+
+      function onCacheUpdated(opName) {
+        if (opName !== "Bookmarks") return;
+        const cached = queryIdMemCache.get("Bookmarks");
+        if (cached && typeof cached.id === "string" && cached.id) {
+          cleanup();
+          resolve(cached.id);
+        }
+      }
+
+      function onTabRemoved(removedId) {
+        if (removedId === safeTabId) {
+          cleanup();
+          resolve(null);
+        }
+      }
+
+      function cleanup() {
+        clearTimeout(timeout);
+        queryIdCacheListeners.delete(onCacheUpdated);
+        chrome.tabs.onRemoved.removeListener(onTabRemoved);
+      }
+
+      queryIdCacheListeners.add(onCacheUpdated);
+      chrome.tabs.onRemoved.addListener(onTabRemoved);
+
+      // Check if already resolved while we were setting up
       const cached = queryIdMemCache.get("Bookmarks");
       if (cached && typeof cached.id === "string" && cached.id) {
-        return cached.id;
+        cleanup();
+        resolve(cached.id);
       }
-    }
-    return null;
+    });
   } finally {
-    if (tabId) chrome.tabs.remove(tabId).catch(() => {});
+    if (safeTabId) chrome.tabs.remove(safeTabId).catch(() => {});
   }
 }
 
@@ -1238,7 +1275,7 @@ async function forceRediscoverQueryId(operationName) {
     () => null,
   );
   if (freshId) {
-    queryIdMemCache.set(operationName, { id: freshId, ts: Date.now() });
+    queryIdCacheSet(operationName, { id: freshId, ts: Date.now() });
     return freshId;
   }
 
@@ -1280,7 +1317,7 @@ async function discoverAllMissingQueryIds() {
       let found = false;
       for (const entry of Object.values(catalog.endpoints || {})) {
         if (entry && entry.operation === op && entry.queryId) {
-          queryIdMemCache.set(op, { id: entry.queryId, ts: now });
+          queryIdCacheSet(op, { id: entry.queryId, ts: now });
           found = true;
           break;
         }
@@ -1314,7 +1351,7 @@ async function discoverAllMissingQueryIds() {
         for (const opName of remaining) {
           const qid = extractQueryIdForOperation(text, opName);
           if (qid) {
-            queryIdMemCache.set(opName, { id: qid, ts: Date.now() });
+            queryIdCacheSet(opName, { id: qid, ts: Date.now() });
             remaining.delete(opName);
           }
         }
@@ -1697,7 +1734,7 @@ async function captureBookmarkMutation(details) {
   const tweetId = extractTweetIdFromRequestBody(details.requestBody) || "";
 
   // Cache the query ID from live x.com traffic — most trustworthy source
-  queryIdMemCache.set(mutation.operation, { id: mutation.queryId, ts: Date.now() });
+  queryIdCacheSet(mutation.operation, { id: mutation.queryId, ts: Date.now() });
 
   if (mutation.operation === "DeleteBookmark") {
     await pushBookmarkEvent("DeleteBookmark", tweetId, "x.com");
@@ -2192,7 +2229,7 @@ chrome.webRequest.onSendHeaders.addListener(
     // Capture bookmarks query ID (in-memory) + features (persisted for request params)
     const match = details.url.match(/\/i\/api\/graphql\/([^/]+)\/Bookmarks\?(.+)/);
     if (match) {
-      queryIdMemCache.set("Bookmarks", { id: match[1], ts: Date.now() });
+      queryIdCacheSet("Bookmarks", { id: match[1], ts: Date.now() });
       try {
         const params = new URLSearchParams(match[2]);
         const features = params.get("features");
@@ -2203,21 +2240,21 @@ chrome.webRequest.onSendHeaders.addListener(
     // Passively capture query IDs into in-memory cache from live x.com traffic
     const detailMatch = details.url.match(/\/i\/api\/graphql\/([^/]+)\/TweetDetail/);
     if (detailMatch) {
-      queryIdMemCache.set("TweetDetail", { id: detailMatch[1], ts: Date.now() });
+      queryIdCacheSet("TweetDetail", { id: detailMatch[1], ts: Date.now() });
     }
 
     const deleteMatch = details.url.match(
       /\/i\/api\/graphql\/([^/]+)\/DeleteBookmark(?:\?|$)/,
     );
     if (deleteMatch) {
-      queryIdMemCache.set("DeleteBookmark", { id: deleteMatch[1], ts: Date.now() });
+      queryIdCacheSet("DeleteBookmark", { id: deleteMatch[1], ts: Date.now() });
     }
 
     const createMatch = details.url.match(
       /\/i\/api\/graphql\/([^/]+)\/CreateBookmark(?:\?|$)/,
     );
     if (createMatch) {
-      queryIdMemCache.set("CreateBookmark", { id: createMatch[1], ts: Date.now() });
+      queryIdCacheSet("CreateBookmark", { id: createMatch[1], ts: Date.now() });
     }
 
     const mutation = parseBookmarkMutation(details.url);
@@ -2363,7 +2400,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       authTabId = null;
     }
 
-    chrome.tabs.create({ url: "https://x.com/i/bookmarks", active: true }, (tab) => {
+    chrome.tabs.create({ url: "https://x.com/i/bookmarks", active: false }, (tab) => {
       authTabId = tab.id;
 
       const cleanup = () => {
@@ -2476,13 +2513,13 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message.type === "STORE_QUERY_IDS") {
     const now = Date.now();
     if (typeof message.ids?.DeleteBookmark === "string" && message.ids.DeleteBookmark) {
-      queryIdMemCache.set("DeleteBookmark", { id: message.ids.DeleteBookmark, ts: now });
+      queryIdCacheSet("DeleteBookmark", { id: message.ids.DeleteBookmark, ts: now });
     }
     if (typeof message.ids?.CreateBookmark === "string" && message.ids.CreateBookmark) {
-      queryIdMemCache.set("CreateBookmark", { id: message.ids.CreateBookmark, ts: now });
+      queryIdCacheSet("CreateBookmark", { id: message.ids.CreateBookmark, ts: now });
     }
     if (typeof message.ids?.TweetDetail === "string" && message.ids.TweetDetail) {
-      queryIdMemCache.set("TweetDetail", { id: message.ids.TweetDetail, ts: now });
+      queryIdCacheSet("TweetDetail", { id: message.ids.TweetDetail, ts: now });
     }
     sendResponse({ ok: true });
     return false;
