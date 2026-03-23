@@ -682,10 +682,10 @@ export function BookmarksList({
                     }}
                     href={getBookmarkHref(bookmark)}
                     className={cn(
-                      "group/card relative flex min-w-0 flex-col gap-2 overflow-hidden rounded-lg rounded-tr-[22px] bg-surface-card p-3 shadow-[inset_0_0_0_1px] shadow-border/50 no-underline transition-[background-color] duration-200",
-                      "before:pointer-events-none before:absolute before:top-0 before:right-0 before:z-[3] before:h-[26px] before:w-[26px] before:-translate-y-1/2 before:translate-x-1/2 before:rotate-45 before:bg-surface before:shadow-[0_1px_0_0] before:shadow-border/50 before:transition-[height,width] before:duration-200 before:content-['']",
-                      "after:pointer-events-none after:absolute after:top-0 after:right-0 after:z-[2] after:size-6 after:-translate-y-2 after:translate-x-2 after:rounded-bl-md after:border after:border-border/50 after:bg-surface-hover after:shadow-sm after:transition-[width,height,box-shadow] after:duration-200 after:content-['']",
-                      "hover:bg-surface-hover hover:before:h-[40px] hover:before:w-[40px] hover:after:size-[34px] hover:after:shadow-md",
+                      "group/card relative flex min-w-0 flex-col gap-2 overflow-hidden rounded-lg rounded-tr-5 bg-surface-card p-3 shadow-[inset_0_0_0_1px] shadow-border/60 no-underline transition-[background-color] duration-200",
+                      "before:pointer-events-none before:absolute before:top-0 before:right-0 before:z-[3] before:size-6 before:-translate-y-1/2 before:translate-x-1/2 before:rotate-45 before:bg-surface before:shadow-[0_1px_0_0] before:shadow-border before:transition-all before:duration-180 before:content-['']",
+                      "after:pointer-events-none after:absolute after:top-0 after:right-0 after:z-[2] after:h-[22px] after:w-[22px] after:-translate-y-1.5 after:translate-x-1.5 after:rounded-bl-md after:border after:border-border after:bg-surface after:shadow-xs after:transition-all after:duration-180 after:content-['']",
+                      "hover:rounded-tr-[35px] hover:bg-surface-hover hover:before:size-10 hover:after:h-[34px] hover:after:w-[34px] hover:after:shadow-lg hover:after:shadow-black/5",
                       isFocused && "bg-surface-hover ring-1 ring-accent/30",
                     )}
                   >
@@ -799,8 +799,11 @@ export function BookmarksList({
                     <a
                       href={getBookmarkHref(bookmark)}
                       className={cn(
-                        "group/row bookmark-list-item flex w-full items-center gap-3 rounded-lg py-3 px-3 text-left no-underline transition-colors hover:bg-surface-hover",
-                        isFocused && "bg-surface-hover",
+                        "group/row bookmark-list-item flex w-full items-center gap-3 rounded-lg py-3 px-3 text-left no-underline transition-colors duration-150",
+                        virtualItem.index % 2 === 0
+                          ? "bg-surface-alt hover:bg-surface-alt-hover"
+                          : "hover:bg-surface-hover",
+                        isFocused && "ring-1 ring-accent/20",
                       )}
                     >
                       <img

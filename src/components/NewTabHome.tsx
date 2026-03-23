@@ -194,7 +194,7 @@ export function NewTabHome({
 
   useHotkeys(
     "space",
-    () => openItem(currentItem),
+    () => openItem(currentItem ?? null),
     {
       preventDefault: true,
     },
