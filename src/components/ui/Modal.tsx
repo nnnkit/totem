@@ -27,7 +27,7 @@ export function Modal({ open, onClose, className, ariaLabelledBy, children }: Pr
           )}
         />
         <Dialog.Popup
-          className="fixed inset-0 z-50"
+          className="fixed inset-0 z-50 transition-[opacity,transform] duration-200 data-[starting-style]:scale-95 data-[starting-style]:opacity-0 data-[ending-style]:scale-[0.97] data-[ending-style]:opacity-0"
           aria-labelledby={ariaLabelledBy}
           onClick={(e) => {
             if (e.target === e.currentTarget) onClose();

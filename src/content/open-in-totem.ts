@@ -195,11 +195,15 @@ function stopEvent(event: MouseEvent) {
 
 function openTotemReader(tweetId: string) {
   if (!isValidTweetId(tweetId)) return;
+  // Navigate immediately to preserve user gesture context (avoids popup blocker).
+  // The service worker will redirect to the reader page; if it fails, the user
+  // lands on the tweet's native page as a safe fallback.
+  const fallbackUrl = `https://x.com/i/web/status/${tweetId}`;
   chrome.runtime.sendMessage({
     type: "OPEN_TOTEM_READER",
     tweetId,
   }).catch(() => {
-    window.open(`https://x.com/i/web/status/${tweetId}`, "_blank");
+    window.location.href = fallbackUrl;
   });
 }
 

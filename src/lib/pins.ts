@@ -1,6 +1,7 @@
 import { LS_PINNED_TWEETS } from "./storage-keys";
 
 const MAX_PINS = 6;
+const PIN_CHANGED_EVENT = "totem:pins-changed";
 
 function readPinnedArray(): string[] {
   try {
@@ -16,6 +17,8 @@ function readPinnedArray(): string[] {
 
 function writePinnedArray(ids: string[]): void {
   localStorage.setItem(LS_PINNED_TWEETS, JSON.stringify(ids));
+  // Dispatch custom event for same-tab listeners (storage event only fires cross-tab)
+  window.dispatchEvent(new CustomEvent(PIN_CHANGED_EVENT));
 }
 
 export function getPinnedTweetIds(): Set<string> {
@@ -65,9 +68,16 @@ export function isPinned(tweetId: string): boolean {
 }
 
 export function subscribeToPinChanges(cb: () => void): () => void {
-  const handler = (event: StorageEvent) => {
+  // Cross-tab changes via storage event
+  const storageHandler = (event: StorageEvent) => {
     if (event.key === LS_PINNED_TWEETS) cb();
   };
-  window.addEventListener("storage", handler);
-  return () => window.removeEventListener("storage", handler);
+  // Same-tab changes via custom event
+  const localHandler = () => cb();
+  window.addEventListener("storage", storageHandler);
+  window.addEventListener(PIN_CHANGED_EVENT, localHandler);
+  return () => {
+    window.removeEventListener("storage", storageHandler);
+    window.removeEventListener(PIN_CHANGED_EVENT, localHandler);
+  };
 }

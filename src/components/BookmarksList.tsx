@@ -787,19 +787,20 @@ export function BookmarksList({
                 return (
                   <div
                     key={bookmark.tweetId}
+                    ref={virtualizer.measureElement}
+                    data-index={virtualItem.index}
                     style={{
                       position: "absolute",
                       top: 0,
                       left: 0,
                       width: "100%",
-                      height: virtualItem.size,
                       transform: `translateY(${virtualItem.start}px)`,
                     }}
                   >
                     <a
                       href={getBookmarkHref(bookmark)}
                       className={cn(
-                        "group/row bookmark-list-item flex w-full items-center gap-3 rounded-lg py-3 px-3 text-left no-underline transition-colors duration-150",
+                        "group/row flex w-full items-center gap-3 rounded-lg py-3 px-3 text-left no-underline transition-colors duration-150",
                         virtualItem.index % 2 === 0
                           ? "bg-surface-alt hover:bg-surface-alt-hover"
                           : "hover:bg-surface-hover",
@@ -887,31 +888,33 @@ export function BookmarksList({
                           )}
                         </p>
                       </div>
-                      <button
-                        type="button"
-                        onClick={(e) => handleTogglePin(bookmark.tweetId, e)}
-                        className={cn(
-                          "flex size-10 shrink-0 items-center justify-center rounded transition-[color,opacity]",
-                          pinnedIds.has(bookmark.tweetId)
-                            ? "text-accent opacity-100 hover:text-accent/80"
-                            : "text-muted/40 opacity-0 group-hover/row:opacity-100 hover:text-muted",
-                        )}
-                        aria-label={
-                          pinnedIds.has(bookmark.tweetId)
-                            ? "Unpin bookmark"
-                            : "Pin bookmark"
-                        }
-                        title={
-                          pinnedIds.has(bookmark.tweetId) ? "Unpin" : "Pin"
-                        }
-                      >
-                        <PushPinIcon
-                          weight={
-                            pinnedIds.has(bookmark.tweetId) ? "fill" : "regular"
+                      {activeTab === "unread" && (
+                        <button
+                          type="button"
+                          onClick={(e) => handleTogglePin(bookmark.tweetId, e)}
+                          className={cn(
+                            "flex size-10 shrink-0 items-center justify-center rounded transition-[color,opacity]",
+                            pinnedIds.has(bookmark.tweetId)
+                              ? "text-accent opacity-100 hover:text-accent/80"
+                              : "text-muted/40 opacity-0 group-hover/row:opacity-100 hover:text-muted",
+                          )}
+                          aria-label={
+                            pinnedIds.has(bookmark.tweetId)
+                              ? "Unpin bookmark"
+                              : "Pin bookmark"
                           }
-                          className="size-3.5"
-                        />
-                      </button>
+                          title={
+                            pinnedIds.has(bookmark.tweetId) ? "Unpin" : "Pin"
+                          }
+                        >
+                          <PushPinIcon
+                            weight={
+                              pinnedIds.has(bookmark.tweetId) ? "fill" : "regular"
+                            }
+                            className="size-3.5"
+                          />
+                        </button>
+                      )}
                     </a>
                   </div>
                 );

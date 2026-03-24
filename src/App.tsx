@@ -588,7 +588,8 @@ function ReaderRouteApp() {
     return () => {
       cancelled = true;
     };
-  }, [actions, appMode, hiddenBookmark, localBookmark, readTweetId, retryKey]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [actions, appMode, hiddenBookmark, localBookmark?.tweetId, readTweetId, retryKey]);
 
   const displayBookmark = localBookmark ||
     localBookmarkSnapshot ||

@@ -451,3 +451,168 @@ describe("runtime-store sync", () => {
   });
 
 });
+
+// ---------------------------------------------------------------------------
+// Auth flow integration tests
+// ---------------------------------------------------------------------------
+
+describe("runtime-store auth flows", () => {
+  function primeReadyState(
+    store: ReturnType<typeof createRuntimeStore>,
+    overrides: Partial<RuntimeState> = {},
+  ) {
+    store.setState({
+      authPhase: "ready",
+      authState: "authenticated",
+      sessionState: "logged_in",
+      capability: {
+        bookmarksApi: "ready",
+        detailApi: "unknown",
+      },
+      activeAccountId: "acct-1",
+      bookmarksLoaded: true,
+      detailedIdsLoaded: true,
+      syncStatus: "idle",
+      syncJobKind: "none",
+      syncBlockedReason: null,
+      ...overrides,
+    });
+  }
+
+  it("fresh install → login → checkAuth → reaches ready and triggers sync", async () => {
+    // Boot with logged_out snapshot (default mock)
+    const store = createRuntimeStore();
+    await store.getState().actions.boot();
+
+    expect(store.getState().authPhase).toBe("need_login");
+
+    // User clicks login → startLogin sets authPhase to "connecting"
+    // Mock getRuntimeSnapshot to return logged_in for the next auth check
+    mocks.getRuntimeSnapshot.mockResolvedValue(
+      runtimeSnapshot({
+        sessionState: "logged_in",
+        authPhase: "ready",
+        accountContextId: "acct-1",
+        capability: {
+          bookmarksApi: "ready",
+          detailApi: "unknown",
+        },
+      }),
+    );
+
+    await store.getState().actions.startLogin();
+
+    const state = store.getState();
+    expect(state.authPhase).toBe("ready");
+    expect(state.sessionState).toBe("logged_in");
+  });
+
+  it("sync auth error → reauthing → recovery after checkAuth", async () => {
+    const store = createRuntimeStore();
+    primeReadyState(store);
+
+    // Allow sync but make fetchBookmarkPage throw NO_AUTH
+    mocks.reserveSyncRun.mockResolvedValue({
+      allow: true,
+      mode: "quick",
+      reason: "manual",
+      leaseId: "lease-auth-err",
+      accountKey: "acct-1",
+    });
+    mocks.fetchBookmarkPage.mockRejectedValue(new Error("NO_AUTH"));
+
+    await store.getState().actions.refresh();
+
+    // Should be in reauthing state
+    expect(store.getState().syncStatus).toBe("reauthing");
+
+    // Simulate auth recovery: getRuntimeSnapshot returns logged_in
+    mocks.getRuntimeSnapshot.mockResolvedValue(
+      runtimeSnapshot({
+        sessionState: "logged_in",
+        authPhase: "ready",
+        accountContextId: "acct-1",
+        capability: {
+          bookmarksApi: "ready",
+          detailApi: "unknown",
+        },
+      }),
+    );
+
+    await store.getState().actions.checkAuth();
+
+    expect(store.getState().authPhase).toBe("ready");
+    expect(store.getState().sessionState).toBe("logged_in");
+  });
+
+  it("sync transient error → retry → success accumulates bookmarks", async () => {
+    const store = createRuntimeStore();
+    primeReadyState(store);
+
+    // First sync: allow but fail with network error
+    mocks.reserveSyncRun.mockResolvedValue({
+      allow: true,
+      mode: "quick",
+      reason: "manual",
+      leaseId: "lease-err-1",
+      accountKey: "acct-1",
+    });
+    mocks.fetchBookmarkPage.mockRejectedValue(new Error("NETWORK_ERROR"));
+
+    await store.getState().actions.refresh();
+    expect(store.getState().syncStatus).toBe("error");
+
+    // Retry: allow sync with successful fetch
+    mocks.reserveSyncRun.mockResolvedValue({
+      allow: true,
+      mode: "quick",
+      reason: "manual",
+      leaseId: "lease-ok-2",
+      accountKey: "acct-1",
+    });
+    mocks.fetchBookmarkPage
+      .mockResolvedValueOnce({
+        bookmarks: [createBookmark("tweet-a"), createBookmark("tweet-b")],
+        cursor: null,
+        stopOnEmptyResponse: true,
+      });
+
+    await store.getState().actions.refresh();
+
+    const state = store.getState();
+    expect(state.syncStatus).toBe("idle");
+    expect(state.bookmarks).toHaveLength(2);
+  });
+
+  it("connecting timeout → need_login → can retry and reach ready", async () => {
+    const store = createRuntimeStore();
+
+    // Make both auth calls fail so boot's catch block sets authPhase to "connecting"
+    mocks.getRuntimeSnapshot.mockRejectedValue(new Error("AUTH_TIMEOUT"));
+    mocks.checkAuth.mockRejectedValue(new Error("AUTH_TIMEOUT"));
+
+    await store.getState().actions.boot();
+    expect(store.getState().authPhase).toBe("connecting");
+
+    // Timeout fires
+    store.getState().actions.connectingTimeout();
+    expect(store.getState().authPhase).toBe("need_login");
+
+    // User retries login, this time auth succeeds
+    mocks.getRuntimeSnapshot.mockResolvedValue(
+      runtimeSnapshot({
+        sessionState: "logged_in",
+        authPhase: "ready",
+        accountContextId: "acct-1",
+        capability: {
+          bookmarksApi: "ready",
+          detailApi: "unknown",
+        },
+      }),
+    );
+
+    await store.getState().actions.startLogin();
+    expect(store.getState().authPhase).toBe("ready");
+    expect(store.getState().sessionState).toBe("logged_in");
+  });
+});

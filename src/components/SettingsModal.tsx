@@ -64,7 +64,7 @@ export function SettingsModal({
       ariaLabelledBy="settings-title"
     >
         <div
-          className="max-w-md mx-auto mt-[10vh] max-h-[80vh] flex flex-col rounded border border-border bg-surface-card shadow-xl animate-preview-in"
+          className="max-w-md mx-auto mt-[10vh] max-h-[80vh] flex flex-col rounded border border-border bg-surface-card shadow-xl"
         >
           <div className="flex shrink-0 items-center justify-between px-6 pt-5 pb-3">
             <h2

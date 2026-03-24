@@ -606,10 +606,6 @@
     }
 }
 
-@utility bookmark-list-item {
-    content-visibility: auto;
-    contain-intrinsic-size: 0 64px;
-}
 
 @utility prose-reader {
     --tw-prose-body: var(--foreground);
