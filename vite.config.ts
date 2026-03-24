@@ -33,8 +33,36 @@ function contentScriptPlugin(): Plugin {
   };
 }
 
+function serviceWorkerPlugin(): Plugin {
+  return {
+    name: "service-worker-ts",
+    async closeBundle() {
+      await viteBuild({
+        configFile: false,
+        logLevel: "warn",
+        build: {
+          write: true,
+          emptyOutDir: false,
+          outDir: "dist",
+          lib: {
+            entry: resolve(__dirname, "src/service-worker/index.ts"),
+            formats: ["iife"],
+            name: "ServiceWorker",
+            fileName: () => "service-worker-next.js",
+          },
+          rollupOptions: {
+            output: {
+              inlineDynamicImports: true,
+            },
+          },
+        },
+      });
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [react(), tailwindcss(), contentScriptPlugin()],
+  plugins: [react(), tailwindcss(), contentScriptPlugin(), serviceWorkerPlugin()],
   base: "./",
   build: {
     modulePreload: { polyfill: false },
