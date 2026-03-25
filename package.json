@@ -23,8 +23,7 @@
     "test": "vitest run",
     "test:reliability": "vitest run src/stores/__tests__/runtime-store.test.ts src/api/__tests__/parsers.bookmarks.test.ts src/lib/__tests__/reconcile.test.ts src/lib/__tests__/sw-pure.test.ts",
     "ci:verify": "pnpm test && pnpm build",
-    "ralph": "bash scripts/dispatch.sh",
-    "ralph:cleanup": "bash scripts/cleanup-worktrees.sh"
+    "ralph": ".ralph/run.sh"
   },
   "dependencies": {
     "@base-ui/react": "^1.2.0",

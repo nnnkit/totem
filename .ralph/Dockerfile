@@ -1,33 +1,38 @@
-FROM node:22-bookworm
+FROM docker/sandbox-templates:claude-code
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-  git \
-  curl \
-  jq \
-  && rm -rf /var/lib/apt/lists/*
-
-# Enable corepack (pnpm)
-RUN corepack enable && corepack prepare pnpm@9 --activate
-
-# Install GitHub CLI
-RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
-  | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg \
-  && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
-  | tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
-  && apt-get update && apt-get install -y gh \
-  && rm -rf /var/lib/apt/lists/*
-
-# Install Claude Code CLI (as root, before switching user)
-RUN npm install -g @anthropic-ai/claude-code
-
-# Create a non-root user and switch to it
-RUN useradd -m -s /bin/bash agent
 USER agent
 
-# Add to PATH
-ENV PATH="/home/agent/.npm-global/bin:/home/agent/.local/bin:$PATH"
+# Upgrade Claude Code to latest (must run as agent, installs to ~/.local/)
+RUN curl -fsSL https://claude.ai/install.sh | bash
 
-WORKDIR /home/agent
+USER root
 
-ENTRYPOINT ["/bin/bash"]
+# Load tokens from .env for non-interactive shells (how the agent runs commands)
+ENV BASH_ENV=/home/agent/.env_loader
+RUN cat > /home/agent/.env_loader <<'EOF'
+if [ -f .ralph/.env ]; then
+  for _var in GH_TOKEN; do
+    _val=$(grep "^${_var}=" .ralph/.env | cut -d= -f2-)
+    if [ -n "$_val" ]; then export "${_var}=${_val}"; fi
+  done
+  unset _var _val
+fi
+EOF
+
+# Wrapper that injects CLAUDE_CODE_OAUTH_TOKEN before claude starts.
+# Placed in /usr/local/bin which won't be touched by claude auto-updates.
+# The real binary lives at ~/.local/bin/claude.
+RUN cat > /usr/local/bin/claude <<'WRAPPER'
+#!/bin/bash
+if [ -z "$CLAUDE_CODE_OAUTH_TOKEN" ] && [ -f .ralph/.env ]; then
+  CLAUDE_CODE_OAUTH_TOKEN=$(grep "^CLAUDE_CODE_OAUTH_TOKEN=" .ralph/.env | cut -d= -f2-)
+  export CLAUDE_CODE_OAUTH_TOKEN
+fi
+exec /home/agent/.local/bin/claude "$@"
+WRAPPER
+RUN chmod +x /usr/local/bin/claude
+
+# Prepend /usr/local/bin so wrapper is found before ~/.local/bin
+ENV PATH=/usr/local/bin:$PATH
+
+USER agent
