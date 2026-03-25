@@ -5,6 +5,7 @@
  */
 
 import type { MessageRequest } from "../types/messages";
+import { queryIdHandlers } from "./query-id";
 
 export type Handler = (
   message: MessageRequest,
@@ -68,3 +69,10 @@ export function createMessageRouter(handlers: HandlerMap) {
 export const pingHandler: HandlerMap = {
   PING: async () => ({ ok: true, pong: true }),
 };
+
+// ── All module handler maps, merged into one ────────────────
+
+export const allHandlers: HandlerMap = mergeHandlerMaps(
+  pingHandler,
+  queryIdHandlers,
+);
