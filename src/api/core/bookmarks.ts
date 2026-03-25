@@ -1,3 +1,4 @@
+import type { BookmarkChangeType, BookmarkChangeEvent } from "../../types/messages";
 import { asRecord, asString, toNumber } from "../../lib/json";
 import { isValidTweetId } from "../../lib/reader-navigation";
 import {
@@ -5,15 +6,7 @@ import {
   type BookmarkPageResult,
 } from "../parsers";
 
-export type BookmarkChangeType = "CreateBookmark" | "DeleteBookmark";
-
-export interface BookmarkChangeEvent {
-  id: string;
-  type: BookmarkChangeType;
-  tweetId: string;
-  at: number;
-  source: string;
-}
+export type { BookmarkChangeType, BookmarkChangeEvent };
 
 interface RuntimeResponse {
   error?: string;
