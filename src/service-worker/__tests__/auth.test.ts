@@ -1,0 +1,486 @@
+import { beforeEach, describe, expect, it } from "vitest";
+import { createFakeChrome } from "../../test-utils/fake-chrome";
+import {
+  _resetForTesting,
+  createAuthHandlers,
+  getAuthDiagnosticLog,
+  getSessionSnapshot,
+  deriveAuthPhaseFromSession,
+  type AuthDeps,
+} from "../auth";
+import { createMessageRouter, mergeHandlerMaps } from "../index";
+
+// ── Helpers ─────────────────────────────────────────────────────
+
+function makeDeps(
+  fakeChrome: ReturnType<typeof createFakeChrome>,
+): AuthDeps {
+  return {
+    storage: fakeChrome.storage.local as unknown as typeof chrome.storage.local,
+    tabs: fakeChrome.tabs as unknown as typeof chrome.tabs,
+  };
+}
+
+function setupRouter(fakeChrome: ReturnType<typeof createFakeChrome>) {
+  const deps = makeDeps(fakeChrome);
+  const handlers = createAuthHandlers(deps);
+  const router = createMessageRouter(mergeHandlerMaps(handlers));
+  fakeChrome.runtime.onMessage.addListener(router);
+  return { deps, handlers };
+}
+
+// ── Tests ───────────────────────────────────────────────────────
+
+describe("auth module", () => {
+  let fakeChrome: ReturnType<typeof createFakeChrome>;
+
+  beforeEach(() => {
+    fakeChrome = createFakeChrome();
+    _resetForTesting();
+  });
+
+  // ── getSessionSnapshot ──────────────────────────────────────
+
+  describe("getSessionSnapshot", () => {
+    it("returns logged_out when no auth data exists", async () => {
+      const storage = fakeChrome.storage
+        .local as unknown as typeof chrome.storage.local;
+      const snapshot = await getSessionSnapshot(storage);
+      // With no stored state and no auth header, normalizeAuthState returns "logged_out"
+      expect(snapshot.sessionState).toBe("logged_out");
+      expect(snapshot.userId).toBeNull();
+      expect(snapshot.hasAuthHeader).toBe(false);
+    });
+
+    it("returns logged_in when auth headers are present and state is authenticated", async () => {
+      const storage = fakeChrome.storage
+        .local as unknown as typeof chrome.storage.local;
+      await storage.set({
+        totem_user_id: "12345",
+        totem_account_context_id: "12345",
+        totem_auth_headers: {
+          authorization: "Bearer token123",
+          "x-csrf-token": "csrf456",
+          cookie: "twid=u%3D12345; ct0=csrf456",
+        },
+        totem_auth_state: "authenticated",
+      });
+
+      const snapshot = await getSessionSnapshot(storage);
+      expect(snapshot.sessionState).toBe("logged_in");
+      expect(snapshot.userId).toBe("12345");
+      expect(snapshot.hasAuthHeader).toBe(true);
+      expect(snapshot.capability.bookmarksApi).toBe("ready");
+    });
+
+    it("extracts userId from cookie when totem_user_id is missing", async () => {
+      const storage = fakeChrome.storage
+        .local as unknown as typeof chrome.storage.local;
+      await storage.set({
+        totem_auth_headers: {
+          authorization: "Bearer token",
+          "x-csrf-token": "csrf",
+          cookie: "twid=u%3D9999; ct0=token",
+        },
+        totem_auth_state: "stale",
+      });
+
+      const snapshot = await getSessionSnapshot(storage);
+      expect(snapshot.userId).toBe("9999");
+      expect(snapshot.sessionState).toBe("logged_in");
+    });
+
+    it("returns logged_out when auth state is logged_out", async () => {
+      const storage = fakeChrome.storage
+        .local as unknown as typeof chrome.storage.local;
+      await storage.set({
+        totem_auth_state: "logged_out",
+      });
+
+      const snapshot = await getSessionSnapshot(storage);
+      expect(snapshot.sessionState).toBe("logged_out");
+      expect(snapshot.authState).toBe("logged_out");
+    });
+  });
+
+  // ── deriveAuthPhaseFromSession ──────────────────────────────
+
+  describe("deriveAuthPhaseFromSession", () => {
+    it("maps logged_out to need_login", () => {
+      expect(deriveAuthPhaseFromSession("logged_out")).toBe("need_login");
+    });
+
+    it("maps logged_in to ready", () => {
+      expect(deriveAuthPhaseFromSession("logged_in")).toBe("ready");
+    });
+
+    it("maps unknown to connecting", () => {
+      expect(deriveAuthPhaseFromSession("unknown")).toBe("connecting");
+    });
+  });
+
+  // ── CHECK_AUTH handler ──────────────────────────────────────
+
+  describe("CHECK_AUTH handler", () => {
+    it("returns auth status for authenticated user", async () => {
+      const storage = fakeChrome.storage
+        .local as unknown as typeof chrome.storage.local;
+      await storage.set({
+        totem_user_id: "42",
+        totem_account_context_id: "42",
+        totem_auth_headers: {
+          authorization: "Bearer token",
+          "x-csrf-token": "csrf",
+          cookie: "twid=u%3D42; ct0=csrf",
+        },
+        totem_auth_state: "authenticated",
+      });
+
+      setupRouter(fakeChrome);
+
+      const response = (await fakeChrome.runtime.sendMessage({
+        type: "CHECK_AUTH",
+      })) as Record<string, unknown>;
+
+      expect(response.hasUser).toBe(true);
+      expect(response.hasAuth).toBe(true);
+      expect(response.userId).toBe("42");
+      expect(response.sessionState).toBe("logged_in");
+      expect(response.authState).toBe("authenticated");
+      expect(response.capability).toEqual({
+        bookmarksApi: "ready",
+        detailApi: "unknown",
+      });
+    });
+
+    it("returns no-auth status for logged out user", async () => {
+      const storage = fakeChrome.storage
+        .local as unknown as typeof chrome.storage.local;
+      await storage.set({
+        totem_auth_state: "logged_out",
+      });
+
+      setupRouter(fakeChrome);
+
+      const response = (await fakeChrome.runtime.sendMessage({
+        type: "CHECK_AUTH",
+      })) as Record<string, unknown>;
+
+      expect(response.hasUser).toBe(false);
+      expect(response.hasAuth).toBe(false);
+      expect(response.userId).toBeNull();
+      expect(response.sessionState).toBe("logged_out");
+    });
+
+    it("writes diagnostic entry on CHECK_AUTH", async () => {
+      setupRouter(fakeChrome);
+      await fakeChrome.runtime.sendMessage({ type: "CHECK_AUTH" });
+
+      const log = getAuthDiagnosticLog();
+      expect(log.some((e) => e.stage === "frontend_receipt")).toBe(true);
+    });
+  });
+
+  // ── GET_RUNTIME_SNAPSHOT handler ────────────────────────────
+
+  describe("GET_RUNTIME_SNAPSHOT handler", () => {
+    it("returns full runtime snapshot", async () => {
+      const storage = fakeChrome.storage
+        .local as unknown as typeof chrome.storage.local;
+      await storage.set({
+        totem_user_id: "100",
+        totem_account_context_id: "100",
+        totem_auth_headers: {
+          authorization: "Bearer token",
+          "x-csrf-token": "csrf",
+          cookie: "twid=u%3D100",
+        },
+        totem_auth_state: "authenticated",
+      });
+
+      setupRouter(fakeChrome);
+
+      const response = (await fakeChrome.runtime.sendMessage({
+        type: "GET_RUNTIME_SNAPSHOT",
+      })) as { ok: boolean; data: Record<string, unknown> };
+
+      expect(response.ok).toBe(true);
+      expect(response.data.sessionState).toBe("logged_in");
+      expect(response.data.authPhase).toBe("ready");
+      expect(response.data.accountContextId).toBe("100");
+      expect(response.data.capability).toEqual({
+        bookmarksApi: "ready",
+        detailApi: "unknown",
+      });
+      expect(response.data.syncPolicy).toBeDefined();
+      expect(response.data.cacheSummary).toBeDefined();
+    });
+
+    it("persists runtime state v2 to storage", async () => {
+      const storage = fakeChrome.storage
+        .local as unknown as typeof chrome.storage.local;
+      await storage.set({
+        totem_user_id: "200",
+        totem_account_context_id: "200",
+        totem_auth_state: "authenticated",
+        totem_auth_headers: {
+          authorization: "Bearer t",
+          "x-csrf-token": "c",
+          cookie: "twid=u%3D200",
+        },
+      });
+
+      setupRouter(fakeChrome);
+      await fakeChrome.runtime.sendMessage({ type: "GET_RUNTIME_SNAPSHOT" });
+
+      const stored = await storage.get(["totem_runtime_state_v2"]);
+      expect(stored.totem_runtime_state_v2).toBeDefined();
+      expect(
+        (stored.totem_runtime_state_v2 as Record<string, unknown>)
+          .sessionState,
+      ).toBe("logged_in");
+    });
+
+    it("returns snapshot with specific accountId", async () => {
+      const storage = fakeChrome.storage
+        .local as unknown as typeof chrome.storage.local;
+      await storage.set({
+        totem_user_id: "300",
+        totem_account_context_id: "300",
+        totem_auth_state: "authenticated",
+        totem_auth_headers: {
+          authorization: "Bearer t",
+          "x-csrf-token": "c",
+          cookie: "twid=u%3D300",
+        },
+      });
+
+      setupRouter(fakeChrome);
+      const response = (await fakeChrome.runtime.sendMessage({
+        type: "GET_RUNTIME_SNAPSHOT",
+        accountId: "999",
+      })) as { ok: boolean; data: Record<string, unknown> };
+
+      expect(response.ok).toBe(true);
+      expect(response.data.accountContextId).toBe("999");
+    });
+  });
+
+  // ── SESSION_USER_MISSING handler ────────────────────────────
+
+  describe("SESSION_USER_MISSING handler", () => {
+    it("removes user ID and sets logged_out when no auth headers", async () => {
+      const storage = fakeChrome.storage
+        .local as unknown as typeof chrome.storage.local;
+      await storage.set({
+        totem_user_id: "42",
+        totem_auth_state: "stale",
+      });
+
+      setupRouter(fakeChrome);
+      const response = (await fakeChrome.runtime.sendMessage({
+        type: "SESSION_USER_MISSING",
+      })) as { ok: boolean };
+
+      expect(response.ok).toBe(true);
+
+      const stored = await storage.get([
+        "totem_user_id",
+        "totem_auth_state",
+        "totem_auth_headers",
+      ]);
+      expect(stored.totem_user_id).toBeUndefined();
+      expect(stored.totem_auth_state).toBe("logged_out");
+      // auth headers should be cleared since there were none
+      expect(stored.totem_auth_headers).toBeUndefined();
+    });
+
+    it("keeps auth headers when they exist (marks logged_out without clearAuth)", async () => {
+      const storage = fakeChrome.storage
+        .local as unknown as typeof chrome.storage.local;
+      await storage.set({
+        totem_user_id: "42",
+        totem_auth_headers: {
+          authorization: "Bearer token",
+          "x-csrf-token": "csrf",
+          cookie: "twid=u%3D42",
+        },
+        totem_auth_state: "authenticated",
+      });
+
+      setupRouter(fakeChrome);
+      await fakeChrome.runtime.sendMessage({ type: "SESSION_USER_MISSING" });
+
+      const stored = await storage.get([
+        "totem_user_id",
+        "totem_auth_state",
+        "totem_auth_headers",
+      ]);
+      expect(stored.totem_user_id).toBeUndefined();
+      expect(stored.totem_auth_state).toBe("logged_out");
+      // Auth headers should be preserved for diagnostics
+      expect(stored.totem_auth_headers).toBeDefined();
+    });
+
+    it("logs diagnostic entry", async () => {
+      setupRouter(fakeChrome);
+      await fakeChrome.runtime.sendMessage({ type: "SESSION_USER_MISSING" });
+
+      const log = getAuthDiagnosticLog();
+      expect(
+        log.some(
+          (e) => e.stage === "capture" && e.status === "missing",
+        ),
+      ).toBe(true);
+    });
+  });
+
+  // ── SET_ACCOUNT_CONTEXT handler ─────────────────────────────
+
+  describe("SET_ACCOUNT_CONTEXT handler", () => {
+    it("sets account context and returns it", async () => {
+      setupRouter(fakeChrome);
+      const response = (await fakeChrome.runtime.sendMessage({
+        type: "SET_ACCOUNT_CONTEXT",
+        accountId: "new-account-42",
+      })) as { ok: boolean; accountContextId: string };
+
+      expect(response.ok).toBe(true);
+      expect(response.accountContextId).toBe("new-account-42");
+    });
+
+    it("rejects invalid account context", async () => {
+      setupRouter(fakeChrome);
+      const response = (await fakeChrome.runtime.sendMessage({
+        type: "SET_ACCOUNT_CONTEXT",
+        accountId: "",
+      })) as { ok: boolean; error: string };
+
+      expect(response.ok).toBe(false);
+      expect(response.error).toBe("INVALID_ACCOUNT_CONTEXT");
+    });
+  });
+
+  // ── CLOSE_AUTH_TAB handler ──────────────────────────────────
+
+  describe("CLOSE_AUTH_TAB handler", () => {
+    it("returns ok", async () => {
+      setupRouter(fakeChrome);
+      const response = (await fakeChrome.runtime.sendMessage({
+        type: "CLOSE_AUTH_TAB",
+      })) as { ok: boolean };
+
+      expect(response.ok).toBe(true);
+    });
+  });
+
+  // ── REAUTH_STATUS handler ──────────────────────────────────
+
+  describe("REAUTH_STATUS handler", () => {
+    it("returns reauth status", async () => {
+      setupRouter(fakeChrome);
+      const response = (await fakeChrome.runtime.sendMessage({
+        type: "REAUTH_STATUS",
+      })) as { inProgress: boolean };
+
+      expect(response.inProgress).toBe(false);
+    });
+  });
+
+  // ── START_AUTH_CAPTURE handler ──────────────────────────────
+
+  describe("START_AUTH_CAPTURE handler", () => {
+    it("creates a tab and returns tabId", async () => {
+      setupRouter(fakeChrome);
+      const response = (await fakeChrome.runtime.sendMessage({
+        type: "START_AUTH_CAPTURE",
+      })) as { tabId: number | null };
+
+      expect(response.tabId).toBeGreaterThan(0);
+    });
+
+    it("logs diagnostic entry for capture start", async () => {
+      setupRouter(fakeChrome);
+      await fakeChrome.runtime.sendMessage({ type: "START_AUTH_CAPTURE" });
+
+      const log = getAuthDiagnosticLog();
+      expect(
+        log.some(
+          (e) =>
+            e.stage === "capture" &&
+            e.status === "ok" &&
+            e.reason?.includes("auth_capture_started"),
+        ),
+      ).toBe(true);
+    });
+  });
+
+  // ── Diagnostics persistence ─────────────────────────────────
+
+  describe("diagnostics", () => {
+    it("persists diagnostics to storage on CHECK_AUTH", async () => {
+      const storage = fakeChrome.storage
+        .local as unknown as typeof chrome.storage.local;
+
+      setupRouter(fakeChrome);
+      await fakeChrome.runtime.sendMessage({ type: "CHECK_AUTH" });
+
+      const stored = await storage.get(["totem_auth_diagnostics"]);
+      expect(stored.totem_auth_diagnostics).toBeDefined();
+      expect(
+        Array.isArray(stored.totem_auth_diagnostics),
+      ).toBe(true);
+      expect(
+        (stored.totem_auth_diagnostics as unknown[]).length,
+      ).toBeGreaterThan(0);
+    });
+  });
+
+  // ── End-to-end: auth capture → snapshot → frontend ──────────
+
+  describe("end-to-end: auth capture → snapshot → frontend receipt", () => {
+    it("full flow: no auth → capture headers → CHECK_AUTH returns authenticated", async () => {
+      const storage = fakeChrome.storage
+        .local as unknown as typeof chrome.storage.local;
+      setupRouter(fakeChrome);
+
+      // Step 1: No auth — CHECK_AUTH returns unauthenticated
+      const initial = (await fakeChrome.runtime.sendMessage({
+        type: "CHECK_AUTH",
+      })) as Record<string, unknown>;
+      expect(initial.hasAuth).toBe(false);
+
+      // Step 2: Simulate auth header capture (as webRequest listener would do)
+      await storage.set({
+        totem_user_id: "777",
+        totem_account_context_id: "777",
+        totem_auth_headers: {
+          authorization: "Bearer real_token",
+          "x-csrf-token": "real_csrf",
+          cookie: "twid=u%3D777; ct0=real_csrf",
+        },
+        totem_auth_time: Date.now(),
+        totem_auth_state: "authenticated",
+        totem_auth_state_at: Date.now(),
+        totem_auth_state_reason: "headers_trio",
+      });
+
+      // Step 3: CHECK_AUTH now returns authenticated
+      const after = (await fakeChrome.runtime.sendMessage({
+        type: "CHECK_AUTH",
+      })) as Record<string, unknown>;
+      expect(after.hasUser).toBe(true);
+      expect(after.hasAuth).toBe(true);
+      expect(after.userId).toBe("777");
+      expect(after.sessionState).toBe("logged_in");
+      expect(after.authState).toBe("authenticated");
+
+      // Step 4: Runtime snapshot also reflects authenticated state
+      const snapshot = (await fakeChrome.runtime.sendMessage({
+        type: "GET_RUNTIME_SNAPSHOT",
+      })) as { ok: boolean; data: Record<string, unknown> };
+      expect(snapshot.data.sessionState).toBe("logged_in");
+      expect(snapshot.data.authPhase).toBe("ready");
+    });
+  });
+});

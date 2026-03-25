@@ -50,6 +50,77 @@ describe("parseTwidUserId", () => {
 });
 
 // ---------------------------------------------------------------------------
+// parseTwidUserId — real X.com cookie fixtures
+// ---------------------------------------------------------------------------
+
+describe("parseTwidUserId – real X.com fixtures", () => {
+  it("extracts from real twid cookie value (URL-encoded)", () => {
+    // Real X.com sets twid as URL-encoded: u%3D1234567890
+    expect(parseTwidUserId("u%3D1784032851")).toBe("1784032851");
+  });
+
+  it("extracts from double-encoded twid cookie value", () => {
+    // Some cookie jars double-encode: u%253D...
+    expect(parseTwidUserId("u%253D1784032851")).toBe("1784032851");
+  });
+
+  it("extracts from real twid in full cookie header via getCookieHeaderValue", () => {
+    const fullCookie =
+      "guest_id=v1%3A17840328; ct0=abc123def456; twid=u%3D9876543210; personalization_id=v1_xyz";
+    const twid = getCookieHeaderValue(fullCookie, "twid");
+    expect(parseTwidUserId(twid)).toBe("9876543210");
+  });
+
+  it("extracts from twid with leading/trailing whitespace in cookie", () => {
+    const fullCookie = " twid=u%3D5551234567 ; ct0=token123 ";
+    const twid = getCookieHeaderValue(fullCookie, "twid");
+    expect(parseTwidUserId(twid)).toBe("5551234567");
+  });
+
+  it("handles real X.com long user IDs (18+ digits)", () => {
+    expect(parseTwidUserId("u=123456789012345678")).toBe("123456789012345678");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// getCookieHeaderValue — real X.com header fixtures
+// ---------------------------------------------------------------------------
+
+describe("getCookieHeaderValue – real X.com fixtures", () => {
+  const realCookieHeader =
+    "guest_id=v1%3A170000000000000000; night_mode=2; " +
+    "ct0=a1b2c3d4e5f6g7h8i9j0; twid=u%3D1784032851; " +
+    "auth_token=abc123xyz789; personalization_id=\"v1_abcdef==\"; " +
+    "lang=en; d_prefs=MToxLGNvbnNlbnRfdmVyc2lvbjoyLHRleHRfdmVyc2lvbjoxMDAw";
+
+  it("extracts ct0 (CSRF token) from real cookie header", () => {
+    expect(getCookieHeaderValue(realCookieHeader, "ct0")).toBe(
+      "a1b2c3d4e5f6g7h8i9j0",
+    );
+  });
+
+  it("extracts twid from real cookie header", () => {
+    expect(getCookieHeaderValue(realCookieHeader, "twid")).toBe(
+      "u%3D1784032851",
+    );
+  });
+
+  it("extracts auth_token from real cookie header", () => {
+    expect(getCookieHeaderValue(realCookieHeader, "auth_token")).toBe(
+      "abc123xyz789",
+    );
+  });
+
+  it("extracts lang from real cookie header", () => {
+    expect(getCookieHeaderValue(realCookieHeader, "lang")).toBe("en");
+  });
+
+  it("returns empty string for absent cookie in real header", () => {
+    expect(getCookieHeaderValue(realCookieHeader, "nonexistent")).toBe("");
+  });
+});
+
+// ---------------------------------------------------------------------------
 // getCookieHeaderValue
 // ---------------------------------------------------------------------------
 

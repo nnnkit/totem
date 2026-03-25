@@ -35,3 +35,30 @@ export interface CapturedAuthHeaders {
   "x-client-uuid"?: string;
   "x-client-transaction-id"?: string;
 }
+
+// ── Auth pipeline diagnostics ─────────────────────────────────
+
+export type AuthDiagnosticStage =
+  | "capture"
+  | "storage"
+  | "snapshot_build"
+  | "frontend_receipt";
+
+export type AuthDiagnosticStatus = "ok" | "error" | "missing";
+
+export interface AuthDiagnosticEntry {
+  stage: AuthDiagnosticStage;
+  status: AuthDiagnosticStatus;
+  timestamp: number;
+  reason?: string;
+}
+
+/** Shape of the session snapshot built by the auth module. */
+export interface SessionSnapshot {
+  userId: string | null;
+  accountContextId: string | null;
+  authState: AuthState;
+  sessionState: SessionState;
+  capability: ApiCapability;
+  hasAuthHeader: boolean;
+}

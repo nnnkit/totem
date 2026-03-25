@@ -5,6 +5,7 @@
  */
 
 import type { MessageRequest } from "../types/messages";
+import { authHandlers } from "./auth";
 import { queryIdHandlers } from "./query-id";
 
 export type Handler = (
@@ -74,5 +75,6 @@ export const pingHandler: HandlerMap = {
 
 export const allHandlers: HandlerMap = mergeHandlerMaps(
   pingHandler,
+  authHandlers,
   queryIdHandlers,
 );
