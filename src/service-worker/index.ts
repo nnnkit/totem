@@ -7,6 +7,9 @@
 import type { MessageRequest } from "../types/messages";
 import { authHandlers } from "./auth";
 import { queryIdHandlers } from "./query-id";
+import { syncHandlers } from "./sync";
+import { apiProxyHandlers } from "./api-proxy";
+import { eventHandlers } from "./events";
 
 export type Handler = (
   message: MessageRequest,
@@ -77,4 +80,7 @@ export const allHandlers: HandlerMap = mergeHandlerMaps(
   pingHandler,
   authHandlers,
   queryIdHandlers,
+  syncHandlers,
+  apiProxyHandlers,
+  eventHandlers,
 );

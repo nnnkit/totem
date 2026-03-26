@@ -607,6 +607,7 @@ export const authHandlers: HandlerMap = createAuthHandlers();
 // ── Exports for external use ────────────────────────────────────
 
 export {
+  buildRuntimeSnapshot,
   markAuthAuthenticated,
   markAuthLoggedOut,
   recordWeakAuthNegativeSignal,
