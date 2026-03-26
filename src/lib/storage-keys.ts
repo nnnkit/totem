@@ -39,7 +39,7 @@ export const CS_SYNC_AUTO_ENABLED = "totem_sync_auto_enabled";
 export const CS_RUNTIME_AUDIT = "totem_runtime_audit";
 export const CS_RUNTIME_STATE_V2 = "totem_runtime_state_v2";
 
-// These are written/read exclusively by public/service-worker.js.
+// These are written/read exclusively by service worker modules (src/service-worker/).
 // Listed here so reset (chrome.storage.local.clear()) covers them.
 //   totem_graphql_catalog    – captured GraphQL endpoint catalog
 //   totem_sw_cleanup_at      – weekly service worker cleanup timestamp

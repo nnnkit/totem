@@ -47,7 +47,7 @@ function serviceWorkerPlugin(): Plugin {
           outDir: "dist",
           rollupOptions: {
             input: {
-              "service-worker-next": resolve(
+              "service-worker": resolve(
                 __dirname,
                 "src/service-worker/index.ts",
               ),

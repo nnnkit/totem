@@ -1,8 +1,7 @@
 /**
- * Pure functions extracted from public/service-worker.js for testability.
+ * Pure functions shared between service worker modules and frontend.
  *
- * The service worker is a plain JS file that cannot import from src/, so it
- * keeps its own copies. These canonical TypeScript versions are the source of
+ * These canonical TypeScript versions are the source of
  * truth for logic and are covered by unit tests.
  */
 
