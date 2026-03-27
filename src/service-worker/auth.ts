@@ -54,6 +54,14 @@ let authWeakNegativeHits: number[] = [];
 let authTabId: number | null = null;
 let authTabCleanup: (() => void) | null = null;
 
+/** Idempotent — safe to call multiple times or from concurrent event handlers. */
+function runAuthTabCleanup() {
+  if (authTabCleanup) {
+    authTabCleanup();
+    authTabCleanup = null;
+  }
+}
+
 // ── Diagnostics ─────────────────────────────────────────────────
 
 const diagnosticLog: AuthDiagnosticEntry[] = [];
@@ -513,10 +521,7 @@ export function createAuthHandlers(deps?: AuthDeps): HandlerMap {
 
     START_AUTH_CAPTURE: async () => {
       // Clean up any prior auth tab + listeners
-      if (authTabCleanup) {
-        authTabCleanup();
-        authTabCleanup = null;
-      }
+      runAuthTabCleanup();
       if (authTabId) {
         try {
           await tabs.remove(authTabId);
@@ -547,10 +552,7 @@ export function createAuthHandlers(deps?: AuthDeps): HandlerMap {
         if (hasAuth) {
           logDiagnostic("capture", "ok", "auth_headers_captured");
           persistDiagnostics(storage);
-          if (authTabCleanup) {
-            authTabCleanup();
-            authTabCleanup = null;
-          }
+          runAuthTabCleanup();
           if (authTabId) {
             const tabToClose = authTabId;
             authTabId = null;
@@ -562,10 +564,7 @@ export function createAuthHandlers(deps?: AuthDeps): HandlerMap {
       const onRemoved = (removedTabId: number) => {
         if (removedTabId === safeTabId) {
           authTabId = null;
-          if (authTabCleanup) {
-            authTabCleanup();
-            authTabCleanup = null;
-          }
+          runAuthTabCleanup();
         }
       };
 
@@ -581,10 +580,7 @@ export function createAuthHandlers(deps?: AuthDeps): HandlerMap {
     },
 
     CLOSE_AUTH_TAB: async () => {
-      if (authTabCleanup) {
-        authTabCleanup();
-        authTabCleanup = null;
-      }
+      runAuthTabCleanup();
       if (authTabId) {
         try {
           await tabs.remove(authTabId);
@@ -620,9 +616,6 @@ export {
 export function _resetForTesting(): void {
   authWeakNegativeHits = [];
   authTabId = null;
-  if (authTabCleanup) {
-    authTabCleanup();
-    authTabCleanup = null;
-  }
+  runAuthTabCleanup();
   diagnosticLog.length = 0;
 }

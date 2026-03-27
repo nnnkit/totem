@@ -76,7 +76,7 @@ function AuthorCard({ author, closing, onClose }: AuthorCardProps) {
         <div className={author.bannerUrl ? "-mt-8" : "mt-4"}>
           <img
             src={author.profileImageUrl}
-            alt=""
+            alt={`@${author.screenName}`}
             className="size-16 rounded-full border-2 border-surface-card"
             loading="lazy"
           />
@@ -245,7 +245,7 @@ export function TweetHeader({ author, displayKind, createdAt, readingMinutes }: 
         >
           <img
             src={author.profileImageUrl}
-            alt=""
+            alt={`@${author.screenName}`}
             className="size-11 rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.06)] transition-opacity hover:opacity-80 dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]"
             loading="lazy"
           />

@@ -250,7 +250,7 @@ export function createAuthSlice(deps: AuthSliceDeps) {
       const accountId = get().activeAccountId;
       deps.setActiveAccountId(accountId);
 
-      await Promise.allSettled([
+      const [bookmarksResult, detailedResult] = await Promise.allSettled([
         withTimeout(deps.getAllBookmarks(), DB_INIT_TIMEOUT_MS, new Error("DB_INIT_TIMEOUT")),
         withTimeout(deps.getDetailedTweetIds(), DB_INIT_TIMEOUT_MS, new Error("DETAIL_DB_INIT_TIMEOUT")),
       ]);
@@ -258,8 +258,8 @@ export function createAuthSlice(deps: AuthSliceDeps) {
       if (get().bootGeneration !== bootGeneration) return;
 
       setState({
-        bookmarksLoaded: true,
-        detailedIdsLoaded: true,
+        bookmarksLoaded: bookmarksResult.status === "fulfilled",
+        detailedIdsLoaded: detailedResult.status === "fulfilled",
       });
 
       deps.onHydrateComplete?.();
@@ -325,6 +325,8 @@ export function createAuthSlice(deps: AuthSliceDeps) {
       });
 
       if (needsHydration) {
+        // hydrateCurrentAccount checks bootGeneration internally before
+        // mutating state, so stale hydrations are safely discarded.
         await hydrateCurrentAccount(nextBootGeneration, options.allowAutoSync);
         return;
       }
@@ -401,7 +403,6 @@ export function createAuthSlice(deps: AuthSliceDeps) {
         authRequestId += 1;
         setState((state) => ({
           bootGeneration: state.bootGeneration + 1,
-          readerActive: false,
           authRetryDelayMs: null,
         }));
       },

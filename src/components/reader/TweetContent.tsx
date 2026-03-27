@@ -64,7 +64,7 @@ function TweetBody({
           <div className="mt-2 flex items-center gap-2 text-sm">
             <img
               src={tweet.retweetedTweet.author.profileImageUrl}
-              alt=""
+              alt={`@${tweet.retweetedTweet.author.screenName}`}
               className="size-7 rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.06)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]"
               loading="lazy"
             />
@@ -149,7 +149,7 @@ function ThreadTweets({ tweets }: ThreadTweetsProps) {
                 {showAuthorProfile ? (
                   <img
                     src={tweet.author.profileImageUrl}
-                    alt=""
+                    alt={`@${tweet.author.screenName}`}
                     className="size-10 shrink-0 rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.06)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]"
                     loading="lazy"
                   />

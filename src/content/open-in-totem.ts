@@ -122,7 +122,6 @@ function isNestedTweet(article: HTMLElement): boolean {
   return parentArticle instanceof HTMLElement;
 }
 
-
 function findStatusLink(article: HTMLElement): HTMLAnchorElement | null {
   const links = querySameTweet<HTMLAnchorElement>(article, 'a[href*="/status/"]');
   if (links.length === 0) return null;
@@ -199,12 +198,16 @@ function openTotemReader(tweetId: string) {
   // The service worker will redirect to the reader page; if it fails, the user
   // lands on the tweet's native page as a safe fallback.
   const fallbackUrl = `https://x.com/i/web/status/${tweetId}`;
-  chrome.runtime.sendMessage({
-    type: "OPEN_TOTEM_READER",
-    tweetId,
-  }).catch(() => {
-    window.location.href = fallbackUrl;
-  });
+  chrome.runtime
+    .sendMessage({ type: "OPEN_TOTEM_READER", tweetId })
+    .then((response) => {
+      if (!response?.ok) {
+        window.location.href = fallbackUrl;
+      }
+    })
+    .catch(() => {
+      window.location.href = fallbackUrl;
+    });
 }
 
 function createButton(tweetId: string): HTMLButtonElement {

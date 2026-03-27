@@ -521,12 +521,12 @@ function ReaderRouteApp() {
     ensureReadingProgressExists(readTweetId).catch(() => {});
   }, [appMode, hiddenBookmark, readTweetId, returnSurface]);
 
-  const [prevLocalBookmarkId, setPrevLocalBookmarkId] = useState(localBookmark?.tweetId ?? null);
-  if (localBookmark && localBookmark.tweetId !== prevLocalBookmarkId) {
-    setPrevLocalBookmarkId(localBookmark.tweetId);
-    setLocalBookmarkSnapshot(localBookmark);
-    setLocalMutation("idle");
-  }
+  useEffect(() => {
+    if (localBookmark) {
+      setLocalBookmarkSnapshot(localBookmark);
+      setLocalMutation("idle");
+    }
+  }, [localBookmark?.tweetId]); // eslint-disable-line react-hooks/exhaustive-deps -- sync snapshot when ID changes, not on every bookmark object update
 
   useEffect(() => {
     if (!readTweetId || appMode === "initializing") return;
@@ -589,7 +589,7 @@ function ReaderRouteApp() {
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- depends on tweetId not full bookmark object to avoid re-fetching on unrelated property changes
   }, [actions, appMode, hiddenBookmark, localBookmark?.tweetId, readTweetId, retryKey]);
 
   const displayBookmark = localBookmark ||

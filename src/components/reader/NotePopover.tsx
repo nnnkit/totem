@@ -97,10 +97,10 @@ export function NotePopover({ highlight, anchorEl, onSaveNote, onDeleteNote, onC
             </span>
             <Button
               variant="ghost"
-              size="icon"
+              size="icon-sm"
               onClick={onClose}
               aria-label="Close notes panel"
-              className="-mr-1 !p-1 text-muted/40 hover:text-foreground"
+              className="-mr-1 text-muted/40 hover:text-foreground"
             >
               <XIcon className="size-3" />
             </Button>

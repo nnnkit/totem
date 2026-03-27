@@ -113,7 +113,6 @@ export function BookmarksList({
   const syncButton = syncButtonStateOverride ?? runtimeSyncButton;
   const offlineMode = offlineModeOverride ?? runtimeOfflineMode;
   const [focusedIndex, setFocusedIndex] = useState(-1);
-  const [prevActiveTab, setPrevActiveTab] = useState(activeTab);
   const [sortPreferences, setSortPreferences] =
     useState<ReadingSortPreferences>(() => readStoredReadingSortPreferences());
   const [pinnedIds, setPinnedIds] = useState(() => getPinnedTweetIds());
@@ -126,10 +125,9 @@ export function BookmarksList({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const pinnedCardRefs = useRef<Map<number, HTMLAnchorElement>>(new Map());
 
-  if (prevActiveTab !== activeTab) {
-    setPrevActiveTab(activeTab);
+  useEffect(() => {
     setFocusedIndex(-1);
-  }
+  }, [activeTab]);
 
   useEffect(() => {
     return subscribeToPinChanges(() => {
@@ -695,7 +693,7 @@ export function BookmarksList({
                     <div className="relative flex items-center gap-2">
                       <img
                         src={bookmark.author.profileImageUrl}
-                        alt=""
+                        alt={`@${bookmark.author.screenName}`}
                         className="size-5 shrink-0 cursor-pointer rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.06)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]"
                         onClick={(e) => {
                           e.stopPropagation();
@@ -707,22 +705,15 @@ export function BookmarksList({
                           );
                         }}
                       />
-                      <span
-                        className="cursor-pointer truncate text-xs text-muted/70 transition-colors hover:text-foreground"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          e.preventDefault();
-                          window.open(
-                            `https://x.com/${bookmark.author.screenName}`,
-                            "_blank",
-                            "noopener,noreferrer",
-                          );
-                        }}
-                        role="link"
-                        tabIndex={-1}
+                      <a
+                        href={`https://x.com/${bookmark.author.screenName}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="truncate text-xs text-muted/70 transition-colors hover:text-foreground"
+                        onClick={(e) => e.stopPropagation()}
                       >
                         @{bookmark.author.screenName}
-                      </span>
+                      </a>
                     </div>
                     <p className="line-clamp-2 text-xs leading-relaxed text-foreground">
                       {pickTitle(bookmark)}
@@ -811,7 +802,7 @@ export function BookmarksList({
                     >
                       <img
                         src={bookmark.author.profileImageUrl}
-                        alt=""
+                        alt={`@${bookmark.author.screenName}`}
                         className="size-9 shrink-0 cursor-pointer rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.06)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]"
                         onClick={(e) => {
                           e.stopPropagation();
@@ -836,22 +827,15 @@ export function BookmarksList({
                           )}
                         </p>
                         <p className="mt-1 truncate text-xs text-muted/50">
-                          <span
-                            className="cursor-pointer transition-colors hover:text-foreground"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              e.preventDefault();
-                              window.open(
-                                `https://x.com/${bookmark.author.screenName}`,
-                                "_blank",
-                                "noopener,noreferrer",
-                              );
-                            }}
-                            role="link"
-                            tabIndex={-1}
+                          <a
+                            href={`https://x.com/${bookmark.author.screenName}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="transition-colors hover:text-foreground"
+                            onClick={(e) => e.stopPropagation()}
                           >
                             @{bookmark.author.screenName}
-                          </span>
+                          </a>
                           {row.subtitle ? (
                             <span className="text-muted/40">
                               {" "}

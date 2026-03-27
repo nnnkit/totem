@@ -45,7 +45,7 @@ export function TweetRecommendations({
             <div className="flex items-center gap-1.5">
               <img
                 src={related.author.profileImageUrl}
-                alt=""
+                alt={`@${related.author.screenName}`}
                 className="size-5 rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.06)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]"
                 loading="lazy"
               />

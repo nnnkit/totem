@@ -353,7 +353,7 @@ export function NewTabHome({
               <div className="mt-auto flex items-center gap-2.5 pt-3">
                 <img
                   src={currentItem.bookmark.author.profileImageUrl}
-                  alt=""
+                  alt={`@${currentItem.bookmark.author.screenName}`}
                   className="size-6 shrink-0 rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.06)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]"
                 />
                 <div className="min-w-0 flex flex-col gap-1">

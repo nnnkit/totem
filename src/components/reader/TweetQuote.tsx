@@ -27,7 +27,7 @@ function QuoteHeader({ quotedTweet }: { quotedTweet: ResolvedQuote }) {
     <div className="mb-3 flex items-center gap-2 text-sm">
       <img
         src={quotedTweet.author.profileImageUrl}
-        alt=""
+        alt={`@${quotedTweet.author.screenName}`}
         className="size-6 rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.06)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]"
         loading="lazy"
       />
