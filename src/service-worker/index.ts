@@ -26,6 +26,7 @@ import {
   extractTweetIdFromVariables,
   extractGraphqlOperationName,
 } from "../lib/sw-pure";
+import { CS_ACCOUNT_CONTEXT_ID } from "../lib/storage-keys";
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -56,8 +57,6 @@ const AUTH_PROTECTED_OPERATIONS = new Set([
   "DeleteBookmark",
   "CreateBookmark",
 ]);
-
-const ACCOUNT_CONTEXT_STORAGE_KEY = "totem_account_context_id";
 
 // ── Handler map utilities ────────────────────────────────────
 
@@ -256,7 +255,7 @@ chrome.webRequest.onSendHeaders.addListener(
       chrome.storage.local
         .set({
           totem_user_id: userIdFromHeader,
-          [ACCOUNT_CONTEXT_STORAGE_KEY]: userIdFromHeader,
+          [CS_ACCOUNT_CONTEXT_ID]: userIdFromHeader,
         })
         .catch(() => {});
     }

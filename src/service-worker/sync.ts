@@ -13,10 +13,13 @@ import type { MessageRequest } from "../types/messages";
 import type { HandlerMap } from "./index";
 import { getSessionSnapshot, buildRuntimeSnapshot } from "./auth";
 import { normalizeSyncAccountId } from "../lib/sw-pure";
+import {
+  CS_SYNC_ORCHESTRATOR_STATE,
+  CS_RUNTIME_STATE_V2,
+} from "../lib/storage-keys";
 
 // ── Constants ───────────────────────────────────────────────────
 
-const SYNC_ORCHESTRATOR_STORAGE_KEY = "totem_sync_orchestrator_state";
 const SYNC_ORCHESTRATOR_VERSION = 1;
 const SYNC_ORCHESTRATOR_LOCK_TTL_MS = 12 * 60 * 1000;
 const SYNC_ORCHESTRATOR_AUTO_BACKOFF_MS = 5 * 60 * 1000;
@@ -26,11 +29,10 @@ const SYNC_ORCHESTRATOR_MANUAL_SUCCESS_COOLDOWN_MS = 15 * 60 * 1000;
 const SYNC_ORCHESTRATOR_MANUAL_FAILURE_RETRY_MS = 30_000;
 const SYNC_ORCHESTRATOR_RATE_LIMIT_BACKOFF_BASE_MS = 60_000;
 const SYNC_ORCHESTRATOR_RATE_LIMIT_BACKOFF_MAX_MS = 15 * 60 * 1000;
-const RUNTIME_STATE_V2_STORAGE_KEY = "totem_runtime_state_v2";
 
 // ── Types ───────────────────────────────────────────────────────
 
-interface SyncInFlight {
+export interface SyncInFlight {
   leaseId: string;
   mode: "full" | "quick" | "incremental";
   trigger: "manual" | "auto";
@@ -38,7 +40,7 @@ interface SyncInFlight {
   startedAt: number;
 }
 
-interface SyncAccountState {
+export interface SyncAccountState {
   inFlight: SyncInFlight | null;
   lastSuccessAt: number;
   lastFullSyncAt: number;
@@ -55,7 +57,7 @@ interface SyncAccountState {
   lastFailureCode: string | null;
 }
 
-interface SyncOrchestratorState {
+export interface SyncOrchestratorState {
   version: number;
   accounts: Record<string, SyncAccountState>;
 }
@@ -162,15 +164,15 @@ function normalizeSyncOrchestratorState(raw: unknown): SyncOrchestratorState {
 }
 
 async function readSyncOrchestratorState(): Promise<SyncOrchestratorState> {
-  const stored = await chrome.storage.local.get([SYNC_ORCHESTRATOR_STORAGE_KEY]);
-  return normalizeSyncOrchestratorState(stored[SYNC_ORCHESTRATOR_STORAGE_KEY]);
+  const stored = await chrome.storage.local.get([CS_SYNC_ORCHESTRATOR_STATE]);
+  return normalizeSyncOrchestratorState(stored[CS_SYNC_ORCHESTRATOR_STATE]);
 }
 
 async function writeSyncOrchestratorState(
   state: SyncOrchestratorState,
 ): Promise<void> {
   await chrome.storage.local.set({
-    [SYNC_ORCHESTRATOR_STORAGE_KEY]: state,
+    [CS_SYNC_ORCHESTRATOR_STATE]: state,
   });
 }
 
@@ -191,7 +193,7 @@ function createSyncLeaseId(accountKey: string, now: number): string {
 }
 
 async function persistRuntimeStateV2(snapshot: unknown): Promise<void> {
-  await chrome.storage.local.set({ [RUNTIME_STATE_V2_STORAGE_KEY]: snapshot });
+  await chrome.storage.local.set({ [CS_RUNTIME_STATE_V2]: snapshot });
 }
 
 // ── Handlers ────────────────────────────────────────────────────

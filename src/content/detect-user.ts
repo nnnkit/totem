@@ -9,9 +9,9 @@
 
 import { parseTwidUserId } from "../lib/sw-pure";
 import type { BookmarkChangeType } from "../types/messages";
+import { CS_ACCOUNT_CONTEXT_ID } from "../lib/storage-keys";
 
 const MESSAGE_SOURCE = "totem-bookmark-mutation";
-const ACCOUNT_CONTEXT_STORAGE_KEY = "totem_account_context_id";
 
 // ── Cookie detection ────────────────────────────────────────
 
@@ -25,7 +25,7 @@ const currentUserId = parseTwidUserId(twidRawValue);
 if (currentUserId) {
   chrome.storage.local.set({
     totem_user_id: currentUserId,
-    [ACCOUNT_CONTEXT_STORAGE_KEY]: currentUserId,
+    [CS_ACCOUNT_CONTEXT_ID]: currentUserId,
   });
 } else {
   // User identity can disappear on logout; keep account context so the new tab

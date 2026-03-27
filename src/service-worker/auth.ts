@@ -25,28 +25,32 @@ import {
   normalizeSyncAccountId,
   getSyncBlockedReason,
 } from "../lib/sw-pure";
+import {
+  CS_ACCOUNT_CONTEXT_ID,
+  CS_BOOKMARK_EVENTS,
+  CS_LAST_SYNC,
+  CS_LAST_SOFT_SYNC,
+  CS_SOFT_SYNC_NEEDED,
+  CS_SYNC_ORCHESTRATOR_STATE,
+  CS_RUNTIME_STATE_V2,
+} from "../lib/storage-keys";
 
 // ── Constants ───────────────────────────────────────────────────
 
-const ACCOUNT_CONTEXT_STORAGE_KEY = "totem_account_context_id";
 const AUTH_WEAK_NEGATIVE_WINDOW_MS = 10_000;
 const AUTH_WEAK_NEGATIVE_THRESHOLD = 2;
 
-const BOOKMARK_EVENTS_STORAGE_KEY = "totem_bookmark_events";
 const CACHE_SUMMARY_KEYS = [
-  "totem_last_sync",
-  "totem_last_light_sync",
-  "totem_light_sync_needed",
-  BOOKMARK_EVENTS_STORAGE_KEY,
+  CS_LAST_SYNC,
+  CS_LAST_SOFT_SYNC,
+  CS_SOFT_SYNC_NEEDED,
+  CS_BOOKMARK_EVENTS,
 ];
-const SYNC_ORCHESTRATOR_STORAGE_KEY = "totem_sync_orchestrator_state";
-const RUNTIME_STATE_V2_STORAGE_KEY = "totem_runtime_state_v2";
 const AUTH_DIAGNOSTICS_STORAGE_KEY = "totem_auth_diagnostics";
 
 // ── In-memory auth state ────────────────────────────────────────
 
 let authWeakNegativeHits: number[] = [];
-let reauthInProgress = false;
 let authTabId: number | null = null;
 let authTabCleanup: (() => void) | null = null;
 
@@ -158,7 +162,7 @@ export async function getSessionSnapshot(
 ): Promise<SessionSnapshot> {
   const stored = await storage.get([
     "totem_user_id",
-    ACCOUNT_CONTEXT_STORAGE_KEY,
+    CS_ACCOUNT_CONTEXT_ID,
     "totem_auth_headers",
     "totem_auth_state",
     "totem_auth_state_at",
@@ -181,20 +185,20 @@ export async function getSessionSnapshot(
       storage
         .set({
           totem_user_id: parsedUserId,
-          [ACCOUNT_CONTEXT_STORAGE_KEY]: parsedUserId,
+          [CS_ACCOUNT_CONTEXT_ID]: parsedUserId,
         })
         .catch(() => {});
     }
   }
 
   const storedAccountContextId =
-    typeof stored[ACCOUNT_CONTEXT_STORAGE_KEY] === "string" &&
-    stored[ACCOUNT_CONTEXT_STORAGE_KEY]
-      ? (stored[ACCOUNT_CONTEXT_STORAGE_KEY] as string)
+    typeof stored[CS_ACCOUNT_CONTEXT_ID] === "string" &&
+    stored[CS_ACCOUNT_CONTEXT_ID]
+      ? (stored[CS_ACCOUNT_CONTEXT_ID] as string)
       : null;
   const accountContextId = userId || storedAccountContextId;
   if (userId && storedAccountContextId !== userId) {
-    storage.set({ [ACCOUNT_CONTEXT_STORAGE_KEY]: userId }).catch(() => {});
+    storage.set({ [CS_ACCOUNT_CONTEXT_ID]: userId }).catch(() => {});
   }
 
   const authState = normalizeAuthState(stored.totem_auth_state, hasAuthHeader);
@@ -238,39 +242,32 @@ export function deriveAuthPhaseFromSession(
 
 // ── Sync orchestrator read helpers ──────────────────────────────
 
-interface SyncAccountState {
-  rateLimitBackoffUntil?: number;
-  inFlight?: {
-    leaseId?: string;
-    mode?: string;
-    trigger?: string;
-    startedAt?: number;
-  } | null;
-  manualCooldownUntil?: number;
-  lastAttemptAt?: number;
-  lastSuccessAt?: number;
+// Auth only reads a subset of sync state for snapshot building.
+// Canonical types live in sync.ts.
+type SyncAccountStateReadonly = Partial<
+  import("./sync").SyncAccountState
+>;
+
+interface SyncOrchestratorStateReadonly {
+  accounts: Record<string, SyncAccountStateReadonly>;
 }
 
-interface SyncOrchestratorState {
-  accounts: Record<string, SyncAccountState>;
-}
-
-function createEmptySyncAccountState(): SyncAccountState {
+function createEmptySyncAccountState(): SyncAccountStateReadonly {
   return {};
 }
 
 async function readSyncOrchestratorState(
   storage: typeof chrome.storage.local,
-): Promise<SyncOrchestratorState> {
-  const stored = await storage.get([SYNC_ORCHESTRATOR_STORAGE_KEY]);
-  const state = stored[SYNC_ORCHESTRATOR_STORAGE_KEY];
+): Promise<SyncOrchestratorStateReadonly> {
+  const stored = await storage.get([CS_SYNC_ORCHESTRATOR_STATE]);
+  const state = stored[CS_SYNC_ORCHESTRATOR_STATE];
   if (
     state &&
     typeof state === "object" &&
     !Array.isArray(state) &&
-    typeof (state as SyncOrchestratorState).accounts === "object"
+    typeof (state as SyncOrchestratorStateReadonly).accounts === "object"
   ) {
-    return state as SyncOrchestratorState;
+    return state as SyncOrchestratorStateReadonly;
   }
   return { accounts: {} };
 }
@@ -278,7 +275,7 @@ async function readSyncOrchestratorState(
 // ── Runtime snapshot building ───────────────────────────────────
 
 async function buildRuntimeSnapshot(
-  stateOverride: SyncOrchestratorState | null = null,
+  stateOverride: SyncOrchestratorStateReadonly | null = null,
   accountContextOverride: string | null = null,
   storage: typeof chrome.storage.local,
 ) {
@@ -302,8 +299,8 @@ async function buildRuntimeSnapshot(
   );
 
   const cacheStored = await storage.get(CACHE_SUMMARY_KEYS);
-  const events = Array.isArray(cacheStored[BOOKMARK_EVENTS_STORAGE_KEY])
-    ? (cacheStored[BOOKMARK_EVENTS_STORAGE_KEY] as unknown[])
+  const events = Array.isArray(cacheStored[CS_BOOKMARK_EVENTS])
+    ? (cacheStored[CS_BOOKMARK_EVENTS] as unknown[])
     : [];
 
   return {
@@ -372,7 +369,7 @@ async function persistRuntimeStateV2(
         };
 
   await storage.set({
-    [RUNTIME_STATE_V2_STORAGE_KEY]: {
+    [CS_RUNTIME_STATE_V2]: {
       sessionState: payload.sessionState || "unknown",
       authPhase: payload.authPhase || "loading",
       accountContextId: payload.accountContextId || null,
@@ -465,7 +462,7 @@ export function createAuthHandlers(deps?: AuthDeps): HandlerMap {
       }
 
       await storage.set({
-        [ACCOUNT_CONTEXT_STORAGE_KEY]: accountContextId,
+        [CS_ACCOUNT_CONTEXT_ID]: accountContextId,
       });
       let snapshot;
       try {
@@ -600,7 +597,7 @@ export function createAuthHandlers(deps?: AuthDeps): HandlerMap {
     },
 
     REAUTH_STATUS: async () => {
-      return { inProgress: reauthInProgress };
+      return { inProgress: false };
     },
   };
 }
@@ -622,7 +619,6 @@ export {
 
 export function _resetForTesting(): void {
   authWeakNegativeHits = [];
-  reauthInProgress = false;
   authTabId = null;
   if (authTabCleanup) {
     authTabCleanup();

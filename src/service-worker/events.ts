@@ -9,10 +9,10 @@
 
 import type { MessageRequest, BookmarkChangeType } from "../types/messages";
 import type { HandlerMap } from "./index";
+import { CS_BOOKMARK_EVENTS } from "../lib/storage-keys";
 
 // ── Constants ───────────────────────────────────────────────────
 
-const BOOKMARK_EVENTS_STORAGE_KEY = "totem_bookmark_events";
 const MAX_BOOKMARK_EVENTS = 400;
 
 // ── Types ───────────────────────────────────────────────────────
@@ -36,11 +36,11 @@ export async function pushBookmarkEvent(
   const s = storage ?? defaultStorage();
   const normalizedTweetId = typeof tweetId === "string" ? tweetId : "";
   const now = Date.now();
-  const stored = await s.get([BOOKMARK_EVENTS_STORAGE_KEY]);
+  const stored = await s.get([CS_BOOKMARK_EVENTS]);
   const existing: BookmarkEvent[] = Array.isArray(
-    stored[BOOKMARK_EVENTS_STORAGE_KEY],
+    stored[CS_BOOKMARK_EVENTS],
   )
-    ? stored[BOOKMARK_EVENTS_STORAGE_KEY]
+    ? stored[CS_BOOKMARK_EVENTS]
     : [];
 
   const next = existing
@@ -65,7 +65,7 @@ export async function pushBookmarkEvent(
     next.splice(0, next.length - MAX_BOOKMARK_EVENTS);
   }
 
-  await s.set({ [BOOKMARK_EVENTS_STORAGE_KEY]: next });
+  await s.set({ [CS_BOOKMARK_EVENTS]: next });
 }
 
 // ── Handlers ────────────────────────────────────────────────────
@@ -84,11 +84,11 @@ export function createEventHandlers(deps: EventsDeps = {}): HandlerMap {
   const storage = deps.storage ?? defaultStorage();
 
   async function handleGetBookmarkEvents(): Promise<unknown> {
-    const stored = await storage.get([BOOKMARK_EVENTS_STORAGE_KEY]);
+    const stored = await storage.get([CS_BOOKMARK_EVENTS]);
     const events: BookmarkEvent[] = Array.isArray(
-      stored[BOOKMARK_EVENTS_STORAGE_KEY],
+      stored[CS_BOOKMARK_EVENTS],
     )
-      ? stored[BOOKMARK_EVENTS_STORAGE_KEY]
+      ? stored[CS_BOOKMARK_EVENTS]
       : [];
     return { data: { events } };
   }
@@ -109,11 +109,11 @@ export function createEventHandlers(deps: EventsDeps = {}): HandlerMap {
       return { data: { removed: 0, remaining: 0 } };
     }
 
-    const stored = await storage.get([BOOKMARK_EVENTS_STORAGE_KEY]);
+    const stored = await storage.get([CS_BOOKMARK_EVENTS]);
     const events: BookmarkEvent[] = Array.isArray(
-      stored[BOOKMARK_EVENTS_STORAGE_KEY],
+      stored[CS_BOOKMARK_EVENTS],
     )
-      ? stored[BOOKMARK_EVENTS_STORAGE_KEY]
+      ? stored[CS_BOOKMARK_EVENTS]
       : [];
 
     const next = events.filter((event) => {
@@ -122,7 +122,7 @@ export function createEventHandlers(deps: EventsDeps = {}): HandlerMap {
       return id ? !ackSet.has(id) : true;
     });
 
-    await storage.set({ [BOOKMARK_EVENTS_STORAGE_KEY]: next });
+    await storage.set({ [CS_BOOKMARK_EVENTS]: next });
     return {
       data: {
         removed: events.length - next.length,

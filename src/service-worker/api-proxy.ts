@@ -62,6 +62,10 @@ const DETAIL_FEATURE_OVERRIDES: Record<string, boolean> = {
   responsive_web_grok_community_note_auto_translation_is_enabled: false,
 };
 
+// ── Reauth concurrency guard ────────────────────────────────────
+
+let pendingReauth: Promise<boolean> | null = null;
+
 // ── Auth helpers ────────────────────────────────────────────────
 
 async function buildHeaders(
@@ -92,11 +96,17 @@ async function buildHeaders(
   return headers;
 }
 
+/**
+ * Opens a background tab to x.com to refresh auth headers.
+ * Deduplicates concurrent calls — only one tab is opened at a time.
+ */
 async function reAuthSilently(
   storage: typeof chrome.storage.local,
   tabs: typeof chrome.tabs,
 ): Promise<boolean> {
-  return new Promise((resolve) => {
+  if (pendingReauth) return pendingReauth;
+
+  const attempt = new Promise<boolean>((resolve) => {
     let tabId: number | null = null;
     let resolved = false;
 
@@ -139,6 +149,10 @@ async function reAuthSilently(
       }
     }, 15000);
   });
+
+  pendingReauth = attempt;
+  attempt.finally(() => { pendingReauth = null; });
+  return attempt;
 }
 
 function parseFeatureSet(raw: unknown): Record<string, boolean> {
@@ -178,6 +192,7 @@ export function createApiProxyHandlers(deps: ApiProxyDeps = {}): HandlerMap {
 
   async function handleFetchBookmarks(
     message: MessageRequest,
+    _retried = false,
   ): Promise<unknown> {
     const msg = message as unknown as Record<string, unknown>;
     const cursor = typeof msg.cursor === "string" ? msg.cursor : undefined;
@@ -220,10 +235,9 @@ export function createApiProxyHandlers(deps: ApiProxyDeps = {}): HandlerMap {
 
       if (response.status === 401 || response.status === 403) {
         await storage.remove(["totem_auth_headers", "totem_auth_time"]);
-        const success = await reAuthSilently(storage, tabs);
-        if (success) {
-          // Retry after re-auth
-          return handleFetchBookmarks(message);
+        if (!_retried) {
+          const success = await reAuthSilently(storage, tabs);
+          if (success) return handleFetchBookmarks(message, true);
         }
         await markAuthLoggedOut(
           `bookmarks_${response.status}`,
@@ -255,6 +269,7 @@ export function createApiProxyHandlers(deps: ApiProxyDeps = {}): HandlerMap {
 
   async function handleDeleteBookmark(
     message: MessageRequest,
+    _retried = false,
   ): Promise<unknown> {
     const msg = message as unknown as Record<string, unknown>;
     const tweetId = typeof msg.tweetId === "string" ? msg.tweetId : "";
@@ -284,9 +299,9 @@ export function createApiProxyHandlers(deps: ApiProxyDeps = {}): HandlerMap {
 
       if (response.status === 401 || response.status === 403) {
         await storage.remove(["totem_auth_headers", "totem_auth_time"]);
-        const success = await reAuthSilently(storage, tabs);
-        if (success) {
-          return handleDeleteBookmark(message);
+        if (!_retried) {
+          const success = await reAuthSilently(storage, tabs);
+          if (success) return handleDeleteBookmark(message, true);
         }
         await markAuthLoggedOut(
           `delete_${response.status}`,
@@ -317,6 +332,7 @@ export function createApiProxyHandlers(deps: ApiProxyDeps = {}): HandlerMap {
 
   async function handleFetchTweetDetail(
     message: MessageRequest,
+    _retried = false,
   ): Promise<unknown> {
     const msg = message as unknown as Record<string, unknown>;
     const tweetId = typeof msg.tweetId === "string" ? msg.tweetId : "";
@@ -375,9 +391,9 @@ export function createApiProxyHandlers(deps: ApiProxyDeps = {}): HandlerMap {
 
       if (response.status === 401 || response.status === 403) {
         await storage.remove(["totem_auth_headers", "totem_auth_time"]);
-        const success = await reAuthSilently(storage, tabs);
-        if (success) {
-          return handleFetchTweetDetail(message);
+        if (!_retried) {
+          const success = await reAuthSilently(storage, tabs);
+          if (success) return handleFetchTweetDetail(message, true);
         }
         await markAuthLoggedOut(
           `detail_${response.status}`,
@@ -407,9 +423,9 @@ export function createApiProxyHandlers(deps: ApiProxyDeps = {}): HandlerMap {
   }
 
   return {
-    FETCH_BOOKMARKS: handleFetchBookmarks,
-    DELETE_BOOKMARK: handleDeleteBookmark,
-    FETCH_TWEET_DETAIL: handleFetchTweetDetail,
+    FETCH_BOOKMARKS: (msg) => handleFetchBookmarks(msg),
+    DELETE_BOOKMARK: (msg) => handleDeleteBookmark(msg),
+    FETCH_TWEET_DETAIL: (msg) => handleFetchTweetDetail(msg),
   };
 }
 
