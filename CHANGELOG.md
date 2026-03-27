@@ -2,6 +2,43 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.14] - 2026-03-27
+
+- fix: links not rendering anchor
+- fix: address PR review — auth slice bugs, a11y, cleanup races, fallback handling
+- fix: reauth retry guard, dedup concurrent reauth, centralize storage keys
+- fix: active mode
+- feat: add ralph
+- RALPH: integration tests + SW monolith removal (#11)
+- RALPH: SW API proxy + events modules, bookmarks & reader store slices (#10)
+- RALPH: auth+boot & sync store slices — state machines, unified cancellation (#9)
+- RALPH: auth pipeline end-to-end — content script TS, SW auth module, diagnostics (#8)
+- RALPH: query ID resilience — module extraction, passive catalog primary, hardened scraping (#7)
+- RALPH: foundation — shared types, SW message router, fake Chrome test layer (#6)
+- feat: add ralph local dispatch config
+- fix: UI polish, pin events, auth flow tests
+- feat: add ralph local dispatch with parallel git worktrees
+- fix: restore login flow and fix recursive stack overflow in query ID cache
+- fix: style improvment
+- fix: improve animation
+- fix: scope profile click to avatar and username on pinned cards
+- fix: remove auto-unpin, cap only counts unread pins
+- fix: stop filtering pinned bookmarks from reading/read tab lists
+- feat: limit pins to 6, show only on unread tab, auto-unpin on read
+- feat: add fold corner effect and accent bar to pinned bookmark cards
+- fix: open in totem
+- fix: rotate through all pinned bookmarks instead of always showing first
+- ui: segrigate ui
+- feat: add clickable Twitter profile links in bookmarks list
+- fix: remove unnecessary sender guard blocking newtab auth messages
+- feat: add chrome web store install link and unify button labels
+- feat: fix bugs after review
+- feat: hide sort control on empty tabs and use ghost buttons for empty states
+- feat: add individual tweet on render and sorting
+- feat: refactoa nd fix issues
+- fix: remove bookmark from reader
+- feat: add open in totem
+
 ## [1.1.13] - 2026-03-11
 
 - feat: update title
