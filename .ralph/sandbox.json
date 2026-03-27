@@ -1,0 +1,12 @@
+{
+  "sandbox": {
+    "enabled": false
+  },
+  "permissions": {
+    "defaultMode": "bypassPermissions",
+    "allow": [
+      "*"
+    ]
+  },
+  "model": "claude-opus-4-6"
+}

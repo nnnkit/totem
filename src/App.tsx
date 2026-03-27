@@ -521,11 +521,12 @@ function ReaderRouteApp() {
     ensureReadingProgressExists(readTweetId).catch(() => {});
   }, [appMode, hiddenBookmark, readTweetId, returnSurface]);
 
-  useEffect(() => {
-    if (!localBookmark) return;
+  const [prevLocalBookmarkId, setPrevLocalBookmarkId] = useState(localBookmark?.tweetId ?? null);
+  if (localBookmark && localBookmark.tweetId !== prevLocalBookmarkId) {
+    setPrevLocalBookmarkId(localBookmark.tweetId);
     setLocalBookmarkSnapshot(localBookmark);
     setLocalMutation("idle");
-  }, [localBookmark]);
+  }
 
   useEffect(() => {
     if (!readTweetId || appMode === "initializing") return;

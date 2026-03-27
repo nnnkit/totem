@@ -198,8 +198,12 @@ export async function getSessionSnapshot(
   }
 
   const authState = normalizeAuthState(stored.totem_auth_state, hasAuthHeader);
+  // A valid auth header is a stronger signal than a stale "logged_out" state.
+  // When the user logs back in, fresh headers arrive before markAuthAuthenticated
+  // updates totem_auth_state — without this check the extension stays stuck in
+  // need_login until a second storage change propagates.
   const sessionState =
-    authState === "logged_out"
+    authState === "logged_out" && !hasAuthHeader
       ? ("logged_out" as const)
       : hasAuthHeader || authState === "authenticated"
         ? ("logged_in" as const)

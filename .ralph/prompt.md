@@ -18,7 +18,7 @@ TL;DR - build a tiny, end-to-end slice of the feature first, then expand it out.
 3. Polish and quick wins
 4. Refactors
 
-If all tasks are complete, output <promise>COMPLETE</promise>.
+Do NOT output <promise>COMPLETE</promise> unless there are ZERO open issues remaining. After completing your single task, just commit and close the issue — the loop will call you again for the next one. Only output <promise>COMPLETE</promise> when every issue is closed.
 
 # EXPLORATION
 
@@ -38,7 +38,7 @@ Make a git commit. The commit message must:
 4. Files changed
 5. Blockers or notes for next iteration
 
-Keep it concise.
+Keep it concise. One line only. NEVER add Co-Authored-By lines.
 
 # THE ISSUE
 

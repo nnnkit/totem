@@ -160,12 +160,11 @@ export function NewTabHome({
 
   const showWallpaper = Boolean(wallpaperUrl && !imgError);
 
-  useEffect(() => {
-    if (prevWallpaperUrlRef.current === wallpaperUrl) return;
+  if (prevWallpaperUrlRef.current !== wallpaperUrl) {
     prevWallpaperUrlRef.current = wallpaperUrl;
     setImgLoaded(false);
     setImgError(false);
-  }, [wallpaperUrl]);
+  }
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(new Date()), CLOCK_UPDATE_MS);
