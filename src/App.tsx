@@ -332,9 +332,9 @@ function NewTabRouteApp() {
   }, [actions]);
 
   useEffect(() => {
-    if (getNewTabView() === null) return;
-    window.history.replaceState({}, "", getNewTabUrl());
-  }, []);
+    const target = getNewTabUrl(undefined, view === "reading" ? "reading" : undefined);
+    window.history.replaceState({}, "", target);
+  }, [view]);
 
   useEffect(() => {
     window.totemExportDemoData = async () => {
