@@ -113,6 +113,7 @@ export function BookmarksList({
   const syncButton = syncButtonStateOverride ?? runtimeSyncButton;
   const offlineMode = offlineModeOverride ?? runtimeOfflineMode;
   const [focusedIndex, setFocusedIndex] = useState(-1);
+  const [prevActiveTab, setPrevActiveTab] = useState(activeTab);
   const [sortPreferences, setSortPreferences] =
     useState<ReadingSortPreferences>(() => readStoredReadingSortPreferences());
   const [pinnedIds, setPinnedIds] = useState(() => getPinnedTweetIds());
@@ -125,9 +126,10 @@ export function BookmarksList({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const pinnedCardRefs = useRef<Map<number, HTMLAnchorElement>>(new Map());
 
-  useEffect(() => {
+  if (prevActiveTab !== activeTab) {
+    setPrevActiveTab(activeTab);
     setFocusedIndex(-1);
-  }, [activeTab]);
+  }
 
   useEffect(() => {
     return subscribeToPinChanges(() => {
@@ -800,9 +802,9 @@ export function BookmarksList({
                     <a
                       href={getBookmarkHref(bookmark)}
                       className={cn(
-                        "group/row flex w-full items-center gap-3 rounded-lg py-3 px-3 text-left no-underline transition-colors duration-150",
+                        "group/row flex w-full items-center gap-3 py-3 px-3 text-left no-underline transition-colors duration-150",
                         virtualItem.index % 2 === 0
-                          ? "bg-surface-alt hover:bg-surface-alt-hover"
+                          ? "bg-surface-alt hover:bg-surface-hover"
                           : "hover:bg-surface-hover",
                         isFocused && "ring-1 ring-accent/20",
                       )}
@@ -914,6 +916,14 @@ export function BookmarksList({
                             className="size-3.5"
                           />
                         </button>
+                      )}
+                      {activeTab !== "unread" && pinnedIds.has(bookmark.tweetId) && (
+                        <div
+                          className="flex size-10 shrink-0 items-center justify-center text-accent opacity-60"
+                          title="Pinned"
+                        >
+                          <PushPinIcon weight="fill" className="size-3.5" />
+                        </div>
                       )}
                     </a>
                   </div>

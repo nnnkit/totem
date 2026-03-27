@@ -1,15 +1,11 @@
-export type SyncTrigger = "auto" | "manual";
-export type SyncCompletionStatus = "success" | "failure" | "timeout" | "skipped";
-export type SyncMode = "full" | "incremental" | "quick";
+import type {
+  SyncTrigger,
+  SyncCompletionStatus,
+  SyncMode,
+  SyncReservationDecision,
+} from "../../types/sync";
 
-export interface SyncReservationDecision {
-  allow: boolean;
-  mode: SyncMode | null;
-  reason: string;
-  leaseId?: string;
-  accountKey?: string;
-  retryAfterMs?: number;
-}
+export type { SyncTrigger, SyncCompletionStatus, SyncMode, SyncReservationDecision };
 
 interface RuntimeResponse {
   error?: string;

@@ -332,9 +332,9 @@ function NewTabRouteApp() {
   }, [actions]);
 
   useEffect(() => {
-    if (getNewTabView() === null) return;
-    window.history.replaceState({}, "", getNewTabUrl());
-  }, []);
+    const target = getNewTabUrl(undefined, view === "reading" ? "reading" : undefined);
+    window.history.replaceState({}, "", target);
+  }, [view]);
 
   useEffect(() => {
     window.totemExportDemoData = async () => {
@@ -521,11 +521,12 @@ function ReaderRouteApp() {
     ensureReadingProgressExists(readTweetId).catch(() => {});
   }, [appMode, hiddenBookmark, readTweetId, returnSurface]);
 
-  useEffect(() => {
-    if (!localBookmark) return;
+  const [prevLocalBookmarkId, setPrevLocalBookmarkId] = useState(localBookmark?.tweetId ?? null);
+  if (localBookmark && localBookmark.tweetId !== prevLocalBookmarkId) {
+    setPrevLocalBookmarkId(localBookmark.tweetId);
     setLocalBookmarkSnapshot(localBookmark);
     setLocalMutation("idle");
-  }, [localBookmark]);
+  }
 
   useEffect(() => {
     if (!readTweetId || appMode === "initializing") return;
