@@ -18,7 +18,6 @@ function makeState(overrides: Partial<RuntimeState> = {}): RuntimeState {
       detailApi: "ready",
     },
     activeAccountId: "acct-1",
-    hasQueryId: true,
     authRetryDelayMs: null,
     bookmarksLoaded: true,
     detailedIdsLoaded: true,
@@ -63,6 +62,7 @@ describe("runtime selectors", () => {
         text: "Hello",
         createdAt: 1,
         sortIndex: "tweet-1",
+        bookmarked: false,
         author: {
           name: "Author",
           screenName: "author",
@@ -102,7 +102,7 @@ describe("runtime selectors", () => {
     expect(selectSyncButtonState(state).visible).toBe(false);
   });
 
-  it("disables sync affordances while capability is degraded", () => {
+  it("treats logged-in state as online_ready regardless of bookmarksApi", () => {
     const state = makeState({
       capability: {
         bookmarksApi: "blocked",
@@ -110,11 +110,6 @@ describe("runtime selectors", () => {
       },
     });
 
-    const syncButton = selectSyncButtonState(state);
-    expect(selectRuntimeMode(state)).toBe("online_blocked");
-    expect(selectFooterState(state, false)).toBe("preparing_sync");
-    expect(syncButton.visible).toBe(false);
-    expect(syncButton.disabled).toBe(true);
-    expect(syncButton.title).toBe("Preparing X API...");
+    expect(selectRuntimeMode(state)).toBe("online_ready");
   });
 });

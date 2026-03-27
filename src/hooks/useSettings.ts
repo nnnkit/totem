@@ -1,9 +1,15 @@
 import { useEffect, useRef, useState } from "react";
-import type { BackgroundMode, SearchEngineId, UserSettings } from "../types";
+import type {
+  BackgroundMode,
+  RecommendationSource,
+  SearchEngineId,
+  UserSettings,
+} from "../types";
 import { hasChromeStorageSync, hasChromeStorageOnChanged } from "../lib/chrome";
 import { SYNC_SETTINGS } from "../lib/storage-keys";
 
 const VALID_BACKGROUND_MODES: BackgroundMode[] = ["gradient", "images"];
+const VALID_RECOMMENDATION_SOURCES: RecommendationSource[] = ["random", "pinned"];
 const VALID_SEARCH_ENGINES: SearchEngineId[] = [
   "google",
   "bing",
@@ -20,6 +26,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   topSitesLimit: 5,
   backgroundMode: "images",
   searchEngine: "google",
+  recommendationSource: "random",
 };
 
 function normalizeSettings(value: unknown): UserSettings {
@@ -48,6 +55,10 @@ function normalizeSettings(value: unknown): UserSettings {
       VALID_SEARCH_ENGINES.includes(raw.searchEngine as SearchEngineId)
         ? (raw.searchEngine as SearchEngineId)
         : DEFAULT_SETTINGS.searchEngine,
+    recommendationSource:
+      VALID_RECOMMENDATION_SOURCES.includes(raw.recommendationSource as RecommendationSource)
+        ? (raw.recommendationSource as RecommendationSource)
+        : DEFAULT_SETTINGS.recommendationSource,
   };
 }
 

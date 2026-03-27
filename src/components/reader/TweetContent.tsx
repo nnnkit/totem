@@ -64,8 +64,8 @@ function TweetBody({
           <div className="mt-2 flex items-center gap-2 text-sm">
             <img
               src={tweet.retweetedTweet.author.profileImageUrl}
-              alt=""
-              className="size-7 rounded-full"
+              alt={`@${tweet.retweetedTweet.author.screenName}`}
+              className="size-7 rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.06)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]"
               loading="lazy"
             />
             <span className="truncate font-semibold text-foreground">
@@ -149,8 +149,8 @@ function ThreadTweets({ tweets }: ThreadTweetsProps) {
                 {showAuthorProfile ? (
                   <img
                     src={tweet.author.profileImageUrl}
-                    alt=""
-                    className="size-10 shrink-0 rounded-full"
+                    alt={`@${tweet.author.screenName}`}
+                    className="size-10 shrink-0 rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.06)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]"
                     loading="lazy"
                   />
                 ) : (
@@ -205,14 +205,19 @@ interface ActionBarProps {
   viewOnXUrl: string;
   onToggleRead?: () => void;
   isMarkedRead?: boolean;
-  onDeleteBookmark?: () => void;
+  bookmarkAction?: {
+    label: string;
+    onClick: () => void;
+    active?: boolean;
+    pending?: boolean;
+  };
 }
 
 function ActionBar({
   viewOnXUrl,
   onToggleRead,
   isMarkedRead,
-  onDeleteBookmark,
+  bookmarkAction,
 }: ActionBarProps) {
   const grokUrl = buildGrokUrl(viewOnXUrl);
 
@@ -229,15 +234,19 @@ function ActionBar({
       </Button>
 
       <div className="ml-auto flex items-center gap-1">
-        {onDeleteBookmark && (
+        {bookmarkAction && (
           <Button
             variant="ghost"
             size="sm"
-            onClick={onDeleteBookmark}
-            className="hover:text-red-500"
+            onClick={bookmarkAction.onClick}
+            disabled={bookmarkAction.pending}
+            className={bookmarkAction.active ? "hover:text-red-500" : undefined}
           >
-            <BookmarkSimpleIcon weight="fill" className="size-3.5" />
-            Unbookmark
+            <BookmarkSimpleIcon
+              weight={bookmarkAction.active ? "fill" : "regular"}
+              className="size-3.5"
+            />
+            {bookmarkAction.label}
           </Button>
         )}
         {onToggleRead && (
@@ -311,12 +320,12 @@ interface Props {
   detailError: string | null;
   detailErrorKind: DetailErrorKind;
   relatedBookmarks: Bookmark[];
-  onOpenBookmark: (bookmark: Bookmark) => void;
+  getBookmarkHref: (bookmark: Bookmark) => string;
   onShuffle?: () => void;
   tweetSectionIdPrefix?: string;
   onToggleRead?: () => void;
   isMarkedRead?: boolean;
-  onDeleteBookmark?: () => void;
+  bookmarkAction?: ActionBarProps["bookmarkAction"];
   onLogin?: () => void;
 }
 
@@ -328,12 +337,12 @@ export const TweetContent = memo(function TweetContent({
   detailError,
   detailErrorKind,
   relatedBookmarks,
-  onOpenBookmark,
+  getBookmarkHref,
   onShuffle,
   tweetSectionIdPrefix,
   onToggleRead,
   isMarkedRead,
-  onDeleteBookmark,
+  bookmarkAction,
   onLogin,
 }: Props) {
   const viewOnXUrl = `https://x.com/${displayBookmark.author.screenName}/status/${displayBookmark.tweetId}`;
@@ -354,7 +363,7 @@ export const TweetContent = memo(function TweetContent({
           viewOnXUrl={viewOnXUrl}
           onToggleRead={onToggleRead}
           isMarkedRead={isMarkedRead}
-          onDeleteBookmark={onDeleteBookmark}
+          bookmarkAction={bookmarkAction}
         />
       </div>
 
@@ -386,13 +395,13 @@ export const TweetContent = memo(function TweetContent({
           viewOnXUrl={viewOnXUrl}
           onToggleRead={onToggleRead}
           isMarkedRead={isMarkedRead}
-          onDeleteBookmark={onDeleteBookmark}
+          bookmarkAction={bookmarkAction}
         />
       </div>
 
       <TweetRecommendations
         relatedBookmarks={relatedBookmarks}
-        onOpenBookmark={onOpenBookmark}
+        getBookmarkHref={getBookmarkHref}
         onShuffle={onShuffle}
       />
     </div>

@@ -1,22 +1,24 @@
+import type { BookmarkChangeType, BookmarkChangeEvent } from "../../types/messages";
 import { asRecord, asString, toNumber } from "../../lib/json";
+import { isValidTweetId } from "../../lib/reader-navigation";
 import {
   parseBookmarkPagePayload,
   type BookmarkPageResult,
 } from "../parsers";
 
-export type BookmarkChangeType = "CreateBookmark" | "DeleteBookmark";
-
-export interface BookmarkChangeEvent {
-  id: string;
-  type: BookmarkChangeType;
-  tweetId: string;
-  at: number;
-  source: string;
-}
+export type { BookmarkChangeType, BookmarkChangeEvent };
 
 interface RuntimeResponse {
   error?: string;
   data?: unknown;
+}
+
+interface BookmarkMutationMessage {
+  type: "BOOKMARK_MUTATION";
+  operation: BookmarkChangeType;
+  tweetId: string;
+  source?: string;
+  confirmed?: boolean;
 }
 
 function runtimeError(response: RuntimeResponse): string {
@@ -60,10 +62,30 @@ export async function fetchBookmarkPage(
 }
 
 export async function deleteBookmark(tweetId: string): Promise<void> {
+  if (!isValidTweetId(tweetId)) throw new Error("INVALID_TWEET_ID");
   const response = (await chrome.runtime.sendMessage({
     type: "DELETE_BOOKMARK",
     tweetId,
   })) as RuntimeResponse;
+  if (response?.error) throw new Error(runtimeError(response));
+}
+
+export async function queueBookmarkMutation(
+  operation: BookmarkChangeType,
+  tweetId: string,
+  options: {
+    source?: string;
+    confirmed?: boolean;
+  } = {},
+): Promise<void> {
+  if (!isValidTweetId(tweetId)) throw new Error("INVALID_TWEET_ID");
+  const response = (await chrome.runtime.sendMessage({
+    type: "BOOKMARK_MUTATION",
+    operation,
+    tweetId,
+    source: options.source,
+    confirmed: options.confirmed,
+  } satisfies BookmarkMutationMessage)) as RuntimeResponse;
   if (response?.error) throw new Error(runtimeError(response));
 }
 

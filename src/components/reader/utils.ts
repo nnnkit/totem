@@ -8,7 +8,10 @@ export const baseTweetTextClass =
   "font-serif break-words [&_a]:text-accent [&_a:hover]:underline";
 
 export function sanitizeUrl(url: string): string {
-  if (/^https?:\/\//i.test(url)) return url;
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol === "https:" || parsed.protocol === "http:") return url;
+  } catch {}
   return "";
 }
 
@@ -330,7 +333,12 @@ export function paragraphizeText(
 }
 
 function inlineCode(html: string): string {
-  return html.replace(/`([^`\n]+)`/g, "<code>$1</code>");
+  // Split on HTML tags so we only transform backtick pairs in text nodes,
+  // avoiding accidental matches across tag boundaries.
+  return html.replace(/(<[^>]*>)|`([^`\n]+)`/g, (_match, tag: string | undefined, code: string | undefined) => {
+    if (tag) return tag;
+    return `<code>${code}</code>`;
+  });
 }
 
 export function paragraphHtml(text: string): string {

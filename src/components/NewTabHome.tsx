@@ -11,7 +11,13 @@ import {
 } from "@phosphor-icons/react";
 import { TotemLogo } from "./TotemLogo";
 import { SearchEnginePicker } from "./SearchEnginePicker";
-import type { BackgroundMode, Bookmark, SearchEngineId } from "../types";
+import type {
+  BackgroundMode,
+  Bookmark,
+  RecommendationSource,
+  SearchEngineId,
+} from "../types";
+import { getPinnedTweetIdsOrdered } from "../lib/pins";
 import { SEARCH_ENGINES } from "../lib/search-engines";
 import { hasChromeSearch } from "../lib/chrome";
 import { formatClock } from "../lib/time";
@@ -22,6 +28,7 @@ import {
 } from "../lib/bookmark-utils";
 import { cn } from "../lib/cn";
 import { Button } from "./ui/Button";
+import { Input } from "./ui/Input";
 import {
   SUPPORT_EMAIL_URL,
   SUPPORT_X_HANDLE,
@@ -53,7 +60,9 @@ interface Props {
   backgroundMode: BackgroundMode;
   openedTweetIds: Set<string>;
   onOpenBookmark: (bookmark: Bookmark) => void;
+  getBookmarkHref: (bookmark: Bookmark) => string;
   onOpenSettings: () => void;
+  recommendationSource: RecommendationSource;
   onOpenReading: () => void;
   isResetting?: boolean;
   footerStateOverride?: FooterState;
@@ -82,7 +91,9 @@ export function NewTabHome({
   backgroundMode,
   openedTweetIds,
   onOpenBookmark,
+  getBookmarkHref,
   onOpenSettings,
+  recommendationSource,
   onOpenReading,
   isResetting,
   footerStateOverride,
@@ -119,11 +130,29 @@ export function NewTabHome({
   }, [bookmarks, detailedTweetIds, openedTweetIds]);
 
   const currentItem = useMemo(() => {
+    // When pinned source is selected, pick from pinned bookmarks
+    if (recommendationSource === "pinned") {
+      const pinnedIds = getPinnedTweetIdsOrdered();
+      if (pinnedIds.length > 0) {
+        const itemsByTweetId = new Map(
+          items.map((item) => [item.bookmark.tweetId, item]),
+        );
+        const pinnedItems = pinnedIds
+          .map((id) => itemsByTweetId.get(id))
+          .filter(Boolean);
+        if (pinnedItems.length > 0) {
+          const index = Math.floor(mountSeed * pinnedItems.length);
+          return pinnedItems[index];
+        }
+      }
+      // Fall through to random if no pinned items exist
+    }
+
     const pool = unreadItems.length > 0 ? unreadItems : items;
     if (pool.length === 0) return null;
     const index = Math.floor(mountSeed * pool.length);
     return pool[index];
-  }, [items, unreadItems, mountSeed]);
+  }, [items, unreadItems, mountSeed, recommendationSource]);
   const runtimeFooterState = useFooterState(Boolean(currentItem), isResetting);
   const syncButton = syncButtonStateOverride ?? runtimeSyncButton;
   const offlineMode = offlineModeOverride ?? runtimeOfflineMode;
@@ -131,12 +160,11 @@ export function NewTabHome({
 
   const showWallpaper = Boolean(wallpaperUrl && !imgError);
 
-  useEffect(() => {
-    if (prevWallpaperUrlRef.current === wallpaperUrl) return;
+  if (prevWallpaperUrlRef.current !== wallpaperUrl) {
     prevWallpaperUrlRef.current = wallpaperUrl;
     setImgLoaded(false);
     setImgError(false);
-  }, [wallpaperUrl]);
+  }
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(new Date()), CLOCK_UPDATE_MS);
@@ -164,7 +192,7 @@ export function NewTabHome({
 
   useHotkeys(
     "space",
-    () => openItem(currentItem),
+    () => openItem(currentItem ?? null),
     {
       preventDefault: true,
     },
@@ -192,7 +220,7 @@ export function NewTabHome({
   const showCardButtons = footerState === "bookmark_card";
 
   const cardBase =
-    "relative min-h-40 overflow-hidden rounded px-6 py-6 bg-main-bg shadow-glass backdrop-blur-lg transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 max-sm:min-h-36 max-sm:px-4 max-sm:py-4";
+    "relative min-h-40 overflow-hidden rounded px-6 py-6 bg-main-bg shadow-glass transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 max-sm:min-h-36 max-sm:px-4 max-sm:py-4";
   const cardCentered = cn(cardBase, "text-center");
   const handleLoginButton = useCallback(() => {
     if (onLogin) {
@@ -242,24 +270,6 @@ export function NewTabHome({
             </p>
           </article>
         );
-      case "preparing_sync":
-        return (
-          <article className={cardCentered}>
-            <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
-              Finishing X setup
-            </p>
-            <p className="mt-4 text-pretty text-base text-home-empty">
-              We found your account, but bookmark sync is not ready yet. Open X
-              once to finish connecting bookmarks.
-            </p>
-            <Button
-              className="mt-6 border-0 bg-home-accent text-white hover:opacity-90"
-              onClick={handleLoginButton}
-            >
-              Open X
-            </Button>
-          </article>
-        );
       case "need_login":
         return (
           <article className={cardCentered}>
@@ -280,10 +290,11 @@ export function NewTabHome({
       case "bookmark_card":
         if (!currentItem) return null;
         return (
-          <article
+          <a
+            href={getBookmarkHref(currentItem.bookmark)}
             className={cn(
               cardBase,
-              "cursor-pointer p-4 hover:bg-main-bg-hover max-sm:py-3.5",
+              "block cursor-pointer p-4 no-underline hover:bg-main-bg-hover max-sm:py-3.5",
               cardEngaged && "bg-main-bg-hover",
             )}
             onMouseEnter={() => setCardEngaged(true)}
@@ -298,16 +309,13 @@ export function NewTabHome({
                 setCardEngaged(false);
               }
             }}
-            onClick={() => openItem(currentItem)}
             onKeyDown={(event) => {
               if (event.key === " ") {
                 event.preventDefault();
                 event.stopPropagation();
-                openItem(currentItem);
+                onOpenBookmark(currentItem.bookmark);
               }
             }}
-            tabIndex={0}
-            role="button"
             aria-label={`Read ${currentItem.title} by @${
               currentItem.bookmark.author.screenName
             }${
@@ -316,11 +324,13 @@ export function NewTabHome({
                 : ""
             }`}
           >
-            <div className="flex min-h-32 flex-col translate-y-0 opacity-100 transition-all duration-200 ease-overlay-in max-sm:min-h-28">
+            <div className="flex min-h-32 flex-col translate-y-0 opacity-100 transition-[transform,opacity] duration-200 ease-overlay-in max-sm:min-h-28">
               <div className="flex justify-between">
                 <div className="flex items-center gap-1.5">
                   <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
-                    your next read
+                    {recommendationSource === "pinned"
+                      ? "pinned"
+                      : "your next read"}
                   </p>
                   {offlineMode && (
                     <span title="Not signed in — showing cached bookmarks">
@@ -343,8 +353,8 @@ export function NewTabHome({
               <div className="mt-auto flex items-center gap-2.5 pt-3">
                 <img
                   src={currentItem.bookmark.author.profileImageUrl}
-                  alt=""
-                  className="size-6 shrink-0 rounded-full"
+                  alt={`@${currentItem.bookmark.author.screenName}`}
+                  className="size-6 shrink-0 rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.06)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]"
                 />
                 <div className="min-w-0 flex flex-col gap-1">
                   <p className="truncate text-xxs font-medium text-home-fg-secondary">
@@ -356,7 +366,7 @@ export function NewTabHome({
                 </div>
               </div>
             </div>
-          </article>
+          </a>
         );
       case "syncing_bootstrap":
         return (
@@ -485,15 +495,16 @@ export function NewTabHome({
               </span>
             </Button>
           )}
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={onOpenSettings}
-            className="rounded border border-transparent bg-transparent p-2 text-on-bg-muted transition-colors duration-150 ease-hover hover:border-white/15 hover:bg-white/5 hover:text-on-bg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80"
+            className="border border-transparent bg-transparent text-on-bg-muted hover:border-white/15 hover:bg-white/5 hover:text-on-bg"
             aria-label="Open settings"
             title="Settings"
           >
             <GearSixIcon className="size-5" />
-          </button>
+          </Button>
         </div>
       </header>
 
@@ -503,6 +514,10 @@ export function NewTabHome({
             <div className="text-center">
               <h1
                 className="font-serif text-balance text-4xl font-light leading-none tracking-tight text-on-bg tabular-nums sm:text-5xl lg:text-6xl"
+                style={{
+                  textShadow:
+                    "0 1px 8px rgba(0,0,0,0.3), 0 2px 24px rgba(0,0,0,0.15)",
+                }}
                 aria-label={`Current time: ${formatClock(now)}`}
               >
                 {formatClock(now)}
@@ -541,7 +556,7 @@ export function NewTabHome({
 
                 return (
                   <form
-                    className="relative mx-auto flex max-w-xl items-center rounded bg-main-bg shadow-search backdrop-blur-md"
+                    className="relative mx-auto flex max-w-xl items-center rounded bg-main-bg shadow-search"
                     action={engineConfig?.searchUrl}
                     method={isDefault ? undefined : "GET"}
                     target={isDefault ? undefined : "_blank"}
@@ -554,11 +569,11 @@ export function NewTabHome({
                         onChange={onSearchEngineChange}
                       />
                     </span>
-                    <input
+                    <Input
                       ref={searchRef}
                       type="text"
                       name={engineConfig?.queryParam ?? "q"}
-                      className="w-full appearance-none border-0 bg-transparent px-3 py-3.5 text-base text-home-fg [font-family:inherit] outline-none placeholder:text-home-placeholder"
+                      className="w-full appearance-none rounded-none border-0 bg-transparent px-3 py-3.5 text-base text-home-fg font-[inherit] outline-none placeholder:text-home-placeholder focus:border-0"
                       placeholder="Search the web"
                       autoComplete="off"
                     />
@@ -613,7 +628,7 @@ export function NewTabHome({
           >
             <Button
               variant="secondary"
-              className="bg-home-secondary-bg px-5 py-2.5 font-semibold leading-none text-home-secondary-text transition-all duration-150 ease-hover hover:bg-main-bg-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80"
+              className="bg-home-secondary-bg px-5 py-2.5 font-semibold leading-none text-home-secondary-text shadow-glass transition-colors duration-150 ease-hover hover:bg-main-bg-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80"
               onClick={onOpenReading}
             >
               Open reading list
@@ -623,7 +638,7 @@ export function NewTabHome({
             </Button>
             <Button
               variant="secondary"
-              className="bg-home-secondary-bg px-5 py-2.5 font-semibold leading-none text-home-secondary-text transition-all duration-150 ease-hover hover:bg-main-bg-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80"
+              className="bg-home-secondary-bg px-5 py-2.5 font-semibold leading-none text-home-secondary-text shadow-glass transition-colors duration-150 ease-hover hover:bg-main-bg-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80"
               onClick={surpriseMe}
             >
               Surprise me

@@ -59,7 +59,7 @@ function AuthorCard({ author, closing, onClose }: AuthorCardProps) {
     <div
       ref={cardRef}
       className={cn(
-        "mb-4 overflow-hidden rounded border border-border bg-surface-card",
+        "mb-4 overflow-hidden rounded bg-surface-card shadow-[0_1px_3px_rgba(0,0,0,0.08),0_4px_16px_rgba(0,0,0,0.06),inset_0_0_0_1px_rgba(0,0,0,0.06)] dark:shadow-[0_1px_3px_rgba(0,0,0,0.2),0_4px_16px_rgba(0,0,0,0.15),inset_0_0_0_1px_rgba(255,255,255,0.08)]",
         closing ? "animate-card-out" : "animate-card-in",
       )}
     >
@@ -76,7 +76,7 @@ function AuthorCard({ author, closing, onClose }: AuthorCardProps) {
         <div className={author.bannerUrl ? "-mt-8" : "mt-4"}>
           <img
             src={author.profileImageUrl}
-            alt=""
+            alt={`@${author.screenName}`}
             className="size-16 rounded-full border-2 border-surface-card"
             loading="lazy"
           />
@@ -182,7 +182,7 @@ function AffiliateBadge({ affiliate }: AffiliateBadgeProps) {
         <img
           src={affiliate.badgeUrl}
           alt=""
-          className="size-4 rounded-full"
+          className="size-4 rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.06)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]"
           loading="lazy"
         />
       )}
@@ -245,8 +245,8 @@ export function TweetHeader({ author, displayKind, createdAt, readingMinutes }: 
         >
           <img
             src={author.profileImageUrl}
-            alt=""
-            className="size-11 rounded-full transition-opacity hover:opacity-80"
+            alt={`@${author.screenName}`}
+            className="size-11 rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.06)] transition-opacity hover:opacity-80 dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]"
             loading="lazy"
           />
         </button>

@@ -108,9 +108,9 @@ export function useReaderAvailabilityState(
     errorKind: classifyDetailError(detailError, {
       isOnline: state.offlineMode
         ? false
-        : typeof navigator === "undefined"
-          ? true
-          : navigator.onLine,
+        : typeof navigator !== "undefined"
+          ? navigator.onLine
+          : true, // Assume online when navigator is unavailable (tests)
     }),
   };
 }

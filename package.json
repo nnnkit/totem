@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "pnpm build:extension",
     "build:extension": "tsc && vite build",
-    "build:website": "vite build -c vite.website.config.ts",
+    "build:website": "pnpm --filter @totem/site build",
     "build:all": "pnpm build:extension && pnpm build:website",
     "preview": "vite preview",
     "package:extension": "pnpm build:extension && node scripts/package-extension.mjs",
@@ -21,12 +21,14 @@
     "release:check": "pnpm release:version:check && pnpm package:extension",
     "release:prepare": "node scripts/prepare-release.mjs",
     "test": "vitest run",
-    "test:reliability": "vitest run src/stores/__tests__/runtime-store.test.ts src/api/__tests__/parsers.bookmarks.test.ts src/lib/__tests__/reconcile.test.ts",
-    "ci:verify": "pnpm test && pnpm build"
+    "test:reliability": "vitest run src/stores/__tests__/runtime-store.test.ts src/api/__tests__/parsers.bookmarks.test.ts src/lib/__tests__/reconcile.test.ts src/lib/__tests__/sw-pure.test.ts",
+    "ci:verify": "pnpm test && pnpm build",
+    "ralph": ".ralph/run.sh"
   },
   "dependencies": {
     "@base-ui/react": "^1.2.0",
     "@phosphor-icons/react": "^2.1.10",
+    "@tanstack/react-virtual": "^3.13.23",
     "clsx": "^2.1.1",
     "idb": "^8.0.3",
     "react": "^19.0.0",

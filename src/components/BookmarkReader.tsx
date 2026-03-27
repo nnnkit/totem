@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useHotkeys } from "react-hotkeys-hook";
 import {
   ArrowLeftIcon,
   CaretLeftIcon,
@@ -26,12 +27,17 @@ import { Button } from "./ui/Button";
 interface Props {
   bookmark: Bookmark;
   relatedBookmarks: Bookmark[];
-  onOpenBookmark: (bookmark: Bookmark) => void;
+  getBookmarkHref: (bookmark: Bookmark) => string;
   onBack: () => void;
   onShuffle?: () => void;
-  onPrev?: () => void;
-  onNext?: () => void;
-  onDeleteBookmark?: () => void;
+  prevHref?: string;
+  nextHref?: string;
+  bookmarkAction?: {
+    label: string;
+    onClick: () => void;
+    active?: boolean;
+    pending?: boolean;
+  };
   onMarkAsRead?: (tweetId: string) => void;
   onMarkAsUnread?: (tweetId: string) => void;
   onLogin?: () => void;
@@ -50,12 +56,12 @@ interface NotePanelState {
 export function BookmarkReader({
   bookmark,
   relatedBookmarks,
-  onOpenBookmark,
+  getBookmarkHref,
   onBack,
   onShuffle,
-  onPrev,
-  onNext,
-  onDeleteBookmark,
+  prevHref,
+  nextHref,
+  bookmarkAction,
   onMarkAsRead,
   onMarkAsUnread,
   onLogin,
@@ -94,6 +100,7 @@ export function BookmarkReader({
           setResolvedBookmark({
             ...detail.focalTweet,
             sortIndex: bookmark.sortIndex,
+            bookmarked: bookmark.bookmarked,
           });
         }
 
@@ -183,11 +190,48 @@ export function BookmarkReader({
     }
   }, [effectiveMarkedRead, onMarkAsRead, onMarkAsUnread, bookmark.tweetId]);
 
-  const displayBookmark = resolvedBookmark || bookmark;
+  const displayBookmark = useMemo(() => {
+    if (!resolvedBookmark) return bookmark;
+    return {
+      ...resolvedBookmark,
+      sortIndex: bookmark.sortIndex,
+      bookmarked: bookmark.bookmarked,
+    };
+  }, [bookmark, resolvedBookmark]);
   const displayKind = useMemo(
     () => resolveTweetKind(displayBookmark),
     [displayBookmark],
   );
+  const defaultDocumentTitle = useMemo(
+    () => window.location.pathname.endsWith("reader.html") ? "Totem Reader" : "New Tab",
+    [],
+  );
+
+  useHotkeys("escape", (event) => {
+    const target = event.target;
+    if (target instanceof HTMLElement && target.closest("input, textarea, [contenteditable]")) {
+      return;
+    }
+    onBack();
+  }, {
+    preventDefault: true,
+  }, [onBack]);
+
+  useHotkeys("j, ArrowRight", () => {
+    if (!nextHref) return;
+    window.location.assign(nextHref);
+  }, {
+    enabled: Boolean(nextHref),
+    preventDefault: true,
+  }, [nextHref]);
+
+  useHotkeys("k, ArrowLeft", () => {
+    if (!prevHref) return;
+    window.location.assign(prevHref);
+  }, {
+    enabled: Boolean(prevHref),
+    preventDefault: true,
+  }, [prevHref]);
 
   useEffect(() => {
     const title =
@@ -196,9 +240,9 @@ export function BookmarkReader({
       "Post";
     document.title = title;
     return () => {
-      document.title = "New Tab";
+      document.title = defaultDocumentTitle;
     };
-  }, [displayBookmark.article?.title, displayBookmark.text]);
+  }, [defaultDocumentTitle, displayBookmark.article?.title, displayBookmark.text]);
 
   const containerWidthClass = "max-w-2xl";
 
@@ -224,26 +268,26 @@ export function BookmarkReader({
         </div>
       </div>
 
-      {onPrev && (
-        <button
-          onClick={onPrev}
+      {prevHref && (
+        <a
+          href={prevHref}
           aria-label="Previous post"
           title="Previous"
-          className="fixed left-4 top-1/2 z-20 -translate-y-1/2 rounded bg-surface/80 p-3 text-muted shadow-md border border-border backdrop-blur-sm transition-colors hover:bg-surface-hover hover:text-foreground"
+          className="fixed left-4 top-1/2 z-20 -translate-y-1/2 rounded bg-surface/80 p-3 text-muted shadow-[0_1px_3px_rgba(0,0,0,0.08),0_4px_12px_rgba(0,0,0,0.06),inset_0_0_0_1px_rgba(0,0,0,0.06)] backdrop-blur-sm transition-colors hover:bg-surface-hover hover:text-foreground dark:shadow-[0_1px_3px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.15),inset_0_0_0_1px_rgba(255,255,255,0.08)]"
         >
           <CaretLeftIcon className="size-5" />
-        </button>
+        </a>
       )}
 
-      {onNext && (
-        <button
-          onClick={onNext}
+      {nextHref && (
+        <a
+          href={nextHref}
           aria-label="Next post"
           title="Next"
-          className="fixed right-4 top-1/2 z-20 -translate-y-1/2 rounded bg-surface/80 p-3 text-muted shadow-md border border-border backdrop-blur-sm transition-colors hover:bg-surface-hover hover:text-foreground"
+          className="fixed right-4 top-1/2 z-20 -translate-y-1/2 rounded bg-surface/80 p-3 text-muted shadow-[0_1px_3px_rgba(0,0,0,0.08),0_4px_12px_rgba(0,0,0,0.06),inset_0_0_0_1px_rgba(0,0,0,0.06)] backdrop-blur-sm transition-colors hover:bg-surface-hover hover:text-foreground dark:shadow-[0_1px_3px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.15),inset_0_0_0_1px_rgba(255,255,255,0.08)]"
         >
           <CaretRightIcon className="size-5" />
-        </button>
+        </a>
       )}
 
       <article
@@ -258,12 +302,12 @@ export function BookmarkReader({
           detailError={detailError}
           detailErrorKind={readerAvailability.errorKind}
           relatedBookmarks={relatedBookmarks}
-          onOpenBookmark={onOpenBookmark}
+          getBookmarkHref={getBookmarkHref}
           onShuffle={onShuffle}
           tweetSectionIdPrefix="section-tweet"
           onToggleRead={onMarkAsRead ? handleToggleRead : undefined}
           isMarkedRead={effectiveMarkedRead}
-          onDeleteBookmark={onDeleteBookmark}
+          bookmarkAction={bookmarkAction}
           onLogin={onLogin ?? (
             readerAvailability.canLogin
               ? () => { void actions.startLogin(); }

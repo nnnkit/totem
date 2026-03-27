@@ -1,3 +1,4 @@
+import { Separator as BaseSeparator } from "@base-ui/react/separator";
 import { cn } from "../../lib/cn";
 
 interface Props {
@@ -7,7 +8,8 @@ interface Props {
 
 export function Separator({ orientation = "horizontal", className }: Props) {
   return (
-    <div
+    <BaseSeparator
+      orientation={orientation}
       className={cn(
         "bg-border",
         orientation === "vertical" ? "mx-0.5 h-5 w-px" : "my-0.5 h-px w-full",

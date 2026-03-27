@@ -13,7 +13,8 @@ const variants = {
 const sizes = {
   default: "px-3 py-2 text-sm",
   sm: "px-2.5 py-1 text-xs",
-  icon: "p-2",
+  icon: "p-2 min-h-11 min-w-11",
+  "icon-sm": "p-1",
 } as const;
 
 type Variant = keyof typeof variants;

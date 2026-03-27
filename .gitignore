@@ -4,3 +4,5 @@ dist-website
 release
 .DS_Store
 *.local
+.ralph/.env
+.pnpm-store/

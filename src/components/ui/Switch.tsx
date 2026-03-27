@@ -1,3 +1,4 @@
+import { Switch as BaseSwitch } from "@base-ui/react/switch";
 import { cn } from "../../lib/cn";
 
 interface Props {
@@ -9,24 +10,22 @@ interface Props {
 
 export function Switch({ checked, onCheckedChange, className, ...props }: Props) {
   return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
+    <BaseSwitch.Root
+      checked={checked}
+      onCheckedChange={onCheckedChange}
       aria-labelledby={props["aria-labelledby"]}
-      onClick={() => onCheckedChange(!checked)}
       className={cn(
         "relative inline-flex h-6 w-11 items-center rounded-full transition-colors",
-        checked ? "bg-accent" : "bg-border",
+        "data-[checked]:bg-accent data-[unchecked]:bg-border",
         className,
       )}
     >
-      <span
+      <BaseSwitch.Thumb
         className={cn(
           "inline-block size-4 rounded-full bg-white transition-transform",
-          checked ? "translate-x-6" : "translate-x-1",
+          "data-[checked]:translate-x-6 data-[unchecked]:translate-x-1",
         )}
       />
-    </button>
+    </BaseSwitch.Root>
   );
 }

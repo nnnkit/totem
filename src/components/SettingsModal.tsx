@@ -27,7 +27,11 @@ interface Props {
 }
 
 const toggleBase =
-  "flex items-center justify-center h-7 text-sm font-medium rounded transition-colors transition-shadow text-muted hover:text-foreground data-[pressed]:bg-surface-card data-[pressed]:text-accent data-[pressed]:shadow-sm cursor-default";
+  "flex items-center justify-center h-7 text-sm font-medium rounded-[5px] transition-[color,box-shadow] text-muted hover:text-foreground data-[pressed]:bg-surface-card data-[pressed]:text-accent data-[pressed]:shadow-sm cursor-default";
+const TOP_SITES_LIMIT_OPTIONS = [3, 4, 5, 6, 8, 10].map((value) => ({
+  value: String(value),
+  label: String(value),
+}));
 
 export function SettingsModal({
   open,
@@ -59,12 +63,8 @@ export function SettingsModal({
       className="bg-black/50"
       ariaLabelledBy="settings-title"
     >
-      {(closing) => (
         <div
-          className={cn(
-            "max-w-md mx-auto mt-[10vh] max-h-[80vh] flex flex-col rounded border border-border bg-surface-card shadow-xl",
-            closing ? "animate-preview-out" : "animate-preview-in",
-          )}
+          className="max-w-md mx-auto mt-[10vh] max-h-[80vh] flex flex-col rounded border border-border bg-surface-card shadow-xl"
         >
           <div className="flex shrink-0 items-center justify-between px-6 pt-5 pb-3">
             <h2
@@ -101,7 +101,7 @@ export function SettingsModal({
                       if (values.length)
                         onThemePreferenceChange(values[0] as ThemePreference);
                     }}
-                    className="flex gap-1 rounded bg-foreground/6 p-1"
+                    className="flex gap-1 rounded-md bg-foreground/6 p-1"
                   >
                     <Toggle
                       value="system"
@@ -181,21 +181,42 @@ export function SettingsModal({
                   <div className="flex items-center justify-between pl-4 min-h-10">
                     <span className="text-sm text-muted">Max quick links</span>
                     <Select
-                      value={settings.topSitesLimit}
-                      onChange={(e) =>
+                      value={String(settings.topSitesLimit)}
+                      onValueChange={(value) =>
                         onUpdateSettings({
-                          topSitesLimit: Number(e.target.value),
+                          topSitesLimit: Number(value),
                         })
                       }
-                    >
-                      {[3, 4, 5, 6, 8, 10].map((n) => (
-                        <option key={n} value={n}>
-                          {n}
-                        </option>
-                      ))}
-                    </Select>
+                      options={TOP_SITES_LIMIT_OPTIONS}
+                      ariaLabel="Max quick links"
+                      size="sm"
+                      className="w-[5.5rem] shrink-0 border-border/70 bg-surface/45 hover:bg-surface/55"
+                      popupClassName="w-[5.5rem]"
+                    />
                   </div>
                 )}
+
+                <div className="flex items-center justify-between min-h-10">
+                  <span className="text-sm text-foreground/80">
+                    Recommended post
+                  </span>
+                  <Select
+                    value={settings.recommendationSource}
+                    onValueChange={(value) =>
+                      onUpdateSettings({
+                        recommendationSource: value as "random" | "pinned",
+                      })
+                    }
+                    options={[
+                      { value: "random", label: "Random" },
+                      { value: "pinned", label: "Pinned" },
+                    ]}
+                    ariaLabel="Recommended post source"
+                    size="sm"
+                    className="w-[7.5rem] shrink-0 border-border/70 bg-surface/45 hover:bg-surface/55"
+                    popupClassName="w-[7.5rem]"
+                  />
+                </div>
               </div>
               <div className="mt-3">
                 {confirmingReset ? (
@@ -237,7 +258,6 @@ export function SettingsModal({
             </section>
           </div>
         </div>
-      )}
     </Modal>
   );
 }

@@ -1,3 +1,40 @@
+import type { ThemePreference } from "../hooks/useTheme";
+export type { ThemePreference };
+
+// Re-export canonical auth types
+export type {
+  AuthState,
+  AuthPhase,
+  SessionState,
+  ApiCapabilityState,
+  ApiCapability,
+  AuthStatus,
+  CapturedAuthHeaders,
+} from "./auth";
+
+// Re-export canonical sync types
+export type {
+  SyncTrigger,
+  SyncCompletionStatus,
+  SyncMode,
+  SyncBlockedReason,
+  SyncLeaseContract,
+  SyncReservationDecision,
+  RuntimeSyncPolicy,
+  RuntimeCacheSummary,
+} from "./sync";
+
+// Re-export message types
+export type {
+  BookmarkChangeType,
+  BookmarkChangeEvent,
+  MessageRequest,
+  MessageType,
+  RuntimeSnapshotData,
+  RuntimeSnapshotData as RuntimeSnapshot,
+  SwResponse,
+} from "./messages";
+
 export interface AuthorAffiliate {
   name: string;
   badgeUrl?: string;
@@ -113,6 +150,8 @@ export interface Bookmark {
   text: string;
   createdAt: number;
   sortIndex: string;
+  /** Whether this tweet is still bookmarked on X (false after unbookmarking). */
+  bookmarked: boolean;
   author: Author;
   metrics: Metrics;
   media: Media[];
@@ -135,64 +174,6 @@ export interface TweetDetailCache {
   fetchedAt: number;
   focalTweet: Bookmark | null;
   thread: ThreadTweet[];
-}
-
-export type AuthState = "authenticated" | "stale" | "logged_out";
-export type AuthPhase = "loading" | "need_login" | "connecting" | "ready";
-export type SessionState = "unknown" | "logged_in" | "logged_out";
-export type ApiCapabilityState = "unknown" | "ready" | "blocked";
-
-export interface ApiCapability {
-  bookmarksApi: ApiCapabilityState;
-  detailApi: ApiCapabilityState;
-}
-
-export interface AuthStatus {
-  hasUser: boolean;
-  hasAuth: boolean;
-  hasQueryId: boolean;
-  userId: string | null;
-  accountContextId?: string | null;
-  authState: AuthState;
-  sessionState: SessionState;
-  capability: ApiCapability;
-}
-
-export type SyncBlockedReason =
-  | "in_flight"
-  | "cooldown"
-  | "rate_limited"
-  | "no_account"
-  | "not_ready";
-
-export interface RuntimeSyncPolicy {
-  accountKey: string | null;
-  inFlight: {
-    leaseId: string;
-    mode: "full" | "incremental" | "quick";
-    trigger: "manual" | "auto";
-    startedAt: number;
-  } | null;
-  lastAttemptAt: number;
-  lastSuccessAt: number;
-  blockedReason: SyncBlockedReason | null;
-}
-
-export interface RuntimeCacheSummary {
-  lastSyncAt: number;
-  lastSoftSyncAt: number;
-  lightSyncNeededAt: number;
-  pendingBookmarkEventCount: number;
-}
-
-export interface RuntimeSnapshot {
-  sessionState: SessionState;
-  authPhase: "loading" | "need_login" | "connecting" | "ready";
-  accountContextId: string | null;
-  capability: ApiCapability;
-  syncPolicy: RuntimeSyncPolicy;
-  blockedReason: SyncBlockedReason | null;
-  cacheSummary: RuntimeCacheSummary;
 }
 
 export interface SyncRequestResult {
@@ -243,10 +224,24 @@ export type SearchEngineId =
   | "ecosia"
   | "default";
 
+export type RecommendationSource = "random" | "pinned";
+
 export interface UserSettings {
   showTopSites: boolean;
   showSearchBar: boolean;
   topSitesLimit: number;
   backgroundMode: BackgroundMode;
   searchEngine: SearchEngineId;
+  recommendationSource: RecommendationSource;
+}
+
+export interface TotemSeedPayload {
+  version: 1;
+  source: "extension-export" | "demo-fixture" | "demo-json";
+  generatedAt?: string;
+  bookmarks: Bookmark[];
+  detailByTweetId: Record<string, TweetDetailCache>;
+  readingProgress: ReadingProgress[];
+  settings: UserSettings;
+  themePreference: ThemePreference;
 }

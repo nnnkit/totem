@@ -1,0 +1,99 @@
+export type ReturnSurface = "home" | "reading";
+
+const VALID_RETURN_SURFACES = new Set<ReturnSurface>(["home", "reading"]);
+const TWEET_ID_PATTERN = /^\d{1,20}$/;
+
+export function isValidTweetId(value: string): boolean {
+  return TWEET_ID_PATTERN.test(value);
+}
+
+function getBaseUrl(): string {
+  if (typeof window !== "undefined") return window.location.href;
+  if (typeof chrome !== "undefined" && chrome.runtime?.getURL) {
+    return chrome.runtime.getURL("newtab.html");
+  }
+  return "https://localhost/newtab.html";
+}
+
+function buildExtensionUrl(
+  fileName: "newtab.html" | "reader.html",
+  params?: Record<string, string | null | undefined>,
+  currentUrl = getBaseUrl(),
+): string {
+  const url = new URL(fileName, currentUrl);
+  url.search = "";
+  url.hash = "";
+
+  for (const [key, value] of Object.entries(params ?? {})) {
+    if (!value) continue;
+    url.searchParams.set(key, value);
+  }
+
+  return url.toString();
+}
+
+export function getReaderUrl(
+  tweetId: string,
+  currentUrl?: string,
+  returnSurface: ReturnSurface = "home",
+): string {
+  return buildExtensionUrl(
+    "reader.html",
+    {
+      read: tweetId,
+      from: returnSurface === "reading" ? returnSurface : undefined,
+    },
+    currentUrl,
+  );
+}
+
+export function getReaderReturnSurface(
+  search = typeof window !== "undefined" ? window.location.search : "",
+): ReturnSurface {
+  const surface = new URLSearchParams(search).get("from");
+  return VALID_RETURN_SURFACES.has(surface as ReturnSurface)
+    ? (surface as ReturnSurface)
+    : "home";
+}
+
+export function getNewTabUrl(
+  currentUrl?: string,
+  view?: ReturnSurface,
+): string {
+  return buildExtensionUrl(
+    "newtab.html",
+    view === "reading" ? { view } : undefined,
+    currentUrl,
+  );
+}
+
+export function getNewTabView(
+  search = typeof window !== "undefined" ? window.location.search : "",
+): ReturnSurface | null {
+  const view = new URLSearchParams(search).get("view");
+  return VALID_RETURN_SURFACES.has(view as ReturnSurface)
+    ? (view as ReturnSurface)
+    : null;
+}
+
+export function parseTweetIdFromHref(href: string): string {
+  if (!href) return "";
+  try {
+    const base = typeof window !== "undefined" ? window.location.origin : "https://x.com";
+    const url = new URL(href, base);
+    const match = url.pathname.match(/\/status\/(\d+)/);
+    return match?.[1] || "";
+  } catch {
+    return "";
+  }
+}
+
+export function getReaderTweetId(search = typeof window !== "undefined" ? window.location.search : ""): string | null {
+  const tweetId = new URLSearchParams(search).get("read")?.trim() ?? "";
+  if (!tweetId || !isValidTweetId(tweetId)) return null;
+  return tweetId;
+}
+
+export function isReaderRoute(pathname = typeof window !== "undefined" ? window.location.pathname : ""): boolean {
+  return pathname.endsWith("reader.html");
+}

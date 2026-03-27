@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import type { Bookmark, ReadingProgress } from "../types";
 import { getAllReadingProgress } from "../db";
+import { subscribeToReaderActivity } from "../lib/reader-activity";
 
 export interface ContinueReadingItem {
   bookmark: Bookmark;
@@ -28,6 +29,10 @@ export function useContinueReading(
   useEffect(() => {
     refresh();
   }, [refresh, refreshKey]);
+
+  useEffect(() => {
+    return subscribeToReaderActivity(refresh);
+  }, [refresh]);
 
   const { continueReading, allUnread } = useMemo(() => {
     const bookmarkMap = new Map(bookmarks.map((b) => [b.tweetId, b]));

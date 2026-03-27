@@ -1,0 +1,383 @@
+import { isValidTweetId, parseTweetIdFromHref } from "../lib/reader-navigation";
+
+const TWEET_SELECTOR = 'article[data-testid="tweet"]';
+const BUTTON_ATTR = "data-totem-open-button";
+const STYLE_ID = "totem-open-in-totem-style";
+
+declare global {
+  interface Window {
+    __totemOpenInTotemInstalled?: boolean;
+  }
+}
+
+function isElement(value: unknown): value is Element {
+  return value instanceof Element;
+}
+
+function ensureStyles() {
+  if (document.getElementById(STYLE_ID)) return;
+
+  const style = document.createElement("style");
+  style.id = STYLE_ID;
+  style.textContent = `
+    .totem-open-in-totem {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      inline-size: 28px;
+      block-size: 28px;
+      min-inline-size: 28px;
+      min-block-size: 28px;
+      margin-inline-end: 6px;
+      padding: 0;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      cursor: pointer;
+      transition: opacity 150ms ease, transform 150ms ease;
+    }
+
+    .totem-open-in-totem:focus-visible {
+      outline: 2px solid rgba(224, 122, 95, 0.65);
+      outline-offset: 2px;
+    }
+
+    @media (hover: hover) {
+      .totem-open-in-totem:hover {
+        opacity: 0.88;
+        transform: translateY(-1px);
+      }
+    }
+
+    .totem-open-in-totem svg {
+      inline-size: 20px;
+      block-size: 20px;
+      display: block;
+      pointer-events: none;
+    }
+
+    .totem-open-in-totem::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      inset-block-start: calc(100% + 4px);
+      inset-inline-start: 50%;
+      translate: -50% 0;
+      padding: 4px 8px;
+      border-radius: 4px;
+      background: rgba(101, 119, 134, 0.92);
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-size: 11px;
+      font-weight: 400;
+      line-height: 1;
+      white-space: nowrap;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 150ms ease;
+    }
+
+    @media (hover: hover) {
+      .totem-open-in-totem:hover::after {
+        opacity: 1;
+      }
+    }
+
+    .totem-open-in-totem:focus-visible::after {
+      opacity: 1;
+    }
+  `;
+
+  document.head.appendChild(style);
+}
+
+function closestTweetArticle(node: Node | null): HTMLElement | null {
+  if (!node) return null;
+
+  let current: Element | null = isElement(node) ? node : node.parentElement;
+  while (current) {
+    if (current.matches(TWEET_SELECTOR)) {
+      return current as HTMLElement;
+    }
+    current = current.parentElement;
+  }
+  return null;
+}
+
+function belongsToArticle(node: Element, article: Element): boolean {
+  return closestTweetArticle(node) === article;
+}
+
+function querySameTweet<T extends Element>(
+  article: HTMLElement,
+  selector: string,
+): T[] {
+  return Array.from(article.querySelectorAll<T>(selector)).filter((node) =>
+    belongsToArticle(node, article)
+  );
+}
+
+function isNestedTweet(article: HTMLElement): boolean {
+  const parentArticle = article.parentElement?.closest(TWEET_SELECTOR);
+  return parentArticle instanceof HTMLElement;
+}
+
+function findStatusLink(article: HTMLElement): HTMLAnchorElement | null {
+  const links = querySameTweet<HTMLAnchorElement>(article, 'a[href*="/status/"]');
+  if (links.length === 0) return null;
+
+  const candidates = links
+    .map((link) => ({
+      link,
+      tweetId: parseTweetIdFromHref(link.getAttribute("href") || ""),
+      hasTime: Boolean(link.querySelector("time")),
+    }))
+    .filter((item) => Boolean(item.tweetId));
+
+  if (candidates.length === 0) return null;
+
+  const timed = candidates.find((item) => item.hasTime);
+  return timed?.link || candidates[0]?.link || null;
+}
+
+function getInteractiveLabel(node: Element): string {
+  const parts = [
+    node.getAttribute("aria-label") || "",
+    node.getAttribute("data-testid") || "",
+    node.getAttribute("title") || "",
+    node.textContent || "",
+  ];
+  return parts.join(" ").toLowerCase();
+}
+
+function findGrokControl(article: HTMLElement): Element | null {
+  const candidates = querySameTweet<Element>(
+    article,
+    "button[aria-label], button[title], div[role='button'][aria-label], div[role='button'][title]",
+  );
+  return candidates.find((node) => getInteractiveLabel(node).includes("grok")) || null;
+}
+
+function findMoreControl(article: HTMLElement): Element | null {
+  const candidates = querySameTweet<Element>(
+    article,
+    "button, a, div[role='button']",
+  );
+  return candidates.find((node) => {
+    const ariaLabel = (node.getAttribute("aria-label") || "").toLowerCase();
+    const dataTestId = (node.getAttribute("data-testid") || "").toLowerCase();
+    return ariaLabel === "more" ||
+      ariaLabel.includes("more menu items") ||
+      dataTestId === "caret";
+  }) || null;
+}
+
+function findInsertionPoint(article: HTMLElement): {
+  container: HTMLElement;
+  before: Element;
+} | null {
+  const anchor = findMoreControl(article) || findGrokControl(article);
+  if (!(anchor?.parentElement instanceof HTMLElement)) {
+    return null;
+  }
+
+  return {
+    container: anchor.parentElement,
+    before: anchor,
+  };
+}
+
+function stopEvent(event: MouseEvent) {
+  event.preventDefault();
+  event.stopPropagation();
+}
+
+function openTotemReader(tweetId: string) {
+  if (!isValidTweetId(tweetId)) return;
+  // Navigate immediately to preserve user gesture context (avoids popup blocker).
+  // The service worker will redirect to the reader page; if it fails, the user
+  // lands on the tweet's native page as a safe fallback.
+  const fallbackUrl = `https://x.com/i/web/status/${tweetId}`;
+  chrome.runtime
+    .sendMessage({ type: "OPEN_TOTEM_READER", tweetId })
+    .then((response) => {
+      if (!response?.ok) {
+        window.location.href = fallbackUrl;
+      }
+    })
+    .catch(() => {
+      window.location.href = fallbackUrl;
+    });
+}
+
+function createButton(tweetId: string): HTMLButtonElement {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "totem-open-in-totem";
+  button.setAttribute(BUTTON_ATTR, "");
+  button.dataset.totemTweetId = tweetId;
+  button.dataset.tooltip = "Open in Totem";
+  button.setAttribute("aria-label", "Open in Totem");
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", "0 0 100 100");
+  svg.setAttribute("fill", "none");
+  svg.setAttribute("aria-hidden", "true");
+
+  const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+  rect.setAttribute("width", "100");
+  rect.setAttribute("height", "100");
+  rect.setAttribute("rx", "18");
+  rect.setAttribute("fill", "#1c1c1e");
+  svg.appendChild(rect);
+
+  const path1 = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  path1.setAttribute("d", "M20 80L80 80L80 20Z");
+  path1.setAttribute("fill", "#e07a5f");
+  svg.appendChild(path1);
+
+  const path2 = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  path2.setAttribute("d", "M80 20L52.5 47.5L80 80Z");
+  path2.setAttribute("fill", "#c96b50");
+  svg.appendChild(path2);
+
+  const path3 = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  path3.setAttribute("d", "M52.5 47.5L80 20");
+  path3.setAttribute("stroke", "rgba(255,255,255,0.18)");
+  path3.setAttribute("stroke-width", "1.5");
+  svg.appendChild(path3);
+
+  button.appendChild(svg);
+
+  button.addEventListener("mousedown", (event) => {
+    event.stopPropagation();
+  });
+  button.addEventListener("click", (event) => {
+    stopEvent(event);
+    openTotemReader(tweetId);
+  });
+
+  return button;
+}
+
+function findManagedButton(article: HTMLElement): HTMLButtonElement | null {
+  return querySameTweet<HTMLButtonElement>(article, `button[${BUTTON_ATTR}]`)[0] || null;
+}
+
+function ensureButton(article: HTMLElement) {
+  if (!article.isConnected) return;
+
+  const existing = findManagedButton(article);
+  if (isNestedTweet(article)) {
+    existing?.remove();
+    return;
+  }
+
+  const statusLink = findStatusLink(article);
+  const tweetId = parseTweetIdFromHref(statusLink?.getAttribute("href") || "");
+  if (!tweetId) {
+    existing?.remove();
+    return;
+  }
+
+  const insertionPoint = findInsertionPoint(article);
+  if (!insertionPoint) return;
+
+  if (
+    existing &&
+    existing.dataset.totemTweetId === tweetId &&
+    existing.parentElement === insertionPoint.container
+  ) {
+    if (existing.nextSibling !== insertionPoint.before) {
+      insertionPoint.container.insertBefore(existing, insertionPoint.before);
+    }
+    return;
+  }
+
+  existing?.remove();
+  insertionPoint.container.insertBefore(
+    createButton(tweetId),
+    insertionPoint.before,
+  );
+}
+
+const pendingArticles = new Set<HTMLElement>();
+let frameRequested = false;
+
+function flushPendingArticles() {
+  frameRequested = false;
+  const articles = Array.from(pendingArticles);
+  pendingArticles.clear();
+  for (const article of articles) {
+    ensureButton(article);
+  }
+}
+
+function scheduleArticle(article: HTMLElement | null) {
+  if (!article) return;
+  pendingArticles.add(article);
+  if (frameRequested) return;
+
+  frameRequested = true;
+  requestAnimationFrame(flushPendingArticles);
+}
+
+function scheduleFromNode(node: Node | null) {
+  const closestArticle = closestTweetArticle(node);
+  scheduleArticle(closestArticle);
+
+  if (!isElement(node)) return;
+
+  if (node.matches(TWEET_SELECTOR)) {
+    scheduleArticle(node as HTMLElement);
+  }
+
+  for (const article of node.querySelectorAll<HTMLElement>(TWEET_SELECTOR)) {
+    scheduleArticle(article);
+  }
+}
+
+function scanDocument() {
+  ensureStyles();
+  for (const article of document.querySelectorAll<HTMLElement>(TWEET_SELECTOR)) {
+    scheduleArticle(article);
+  }
+}
+
+let activeObserver: MutationObserver | null = null;
+
+function startObserver() {
+  scanDocument();
+  if (!(document.body instanceof HTMLElement)) return;
+
+  const root = document.querySelector<HTMLElement>('main[role="main"]') || document.body;
+
+  activeObserver?.disconnect();
+  activeObserver = new MutationObserver((mutations) => {
+    for (const mutation of mutations) {
+      if (mutation.type === "childList") {
+        for (const node of mutation.addedNodes) {
+          scheduleFromNode(node);
+        }
+      }
+    }
+  });
+
+  activeObserver.observe(root, {
+    childList: true,
+    subtree: true,
+  });
+}
+
+function init() {
+  if (window.__totemOpenInTotemInstalled) return;
+  window.__totemOpenInTotemInstalled = true;
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", startObserver, { once: true });
+    return;
+  }
+
+  startObserver();
+}
+
+init();

@@ -3,15 +3,23 @@ export const LEGACY_IDB_DATABASE_NAME = "xbt";
 export const IDB_ACCOUNT_DATABASE_PREFIX = "totem_acct_";
 
 export const LS_READING_TAB = "totem_reading_tab";
+export const LS_READING_SORTS = "totem_reading_sorts";
+export const LS_RETURN_SURFACE = "totem_return_surface";
 export const LS_WALLPAPER_INDEX = "totem_wallpaper_index";
 export const LS_MANUAL_SYNC_REQUIRED = "totem_manual_sync_required";
 export const LS_BOOT_SYNC_POLICY = "totem_boot_sync_policy";
+export const LS_PINNED_TWEETS = "totem_pinned_tweets";
+export const LS_READER_ACTIVITY = "totem_reader_activity";
 
 export const LOCAL_STORAGE_KEYS = [
   LS_READING_TAB,
+  LS_READING_SORTS,
+  LS_RETURN_SURFACE,
   LS_WALLPAPER_INDEX,
   LS_MANUAL_SYNC_REQUIRED,
   LS_BOOT_SYNC_POLICY,
+  LS_PINNED_TWEETS,
+  LS_READER_ACTIVITY,
   "totem_has_bookmarks", // legacy — kept for reset cleanup
 ] as const;
 
@@ -31,7 +39,7 @@ export const CS_SYNC_AUTO_ENABLED = "totem_sync_auto_enabled";
 export const CS_RUNTIME_AUDIT = "totem_runtime_audit";
 export const CS_RUNTIME_STATE_V2 = "totem_runtime_state_v2";
 
-// These are written/read exclusively by public/service-worker.js.
+// These are written/read exclusively by service worker modules (src/service-worker/).
 // Listed here so reset (chrome.storage.local.clear()) covers them.
 //   totem_graphql_catalog    – captured GraphQL endpoint catalog
 //   totem_sw_cleanup_at      – weekly service worker cleanup timestamp

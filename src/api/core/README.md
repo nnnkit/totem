@@ -12,6 +12,7 @@ This folder contains the extension's primary API-call entrypoints so core data f
 
 ## Bookmarks
 - `fetchBookmarkPage(cursor?)` -> runtime message `FETCH_BOOKMARKS`
+- `createBookmark(tweetId)` -> runtime message `CREATE_BOOKMARK`
 - `deleteBookmark(tweetId)` -> runtime message `DELETE_BOOKMARK`
 - `getBookmarkEvents()` -> runtime message `GET_BOOKMARK_EVENTS`
 - `ackBookmarkEvents(ids)` -> runtime message `ACK_BOOKMARK_EVENTS`
@@ -31,4 +32,5 @@ Runtime messages above are handled in:
 Network calls made by the worker:
 - `GET https://x.com/i/api/graphql/{queryId}/Bookmarks`
 - `GET https://x.com/i/api/graphql/{queryId}/TweetDetail`
+- `POST https://x.com/i/api/graphql/{queryId}/CreateBookmark`
 - `POST https://x.com/i/api/graphql/{queryId}/DeleteBookmark`
