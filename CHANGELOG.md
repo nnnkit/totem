@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.15] - 2026-03-29
+
+- feat: add setting to toggle open-in-totem content script on tweets
+
 ## [1.1.14] - 2026-03-27
 
 - fix: links not rendering anchor
