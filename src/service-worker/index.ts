@@ -26,7 +26,7 @@ import {
   extractTweetIdFromVariables,
   extractGraphqlOperationName,
 } from "../lib/sw-pure";
-import { CS_ACCOUNT_CONTEXT_ID } from "../lib/storage-keys";
+import { CS_ACCOUNT_CONTEXT_ID, SYNC_SETTINGS } from "../lib/storage-keys";
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -379,9 +379,68 @@ chrome.action.onClicked.addListener(() => {
   chrome.tabs.create({ url: chrome.runtime.getURL("newtab.html") });
 });
 
+// ── Dynamic content script: Open in Totem ───────────────────
+
+const OPEN_IN_TOTEM_SCRIPT_ID = "open-in-totem";
+
+async function syncOpenInTotemScript(enabled: boolean) {
+  try {
+    const existing = await chrome.scripting.getRegisteredContentScripts({
+      ids: [OPEN_IN_TOTEM_SCRIPT_ID],
+    });
+    const isRegistered = existing.length > 0;
+
+    if (enabled && !isRegistered) {
+      await chrome.scripting.registerContentScripts([
+        {
+          id: OPEN_IN_TOTEM_SCRIPT_ID,
+          matches: ["https://x.com/*"],
+          js: ["assets/open-in-totem.js"],
+          runAt: "document_idle",
+          world: "ISOLATED",
+        },
+      ]);
+    } else if (!enabled && isRegistered) {
+      await chrome.scripting.unregisterContentScripts({
+        ids: [OPEN_IN_TOTEM_SCRIPT_ID],
+      });
+    }
+  } catch {
+    // ignore — scripting API may not be available in all contexts
+  }
+}
+
+async function readOpenInTotemSetting(): Promise<boolean> {
+  try {
+    const stored = await chrome.storage.sync.get({ [SYNC_SETTINGS]: {} });
+    const settings = stored[SYNC_SETTINGS];
+    if (settings && typeof settings === "object" && typeof settings.showOpenInTotem === "boolean") {
+      return settings.showOpenInTotem;
+    }
+  } catch {}
+  return true; // default: enabled
+}
+
+// React to setting changes
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName !== "sync") return;
+  const change = changes[SYNC_SETTINGS];
+  if (!change) return;
+
+  const newVal = change.newValue;
+  const enabled =
+    newVal && typeof newVal === "object" && typeof newVal.showOpenInTotem === "boolean"
+      ? newVal.showOpenInTotem
+      : true;
+  syncOpenInTotemScript(enabled);
+});
+
 // ══════════════════════════════════════════════════════════════
 // STARTUP
 // ══════════════════════════════════════════════════════════════
+
+// On startup, sync open-in-totem content script registration.
+readOpenInTotemSetting().then((enabled) => syncOpenInTotemScript(enabled));
 
 // On startup, normalize auth state and proactively discover query IDs.
 chrome.storage.local.get(

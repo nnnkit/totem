@@ -132,6 +132,34 @@ export function SettingsModal({
 
             <section className="py-4 first:pt-0 last:pb-0">
               <h3 className="text-sm font-semibold text-muted mb-1.5">
+                Twitter
+              </h3>
+              <div className="space-y-1.5">
+                <label className="flex items-center justify-between gap-4 min-h-10">
+                  <div className="flex flex-col gap-0.5">
+                    <span
+                      id="label-open-in-totem"
+                      className="text-sm text-foreground/80"
+                    >
+                      Open in Totem button
+                    </span>
+                    <span className="text-xxs text-muted/60 leading-snug">
+                      Adds a button on each tweet to open it in the reader
+                    </span>
+                  </div>
+                  <Switch
+                    checked={settings.showOpenInTotem}
+                    onCheckedChange={(checked) =>
+                      onUpdateSettings({ showOpenInTotem: checked })
+                    }
+                    aria-labelledby="label-open-in-totem"
+                  />
+                </label>
+              </div>
+            </section>
+
+            <section className="py-4 first:pt-0 last:pb-0">
+              <h3 className="text-sm font-semibold text-muted mb-1.5">
                 New Tab
               </h3>
               <div className="space-y-1.5">

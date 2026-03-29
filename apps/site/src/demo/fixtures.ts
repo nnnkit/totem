@@ -15,6 +15,7 @@ export type DemoPayload = TotemSeedPayload;
 export const DEFAULT_DEMO_SETTINGS: UserSettings = {
   showTopSites: false,
   showSearchBar: true,
+  showOpenInTotem: true,
   topSitesLimit: 5,
   backgroundMode: "images",
   searchEngine: "google",

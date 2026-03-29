@@ -23,6 +23,7 @@ const VALID_SEARCH_ENGINES: SearchEngineId[] = [
 const DEFAULT_SETTINGS: UserSettings = {
   showTopSites: false,
   showSearchBar: true,
+  showOpenInTotem: true,
   topSitesLimit: 5,
   backgroundMode: "images",
   searchEngine: "google",
@@ -41,6 +42,10 @@ function normalizeSettings(value: unknown): UserSettings {
       typeof raw.showSearchBar === "boolean"
         ? raw.showSearchBar
         : DEFAULT_SETTINGS.showSearchBar,
+    showOpenInTotem:
+      typeof raw.showOpenInTotem === "boolean"
+        ? raw.showOpenInTotem
+        : DEFAULT_SETTINGS.showOpenInTotem,
     topSitesLimit:
       typeof raw.topSitesLimit === "number" &&
       raw.topSitesLimit >= 1 &&

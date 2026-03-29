@@ -80,6 +80,10 @@ function mergeSettings(raw?: Partial<UserSettings>): UserSettings {
       typeof raw.showSearchBar === "boolean"
         ? raw.showSearchBar
         : DEFAULT_DEMO_SETTINGS.showSearchBar,
+    showOpenInTotem:
+      typeof raw.showOpenInTotem === "boolean"
+        ? raw.showOpenInTotem
+        : DEFAULT_DEMO_SETTINGS.showOpenInTotem,
     topSitesLimit,
     backgroundMode:
       raw.backgroundMode === "gradient" || raw.backgroundMode === "images"

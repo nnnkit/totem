@@ -233,6 +233,7 @@ export type RecommendationSource = "random" | "pinned";
 export interface UserSettings {
   showTopSites: boolean;
   showSearchBar: boolean;
+  showOpenInTotem: boolean;
   topSitesLimit: number;
   backgroundMode: BackgroundMode;
   searchEngine: SearchEngineId;
