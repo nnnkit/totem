@@ -633,7 +633,7 @@ export function BookmarksList({
                 </span>
               )}
             </Tabs.Tab>
-            <Tabs.Indicator className="absolute bottom-0 h-0.5 w-[var(--active-tab-width)] translate-x-[var(--active-tab-left)] rounded-full bg-accent transition-[width,transform] duration-200 ease-tab" />
+            <Tabs.Indicator className="absolute bottom-0 h-0.5 w-[var(--active-tab-width)] translate-x-[var(--active-tab-left)] rounded-full bg-accent transition-[width,translate] duration-200 ease-tab" />
           </Tabs.List>
         </Tabs.Root>
       </div>

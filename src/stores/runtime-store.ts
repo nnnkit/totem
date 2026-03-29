@@ -740,12 +740,8 @@ export function createRuntimeStore() {
           ? options.localCountHint
           : startingLocalCount;
       const requestedMode =
-        options.requestedMode ?? (trigger === "manual" ? "quick" : undefined);
-      const requestedModeForReservation =
-        trigger === "manual" &&
-          (startingLocalCount <= 0 || state.bootPolicy === "manual_only_until_seeded")
-          ? "full"
-          : requestedMode;
+        options.requestedMode ?? (trigger === "manual" ? "full" : undefined);
+      const requestedModeForReservation = requestedMode;
 
       const policy = await reserveSyncRun({
         accountId,
