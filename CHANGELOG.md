@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.16] - 2026-03-29
+
+- fix: tab indicator animation and manual sync now runs full reconcile
+
 ## [1.1.15] - 2026-03-29
 
 - feat: add setting to toggle open-in-totem content script on tweets
