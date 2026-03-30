@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.17] - 2026-03-30
+
+- fix: remove red accent border on search input focus
+
 ## [1.1.16] - 2026-03-29
 
 - fix: tab indicator animation and manual sync now runs full reconcile
