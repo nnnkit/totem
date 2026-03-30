@@ -30,13 +30,21 @@ interface TweetBodyProps {
 
 function stripCardUrls(
   text: string,
-  urls: { url: string; expandedUrl: string }[],
+  urls: { url: string; expandedUrl: string; card?: { title?: string } }[],
 ): string {
   if (urls.length === 0) return text;
   let result = text;
   for (const u of urls) {
-    if (u.url) result = result.replaceAll(u.url, "");
-    if (u.expandedUrl) result = result.replaceAll(u.expandedUrl, "");
+    if (u.card?.title) {
+      // URLs with card data are rendered as rich preview cards — strip from text
+      if (u.url) result = result.replaceAll(u.url, "");
+      if (u.expandedUrl) result = result.replaceAll(u.expandedUrl, "");
+    } else {
+      // Plain URLs stay inline — replace t.co with expanded URL
+      if (u.url && u.expandedUrl) {
+        result = result.replaceAll(u.url, u.expandedUrl);
+      }
+    }
   }
   return result.replace(/\n+$/, "").trimEnd();
 }
@@ -95,6 +103,8 @@ function TweetBody({
         />
       )}
 
+      <TweetLinks urls={tweet.urls} />
+
       <TweetMedia items={tweet.media} bleed={!compact} />
       <TweetQuote quotedTweet={tweet.quotedTweet || null} variant="compact" />
 
@@ -105,8 +115,6 @@ function TweetBody({
           authorProfileImageUrl={tweet.author?.profileImageUrl}
         />
       )}
-
-      <TweetLinks urls={tweet.urls} />
     </>
   );
 }

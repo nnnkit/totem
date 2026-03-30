@@ -5,15 +5,15 @@ import { sanitizeUrl } from "./utils";
 type ResolvedUrl = {
   href: string;
   displayUrl: string;
-  card?: LinkCard;
+  card: LinkCard;
 };
 
 interface LinkPreviewCardProps {
   url: ResolvedUrl;
-  card: LinkCard;
 }
 
-function LinkPreviewCard({ url, card }: LinkPreviewCardProps) {
+function LinkPreviewCard({ url }: LinkPreviewCardProps) {
+  const { card } = url;
   return (
     <a
       href={url.href}
@@ -49,10 +49,12 @@ interface Props {
   urls: TweetUrl[];
 }
 
+/** Only renders URLs that have rich card data. Plain URLs are now kept inline in the tweet text. */
 export function TweetLinks({ urls }: Props) {
-  const resolvedUrls = useMemo<ResolvedUrl[]>(
+  const cardUrls = useMemo<ResolvedUrl[]>(
     () =>
       urls.flatMap((url) => {
+        if (!url.card?.title) return [];
         const href = sanitizeUrl((url.expandedUrl || url.url || "").trim());
         if (!href) return [];
         return [
@@ -62,34 +64,13 @@ export function TweetLinks({ urls }: Props) {
     [urls],
   );
 
-  if (resolvedUrls.length === 0) return null;
+  if (cardUrls.length === 0) return null;
 
   return (
     <div className="mt-6 flex flex-col gap-2.5">
-      {resolvedUrls.map((url, index) =>
-        url.card?.title ? (
-          <LinkPreviewCard
-            key={`${url.href}-${index}`}
-            url={url}
-            card={url.card}
-          />
-        ) : (
-          <a
-            key={`${url.href}-${index}`}
-            href={url.href}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block rounded border border-border bg-surface-link-card px-4 py-3 transition-colors hover:bg-surface-hover"
-          >
-            <span className="text-sm text-accent">{url.displayUrl}</span>
-            {url.displayUrl !== url.href && (
-              <span className="mt-1 block text-xs text-muted">
-                {url.href}
-              </span>
-            )}
-          </a>
-        ),
-      )}
+      {cardUrls.map((url, index) => (
+        <LinkPreviewCard key={`${url.href}-${index}`} url={url} />
+      ))}
     </div>
   );
 }
