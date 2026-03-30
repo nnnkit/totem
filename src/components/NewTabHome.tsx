@@ -573,7 +573,7 @@ export function NewTabHome({
                       ref={searchRef}
                       type="text"
                       name={engineConfig?.queryParam ?? "q"}
-                      className="w-full appearance-none rounded-none border-0 bg-transparent px-3 py-3.5 text-base text-home-fg font-[inherit] outline-none placeholder:text-home-placeholder focus:border-0"
+                      className="w-full appearance-none rounded-none border-0 bg-transparent px-3 py-3.5 text-base text-home-fg font-[inherit] outline-none placeholder:text-home-placeholder focus:border-0 focus-visible:outline-none focus-visible:shadow-none"
                       placeholder="Search the web"
                       autoComplete="off"
                     />
