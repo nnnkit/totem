@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.18] - 2026-03-30
+
+- fix: keep plain URLs inline in tweet text like Twitter
+
 ## [1.1.17] - 2026-03-30
 
 - fix: remove red accent border on search input focus
