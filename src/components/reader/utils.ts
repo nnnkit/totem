@@ -15,6 +15,18 @@ export function sanitizeUrl(url: string): string {
   return "";
 }
 
+export function sanitizeUrlRelaxed(url: string): string {
+  const t = url.trim();
+  if (!t) return "";
+  try {
+    const parsed = new URL(t);
+    if (parsed.protocol === "https:" || parsed.protocol === "http:") return t;
+  } catch {}
+  if (t.startsWith("/") && !t.startsWith("//")) return t;
+  if (t.startsWith("#")) return t;
+  return "";
+}
+
 export function buildGrokUrl(tweetUrl: string, selectedText?: string): string {
   const prompt = selectedText
     ? `Explain this in context of the tweet:\n\n"${selectedText}"\n\n${tweetUrl}`
@@ -158,7 +170,7 @@ export function renderBlockInlineContent(
         ? range.toIndex
         : start + (range.text?.length || 0);
     const end = Math.max(start, Math.min(rawEnd, length));
-    const href = sanitizeUrl((range.text || text.slice(start, end)).trim());
+    const href = sanitizeUrlRelaxed((range.text || text.slice(start, end)).trim());
     if (!href || end <= start) continue;
     for (let i = start; i < end; i++) {
       if (entityKey[i] < 0) linkHref[i] = href;
@@ -224,13 +236,15 @@ export function renderBlockInlineContent(
       if (seg.entityKey >= 0) {
         const entity = entityMap[String(seg.entityKey)];
         if (entity?.type === "LINK") {
-          const url = sanitizeUrl(String(entity.data?.url || ""));
+          const url = sanitizeUrlRelaxed(String(entity.data?.url || ""));
           if (url) {
-            html = `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${html}</a>`;
+            const isExternal = /^https?:\/\//i.test(url);
+            html = `<a href="${escapeHtml(url)}"${isExternal ? ' target="_blank" rel="noopener noreferrer"' : ""}>${html}</a>`;
           }
         }
       } else if (seg.linkHref) {
-        html = `<a href="${escapeHtml(seg.linkHref)}" target="_blank" rel="noopener noreferrer">${html}</a>`;
+        const isExternal = /^https?:\/\//i.test(seg.linkHref);
+        html = `<a href="${escapeHtml(seg.linkHref)}"${isExternal ? ' target="_blank" rel="noopener noreferrer"' : ""}>${html}</a>`;
       }
       return html;
     })

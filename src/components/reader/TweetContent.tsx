@@ -6,6 +6,7 @@ import {
   LightningIcon,
 } from "@phosphor-icons/react";
 import type { Bookmark, ThreadTweet, TweetKind } from "../../types";
+import { stripCardUrlsFromTweetText } from "../../lib/tweet-text";
 import { buildGrokUrl, normalizeText, resolveTweetKind } from "./utils";
 import { estimateReadingMinutes } from "../../lib/bookmark-utils";
 import { TweetHeader } from "./TweetHeader";
@@ -21,32 +22,12 @@ import type { DetailErrorKind } from "./detail-error";
 import { cn } from "../../lib/cn";
 import { Button } from "../ui/Button";
 import { OfflineBanner } from "../ui/OfflineBanner";
+import { ArticleExportMenu } from "./ArticleExportMenu";
 
 interface TweetBodyProps {
   tweet: ReaderTweet;
   compact?: boolean;
   sectionIdPrefix?: string;
-}
-
-function stripCardUrls(
-  text: string,
-  urls: { url: string; expandedUrl: string; card?: { title?: string } }[],
-): string {
-  if (urls.length === 0) return text;
-  let result = text;
-  for (const u of urls) {
-    if (u.card?.title) {
-      // URLs with card data are rendered as rich preview cards — strip from text
-      if (u.url) result = result.replaceAll(u.url, "");
-      if (u.expandedUrl) result = result.replaceAll(u.expandedUrl, "");
-    } else {
-      // Plain URLs stay inline — replace t.co with expanded URL
-      if (u.url && u.expandedUrl) {
-        result = result.replaceAll(u.url, u.expandedUrl);
-      }
-    }
-  }
-  return result.replace(/\n+$/, "").trimEnd();
 }
 
 function TweetBody({
@@ -90,7 +71,7 @@ function TweetBody({
 
   const { showArticle, showText } = resolveTweetBodyVisibility(tweet, kind);
 
-  const displayText = stripCardUrls(tweet.text, tweet.urls);
+  const displayText = stripCardUrlsFromTweetText(tweet.text, tweet.urls);
 
   return (
     <>
@@ -219,6 +200,11 @@ interface ActionBarProps {
     active?: boolean;
     pending?: boolean;
   };
+  articleExport?: {
+    onCopyMarkdown: () => Promise<boolean>;
+    onDownloadMarkdown: () => void;
+    onPrintPdf: () => void;
+  };
 }
 
 function ActionBar({
@@ -226,11 +212,12 @@ function ActionBar({
   onToggleRead,
   isMarkedRead,
   bookmarkAction,
+  articleExport,
 }: ActionBarProps) {
   const grokUrl = buildGrokUrl(viewOnXUrl);
 
   return (
-    <div className="flex items-center gap-1 border-y border-border py-2">
+    <div className="flex flex-wrap items-center gap-1 border-y border-border py-2">
       <Button variant="ghost" size="sm" href={viewOnXUrl}>
         <ArrowSquareOutIcon className="size-3.5" />
         View on X
@@ -240,6 +227,14 @@ function ActionBar({
         <LightningIcon weight="bold" className="size-3.5" />
         Grok
       </Button>
+
+      {articleExport && (
+        <ArticleExportMenu
+          onCopyMarkdown={articleExport.onCopyMarkdown}
+          onDownloadMarkdown={articleExport.onDownloadMarkdown}
+          onPrintPdf={articleExport.onPrintPdf}
+        />
+      )}
 
       <div className="ml-auto flex items-center gap-1">
         {bookmarkAction && (
@@ -334,6 +329,7 @@ interface Props {
   onToggleRead?: () => void;
   isMarkedRead?: boolean;
   bookmarkAction?: ActionBarProps["bookmarkAction"];
+  articleExport?: ActionBarProps["articleExport"];
   onLogin?: () => void;
 }
 
@@ -351,6 +347,7 @@ export const TweetContent = memo(function TweetContent({
   onToggleRead,
   isMarkedRead,
   bookmarkAction,
+  articleExport,
   onLogin,
 }: Props) {
   const viewOnXUrl = `https://x.com/${displayBookmark.author.screenName}/status/${displayBookmark.tweetId}`;
@@ -372,6 +369,7 @@ export const TweetContent = memo(function TweetContent({
           onToggleRead={onToggleRead}
           isMarkedRead={isMarkedRead}
           bookmarkAction={bookmarkAction}
+          articleExport={articleExport}
         />
       </div>
 
@@ -404,6 +402,7 @@ export const TweetContent = memo(function TweetContent({
           onToggleRead={onToggleRead}
           isMarkedRead={isMarkedRead}
           bookmarkAction={bookmarkAction}
+          articleExport={articleExport}
         />
       </div>
 
