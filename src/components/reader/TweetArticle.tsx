@@ -63,6 +63,27 @@ function ArticleBlockRenderer({ blocks, entityMap }: ArticleBlockRendererProps) 
             const entity = entityMap[String(range.key)];
             if (entity?.type === "MEDIA") {
               const imageUrl = entity.data?.imageUrl;
+              const videoUrl = entity.data?.videoUrl;
+              if (typeof videoUrl === "string" && videoUrl) {
+                return (
+                  <figure
+                    key={`group-${groupIdx}`}
+                    className="-mx-6 my-6 flex justify-center"
+                  >
+                    <video
+                      src={videoUrl}
+                      controls
+                      playsInline
+                      poster={
+                        typeof imageUrl === "string" && imageUrl
+                          ? imageUrl
+                          : undefined
+                      }
+                      className="h-auto max-h-[72vh] max-w-full min-w-0 rounded bg-black object-contain"
+                    />
+                  </figure>
+                );
+              }
               if (typeof imageUrl === "string" && imageUrl) {
                 return (
                   <figure
@@ -185,8 +206,13 @@ export function TweetArticle({ article, compact = false, authorProfileImageUrl }
   const hasBlocks =
     article.contentBlocks !== undefined && article.contentBlocks.length > 0;
   const headings = useMemo(
-    () => (hasBlocks ? [] : detectArticleHeadings(plainText)),
-    [plainText, hasBlocks],
+    () =>
+      hasBlocks
+        ? []
+        : detectArticleHeadings(plainText, {
+            articleTitle: article.title?.trim(),
+          }),
+    [plainText, hasBlocks, article.title],
   );
 
   const titleClass = "reader-heading mt-6 text-4xl font-bold text-balance text-foreground";

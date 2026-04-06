@@ -12,6 +12,8 @@ import type {
 import { hasExportableArticle } from "./article-to-markdown";
 
 type TweetExportNode = {
+  tweetId: string;
+  author: { screenName: string; name: string };
   text: string;
   urls: TweetUrl[];
   media: Media[];
@@ -23,6 +25,10 @@ type TweetExportNode = {
   isThread?: boolean;
   inReplyToTweetId?: string;
 };
+
+function tweetStatusUrl(tweet: TweetExportNode): string {
+  return `https://x.com/${tweet.author.screenName}/status/${tweet.tweetId}`;
+}
 
 function exportTweetKind(tweet: TweetExportNode): TweetKind {
   if (tweet.tweetKind) return tweet.tweetKind;
@@ -36,12 +42,22 @@ function exportTweetKind(tweet: TweetExportNode): TweetKind {
   return "tweet";
 }
 
-function appendMediaMarkdown(body: string, media: Media[]): string {
-  const photos = media.filter((m) => m.type === "photo");
-  if (photos.length === 0) return body;
-  const imgs = photos.map((m) => `![](${m.url})`).join("\n\n");
-  if (!body.trim()) return imgs;
-  return `${body.trim()}\n\n${imgs}`;
+function appendMediaMarkdown(body: string, media: Media[], watchOnXUrl: string): string {
+  const parts: string[] = [];
+  const trimmed = body.trim();
+  if (trimmed) parts.push(trimmed);
+
+  for (const m of media) {
+    if (m.type === "photo") {
+      parts.push(`![](${m.url})`);
+    }
+    if (m.type === "video" || m.type === "animated_gif") {
+      if (m.url) parts.push(`![](${m.url})`);
+      parts.push(`[Watch on X](${watchOnXUrl})`);
+    }
+  }
+
+  return parts.join("\n\n");
 }
 
 function appendQuotedTweetExport(
@@ -86,7 +102,7 @@ function tweetNodeToPlainExport(tweet: TweetExportNode): string {
     core = appendQuotedTweetExport(core, tweet.quotedTweet);
   }
 
-  return appendMediaMarkdown(core, tweet.media).trim();
+  return appendMediaMarkdown(core, tweet.media, tweetStatusUrl(tweet)).trim();
 }
 
 function firstPhotoUrl(media: Media[]): string | undefined {
@@ -107,8 +123,13 @@ function deriveExportTitle(bookmark: Bookmark): string | undefined {
 export function buildSyntheticExportPlainText(
   bookmark: Bookmark,
   thread: ThreadTweet[],
+  includeThread = false,
 ): string {
   const focal = tweetNodeToPlainExport(bookmark);
+  if (!includeThread) {
+    return focal || "(No text in this post.)";
+  }
+
   const sorted = thread.toSorted((a, b) => a.createdAt - b.createdAt);
   const extras: string[] = [];
   for (const t of sorted) {
@@ -131,11 +152,16 @@ export function buildSyntheticExportPlainText(
 export function resolveReaderExportArticle(
   bookmark: Bookmark,
   thread: ThreadTweet[],
+  options?: { includeThreadInExport?: boolean },
 ): ArticleContent {
   if (bookmark.article && hasExportableArticle(bookmark.article)) {
     return bookmark.article;
   }
-  const plainText = buildSyntheticExportPlainText(bookmark, thread);
+  const plainText = buildSyntheticExportPlainText(
+    bookmark,
+    thread,
+    options?.includeThreadInExport ?? false,
+  );
   const title = deriveExportTitle(bookmark);
   const coverImageUrl = firstPhotoUrl(bookmark.media);
   return {

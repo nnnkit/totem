@@ -179,10 +179,38 @@ describe("resolveReaderExportArticle", () => {
         urls: [],
       },
     ];
-    const plain = buildSyntheticExportPlainText(bm, thread);
+    const plain = buildSyntheticExportPlainText(bm, thread, true);
     expect(plain).toContain("First");
     expect(plain).toContain("@b");
     expect(plain).toContain("Second");
+  });
+
+  it("omits thread from synthetic export unless includeThread is true", () => {
+    const bm = minimalBookmark({
+      tweetId: "1",
+      text: "Focal only",
+      urls: [],
+    });
+    const thread: ThreadTweet[] = [
+      {
+        tweetId: "1",
+        text: "Focal only",
+        createdAt: 1,
+        author: bm.author,
+        media: [],
+        urls: [],
+      },
+      {
+        tweetId: "2",
+        text: "Thread reply",
+        createdAt: 2,
+        author: bm.author,
+        media: [],
+        urls: [],
+      },
+    ];
+    expect(buildSyntheticExportPlainText(bm, thread)).toBe("Focal only");
+    expect(buildSyntheticExportPlainText(bm, thread, true)).toContain("Thread reply");
   });
 });
 

@@ -220,32 +220,61 @@ function parseEntityRanges(
     }));
 }
 
-function buildMediaIdToUrlMap(
+interface ArticleEntityMediaResolved {
+  imageUrl: string;
+  videoUrl?: string;
+}
+
+function buildArticleMediaIdMap(
   mediaEntities: UnknownRecord[],
-): Map<string, string> {
-  const map = new Map<string, string>();
+): Map<string, ArticleEntityMediaResolved> {
+  const map = new Map<string, ArticleEntityMediaResolved>();
   for (const entity of mediaEntities) {
     const mediaId = asString(entity.media_id);
-    const mediaInfo = asRecord(entity.media_info);
-    const url = asString(mediaInfo?.original_img_url);
-    if (mediaId && url) {
-      map.set(mediaId, url);
+    if (!mediaId) continue;
+
+    const mediaInfo = asRecord(entity.media_info) || {};
+    let imageUrl =
+      asString(mediaInfo.original_img_url) ||
+      asString(mediaInfo.preview_image_url) ||
+      "";
+
+    const videoInfo =
+      asRecord(mediaInfo.video_info) || asRecord(entity.video_info);
+    let videoUrl: string | undefined;
+    if (videoInfo) {
+      const variants = asRecords(videoInfo.variants).filter(
+        (v) => asString(v.content_type) === "video/mp4",
+      );
+      if (variants.length > 0) {
+        const sorted = variants.toSorted(
+          (a, b) => toNumber(a.bitrate) - toNumber(b.bitrate),
+        );
+        videoUrl = asString(sorted[sorted.length - 1]?.url) || undefined;
+      }
     }
+
+    if (!imageUrl && !videoUrl) continue;
+
+    map.set(mediaId, {
+      imageUrl,
+      ...(videoUrl ? { videoUrl } : {}),
+    });
   }
   return map;
 }
 
-function resolveMediaEntityUrl(
+function resolveArticleEntityMedia(
   data: Record<string, unknown>,
-  mediaUrlMap: Map<string, string>,
-): string | null {
+  mediaMap: Map<string, ArticleEntityMediaResolved>,
+): ArticleEntityMediaResolved | null {
   const mediaItems = Array.isArray(data.mediaItems) ? data.mediaItems : [];
   for (const item of mediaItems) {
     const record = asRecord(item);
     if (!record) continue;
     const mediaId = asString(record.mediaId);
-    if (mediaId && mediaUrlMap.has(mediaId)) {
-      return mediaUrlMap.get(mediaId)!;
+    if (mediaId && mediaMap.has(mediaId)) {
+      return mediaMap.get(mediaId)!;
     }
   }
   return null;
@@ -270,9 +299,9 @@ function extractContentBlocks(
     data: parseArticleBlockData(block.data),
   }));
 
-  const mediaUrlMap = mediaEntities
-    ? buildMediaIdToUrlMap(mediaEntities)
-    : new Map<string, string>();
+  const mediaMap = mediaEntities
+    ? buildArticleMediaIdMap(mediaEntities)
+    : new Map<string, ArticleEntityMediaResolved>();
 
   const entityMap: Record<string, ArticleContentEntity> = {};
 
@@ -290,10 +319,14 @@ function extractContentBlocks(
       const entityType = asString(value.type);
       if (!entityType) continue;
       let data = (asRecord(value.data) || {}) as Record<string, unknown>;
-      // Resolve MEDIA entities to image URLs
-      if (entityType === "MEDIA" && mediaUrlMap.size > 0) {
-        const imageUrl = resolveMediaEntityUrl(data, mediaUrlMap);
-        if (imageUrl) data = { ...data, imageUrl };
+      if (entityType === "MEDIA" && mediaMap.size > 0) {
+        const resolved = resolveArticleEntityMedia(data, mediaMap);
+        if (resolved) {
+          const next = { ...data };
+          if (resolved.imageUrl) next.imageUrl = resolved.imageUrl;
+          if (resolved.videoUrl) next.videoUrl = resolved.videoUrl;
+          data = next;
+        }
       }
       entityMap[key] = { type: entityType, data };
     }
@@ -306,9 +339,14 @@ function extractContentBlocks(
         const entityType = asString(entity.type);
         if (!entityType) continue;
         let data = (asRecord(entity.data) || {}) as Record<string, unknown>;
-        if (entityType === "MEDIA" && mediaUrlMap.size > 0) {
-          const imageUrl = resolveMediaEntityUrl(data, mediaUrlMap);
-          if (imageUrl) data = { ...data, imageUrl };
+        if (entityType === "MEDIA" && mediaMap.size > 0) {
+          const resolved = resolveArticleEntityMedia(data, mediaMap);
+          if (resolved) {
+            const next = { ...data };
+            if (resolved.imageUrl) next.imageUrl = resolved.imageUrl;
+            if (resolved.videoUrl) next.videoUrl = resolved.videoUrl;
+            data = next;
+          }
         }
         entityMap[key] = { type: entityType, data };
       }

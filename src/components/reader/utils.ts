@@ -2,7 +2,18 @@ import type { ArticleContentBlock } from "../../types";
 import type { ReaderTweet } from "./types";
 import type { TweetKind } from "../../types";
 import { cn } from "../../lib/cn";
-export { compactPreview, normalizeText } from "../../lib/text";
+import { compactPreview, normalizeText } from "../../lib/text";
+
+export { compactPreview, normalizeText };
+
+export function headingBlockMatchesArticleTitle(
+  blockPlainText: string,
+  articleTitle: string | undefined,
+): boolean {
+  const t = articleTitle?.trim();
+  if (!t || !blockPlainText.trim()) return false;
+  return normalizeText(blockPlainText) === normalizeText(t);
+}
 
 export const baseTweetTextClass =
   "font-serif break-words [&_a]:text-accent [&_a:hover]:underline";
@@ -107,14 +118,25 @@ export function groupBlocks(blocks: ArticleContentBlock[]): BlockGroup[] {
   return groups;
 }
 
+function isLikelyExportSeparatorLine(line: string): boolean {
+  const t = line.trim();
+  return t.length >= 3 && /^[\s─—\-_|]+$/u.test(t);
+}
+
+function isLikelyThreadAttributionLine(line: string): boolean {
+  return /^—\s*@/u.test(line.trim());
+}
+
 export function detectArticleHeadings(
   plainText: string,
+  options?: { articleTitle?: string },
 ): { index: number; text: string }[] {
   const lines = plainText
     .split(/\n/)
     .map((l) => l.trim())
     .filter(Boolean);
   const headings: { index: number; text: string }[] = [];
+  const title = options?.articleTitle;
 
   for (let i = 0; i < lines.length - 1; i++) {
     const line = lines[i];
@@ -125,6 +147,10 @@ export function detectArticleHeadings(
       !/[.!?,;:]$/.test(line) &&
       nextLine.length > line.length
     ) {
+      if (headingBlockMatchesArticleTitle(line, title)) continue;
+      if (isLikelyExportSeparatorLine(line)) continue;
+      if (isLikelyThreadAttributionLine(line)) continue;
+      if (/["`]/.test(line)) continue;
       headings.push({ index: i, text: line });
     }
   }

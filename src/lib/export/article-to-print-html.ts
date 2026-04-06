@@ -3,6 +3,7 @@ import {
   detectArticleHeadings,
   escapeHtml,
   groupBlocks,
+  headingBlockMatchesArticleTitle,
   paragraphHtml,
   paragraphizeText,
   renderBlockInlineContent,
@@ -19,6 +20,8 @@ function stripMarkdownEntityCode(markdown: string): string {
 function blocksToArticleHtml(
   blocks: ArticleContentBlock[],
   entityMap: Record<string, import("../../types").ArticleContentEntity>,
+  articleTitle: string | undefined,
+  postUrl: string | undefined,
 ): string {
   const groups = groupBlocks(blocks);
   const out: string[] = [];
@@ -55,6 +58,20 @@ function blocksToArticleHtml(
         const entity = entityMap[String(range.key)];
         if (entity?.type === "MEDIA") {
           const imageUrl = entity.data?.imageUrl;
+          const videoUrl = entity.data?.videoUrl;
+          if (typeof videoUrl === "string" && videoUrl) {
+            const imgPart =
+              typeof imageUrl === "string" && imageUrl
+                ? `<img src="${escapeHtml(imageUrl)}" alt="" />`
+                : "";
+            const linkPart = postUrl
+              ? `<p class="print-video-link"><a href="${escapeHtml(postUrl)}">Watch on X</a></p>`
+              : `<p class="print-video-link"><em>Video</em> — use the source link above.</p>`;
+            out.push(
+              `<figure class="print-video">${imgPart}${linkPart}</figure>`,
+            );
+            break;
+          }
           if (typeof imageUrl === "string" && imageUrl) {
             out.push(
               `<figure><img src="${escapeHtml(imageUrl)}" alt="" /></figure>`,
@@ -86,6 +103,15 @@ function blocksToArticleHtml(
     }
 
     const html = renderBlockInlineContent(block, entityMap);
+
+    if (
+      (block.type === "header-one" ||
+        block.type === "header-two" ||
+        block.type === "header-three") &&
+      headingBlockMatchesArticleTitle(block.text, articleTitle)
+    ) {
+      continue;
+    }
 
     if (block.type === "header-one") {
       out.push(`<h2>${html}</h2>`);
@@ -127,6 +153,7 @@ function richTextArticleHtml(plainText: string): string {
 function buildHeadingChunksHtml(
   plainText: string,
   headings: { index: number; text: string }[],
+  articleTitle: string | undefined,
 ): string {
   const lines = plainText
     .split(/\n/)
@@ -167,7 +194,10 @@ function buildHeadingChunksHtml(
   const parts: string[] = [];
   for (let i = 0; i < chunks.length; i++) {
     const chunk = chunks[i];
-    if (chunk.heading) {
+    if (
+      chunk.heading &&
+      !headingBlockMatchesArticleTitle(chunk.heading, articleTitle)
+    ) {
       parts.push(`<h4>${escapeHtml(chunk.heading)}</h4>`);
     }
     if (chunk.text) {
@@ -285,6 +315,11 @@ figure img {
   margin-left: auto;
   margin-right: auto;
 }
+.print-video-link {
+  margin: 0.5em 0 0;
+  text-align: center;
+  font-size: 0.95em;
+}
 a {
   color: #0a5;
   overflow-wrap: anywhere;
@@ -357,7 +392,9 @@ export function articleToPrintDocumentHtml(
 
   const hasBlocks =
     article.contentBlocks !== undefined && article.contentBlocks.length > 0;
-  const headings = hasBlocks ? [] : detectArticleHeadings(plainText);
+  const headings = hasBlocks
+    ? []
+    : detectArticleHeadings(plainText, { articleTitle: article.title?.trim() });
 
   const metaParts: string[] = [];
   if (options?.metadata?.postUrl) {
@@ -401,11 +438,17 @@ export function articleToPrintDocumentHtml(
     bodyHtml = blocksToArticleHtml(
       article.contentBlocks!,
       article.entityMap || {},
+      article.title?.trim(),
+      options?.metadata?.postUrl,
     );
   } else if (headings.length === 0) {
     bodyHtml = richTextArticleHtml(plainText);
   } else {
-    bodyHtml = buildHeadingChunksHtml(plainText, headings);
+    bodyHtml = buildHeadingChunksHtml(
+      plainText,
+      headings,
+      article.title?.trim(),
+    );
   }
 
   const documentTitle = slugifyArticleBasename(article);

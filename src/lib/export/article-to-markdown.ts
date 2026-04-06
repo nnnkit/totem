@@ -1,5 +1,9 @@
 import type { ArticleContent, ArticleContentBlock } from "../../types";
-import { detectArticleHeadings, groupBlocks } from "../../components/reader/utils";
+import {
+  detectArticleHeadings,
+  groupBlocks,
+  headingBlockMatchesArticleTitle,
+} from "../../components/reader/utils";
 import { resolveArticleCoverImageUrl } from "./article-cover";
 import { renderBlockInlineMarkdown } from "./block-inline-markdown";
 import { richTextArticleMarkdown } from "./article-plain-markdown";
@@ -69,6 +73,8 @@ function formatBlockquoteMarkdown(content: string): string {
 function blocksToMarkdown(
   blocks: ArticleContentBlock[],
   entityMap: Record<string, import("../../types").ArticleContentEntity>,
+  articleTitle: string | undefined,
+  watchOnXUrl: string | undefined,
 ): string {
   const groups = groupBlocks(blocks);
   const out: string[] = [];
@@ -101,6 +107,20 @@ function blocksToMarkdown(
         const entity = entityMap[String(range.key)];
         if (entity?.type === "MEDIA") {
           const imageUrl = entity.data?.imageUrl;
+          const videoUrl = entity.data?.videoUrl;
+          if (typeof videoUrl === "string" && videoUrl) {
+            const parts: string[] = [];
+            if (typeof imageUrl === "string" && imageUrl) {
+              parts.push(`![](${imageUrl})`);
+            }
+            if (watchOnXUrl) {
+              parts.push(`[Watch on X](${watchOnXUrl})`);
+            } else {
+              parts.push("*Video — open the source URL in the front matter on X.*");
+            }
+            out.push(parts.join("\n\n"));
+            break;
+          }
           if (typeof imageUrl === "string" && imageUrl) {
             out.push(`![](${imageUrl})`);
             break;
@@ -128,6 +148,15 @@ function blocksToMarkdown(
     }
 
     const inline = renderBlockInlineMarkdown(block, entityMap);
+
+    if (
+      (block.type === "header-one" ||
+        block.type === "header-two" ||
+        block.type === "header-three") &&
+      headingBlockMatchesArticleTitle(block.text, articleTitle)
+    ) {
+      continue;
+    }
 
     if (block.type === "header-one") {
       out.push(`## ${inline}`);
@@ -159,6 +188,7 @@ function blocksToMarkdown(
 function buildHeadingChunksMarkdown(
   plainText: string,
   headings: { index: number; text: string }[],
+  articleTitle: string | undefined,
 ): string {
   const lines = plainText
     .split(/\n/)
@@ -199,7 +229,10 @@ function buildHeadingChunksMarkdown(
   const parts: string[] = [];
   for (let i = 0; i < chunks.length; i++) {
     const chunk = chunks[i];
-    if (chunk.heading) {
+    if (
+      chunk.heading &&
+      !headingBlockMatchesArticleTitle(chunk.heading, articleTitle)
+    ) {
       parts.push(`#### ${chunk.heading}`);
     }
     if (chunk.text) {
@@ -231,7 +264,9 @@ export function articleToMarkdown(
 
   const hasBlocks =
     article.contentBlocks !== undefined && article.contentBlocks.length > 0;
-  const headings = hasBlocks ? [] : detectArticleHeadings(plainText);
+  const headings = hasBlocks
+    ? []
+    : detectArticleHeadings(plainText, { articleTitle: article.title?.trim() });
 
   const meta = options?.metadata;
   const metaBlock =
@@ -253,6 +288,8 @@ export function articleToMarkdown(
     const body = blocksToMarkdown(
       article.contentBlocks!,
       article.entityMap || {},
+      article.title?.trim(),
+      meta?.postUrl,
     );
     return `${metaBlock}${titlePart}${coverPart}${body}`.trimEnd() + "\n";
   }
@@ -262,6 +299,10 @@ export function articleToMarkdown(
     return `${metaBlock}${titlePart}${coverPart}${body}`.trimEnd() + "\n";
   }
 
-  const body = buildHeadingChunksMarkdown(plainText, headings);
+  const body = buildHeadingChunksMarkdown(
+    plainText,
+    headings,
+    article.title?.trim(),
+  );
   return `${metaBlock}${titlePart}${coverPart}${body}`.trimEnd() + "\n";
 }
