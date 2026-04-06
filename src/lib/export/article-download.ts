@@ -68,7 +68,9 @@ export function downloadArticleMarkdown(
   const a = document.createElement("a");
   a.href = url;
   a.download = name;
+  document.body.appendChild(a);
   a.click();
+  document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
 
@@ -144,9 +146,11 @@ export function printArticleAsPdf(
     }
 
     let remaining = pending.length;
+    const fallbackId = setTimeout(triggerPrint, 8000);
     const onReady = () => {
       remaining--;
       if (remaining <= 0) {
+        clearTimeout(fallbackId);
         requestAnimationFrame(triggerPrint);
       }
     };
@@ -154,7 +158,6 @@ export function printArticleAsPdf(
       img.addEventListener("load", onReady, { once: true });
       img.addEventListener("error", onReady, { once: true });
     }
-    setTimeout(triggerPrint, 8000);
   };
 
   iframe.addEventListener(

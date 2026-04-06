@@ -25,7 +25,11 @@ export function wrapInlineCode(content: string): string {
   if (!content.includes("`") && !content.includes("\n")) {
     return "`" + content + "`";
   }
-  return "``" + content.replace(/`/g, "`") + "``";
+  let fence = "``";
+  while (content.includes(fence)) {
+    fence += "`";
+  }
+  return `${fence} ${content} ${fence}`;
 }
 
 export function wrapItalic(inner: string): string {
