@@ -10,6 +10,7 @@ import { stripCardUrlsFromTweetText } from "../../lib/tweet-text";
 import { buildGrokUrl, normalizeText, resolveTweetKind } from "./utils";
 import { estimateReadingMinutes } from "../../lib/bookmark-utils";
 import { TweetHeader } from "./TweetHeader";
+import { TweetAuthor } from "./TweetAuthor";
 import { RichTextBlock } from "./TweetText";
 import { TweetMedia } from "./TweetMedia";
 import { TweetQuote } from "./TweetQuote";
@@ -50,20 +51,12 @@ function TweetBody({
         )}
         <div className="mt-4 rounded border border-border p-4">
           <p className="text-xs uppercase text-muted">Reposted content</p>
-          <div className="mt-2 flex items-center gap-2 text-sm">
-            <img
-              src={tweet.retweetedTweet.author.profileImageUrl}
-              alt={`@${tweet.retweetedTweet.author.screenName}`}
-              className="size-7 rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.06)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]"
-              loading="lazy"
-            />
-            <span className="truncate font-semibold text-foreground">
-              {tweet.retweetedTweet.author.name}
-            </span>
-            <span className="truncate text-muted">
-              @{tweet.retweetedTweet.author.screenName}
-            </span>
-          </div>
+          <TweetAuthor
+            author={tweet.retweetedTweet.author}
+            layout="inline"
+            avatarSize="sm"
+            className="mt-2 text-sm"
+          />
         </div>
       </>
     );
@@ -159,18 +152,13 @@ function ThreadTweets({ tweets }: ThreadTweetsProps) {
               </div>
               <div className={cn("min-w-0 flex-1", !isLast && "pb-5")}>
                 {showAuthorProfile ? (
-                  <div className="flex items-center gap-1.5 text-sm">
-                    <span className="truncate font-bold text-foreground">
-                      {tweet.author.name}
-                    </span>
-                    <span className="truncate text-muted">
-                      @{tweet.author.screenName}
-                    </span>
-                    <span className="text-muted">&middot;</span>
-                    <span className="shrink-0 text-muted">
-                      {formatThreadDate(tweet.createdAt)}
-                    </span>
-                  </div>
+                  <TweetAuthor
+                    author={tweet.author}
+                    layout="inline"
+                    showAvatar={false}
+                    date={formatThreadDate(tweet.createdAt)}
+                    className="text-sm"
+                  />
                 ) : (
                   <div className="flex items-center text-xs text-muted/75">
                     <span className="shrink-0">

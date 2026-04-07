@@ -2,6 +2,7 @@ import type { Bookmark } from "../../types";
 import { TweetMedia } from "./TweetMedia";
 import { TweetLinks } from "./TweetLinks";
 import { RichTextBlock } from "./TweetText";
+import { TweetAuthor } from "./TweetAuthor";
 import { compactPreview, normalizeText } from "./utils";
 
 interface Props {
@@ -24,20 +25,12 @@ function renderExcerpt(text: string, maxChars: number): string {
 
 function QuoteHeader({ quotedTweet }: { quotedTweet: ResolvedQuote }) {
   return (
-    <div className="mb-3 flex items-center gap-2 text-sm">
-      <img
-        src={quotedTweet.author.profileImageUrl}
-        alt={`@${quotedTweet.author.screenName}`}
-        className="size-6 rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.06)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]"
-        loading="lazy"
-      />
-      <span className="truncate font-semibold text-foreground">
-        {quotedTweet.author.name}
-      </span>
-      <span className="truncate text-muted">
-        @{quotedTweet.author.screenName}
-      </span>
-    </div>
+    <TweetAuthor
+      author={quotedTweet.author}
+      layout="inline"
+      avatarSize="sm"
+      className="mb-3 text-sm"
+    />
   );
 }
 
