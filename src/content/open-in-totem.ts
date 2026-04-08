@@ -263,6 +263,11 @@ function findManagedButton(article: HTMLElement): HTMLButtonElement | null {
   return querySameTweet<HTMLButtonElement>(article, `button[${BUTTON_ATTR}]`)[0] || null;
 }
 
+function getUrlStatusId(): string | null {
+  const match = window.location.pathname.match(/\/status\/(\d+)/);
+  return match?.[1] || null;
+}
+
 function ensureButton(article: HTMLElement) {
   if (!article.isConnected) return;
 
@@ -275,6 +280,12 @@ function ensureButton(article: HTMLElement) {
   const statusLink = findStatusLink(article);
   const tweetId = parseTweetIdFromHref(statusLink?.getAttribute("href") || "");
   if (!tweetId) {
+    existing?.remove();
+    return;
+  }
+
+  const urlStatusId = getUrlStatusId();
+  if (urlStatusId && tweetId !== urlStatusId) {
     existing?.remove();
     return;
   }
