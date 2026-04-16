@@ -127,6 +127,14 @@ function isLikelyThreadAttributionLine(line: string): boolean {
   return /^—\s*@/u.test(line.trim());
 }
 
+function isLikelyQuotationLine(line: string): boolean {
+  const t = line.trim();
+  if (t.length < 2) return false;
+  if (/^".*"$/u.test(t)) return true;
+  if (/^[“‘].*[”’]$/u.test(t)) return true;
+  return false;
+}
+
 export function detectArticleHeadings(
   plainText: string,
   options?: { articleTitle?: string },
@@ -150,7 +158,8 @@ export function detectArticleHeadings(
       if (headingBlockMatchesArticleTitle(line, title)) continue;
       if (isLikelyExportSeparatorLine(line)) continue;
       if (isLikelyThreadAttributionLine(line)) continue;
-      if (/["`]/.test(line)) continue;
+      if (isLikelyQuotationLine(line)) continue;
+      if (/`/.test(line)) continue;
       headings.push({ index: i, text: line });
     }
   }

@@ -1,6 +1,11 @@
 import { useState } from "react";
 import { Menu } from "@base-ui/react/menu";
-import { CaretDownIcon, CheckIcon, ExportIcon } from "@phosphor-icons/react";
+import {
+  CaretDownIcon,
+  CheckIcon,
+  ExportIcon,
+  XIcon,
+} from "@phosphor-icons/react";
 import { cn } from "../../lib/cn";
 
 interface Props {
@@ -9,19 +14,19 @@ interface Props {
   onPrintPdf: () => void;
 }
 
+type CopyStatus = "idle" | "copied" | "failed";
+
 export function ArticleExportMenu({
   onCopyMarkdown,
   onDownloadMarkdown,
   onPrintPdf,
 }: Props) {
-  const [copied, setCopied] = useState(false);
+  const [copyStatus, setCopyStatus] = useState<CopyStatus>("idle");
 
   async function handleCopyMarkdown() {
     const ok = await onCopyMarkdown();
-    if (ok) {
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 2000);
-    }
+    setCopyStatus(ok ? "copied" : "failed");
+    window.setTimeout(() => setCopyStatus("idle"), 2000);
   }
 
   return (
@@ -35,12 +40,20 @@ export function ArticleExportMenu({
         aria-label="Export post"
         title="Copy, download, or print this post"
       >
-        {copied ? (
+        {copyStatus === "copied" ? (
           <CheckIcon className="size-3.5 text-success" weight="bold" aria-hidden />
+        ) : copyStatus === "failed" ? (
+          <XIcon className="size-3.5 text-red-500" weight="bold" aria-hidden />
         ) : (
           <ExportIcon className="size-3.5" aria-hidden />
         )}
-        <span className="max-sm:hidden">{copied ? "Copied" : "Export"}</span>
+        <span className="max-sm:hidden">
+          {copyStatus === "copied"
+            ? "Copied"
+            : copyStatus === "failed"
+              ? "Copy failed"
+              : "Export"}
+        </span>
         <CaretDownIcon className="size-3 opacity-70 max-sm:hidden" aria-hidden />
       </Menu.Trigger>
       <Menu.Portal>

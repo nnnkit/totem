@@ -20,6 +20,7 @@ import {
   wrapItalic,
 } from "../article-plain-markdown";
 import { renderBlockInlineMarkdown } from "../block-inline-markdown";
+import { detectArticleHeadings } from "../../../components/reader/utils";
 
 describe("hasExportableArticle", () => {
   it("returns false for empty article", () => {
@@ -534,5 +535,52 @@ describe("articleToMarkdown edge cases", () => {
     );
     expect(md).toContain('author: "Name [bracketed] (@handle)"');
     expect(md).toContain('exported: "2026-04-16, 11:30"');
+  });
+
+  it("collapses newlines in YAML scalar values", () => {
+    const md = articleToMarkdown(
+      { plainText: "Body", title: "Line1\nLine2" },
+      {
+        metadata: {
+          postUrl: "https://x.com/u/status/1",
+          authorName: "Crash\r\nCarriage",
+          authorHandle: "handle",
+          exportedAtLabel: "first\nsecond",
+        },
+      },
+    );
+    expect(md).toContain('title: "Line1 Line2"');
+    expect(md).toContain('author: "Crash Carriage (@handle)"');
+    expect(md).toContain('exported: "first second"');
+    expect(md).not.toMatch(/title: "[^"]*\n/);
+    expect(md).not.toMatch(/exported: "[^"]*\n/);
+  });
+});
+
+describe("detectArticleHeadings quotation filter", () => {
+  const nextLineLong = "This is a much longer body line that follows the heading candidate.";
+
+  it("keeps heading candidates containing an inline quoted word", () => {
+    const plain = `Intro line\nThe "Problem" Space\n${nextLineLong}`;
+    const headings = detectArticleHeadings(plain);
+    expect(headings.some((h) => h.text === 'The "Problem" Space')).toBe(true);
+  });
+
+  it("drops a line that is fully wrapped in straight quotes", () => {
+    const plain = `Intro\n"This is a pull quote"\n${nextLineLong}`;
+    const headings = detectArticleHeadings(plain);
+    expect(headings.some((h) => h.text.startsWith('"'))).toBe(false);
+  });
+
+  it("drops a line that is fully wrapped in curly quotes", () => {
+    const plain = `Intro\n“Another pull quote”\n${nextLineLong}`;
+    const headings = detectArticleHeadings(plain);
+    expect(headings.some((h) => h.text.startsWith("“"))).toBe(false);
+  });
+
+  it("still drops lines containing backticks", () => {
+    const plain = `Intro\nThe \`token\` line\n${nextLineLong}`;
+    const headings = detectArticleHeadings(plain);
+    expect(headings.some((h) => h.text.includes("`"))).toBe(false);
   });
 });

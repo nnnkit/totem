@@ -17,7 +17,8 @@ export interface ArticleMarkdownMetadata {
 }
 
 function yamlScalar(s: string): string {
-  return `"${s.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+  const oneLine = s.replace(/[\r\n]+/g, " ");
+  return `"${oneLine.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
 }
 
 function buildYamlFrontmatter(

@@ -5,6 +5,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import {
   ArrowLeftIcon,
   ArrowsDownUpIcon,
+  CircleNotchIcon,
   DownloadSimpleIcon,
   MagnifyingGlassIcon,
   PushPinIcon,
@@ -33,6 +34,7 @@ import {
 import { sortIndexToTimestamp, timeAgo } from "../lib/time";
 import { getAllBookmarks, getHighlightCountsByTweetIds, type HighlightCounts } from "../db";
 import { articleToMarkdown } from "../lib/export/article-to-markdown";
+import { downloadMarkdownFile } from "../lib/export/article-download";
 import { resolveReaderExportArticle } from "../lib/export/tweet-export";
 import { subscribeToReaderActivity } from "../lib/reader-activity";
 import {
@@ -501,10 +503,11 @@ export function BookmarksList({
     setIsExporting(true);
     try {
       const bookmarks = await getAllBookmarks();
-      const exportedAtLabel = new Date().toLocaleString();
+      const now = new Date();
+      const exportedAtLabel = now.toLocaleString();
       const header = [
         `# Bookmarks export`,
-        `> ${bookmarks.length} bookmarks — exported ${new Date().toLocaleDateString()}`,
+        `> ${bookmarks.length} bookmarks — exported ${now.toLocaleDateString()}`,
         "",
       ].join("\n");
 
@@ -524,15 +527,11 @@ export function BookmarksList({
         .filter(Boolean);
 
       const body = `${header}\n${sections.join("\n---\n\n")}`;
-      const blob = new Blob([body], { type: "text/markdown;charset=utf-8" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `bookmarks-${new Date().toISOString().slice(0, 10)}.md`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      const localDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+      downloadMarkdownFile(body, `bookmarks-${localDate}.md`);
+    } catch (err) {
+      console.error("Failed to export bookmarks", err);
+      alert("Failed to export bookmarks. Check the console for details.");
     } finally {
       setIsExporting(false);
     }
@@ -617,10 +616,15 @@ export function BookmarksList({
             onClick={() => { void handleExportAll(); }}
             disabled={isExporting}
             aria-label="Export all bookmarks"
-            title="Export all as Markdown"
+            title={isExporting ? "Exporting…" : "Export all as Markdown"}
+            aria-busy={isExporting}
             className="ml-auto shrink-0"
           >
-            <DownloadSimpleIcon className="size-5" />
+            {isExporting ? (
+              <CircleNotchIcon className="size-5 animate-spin" />
+            ) : (
+              <DownloadSimpleIcon className="size-5" />
+            )}
           </Button>
           <div className="relative mr-1 w-40 shrink-0 transition-transform duration-150 ease-out focus-within:-translate-y-px sm:w-52 md:w-60">
             <MagnifyingGlassIcon className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted/65" />
