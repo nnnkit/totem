@@ -255,7 +255,10 @@ export function BookmarkReader({
   const canExportPost = !detailLoading;
 
   const exportArticle = useMemo(
-    () => resolveReaderExportArticle(displayBookmark, detailThread),
+    () =>
+      resolveReaderExportArticle(displayBookmark, detailThread, {
+        includeThreadInExport: true,
+      }),
     [displayBookmark, detailThread],
   );
 

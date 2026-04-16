@@ -131,11 +131,15 @@ export function buildSyntheticExportPlainText(
   }
 
   const sorted = thread.toSorted((a, b) => a.createdAt - b.createdAt);
+  const focalHandle = bookmark.author.screenName;
   const extras: string[] = [];
   for (const t of sorted) {
     if (t.tweetId === bookmark.tweetId) continue;
     const piece = tweetNodeToPlainExport(t);
-    if (piece) {
+    if (!piece) continue;
+    if (t.author.screenName === focalHandle) {
+      extras.push(piece);
+    } else {
       extras.push(
         `— @${t.author.screenName} (${t.author.name}) —\n\n${piece}`,
       );
@@ -144,9 +148,9 @@ export function buildSyntheticExportPlainText(
   if (extras.length === 0) {
     return focal || "(No text in this post.)";
   }
-  const threadBlock = extras.join("\n\n────────────────────\n\n");
+  const threadBlock = extras.join("\n\n---\n\n");
   if (!focal) return threadBlock;
-  return `${focal}\n\n────────────────────\n\n${threadBlock}`;
+  return `${focal}\n\n---\n\n${threadBlock}`;
 }
 
 export function resolveReaderExportArticle(
