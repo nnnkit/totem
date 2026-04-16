@@ -16,10 +16,7 @@ export interface ArticleMarkdownMetadata {
 }
 
 function yamlScalar(s: string): string {
-  if (/[":\n#]/.test(s)) {
-    return `"${s.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
-  }
-  return s;
+  return `"${s.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
 }
 
 function buildYamlFrontmatter(
@@ -291,12 +288,14 @@ export function articleToMarkdown(
       article.title?.trim(),
       meta?.postUrl,
     );
-    return `${metaBlock}${titlePart}${coverPart}${body}`.trimEnd() + "\n";
+    const combined = `${metaBlock}${titlePart}${coverPart}${body}`.trimEnd();
+  return combined ? combined + "\n" : "";
   }
 
   if (headings.length === 0) {
     const body = richTextArticleMarkdown(plainText);
-    return `${metaBlock}${titlePart}${coverPart}${body}`.trimEnd() + "\n";
+    const combined = `${metaBlock}${titlePart}${coverPart}${body}`.trimEnd();
+  return combined ? combined + "\n" : "";
   }
 
   const body = buildHeadingChunksMarkdown(
@@ -304,5 +303,6 @@ export function articleToMarkdown(
     headings,
     article.title?.trim(),
   );
-  return `${metaBlock}${titlePart}${coverPart}${body}`.trimEnd() + "\n";
+  const combined = `${metaBlock}${titlePart}${coverPart}${body}`.trimEnd();
+  return combined ? combined + "\n" : "";
 }

@@ -131,13 +131,13 @@ export function buildSyntheticExportPlainText(
   }
 
   const sorted = thread.toSorted((a, b) => a.createdAt - b.createdAt);
-  const focalHandle = bookmark.author.screenName;
+  const focalHandle = bookmark.author.screenName.toLowerCase();
   const extras: string[] = [];
   for (const t of sorted) {
     if (t.tweetId === bookmark.tweetId) continue;
     const piece = tweetNodeToPlainExport(t);
     if (!piece) continue;
-    if (t.author.screenName === focalHandle) {
+    if (t.author.screenName.toLowerCase() === focalHandle) {
       extras.push(piece);
     } else {
       extras.push(

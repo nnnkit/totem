@@ -32,6 +32,8 @@ import {
 } from "../lib/reading-list";
 import { sortIndexToTimestamp, timeAgo } from "../lib/time";
 import { getAllBookmarks, getHighlightCountsByTweetIds, type HighlightCounts } from "../db";
+import { articleToMarkdown } from "../lib/export/article-to-markdown";
+import { resolveReaderExportArticle } from "../lib/export/tweet-export";
 import { subscribeToReaderActivity } from "../lib/reader-activity";
 import {
   useIsOffline,
@@ -499,48 +501,37 @@ export function BookmarksList({
     setIsExporting(true);
     try {
       const bookmarks = await getAllBookmarks();
-      const lines: string[] = [
+      const exportedAtLabel = new Date().toLocaleString();
+      const header = [
         `# Bookmarks export`,
         `> ${bookmarks.length} bookmarks — exported ${new Date().toLocaleDateString()}`,
         "",
-      ];
+      ].join("\n");
 
-      for (const bookmark of bookmarks) {
-        const tweetUrl = `https://x.com/${bookmark.author.screenName}/status/${bookmark.tweetId}`;
-        const date = bookmark.createdAt
-          ? new Date(bookmark.createdAt).toLocaleDateString()
-          : "";
+      const sections = bookmarks
+        .map((bookmark) => {
+          const article = resolveReaderExportArticle(bookmark, []);
+          return articleToMarkdown(article, {
+            authorProfileImageUrl: bookmark.author.profileImageUrl,
+            metadata: {
+              postUrl: `https://x.com/${bookmark.author.screenName}/status/${bookmark.tweetId}`,
+              authorName: bookmark.author.name,
+              authorHandle: bookmark.author.screenName,
+              exportedAtLabel,
+            },
+          });
+        })
+        .filter(Boolean);
 
-        lines.push("---", "");
-        lines.push(`### @${bookmark.author.screenName}${date ? ` · ${date}` : ""}`);
-        lines.push("");
-        lines.push(bookmark.text);
-        lines.push("");
-
-        const externalUrls = bookmark.urls
-          .map((u) => u.expandedUrl)
-          .filter((u) => !u.startsWith("https://t.co") && !u.includes("x.com") && !u.includes("twitter.com"));
-        if (externalUrls.length > 0) {
-          lines.push(...externalUrls.map((u) => `- ${u}`));
-          lines.push("");
-        }
-
-        if (bookmark.article?.plainText) {
-          if (bookmark.article.title) {
-            lines.push(`**${bookmark.article.title}**`, "");
-          }
-          lines.push(bookmark.article.plainText.trim(), "");
-        }
-
-        lines.push(`[View on X](${tweetUrl})`, "");
-      }
-
-      const blob = new Blob([lines.join("\n")], { type: "text/markdown" });
+      const body = `${header}\n${sections.join("\n---\n\n")}`;
+      const blob = new Blob([body], { type: "text/markdown;charset=utf-8" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
       a.download = `bookmarks-${new Date().toISOString().slice(0, 10)}.md`;
+      document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } finally {
       setIsExporting(false);
