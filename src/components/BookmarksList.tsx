@@ -5,6 +5,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import {
   ArrowLeftIcon,
   ArrowsDownUpIcon,
+  DownloadSimpleIcon,
   MagnifyingGlassIcon,
   PushPinIcon,
 } from "@phosphor-icons/react";
@@ -30,7 +31,7 @@ import {
   type ReadingTab,
 } from "../lib/reading-list";
 import { sortIndexToTimestamp, timeAgo } from "../lib/time";
-import { getHighlightCountsByTweetIds, type HighlightCounts } from "../db";
+import { getAllBookmarks, getHighlightCountsByTweetIds, type HighlightCounts } from "../db";
 import { subscribeToReaderActivity } from "../lib/reader-activity";
 import {
   useIsOffline,
@@ -492,6 +493,60 @@ export function BookmarksList({
     [unreadIdSet],
   );
 
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleExportAll = useCallback(async () => {
+    setIsExporting(true);
+    try {
+      const bookmarks = await getAllBookmarks();
+      const lines: string[] = [
+        `# Bookmarks export`,
+        `> ${bookmarks.length} bookmarks — exported ${new Date().toLocaleDateString()}`,
+        "",
+      ];
+
+      for (const bookmark of bookmarks) {
+        const tweetUrl = `https://x.com/${bookmark.author.screenName}/status/${bookmark.tweetId}`;
+        const date = bookmark.createdAt
+          ? new Date(bookmark.createdAt).toLocaleDateString()
+          : "";
+
+        lines.push("---", "");
+        lines.push(`### @${bookmark.author.screenName}${date ? ` · ${date}` : ""}`);
+        lines.push("");
+        lines.push(bookmark.text);
+        lines.push("");
+
+        const externalUrls = bookmark.urls
+          .map((u) => u.expandedUrl)
+          .filter((u) => !u.startsWith("https://t.co") && !u.includes("x.com") && !u.includes("twitter.com"));
+        if (externalUrls.length > 0) {
+          lines.push(...externalUrls.map((u) => `- ${u}`));
+          lines.push("");
+        }
+
+        if (bookmark.article?.plainText) {
+          if (bookmark.article.title) {
+            lines.push(`**${bookmark.article.title}**`, "");
+          }
+          lines.push(bookmark.article.plainText.trim(), "");
+        }
+
+        lines.push(`[View on X](${tweetUrl})`, "");
+      }
+
+      const blob = new Blob([lines.join("\n")], { type: "text/markdown" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `bookmarks-${new Date().toISOString().slice(0, 10)}.md`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setIsExporting(false);
+    }
+  }, []);
+
   const hasItems = visibleBookmarks.length > 0;
 
   const renderEmptyState = () => {
@@ -565,7 +620,18 @@ export function BookmarksList({
             <ArrowLeftIcon className="size-5" />
           </Button>
           <span className="text-lg font-semibold text-foreground">Reading</span>
-          <div className="relative ml-auto mr-1 w-40 shrink-0 transition-transform duration-150 ease-out focus-within:-translate-y-px sm:w-52 md:w-60">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => { void handleExportAll(); }}
+            disabled={isExporting}
+            aria-label="Export all bookmarks"
+            title="Export all as Markdown"
+            className="ml-auto shrink-0"
+          >
+            <DownloadSimpleIcon className="size-5" />
+          </Button>
+          <div className="relative mr-1 w-40 shrink-0 transition-transform duration-150 ease-out focus-within:-translate-y-px sm:w-52 md:w-60">
             <MagnifyingGlassIcon className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted/65" />
             <Input
               ref={searchInputRef}
