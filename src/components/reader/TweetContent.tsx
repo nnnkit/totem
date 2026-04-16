@@ -6,9 +6,11 @@ import {
   LightningIcon,
 } from "@phosphor-icons/react";
 import type { Bookmark, ThreadTweet, TweetKind } from "../../types";
+import { stripCardUrlsFromTweetText } from "../../lib/tweet-text";
 import { buildGrokUrl, normalizeText, resolveTweetKind } from "./utils";
 import { estimateReadingMinutes } from "../../lib/bookmark-utils";
 import { TweetHeader } from "./TweetHeader";
+import { TweetAuthor } from "./TweetAuthor";
 import { RichTextBlock } from "./TweetText";
 import { TweetMedia } from "./TweetMedia";
 import { TweetQuote } from "./TweetQuote";
@@ -21,32 +23,12 @@ import type { DetailErrorKind } from "./detail-error";
 import { cn } from "../../lib/cn";
 import { Button } from "../ui/Button";
 import { OfflineBanner } from "../ui/OfflineBanner";
+import { ArticleExportMenu } from "./ArticleExportMenu";
 
 interface TweetBodyProps {
   tweet: ReaderTweet;
   compact?: boolean;
   sectionIdPrefix?: string;
-}
-
-function stripCardUrls(
-  text: string,
-  urls: { url: string; expandedUrl: string; card?: { title?: string } }[],
-): string {
-  if (urls.length === 0) return text;
-  let result = text;
-  for (const u of urls) {
-    if (u.card?.title) {
-      // URLs with card data are rendered as rich preview cards — strip from text
-      if (u.url) result = result.replaceAll(u.url, "");
-      if (u.expandedUrl) result = result.replaceAll(u.expandedUrl, "");
-    } else {
-      // Plain URLs stay inline — replace t.co with expanded URL
-      if (u.url && u.expandedUrl) {
-        result = result.replaceAll(u.url, u.expandedUrl);
-      }
-    }
-  }
-  return result.replace(/\n+$/, "").trimEnd();
 }
 
 function TweetBody({
@@ -69,20 +51,12 @@ function TweetBody({
         )}
         <div className="mt-4 rounded border border-border p-4">
           <p className="text-xs uppercase text-muted">Reposted content</p>
-          <div className="mt-2 flex items-center gap-2 text-sm">
-            <img
-              src={tweet.retweetedTweet.author.profileImageUrl}
-              alt={`@${tweet.retweetedTweet.author.screenName}`}
-              className="size-7 rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.06)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]"
-              loading="lazy"
-            />
-            <span className="truncate font-semibold text-foreground">
-              {tweet.retweetedTweet.author.name}
-            </span>
-            <span className="truncate text-muted">
-              @{tweet.retweetedTweet.author.screenName}
-            </span>
-          </div>
+          <TweetAuthor
+            author={tweet.retweetedTweet.author}
+            layout="inline"
+            avatarSize="sm"
+            className="mt-2 text-sm"
+          />
         </div>
       </>
     );
@@ -90,7 +64,7 @@ function TweetBody({
 
   const { showArticle, showText } = resolveTweetBodyVisibility(tweet, kind);
 
-  const displayText = stripCardUrls(tweet.text, tweet.urls);
+  const displayText = stripCardUrlsFromTweetText(tweet.text, tweet.urls);
 
   return (
     <>
@@ -178,18 +152,13 @@ function ThreadTweets({ tweets }: ThreadTweetsProps) {
               </div>
               <div className={cn("min-w-0 flex-1", !isLast && "pb-5")}>
                 {showAuthorProfile ? (
-                  <div className="flex items-center gap-1.5 text-sm">
-                    <span className="truncate font-bold text-foreground">
-                      {tweet.author.name}
-                    </span>
-                    <span className="truncate text-muted">
-                      @{tweet.author.screenName}
-                    </span>
-                    <span className="text-muted">&middot;</span>
-                    <span className="shrink-0 text-muted">
-                      {formatThreadDate(tweet.createdAt)}
-                    </span>
-                  </div>
+                  <TweetAuthor
+                    author={tweet.author}
+                    layout="inline"
+                    showAvatar={false}
+                    date={formatThreadDate(tweet.createdAt)}
+                    className="text-sm"
+                  />
                 ) : (
                   <div className="flex items-center text-xs text-muted/75">
                     <span className="shrink-0">
@@ -219,6 +188,11 @@ interface ActionBarProps {
     active?: boolean;
     pending?: boolean;
   };
+  articleExport?: {
+    onCopyMarkdown: () => Promise<boolean>;
+    onDownloadMarkdown: () => void;
+    onPrintPdf: () => void;
+  };
 }
 
 function ActionBar({
@@ -226,11 +200,12 @@ function ActionBar({
   onToggleRead,
   isMarkedRead,
   bookmarkAction,
+  articleExport,
 }: ActionBarProps) {
   const grokUrl = buildGrokUrl(viewOnXUrl);
 
   return (
-    <div className="flex items-center gap-1 border-y border-border py-2">
+    <div className="flex flex-wrap items-center gap-1 border-y border-border py-2">
       <Button variant="ghost" size="sm" href={viewOnXUrl}>
         <ArrowSquareOutIcon className="size-3.5" />
         View on X
@@ -240,6 +215,14 @@ function ActionBar({
         <LightningIcon weight="bold" className="size-3.5" />
         Grok
       </Button>
+
+      {articleExport && (
+        <ArticleExportMenu
+          onCopyMarkdown={articleExport.onCopyMarkdown}
+          onDownloadMarkdown={articleExport.onDownloadMarkdown}
+          onPrintPdf={articleExport.onPrintPdf}
+        />
+      )}
 
       <div className="ml-auto flex items-center gap-1">
         {bookmarkAction && (
@@ -334,6 +317,7 @@ interface Props {
   onToggleRead?: () => void;
   isMarkedRead?: boolean;
   bookmarkAction?: ActionBarProps["bookmarkAction"];
+  articleExport?: ActionBarProps["articleExport"];
   onLogin?: () => void;
 }
 
@@ -351,6 +335,7 @@ export const TweetContent = memo(function TweetContent({
   onToggleRead,
   isMarkedRead,
   bookmarkAction,
+  articleExport,
   onLogin,
 }: Props) {
   const viewOnXUrl = `https://x.com/${displayBookmark.author.screenName}/status/${displayBookmark.tweetId}`;
@@ -372,6 +357,7 @@ export const TweetContent = memo(function TweetContent({
           onToggleRead={onToggleRead}
           isMarkedRead={isMarkedRead}
           bookmarkAction={bookmarkAction}
+          articleExport={articleExport}
         />
       </div>
 
@@ -404,6 +390,7 @@ export const TweetContent = memo(function TweetContent({
           onToggleRead={onToggleRead}
           isMarkedRead={isMarkedRead}
           bookmarkAction={bookmarkAction}
+          articleExport={articleExport}
         />
       </div>
 

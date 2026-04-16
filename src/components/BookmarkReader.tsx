@@ -23,6 +23,12 @@ import { useReadingProgress } from "../hooks/useReadingProgress";
 import { useTheme } from "../hooks/useTheme";
 import { useHighlights } from "../hooks/useHighlights";
 import { Button } from "./ui/Button";
+import {
+  copyArticleMarkdownToClipboard,
+  downloadArticleMarkdown,
+  printArticleAsPdf,
+} from "../lib/export/article-download";
+import { resolveReaderExportArticle } from "../lib/export/tweet-export";
 
 interface Props {
   bookmark: Bookmark;
@@ -246,6 +252,71 @@ export function BookmarkReader({
 
   const containerWidthClass = "max-w-2xl";
 
+  const canExportPost = !detailLoading;
+
+  const exportArticle = useMemo(
+    () =>
+      resolveReaderExportArticle(displayBookmark, detailThread, {
+        includeThreadInExport: true,
+      }),
+    [displayBookmark, detailThread],
+  );
+
+  const exportMetadata = useMemo(
+    () => ({
+      postUrl: `https://x.com/${displayBookmark.author.screenName}/status/${displayBookmark.tweetId}`,
+      authorName: displayBookmark.author.name,
+      authorHandle: displayBookmark.author.screenName,
+    }),
+    [
+      displayBookmark.author.name,
+      displayBookmark.author.screenName,
+      displayBookmark.tweetId,
+    ],
+  );
+
+  const handleCopyArticleMarkdown = useCallback(async () => {
+    return copyArticleMarkdownToClipboard(exportArticle, {
+      authorProfileImageUrl: displayBookmark.author.profileImageUrl,
+      metadata: {
+        ...exportMetadata,
+        exportedAtLabel: new Date().toLocaleString(),
+      },
+    });
+  }, [
+    exportArticle,
+    displayBookmark.author.profileImageUrl,
+    exportMetadata,
+  ]);
+
+  const handleDownloadArticleMarkdown = useCallback(() => {
+    downloadArticleMarkdown(exportArticle, {
+      authorProfileImageUrl: displayBookmark.author.profileImageUrl,
+      metadata: {
+        ...exportMetadata,
+        exportedAtLabel: new Date().toLocaleString(),
+      },
+    });
+  }, [
+    exportArticle,
+    displayBookmark.author.profileImageUrl,
+    exportMetadata,
+  ]);
+
+  const handlePrintArticlePdf = useCallback(() => {
+    printArticleAsPdf(exportArticle, {
+      authorProfileImageUrl: displayBookmark.author.profileImageUrl,
+      metadata: {
+        ...exportMetadata,
+        exportedAtLabel: new Date().toLocaleString(),
+      },
+    });
+  }, [
+    exportArticle,
+    displayBookmark.author.profileImageUrl,
+    exportMetadata,
+  ]);
+
   return (
     <div className="reader-page min-h-dvh">
       <div className="sticky top-0 z-10 border-b border-border bg-surface/80 backdrop-blur-md">
@@ -308,6 +379,15 @@ export function BookmarkReader({
           onToggleRead={onMarkAsRead ? handleToggleRead : undefined}
           isMarkedRead={effectiveMarkedRead}
           bookmarkAction={bookmarkAction}
+          articleExport={
+            canExportPost
+              ? {
+                  onCopyMarkdown: handleCopyArticleMarkdown,
+                  onDownloadMarkdown: handleDownloadArticleMarkdown,
+                  onPrintPdf: handlePrintArticlePdf,
+                }
+              : undefined
+          }
           onLogin={onLogin ?? (
             readerAvailability.canLogin
               ? () => { void actions.startLogin(); }

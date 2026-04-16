@@ -5,6 +5,8 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import {
   ArrowLeftIcon,
   ArrowsDownUpIcon,
+  CircleNotchIcon,
+  DownloadSimpleIcon,
   MagnifyingGlassIcon,
   PushPinIcon,
 } from "@phosphor-icons/react";
@@ -30,7 +32,10 @@ import {
   type ReadingTab,
 } from "../lib/reading-list";
 import { sortIndexToTimestamp, timeAgo } from "../lib/time";
-import { getHighlightCountsByTweetIds, type HighlightCounts } from "../db";
+import { getAllBookmarks, getHighlightCountsByTweetIds, type HighlightCounts } from "../db";
+import { articleToMarkdown } from "../lib/export/article-to-markdown";
+import { downloadMarkdownFile } from "../lib/export/article-download";
+import { resolveReaderExportArticle } from "../lib/export/tweet-export";
 import { subscribeToReaderActivity } from "../lib/reader-activity";
 import {
   useIsOffline,
@@ -492,6 +497,46 @@ export function BookmarksList({
     [unreadIdSet],
   );
 
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleExportAll = useCallback(async () => {
+    setIsExporting(true);
+    try {
+      const bookmarks = await getAllBookmarks();
+      const now = new Date();
+      const exportedAtLabel = now.toLocaleString();
+      const header = [
+        `# Bookmarks export`,
+        `> ${bookmarks.length} bookmarks — exported ${now.toLocaleDateString()}`,
+        "",
+      ].join("\n");
+
+      const sections = bookmarks
+        .map((bookmark) => {
+          const article = resolveReaderExportArticle(bookmark, []);
+          return articleToMarkdown(article, {
+            authorProfileImageUrl: bookmark.author.profileImageUrl,
+            metadata: {
+              postUrl: `https://x.com/${bookmark.author.screenName}/status/${bookmark.tweetId}`,
+              authorName: bookmark.author.name,
+              authorHandle: bookmark.author.screenName,
+              exportedAtLabel,
+            },
+          });
+        })
+        .filter(Boolean);
+
+      const body = `${header}\n${sections.join("\n---\n\n")}`;
+      const localDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+      downloadMarkdownFile(body, `bookmarks-${localDate}.md`);
+    } catch (err) {
+      console.error("Failed to export bookmarks", err);
+      alert("Failed to export bookmarks. Check the console for details.");
+    } finally {
+      setIsExporting(false);
+    }
+  }, []);
+
   const hasItems = visibleBookmarks.length > 0;
 
   const renderEmptyState = () => {
@@ -565,7 +610,23 @@ export function BookmarksList({
             <ArrowLeftIcon className="size-5" />
           </Button>
           <span className="text-lg font-semibold text-foreground">Reading</span>
-          <div className="relative ml-auto mr-1 w-40 shrink-0 transition-transform duration-150 ease-out focus-within:-translate-y-px sm:w-52 md:w-60">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => { void handleExportAll(); }}
+            disabled={isExporting}
+            aria-label="Export all bookmarks"
+            title={isExporting ? "Exporting…" : "Export all as Markdown"}
+            aria-busy={isExporting}
+            className="ml-auto shrink-0"
+          >
+            {isExporting ? (
+              <CircleNotchIcon className="size-5 animate-spin" />
+            ) : (
+              <DownloadSimpleIcon className="size-5" />
+            )}
+          </Button>
+          <div className="relative mr-1 w-40 shrink-0 transition-transform duration-150 ease-out focus-within:-translate-y-px sm:w-52 md:w-60">
             <MagnifyingGlassIcon className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted/65" />
             <Input
               ref={searchInputRef}

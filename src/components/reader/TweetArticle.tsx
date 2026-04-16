@@ -12,21 +12,7 @@ import {
 import { RichTextBlock } from "./TweetText";
 import { CodeBlock } from "./CodeBlock";
 import { cn } from "../../lib/cn";
-
-function isLikelyProfileAvatarUrl(value: string): boolean {
-  return /\/profile_images\//i.test(value);
-}
-
-function normalizeAvatarCandidateUrl(value: string): string {
-  const trimmed = value.trim();
-  if (!trimmed) return "";
-  const withoutHash = trimmed.split("#")[0];
-  const [withoutQuery] = withoutHash.split("?");
-
-  return withoutQuery
-    .replace(/_(normal|bigger|mini)(?=\.[a-z0-9]+$)/i, "")
-    .toLowerCase();
-}
+import { resolveArticleCoverImageUrl } from "../../lib/export/article-cover";
 
 interface ArticleBlockRendererProps {
   blocks: ArticleContentBlock[];
@@ -77,16 +63,37 @@ function ArticleBlockRenderer({ blocks, entityMap }: ArticleBlockRendererProps) 
             const entity = entityMap[String(range.key)];
             if (entity?.type === "MEDIA") {
               const imageUrl = entity.data?.imageUrl;
+              const videoUrl = entity.data?.videoUrl;
+              if (typeof videoUrl === "string" && videoUrl) {
+                return (
+                  <figure
+                    key={`group-${groupIdx}`}
+                    className="-mx-6 my-6 flex justify-center"
+                  >
+                    <video
+                      src={videoUrl}
+                      controls
+                      playsInline
+                      poster={
+                        typeof imageUrl === "string" && imageUrl
+                          ? imageUrl
+                          : undefined
+                      }
+                      className="h-auto max-h-[72vh] max-w-full min-w-0 rounded bg-black object-contain"
+                    />
+                  </figure>
+                );
+              }
               if (typeof imageUrl === "string" && imageUrl) {
                 return (
                   <figure
                     key={`group-${groupIdx}`}
-                    className="-mx-6 my-6"
+                    className="-mx-6 my-6 flex justify-center"
                   >
                     <img
                       src={imageUrl}
                       alt=""
-                      className="w-full rounded object-cover"
+                      className="h-auto max-w-full min-w-0 rounded object-cover"
                       loading="lazy"
                     />
                   </figure>
@@ -191,28 +198,21 @@ interface Props {
 
 export function TweetArticle({ article, compact = false, authorProfileImageUrl }: Props) {
   const plainText = article.plainText?.trim() || "";
-  const coverImageUrl = useMemo(() => {
-    const cover = article.coverImageUrl?.trim() || "";
-    if (!cover) return "";
-    if (isLikelyProfileAvatarUrl(cover)) return "";
-
-    const authorAvatar = authorProfileImageUrl?.trim() || "";
-    if (!authorAvatar) return cover;
-
-    const normalizedCover = normalizeAvatarCandidateUrl(cover);
-    const normalizedAvatar = normalizeAvatarCandidateUrl(authorAvatar);
-    if (normalizedCover && normalizedCover === normalizedAvatar) {
-      return "";
-    }
-
-    return cover;
-  }, [article.coverImageUrl, authorProfileImageUrl]);
+  const coverImageUrl = useMemo(
+    () => resolveArticleCoverImageUrl(article.coverImageUrl, authorProfileImageUrl),
+    [article.coverImageUrl, authorProfileImageUrl],
+  );
 
   const hasBlocks =
     article.contentBlocks !== undefined && article.contentBlocks.length > 0;
   const headings = useMemo(
-    () => (hasBlocks ? [] : detectArticleHeadings(plainText)),
-    [plainText, hasBlocks],
+    () =>
+      hasBlocks
+        ? []
+        : detectArticleHeadings(plainText, {
+            articleTitle: article.title?.trim(),
+          }),
+    [plainText, hasBlocks, article.title],
   );
 
   const titleClass = "reader-heading mt-6 text-4xl font-bold text-balance text-foreground";

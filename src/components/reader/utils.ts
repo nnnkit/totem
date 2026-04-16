@@ -2,7 +2,18 @@ import type { ArticleContentBlock } from "../../types";
 import type { ReaderTweet } from "./types";
 import type { TweetKind } from "../../types";
 import { cn } from "../../lib/cn";
-export { compactPreview, normalizeText } from "../../lib/text";
+import { compactPreview, normalizeText } from "../../lib/text";
+
+export { compactPreview, normalizeText };
+
+export function headingBlockMatchesArticleTitle(
+  blockPlainText: string,
+  articleTitle: string | undefined,
+): boolean {
+  const t = articleTitle?.trim();
+  if (!t || !blockPlainText.trim()) return false;
+  return normalizeText(blockPlainText) === normalizeText(t);
+}
 
 export const baseTweetTextClass =
   "font-serif break-words [&_a]:text-accent [&_a:hover]:underline";
@@ -12,6 +23,18 @@ export function sanitizeUrl(url: string): string {
     const parsed = new URL(url);
     if (parsed.protocol === "https:" || parsed.protocol === "http:") return url;
   } catch {}
+  return "";
+}
+
+export function sanitizeUrlRelaxed(url: string): string {
+  const t = url.trim();
+  if (!t) return "";
+  try {
+    const parsed = new URL(t);
+    if (parsed.protocol === "https:" || parsed.protocol === "http:") return t;
+  } catch {}
+  if (t.startsWith("/") && !t.startsWith("//")) return t;
+  if (t.startsWith("#")) return t;
   return "";
 }
 
@@ -95,14 +118,33 @@ export function groupBlocks(blocks: ArticleContentBlock[]): BlockGroup[] {
   return groups;
 }
 
+function isLikelyExportSeparatorLine(line: string): boolean {
+  const t = line.trim();
+  return t.length >= 3 && /^[\s─—\-_|]+$/u.test(t);
+}
+
+function isLikelyThreadAttributionLine(line: string): boolean {
+  return /^—\s*@/u.test(line.trim());
+}
+
+function isLikelyQuotationLine(line: string): boolean {
+  const t = line.trim();
+  if (t.length < 2) return false;
+  if (/^".*"$/u.test(t)) return true;
+  if (/^[“‘].*[”’]$/u.test(t)) return true;
+  return false;
+}
+
 export function detectArticleHeadings(
   plainText: string,
+  options?: { articleTitle?: string },
 ): { index: number; text: string }[] {
   const lines = plainText
     .split(/\n/)
     .map((l) => l.trim())
     .filter(Boolean);
   const headings: { index: number; text: string }[] = [];
+  const title = options?.articleTitle;
 
   for (let i = 0; i < lines.length - 1; i++) {
     const line = lines[i];
@@ -113,6 +155,11 @@ export function detectArticleHeadings(
       !/[.!?,;:]$/.test(line) &&
       nextLine.length > line.length
     ) {
+      if (headingBlockMatchesArticleTitle(line, title)) continue;
+      if (isLikelyExportSeparatorLine(line)) continue;
+      if (isLikelyThreadAttributionLine(line)) continue;
+      if (isLikelyQuotationLine(line)) continue;
+      if (/`/.test(line)) continue;
       headings.push({ index: i, text: line });
     }
   }
@@ -158,7 +205,7 @@ export function renderBlockInlineContent(
         ? range.toIndex
         : start + (range.text?.length || 0);
     const end = Math.max(start, Math.min(rawEnd, length));
-    const href = sanitizeUrl((range.text || text.slice(start, end)).trim());
+    const href = sanitizeUrlRelaxed((range.text || text.slice(start, end)).trim());
     if (!href || end <= start) continue;
     for (let i = start; i < end; i++) {
       if (entityKey[i] < 0) linkHref[i] = href;
@@ -224,13 +271,15 @@ export function renderBlockInlineContent(
       if (seg.entityKey >= 0) {
         const entity = entityMap[String(seg.entityKey)];
         if (entity?.type === "LINK") {
-          const url = sanitizeUrl(String(entity.data?.url || ""));
+          const url = sanitizeUrlRelaxed(String(entity.data?.url || ""));
           if (url) {
-            html = `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${html}</a>`;
+            const isExternal = /^https?:\/\//i.test(url);
+            html = `<a href="${escapeHtml(url)}"${isExternal ? ' target="_blank" rel="noopener noreferrer"' : ""}>${html}</a>`;
           }
         }
       } else if (seg.linkHref) {
-        html = `<a href="${escapeHtml(seg.linkHref)}" target="_blank" rel="noopener noreferrer">${html}</a>`;
+        const isExternal = /^https?:\/\//i.test(seg.linkHref);
+        html = `<a href="${escapeHtml(seg.linkHref)}"${isExternal ? ' target="_blank" rel="noopener noreferrer"' : ""}>${html}</a>`;
       }
       return html;
     })
