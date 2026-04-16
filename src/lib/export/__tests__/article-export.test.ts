@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { ArticleContent } from "../../../types";
+import type { ArticleContent, ArticleContentEntity } from "../../../types";
 import {
   articleToMarkdown,
   hasExportableArticle,
@@ -12,6 +12,14 @@ import {
   buildSyntheticExportPlainText,
   resolveReaderExportArticle,
 } from "../tweet-export";
+import { resolveArticleCoverImageUrl } from "../article-cover";
+import { splitPlainTextByHeadings } from "../article-heading-chunks";
+import {
+  escapeMarkdownPlain,
+  wrapInlineCode,
+  wrapItalic,
+} from "../article-plain-markdown";
+import { renderBlockInlineMarkdown } from "../block-inline-markdown";
 
 describe("hasExportableArticle", () => {
   it("returns false for empty article", () => {
@@ -248,5 +256,283 @@ describe("articleToPrintDocumentHtml", () => {
     };
     const html = articleToPrintDocumentHtml(article);
     expect(html).toContain('class="print-cover"');
+  });
+
+  it("drops javascript: URLs from cover and metadata", () => {
+    const article: ArticleContent = {
+      title: "T",
+      plainText: "Body",
+      coverImageUrl: "javascript:alert(1)",
+    };
+    const html = articleToPrintDocumentHtml(article, {
+      metadata: {
+        postUrl: "javascript:alert(2)",
+        authorHandle: "safe",
+      },
+    });
+    expect(html).not.toContain("javascript:");
+    expect(html).not.toContain('class="print-cover"');
+    expect(html).toContain("@safe");
+  });
+
+  it("sanitizes MEDIA entity image and postUrl in content blocks", () => {
+    const entityMap: Record<string, ArticleContentEntity> = {
+      "0": {
+        type: "MEDIA",
+        data: { imageUrl: "javascript:nope", videoUrl: "https://cdn/x.mp4" },
+      },
+    };
+    const article: ArticleContent = {
+      plainText: "",
+      contentBlocks: [
+        {
+          type: "atomic",
+          text: "",
+          inlineStyleRanges: [],
+          entityRanges: [{ offset: 0, length: 1, key: 0 }],
+          depth: 0,
+        },
+      ],
+      entityMap,
+    };
+    const html = articleToPrintDocumentHtml(article, {
+      metadata: { postUrl: "javascript:alert(1)" },
+    });
+    expect(html).not.toContain("javascript:");
+    expect(html).toContain("use the source link above");
+  });
+});
+
+describe("resolveArticleCoverImageUrl", () => {
+  it("returns empty when cover is missing", () => {
+    expect(resolveArticleCoverImageUrl(undefined, undefined)).toBe("");
+    expect(resolveArticleCoverImageUrl("", "x")).toBe("");
+  });
+
+  it("drops cover when it is a profile avatar URL", () => {
+    expect(
+      resolveArticleCoverImageUrl(
+        "https://pbs.twimg.com/profile_images/abc/x_normal.jpg",
+        undefined,
+      ),
+    ).toBe("");
+  });
+
+  it("drops cover when it matches the author avatar ignoring size suffix", () => {
+    expect(
+      resolveArticleCoverImageUrl(
+        "https://pbs.twimg.com/profile_images/abc/x_bigger.jpg",
+        "https://pbs.twimg.com/profile_images/abc/x_normal.jpg",
+      ),
+    ).toBe("");
+  });
+
+  it("keeps cover when it is a distinct image", () => {
+    expect(
+      resolveArticleCoverImageUrl(
+        "https://example.com/cover.jpg",
+        "https://pbs.twimg.com/profile_images/abc/x.jpg",
+      ),
+    ).toBe("https://example.com/cover.jpg");
+  });
+});
+
+describe("splitPlainTextByHeadings", () => {
+  it("returns a single chunk with no heading when headings is empty", () => {
+    const chunks = splitPlainTextByHeadings("Line a\nLine b", []);
+    expect(chunks).toEqual([{ heading: undefined, text: "Line a\nLine b" }]);
+  });
+
+  it("splits body text into chunks keyed by heading index", () => {
+    const plain = "Intro one\nIntro two\nSection A\nBody of A\nSection B\nBody of B";
+    const chunks = splitPlainTextByHeadings(plain, [
+      { index: 2, text: "Section A" },
+      { index: 4, text: "Section B" },
+    ]);
+    expect(chunks).toEqual([
+      { heading: undefined, text: "Intro one\nIntro two" },
+      { heading: "Section A", text: "Body of A" },
+      { heading: "Section B", text: "Body of B" },
+    ]);
+  });
+});
+
+describe("escapeMarkdownPlain", () => {
+  it("escapes backslashes, backticks, emphasis, and brackets", () => {
+    expect(escapeMarkdownPlain("a\\b`c*d_e[f]g")).toBe(
+      "a\\\\b\\`c\\*d\\_e\\[f\\]g",
+    );
+  });
+
+  it("does not touch ordinary characters", () => {
+    expect(escapeMarkdownPlain("hello world")).toBe("hello world");
+  });
+});
+
+describe("wrapInlineCode", () => {
+  it("wraps in single backticks when safe", () => {
+    expect(wrapInlineCode("x = 1")).toBe("`x = 1`");
+  });
+
+  it("escalates fence length when content contains backticks", () => {
+    expect(wrapInlineCode("a `b` c")).toBe("`` a `b` c ``");
+  });
+
+  it("keeps escalating until the fence does not appear inside", () => {
+    expect(wrapInlineCode("x `` y")).toBe("``` x `` y ```");
+  });
+});
+
+describe("wrapItalic", () => {
+  it("uses asterisks by default", () => {
+    expect(wrapItalic("hi")).toBe("*hi*");
+  });
+
+  it("switches to underscores when content already contains *", () => {
+    expect(wrapItalic("a*b")).toBe("_a*b_");
+  });
+
+  it("switches to asterisks when content already contains _", () => {
+    expect(wrapItalic("a_b")).toBe("*a_b*");
+  });
+
+  it("falls back to <em> when both delimiters are present", () => {
+    expect(wrapItalic("a*b_c")).toBe("<em>a*b_c</em>");
+  });
+});
+
+describe("renderBlockInlineMarkdown", () => {
+  it("applies bold, italic, and inline code", () => {
+    const md = renderBlockInlineMarkdown(
+      {
+        type: "unstyled",
+        text: "bold italic code",
+        inlineStyleRanges: [
+          { offset: 0, length: 4, style: "BOLD" },
+          { offset: 5, length: 6, style: "ITALIC" },
+          { offset: 12, length: 4, style: "CODE" },
+        ],
+        entityRanges: [],
+        depth: 0,
+      },
+      {},
+    );
+    expect(md).toBe("**bold** *italic* `code`");
+  });
+
+  it("wraps a LINK entity around the styled segment", () => {
+    const entityMap: Record<string, ArticleContentEntity> = {
+      "0": { type: "LINK", data: { url: "https://example.com" } },
+    };
+    const md = renderBlockInlineMarkdown(
+      {
+        type: "unstyled",
+        text: "Click here",
+        inlineStyleRanges: [{ offset: 0, length: 5, style: "BOLD" }],
+        entityRanges: [{ offset: 0, length: 5, key: 0 }],
+        depth: 0,
+      },
+      entityMap,
+    );
+    expect(md).toBe("[**Click**](https://example.com) here");
+  });
+});
+
+describe("buildSyntheticExportPlainText (same-author thread)", () => {
+  const minimal: Bookmark = {
+    id: "1",
+    tweetId: "1",
+    text: "Focal post",
+    createdAt: 0,
+    sortIndex: "0",
+    bookmarked: true,
+    author: { name: "A", screenName: "ankit", profileImageUrl: "", verified: false },
+    metrics: { likes: 0, retweets: 0, replies: 0, views: 0, bookmarks: 0 },
+    media: [],
+    urls: [],
+    isThread: true,
+    hasImage: false,
+    hasVideo: false,
+    hasLink: false,
+    quotedTweet: null,
+  };
+
+  it("uses --- separators and no per-entry attribution for same-author threads", () => {
+    const thread: ThreadTweet[] = [
+      {
+        tweetId: "1",
+        text: "Focal post",
+        createdAt: 1,
+        author: minimal.author,
+        media: [],
+        urls: [],
+      },
+      {
+        tweetId: "2",
+        text: "Second tweet",
+        createdAt: 2,
+        author: minimal.author,
+        media: [],
+        urls: [],
+      },
+    ];
+    const plain = buildSyntheticExportPlainText(minimal, thread, true);
+    expect(plain).toContain("Focal post\n\n---\n\nSecond tweet");
+    expect(plain).not.toContain("@ankit");
+    expect(plain).not.toContain("────────");
+  });
+
+  it("treats author handles as case-insensitive when dropping attribution", () => {
+    const thread: ThreadTweet[] = [
+      {
+        tweetId: "2",
+        text: "Reply",
+        createdAt: 2,
+        author: { ...minimal.author, screenName: "ANKIT" },
+        media: [],
+        urls: [],
+      },
+    ];
+    const plain = buildSyntheticExportPlainText(minimal, thread, true);
+    expect(plain).not.toContain("@ANKIT");
+    expect(plain).toContain("Reply");
+  });
+
+  it("keeps attribution when a different author appears in the thread", () => {
+    const thread: ThreadTweet[] = [
+      {
+        tweetId: "2",
+        text: "Other reply",
+        createdAt: 2,
+        author: { ...minimal.author, screenName: "someoneelse", name: "Other" },
+        media: [],
+        urls: [],
+      },
+    ];
+    const plain = buildSyntheticExportPlainText(minimal, thread, true);
+    expect(plain).toContain("@someoneelse");
+    expect(plain).toContain("Other reply");
+  });
+});
+
+describe("articleToMarkdown edge cases", () => {
+  it("returns an empty string when there is nothing to render", () => {
+    expect(articleToMarkdown({ plainText: "" })).toBe("");
+  });
+
+  it("quotes YAML scalar values with unsafe characters", () => {
+    const md = articleToMarkdown(
+      { plainText: "Body" },
+      {
+        metadata: {
+          postUrl: "https://x.com/u/status/1",
+          authorName: "Name [bracketed]",
+          authorHandle: "handle",
+          exportedAtLabel: "2026-04-16, 11:30",
+        },
+      },
+    );
+    expect(md).toContain('author: "Name [bracketed] (@handle)"');
+    expect(md).toContain('exported: "2026-04-16, 11:30"');
   });
 });

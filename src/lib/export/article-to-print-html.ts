@@ -7,9 +7,23 @@ import {
   paragraphHtml,
   paragraphizeText,
   renderBlockInlineContent,
+  sanitizeUrl,
 } from "../../components/reader/utils";
 import { resolveArticleCoverImageUrl } from "./article-cover";
 import { slugifyArticleBasename } from "./article-filename";
+import { splitPlainTextByHeadings } from "./article-heading-chunks";
+
+function safeHref(url: string | undefined): string {
+  if (!url) return "";
+  const clean = sanitizeUrl(url);
+  return clean ? escapeHtml(clean) : "";
+}
+
+function safeImgSrc(url: string | undefined): string {
+  if (!url) return "";
+  const clean = sanitizeUrl(url);
+  return clean ? escapeHtml(clean) : "";
+}
 
 function stripMarkdownEntityCode(markdown: string): string {
   return markdown
@@ -60,22 +74,24 @@ function blocksToArticleHtml(
           const imageUrl = entity.data?.imageUrl;
           const videoUrl = entity.data?.videoUrl;
           if (typeof videoUrl === "string" && videoUrl) {
-            const imgPart =
-              typeof imageUrl === "string" && imageUrl
-                ? `<img src="${escapeHtml(imageUrl)}" alt="" />`
-                : "";
-            const linkPart = postUrl
-              ? `<p class="print-video-link"><a href="${escapeHtml(postUrl)}">Watch on X</a></p>`
+            const safeImg = safeImgSrc(
+              typeof imageUrl === "string" ? imageUrl : undefined,
+            );
+            const imgPart = safeImg ? `<img src="${safeImg}" alt="" />` : "";
+            const safePostHref = safeHref(postUrl);
+            const linkPart = safePostHref
+              ? `<p class="print-video-link"><a href="${safePostHref}">Watch on X</a></p>`
               : `<p class="print-video-link"><em>Video</em> — use the source link above.</p>`;
             out.push(
               `<figure class="print-video">${imgPart}${linkPart}</figure>`,
             );
             break;
           }
-          if (typeof imageUrl === "string" && imageUrl) {
-            out.push(
-              `<figure><img src="${escapeHtml(imageUrl)}" alt="" /></figure>`,
-            );
+          const safeImg = safeImgSrc(
+            typeof imageUrl === "string" ? imageUrl : undefined,
+          );
+          if (safeImg) {
+            out.push(`<figure><img src="${safeImg}" alt="" /></figure>`);
             break;
           }
         }
@@ -155,45 +171,9 @@ function buildHeadingChunksHtml(
   headings: { index: number; text: string }[],
   articleTitle: string | undefined,
 ): string {
-  const lines = plainText
-    .split(/\n/)
-    .map((l) => l.trim())
-    .filter(Boolean);
-  const headingLineIndices = new Set(headings.map((h) => h.index));
-
-  const chunks: { heading?: string; headingIdx: number; text: string }[] = [];
-  let currentLines: string[] = [];
-  let currentHeading: string | undefined;
-  let currentHeadingIdx = -1;
-
-  for (let i = 0; i < lines.length; i++) {
-    if (headingLineIndices.has(i)) {
-      if (currentLines.length > 0 || currentHeading !== undefined) {
-        chunks.push({
-          heading: currentHeading,
-          headingIdx: currentHeadingIdx,
-          text: currentLines.join("\n"),
-        });
-      }
-      const hIdx = headings.findIndex((h) => h.index === i);
-      currentHeading = headings[hIdx].text;
-      currentHeadingIdx = hIdx;
-      currentLines = [];
-    } else {
-      currentLines.push(lines[i]);
-    }
-  }
-  if (currentLines.length > 0 || currentHeading !== undefined) {
-    chunks.push({
-      heading: currentHeading,
-      headingIdx: currentHeadingIdx,
-      text: currentLines.join("\n"),
-    });
-  }
-
+  const chunks = splitPlainTextByHeadings(plainText, headings);
   const parts: string[] = [];
-  for (let i = 0; i < chunks.length; i++) {
-    const chunk = chunks[i];
+  for (const chunk of chunks) {
     if (
       chunk.heading &&
       !headingBlockMatchesArticleTitle(chunk.heading, articleTitle)
@@ -398,21 +378,29 @@ export function articleToPrintDocumentHtml(
 
   const metaParts: string[] = [];
   if (options?.metadata?.postUrl) {
-    metaParts.push(
-      `Source: <a href="${escapeHtml(options.metadata.postUrl)}">${escapeHtml(options.metadata.postUrl)}</a>`,
-    );
+    const safePost = safeHref(options.metadata.postUrl);
+    if (safePost) {
+      metaParts.push(
+        `Source: <a href="${safePost}">${escapeHtml(options.metadata.postUrl)}</a>`,
+      );
+    }
   }
   if (options?.metadata?.authorName?.trim() || options?.metadata?.authorHandle?.trim()) {
     const name = options.metadata.authorName?.trim() ?? "";
     const handle = options.metadata.authorHandle?.replace(/^@/, "").trim() ?? "";
+    const profileHref = handle ? safeHref(`https://x.com/${handle}`) : "";
+    const handleLink =
+      handle && profileHref
+        ? `<a href="${profileHref}">@${escapeHtml(handle)}</a>`
+        : handle
+          ? `@${escapeHtml(handle)}`
+          : "";
     const author =
-      name && handle
-        ? `${escapeHtml(name)} (<a href="https://x.com/${escapeHtml(handle)}">@${escapeHtml(handle)}</a>)`
+      name && handleLink
+        ? `${escapeHtml(name)} (${handleLink})`
         : name
           ? escapeHtml(name)
-          : handle
-            ? `<a href="https://x.com/${escapeHtml(handle)}">@${escapeHtml(handle)}</a>`
-            : "";
+          : handleLink;
     if (author) {
       metaParts.push(`Author: ${author}`);
     }
@@ -429,8 +417,9 @@ export function articleToPrintDocumentHtml(
     ? `<h1>${escapeHtml(article.title.trim())}</h1>`
     : "";
 
-  const coverHtml = coverImageUrl
-    ? `<figure class="print-cover"><img src="${escapeHtml(coverImageUrl)}" alt="" /></figure>`
+  const safeCover = safeImgSrc(coverImageUrl);
+  const coverHtml = safeCover
+    ? `<figure class="print-cover"><img src="${safeCover}" alt="" /></figure>`
     : "";
 
   let bodyHtml = "";

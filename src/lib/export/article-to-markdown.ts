@@ -7,6 +7,7 @@ import {
 import { resolveArticleCoverImageUrl } from "./article-cover";
 import { renderBlockInlineMarkdown } from "./block-inline-markdown";
 import { richTextArticleMarkdown } from "./article-plain-markdown";
+import { splitPlainTextByHeadings } from "./article-heading-chunks";
 
 export interface ArticleMarkdownMetadata {
   postUrl?: string;
@@ -187,45 +188,9 @@ function buildHeadingChunksMarkdown(
   headings: { index: number; text: string }[],
   articleTitle: string | undefined,
 ): string {
-  const lines = plainText
-    .split(/\n/)
-    .map((l) => l.trim())
-    .filter(Boolean);
-  const headingLineIndices = new Set(headings.map((h) => h.index));
-
-  const chunks: { heading?: string; headingIdx: number; text: string }[] = [];
-  let currentLines: string[] = [];
-  let currentHeading: string | undefined;
-  let currentHeadingIdx = -1;
-
-  for (let i = 0; i < lines.length; i++) {
-    if (headingLineIndices.has(i)) {
-      if (currentLines.length > 0 || currentHeading !== undefined) {
-        chunks.push({
-          heading: currentHeading,
-          headingIdx: currentHeadingIdx,
-          text: currentLines.join("\n"),
-        });
-      }
-      const hIdx = headings.findIndex((h) => h.index === i);
-      currentHeading = headings[hIdx].text;
-      currentHeadingIdx = hIdx;
-      currentLines = [];
-    } else {
-      currentLines.push(lines[i]);
-    }
-  }
-  if (currentLines.length > 0 || currentHeading !== undefined) {
-    chunks.push({
-      heading: currentHeading,
-      headingIdx: currentHeadingIdx,
-      text: currentLines.join("\n"),
-    });
-  }
-
+  const chunks = splitPlainTextByHeadings(plainText, headings);
   const parts: string[] = [];
-  for (let i = 0; i < chunks.length; i++) {
-    const chunk = chunks[i];
+  for (const chunk of chunks) {
     if (
       chunk.heading &&
       !headingBlockMatchesArticleTitle(chunk.heading, articleTitle)
