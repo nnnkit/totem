@@ -35,6 +35,8 @@ function ensureStyles() {
       border-radius: 0;
       background: transparent;
       cursor: pointer;
+      isolation: isolate;
+      z-index: 1;
       transition: opacity 150ms ease, transform 150ms ease;
     }
 
@@ -60,7 +62,7 @@ function ensureStyles() {
     .totem-open-in-totem::after {
       content: attr(data-tooltip);
       position: absolute;
-      inset-block-start: calc(100% + 4px);
+      inset-block-end: calc(100% + 4px);
       inset-inline-start: 50%;
       translate: -50% 0;
       padding: 4px 8px;
@@ -74,6 +76,7 @@ function ensureStyles() {
       white-space: nowrap;
       pointer-events: none;
       opacity: 0;
+      z-index: 2147483647;
       transition: opacity 150ms ease;
     }
 
