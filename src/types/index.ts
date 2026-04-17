@@ -121,6 +121,9 @@ export type TweetKind =
   | "thread"
   | "article";
 
+export type BookmarkIntent = "read_soon" | "reference" | "act_on" | "unsorted";
+export type IntentSource = "structural" | "keyword" | "manual";
+
 export interface QuotedTweet {
   tweetId: string;
   text: string;
@@ -171,6 +174,13 @@ export interface Bookmark {
   tweetDisplayType?: string;
   inReplyToTweetId?: string;
   inReplyToScreenName?: string;
+  intent?: BookmarkIntent;
+  intentSource?: IntentSource;
+  intentConfidence?: number;
+  intentAssignedAt?: string;
+  skipCount?: number;
+  cooldownUntil?: string;
+  topicIds?: string[];
 }
 
 export interface TweetDetailCache {

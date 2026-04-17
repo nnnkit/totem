@@ -10,7 +10,8 @@ import {
   MagnifyingGlassIcon,
   PushPinIcon,
 } from "@phosphor-icons/react";
-import type { Bookmark } from "../types";
+import type { Bookmark, BookmarkIntent } from "../types";
+import { setIntent } from "../db/intent-repo";
 import type { ContinueReadingItem } from "../hooks/useContinueReading";
 import { useBookmarkSearch } from "../hooks/useBookmarkSearch";
 import { pickTitle, inferKindBadge } from "../lib/bookmark-utils";
@@ -43,6 +44,7 @@ import {
   useSyncButtonState,
   type SyncButtonState,
 } from "../stores/selectors";
+import { runtimeStore } from "../stores/runtime-store";
 import { Badge } from "./ui/Badge";
 import { Button } from "./ui/Button";
 import { Input } from "./ui/Input";
@@ -97,6 +99,26 @@ function getBookmarkTimestamp(bookmark: Bookmark): number | null {
     return null;
   }
 }
+
+const INTENT_BORDER_COLORS: Record<BookmarkIntent, string> = {
+  read_soon: "bg-accent",
+  reference: "bg-muted/30",
+  act_on: "bg-accent-700 dark:bg-accent-400",
+  unsorted: "bg-transparent",
+};
+
+const INTENT_LABELS: { intent: BookmarkIntent; label: string }[] = [
+  { intent: "read_soon", label: "Read soon" },
+  { intent: "reference", label: "Reference" },
+  { intent: "act_on", label: "Act on" },
+];
+
+const INTENT_DOT_STYLES: Record<BookmarkIntent, string> = {
+  read_soon: "bg-accent",
+  reference: "bg-muted/50",
+  act_on: "bg-accent-700 dark:bg-accent-400",
+  unsorted: "",
+};
 
 export function BookmarksList({
   continueReadingItems,
@@ -537,6 +559,23 @@ export function BookmarksList({
     }
   }, []);
 
+  const handleSetIntent = useCallback(
+    (bookmarkId: string, intent: BookmarkIntent, event: React.MouseEvent) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const now = new Date().toISOString();
+      runtimeStore.setState((state) => ({
+        bookmarks: state.bookmarks.map((b) =>
+          b.id === bookmarkId
+            ? { ...b, intent, intentSource: "manual" as const, intentAssignedAt: now }
+            : b,
+        ),
+      }));
+      void setIntent(bookmarkId, { intent, intentSource: "manual" });
+    },
+    [],
+  );
+
   const hasItems = visibleBookmarks.length > 0;
 
   const renderEmptyState = () => {
@@ -854,13 +893,19 @@ export function BookmarksList({
                     <a
                       href={getBookmarkHref(bookmark)}
                       className={cn(
-                        "group/row flex w-full items-center gap-3 py-3 px-3 text-left no-underline transition-colors duration-150",
+                        "group/row relative flex w-full items-center gap-3 py-3 px-3 text-left no-underline transition-colors duration-150",
                         virtualItem.index % 2 === 0
                           ? "bg-surface-alt hover:bg-surface-hover"
                           : "hover:bg-surface-hover",
                         isFocused && "ring-1 ring-accent/20",
                       )}
                     >
+                      <div
+                        className={cn(
+                          "absolute left-0 top-1/2 h-8 w-[3px] -translate-y-1/2 rounded-r-sm",
+                          INTENT_BORDER_COLORS[bookmark.intent ?? "unsorted"],
+                        )}
+                      />
                       <img
                         src={bookmark.author.profileImageUrl}
                         alt={`@${bookmark.author.screenName}`}
@@ -934,6 +979,29 @@ export function BookmarksList({
                             </span>
                           )}
                         </p>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover/row:opacity-100">
+                        {INTENT_LABELS.map(({ intent, label }) => (
+                          <button
+                            key={intent}
+                            type="button"
+                            onClick={(e) => handleSetIntent(bookmark.id, intent, e)}
+                            className={cn(
+                              "flex size-6 items-center justify-center rounded-full transition-[transform,opacity] hover:scale-125",
+                              bookmark.intent === intent ? "opacity-100" : "opacity-60 hover:opacity-100",
+                            )}
+                            aria-label={`File as ${label}`}
+                            title={label}
+                          >
+                            <span
+                              className={cn(
+                                "block size-2 rounded-full",
+                                INTENT_DOT_STYLES[intent],
+                                bookmark.intent === intent && "ring-1 ring-foreground/20",
+                              )}
+                            />
+                          </button>
+                        ))}
                       </div>
                       {activeTab === "unread" && (
                         <button

@@ -86,7 +86,7 @@ export function setActiveAccountId(accountId: string | null | undefined): string
 
 function createDb(dbName: string) {
   return openDB<XBookmarksDbSchema>(dbName, DB_VERSION, {
-    upgrade(db, _oldVersion, _newVersion, tx) {
+    upgrade(db, oldVersion, _newVersion, tx) {
       const bookmarksStore = db.objectStoreNames.contains(STORE_NAME)
         ? tx.objectStore(STORE_NAME)
         : db.createObjectStore(STORE_NAME, { keyPath: "id" });
@@ -138,6 +138,18 @@ function createDb(dbName: string) {
       if (!highlightsStore.indexNames.contains("createdAt")) {
         highlightsStore.createIndex("createdAt", "createdAt", {
           unique: false,
+        });
+      }
+
+      if (oldVersion < 7) {
+        const store = tx.objectStore(STORE_NAME);
+        store.openCursor().then(function migrate(cursor): void {
+          if (!cursor) return;
+          const value = cursor.value;
+          if (!value.intent) {
+            cursor.update({ ...value, intent: "unsorted" });
+          }
+          void cursor.continue().then(migrate);
         });
       }
     },
@@ -309,6 +321,9 @@ export async function getAllBookmarks(): Promise<Bookmark[]> {
     sanitizeBookmark(row);
     if (typeof row.bookmarked !== "boolean") {
       row.bookmarked = true;
+    }
+    if (!row.intent) {
+      row.intent = "unsorted";
     }
   }
   return rows;
