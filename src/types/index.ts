@@ -213,6 +213,14 @@ export interface ReadLogEntry {
   markedReadAt: number;
 }
 
+export interface DailyQueue {
+  date: string;
+  bookmarkIds: string[];
+  completedIds: string[];
+  skippedIds: string[];
+  createdAt: number;
+}
+
 export interface Highlight {
   id: string;
   tweetId: string;
@@ -254,6 +262,7 @@ export interface UserSettings {
   backgroundMode: BackgroundMode;
   searchEngine: SearchEngineId;
   recommendationSource: RecommendationSource;
+  dailyQueueSize: number;
 }
 
 export interface TotemSeedPayload {

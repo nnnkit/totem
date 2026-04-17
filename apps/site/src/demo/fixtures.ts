@@ -20,6 +20,7 @@ export const DEFAULT_DEMO_SETTINGS: UserSettings = {
   backgroundMode: "images",
   searchEngine: "google",
   recommendationSource: "random",
+  dailyQueueSize: 5,
 };
 
 interface BookmarkSeed {

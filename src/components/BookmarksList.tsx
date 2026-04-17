@@ -5,20 +5,27 @@ import { useHotkeys } from "react-hotkeys-hook";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import {
   ArrowLeftIcon,
+  CaretDownIcon,
+  CaretRightIcon,
   CircleNotchIcon,
   DownloadSimpleIcon,
-  List,
+  FireSimpleIcon,
+  ListIcon,
   MagnifyingGlassIcon,
-  SquaresFour,
+  QueueIcon,
+  SquaresFourIcon,
 } from "@phosphor-icons/react";
 import type { Bookmark, BookmarkIntent } from "../types";
 import { setIntent } from "../db/intent-repo";
 import type { ContinueReadingItem } from "../hooks/useContinueReading";
+import { useDailyQueue } from "../hooks/useDailyQueue";
+import { useSettings } from "../hooks/useSettings";
+import { useStreak } from "../hooks/useStreak";
 import { useBookmarkSearch } from "../hooks/useBookmarkSearch";
-import { pickTitle, inferKindBadge } from "../lib/bookmark-utils";
+import { pickTitle, inferKindBadge, estimateReadingMinutes } from "../lib/bookmark-utils";
 import { cn } from "../lib/cn";
 import type { ReadingTab } from "../lib/reading-list";
-import { sortIndexToTimestamp } from "../lib/time";
+import { sortIndexToTimestamp, timeAgo } from "../lib/time";
 import { getAllBookmarks } from "../db";
 import { articleToMarkdown } from "../lib/export/article-to-markdown";
 import { downloadMarkdownFile } from "../lib/export/article-download";
@@ -74,7 +81,7 @@ const INTENT_DOT_STYLES: Record<BookmarkIntent, string> = {
 
 type IntentFilter = BookmarkIntent | "all";
 type FormatFilter = "all" | "threads" | "articles";
-type ViewMode = "browse" | "list";
+type ViewMode = "queue" | "browse" | "list";
 
 function getBookmarkTimestamp(bookmark: Bookmark): number | null {
   try {
@@ -95,6 +102,267 @@ const INTENT_PILL_CONFIG: { value: IntentFilter; label: string; countKey?: Bookm
   { value: "act_on", label: "act on", countKey: "act_on" },
 ];
 
+interface QueueViewProps {
+  queue: import("../types").DailyQueue | null;
+  queueBookmarks: Bookmark[];
+  loading: boolean;
+  streak: import("../lib/streak-tracker").StreakResult;
+  intentCounts: Record<BookmarkIntent, number>;
+  collapsedSections: Record<string, boolean>;
+  toggleSection: (section: string) => void;
+  getBookmarkHref: (bookmark: Bookmark) => string;
+  handleSetIntent: (bookmarkId: string, intent: BookmarkIntent, event: React.MouseEvent) => void;
+}
+
+function QueueRow({
+  bookmark,
+  getBookmarkHref,
+  handleSetIntent,
+}: {
+  bookmark: Bookmark;
+  getBookmarkHref: (bookmark: Bookmark) => string;
+  handleSetIntent: (bookmarkId: string, intent: BookmarkIntent, event: React.MouseEvent) => void;
+}) {
+  const age = timeAgo(bookmark.createdAt);
+  const minutes = estimateReadingMinutes(bookmark);
+  const kind = inferKindBadge(bookmark);
+
+  return (
+    <a
+      href={getBookmarkHref(bookmark)}
+      className="group/row relative flex w-full items-center gap-3 py-3 px-3 text-left no-underline transition-colors duration-150 hover:bg-surface-hover"
+    >
+      <div
+        className={cn(
+          "absolute left-0 top-1/2 h-8 w-[3px] -translate-y-1/2 rounded-r-sm",
+          INTENT_BORDER_COLORS[bookmark.intent ?? "unsorted"],
+        )}
+      />
+      <img
+        src={bookmark.author.profileImageUrl}
+        alt={`@${bookmark.author.screenName}`}
+        className="size-9 shrink-0 rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.06)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]"
+      />
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-medium leading-snug text-foreground">
+          {pickTitle(bookmark)}
+        </p>
+        <p className="mt-1 truncate text-xs text-muted/50">
+          <span>@{bookmark.author.screenName}</span>
+          <span className="text-muted/40"> &middot; {kind}</span>
+          <span className="text-muted/40"> &middot; {minutes} min</span>
+        </p>
+      </div>
+      <span className="shrink-0 text-2xs tabular-nums text-muted/40">
+        {age}
+      </span>
+      <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover/row:opacity-100">
+        {INTENT_LABELS.map(({ intent, label }) => (
+          <button
+            key={intent}
+            type="button"
+            onClick={(e) => handleSetIntent(bookmark.id, intent, e)}
+            className={cn(
+              "flex size-6 items-center justify-center rounded-full transition-[transform,opacity] hover:scale-125",
+              bookmark.intent === intent
+                ? "opacity-100"
+                : "opacity-60 hover:opacity-100",
+            )}
+            aria-label={`File as ${label}`}
+            title={label}
+          >
+            <span
+              className={cn(
+                "block size-2 rounded-full",
+                INTENT_DOT_STYLES[intent],
+                bookmark.intent === intent && "ring-1 ring-foreground/20",
+              )}
+            />
+          </button>
+        ))}
+      </div>
+    </a>
+  );
+}
+
+function QueueSection({
+  title,
+  dotClass,
+  count,
+  collapsed,
+  onToggle,
+  children,
+}: {
+  title: string;
+  dotClass: string;
+  count: number;
+  collapsed: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="mb-4">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="mb-1 flex w-full items-center gap-2 py-1.5 text-left"
+      >
+        {collapsed ? (
+          <CaretRightIcon className="size-3 text-muted/50" />
+        ) : (
+          <CaretDownIcon className="size-3 text-muted/50" />
+        )}
+        <span className={cn("size-2 rounded-full", dotClass)} />
+        <span className="text-2xs font-medium uppercase tracking-extra-wide text-muted/40">
+          {title}
+        </span>
+        <span className="text-2xs tabular-nums text-muted/30">{count}</span>
+      </button>
+      {!collapsed && (
+        <div className="divide-y divide-border/30 overflow-hidden rounded-lg border border-border/50">
+          {children}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function QueueView({
+  queue,
+  queueBookmarks,
+  loading,
+  streak,
+  intentCounts,
+  collapsedSections,
+  toggleSection,
+  getBookmarkHref,
+  handleSetIntent,
+}: QueueViewProps) {
+  const completedCount = queue?.completedIds.length ?? 0;
+  const totalCount = queue?.bookmarkIds.length ?? 0;
+  const remaining = totalCount - completedCount;
+
+  const waitingForYou = queueBookmarks.filter(
+    (b) => (b.intent ?? "unsorted") === "read_soon",
+  );
+  const actOnItems = queueBookmarks.filter(
+    (b) => (b.intent ?? "unsorted") === "act_on",
+  );
+  const referenceCount = intentCounts.reference;
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <CircleNotchIcon className="size-5 animate-spin text-muted/40" />
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <div className="flex items-center gap-2">
+            <h2 className="text-2xs font-medium uppercase tracking-extra-wide text-muted/40">
+              Today
+            </h2>
+            {totalCount > 0 && (
+              <span className="text-2xs tabular-nums text-muted/30">
+                {completedCount} / {totalCount}
+              </span>
+            )}
+          </div>
+          {remaining > 0 && (
+            <p className="mt-0.5 text-xs text-muted/50">
+              {remaining} more to finish
+            </p>
+          )}
+        </div>
+        <div
+          className={cn(
+            "flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium",
+            streak.earnedToday
+              ? "bg-accent-surface text-accent"
+              : "bg-surface-alt text-muted/60",
+          )}
+        >
+          <FireSimpleIcon
+            weight={streak.earnedToday ? "fill" : "regular"}
+            className="size-3.5"
+          />
+          <span className="tabular-nums">{streak.current} days</span>
+          {streak.earnedToday && (
+            <span className="text-accent/70">+1 today</span>
+          )}
+        </div>
+      </div>
+
+      {waitingForYou.length > 0 && (
+        <QueueSection
+          title="waiting for you"
+          dotClass="bg-accent"
+          count={waitingForYou.length}
+          collapsed={collapsedSections["waiting"] ?? false}
+          onToggle={() => toggleSection("waiting")}
+        >
+          {waitingForYou.map((bookmark) => (
+            <div key={bookmark.tweetId}>
+              <QueueRow
+                bookmark={bookmark}
+                getBookmarkHref={getBookmarkHref}
+                handleSetIntent={handleSetIntent}
+              />
+            </div>
+          ))}
+        </QueueSection>
+      )}
+
+      {actOnItems.length > 0 && (
+        <QueueSection
+          title="act on"
+          dotClass="bg-accent-700 dark:bg-accent-400"
+          count={actOnItems.length}
+          collapsed={collapsedSections["act_on"] ?? false}
+          onToggle={() => toggleSection("act_on")}
+        >
+          {actOnItems.map((bookmark) => (
+            <div key={bookmark.tweetId}>
+              <QueueRow
+                bookmark={bookmark}
+                getBookmarkHref={getBookmarkHref}
+                handleSetIntent={handleSetIntent}
+              />
+            </div>
+          ))}
+        </QueueSection>
+      )}
+
+      <QueueSection
+        title="reference library"
+        dotClass="bg-muted/50"
+        count={referenceCount}
+        collapsed={collapsedSections["reference"] ?? true}
+        onToggle={() => toggleSection("reference")}
+      >
+        <div className="px-3 py-3 text-xs text-muted/50">
+          {referenceCount} items filed as reference
+        </div>
+      </QueueSection>
+
+      {totalCount === 0 && (
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <p className="text-balance text-lg text-muted">
+            No queue for today
+          </p>
+          <p className="mt-2 text-sm text-muted/60">
+            Items filed as Read soon or Act on will appear here
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function BookmarksList({
   continueReadingItems,
   unreadBookmarks,
@@ -108,8 +376,10 @@ export function BookmarksList({
   const runtimeOfflineMode = useIsOffline();
   const actions = useRuntimeActions();
   const offlineMode = offlineModeOverride ?? runtimeOfflineMode;
+  const { settings } = useSettings();
+  const streak = useStreak();
 
-  const [viewMode, setViewMode] = useState<ViewMode>("browse");
+  const [viewMode, setViewMode] = useState<ViewMode>("queue");
   const [intentFilter, setIntentFilter] = useState<IntentFilter>("all");
   const [formatFilter, setFormatFilter] = useState<FormatFilter>("all");
   const [focusedIndex, setFocusedIndex] = useState(-1);
@@ -136,6 +406,17 @@ export function BookmarksList({
     }
     return merged;
   }, [continueReadingItems, unreadBookmarks]);
+
+  const { queue, queueBookmarks, loading: queueLoading } = useDailyQueue(
+    allBookmarks,
+    settings.dailyQueueSize,
+  );
+
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
+
+  const toggleSection = useCallback((section: string) => {
+    setCollapsedSections((prev) => ({ ...prev, [section]: !prev[section] }));
+  }, []);
 
   const { query, setQuery, results, isSearching } =
     useBookmarkSearch(allBookmarks);
@@ -468,6 +749,17 @@ export function BookmarksList({
               className="flex gap-0.5 rounded-md border border-border/70 p-0.5"
             >
               <Toggle
+                value="queue"
+                className={cn(
+                  "flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-medium transition-colors",
+                  "text-muted hover:text-foreground",
+                  "data-[pressed]:bg-surface-alt data-[pressed]:text-foreground",
+                )}
+              >
+                <QueueIcon className="size-3.5" />
+                Queue
+              </Toggle>
+              <Toggle
                 value="browse"
                 className={cn(
                   "flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-medium transition-colors",
@@ -475,7 +767,7 @@ export function BookmarksList({
                   "data-[pressed]:bg-surface-alt data-[pressed]:text-foreground",
                 )}
               >
-                <SquaresFour className="size-3.5" />
+                <SquaresFourIcon className="size-3.5" />
                 Browse
               </Toggle>
               <Toggle
@@ -486,7 +778,7 @@ export function BookmarksList({
                   "data-[pressed]:bg-surface-alt data-[pressed]:text-foreground",
                 )}
               >
-                <List className="size-3.5" />
+                <ListIcon className="size-3.5" />
                 List
               </Toggle>
             </ToggleGroup>
@@ -609,7 +901,19 @@ export function BookmarksList({
 
       <div ref={scrollContainerRef} className="flex-1 overflow-y-auto">
         <main className={cn(containerWidthClass, "mx-auto px-6 pb-16 pt-4")}>
-          {viewMode === "browse" ? (
+          {viewMode === "queue" ? (
+            <QueueView
+              queue={queue}
+              queueBookmarks={queueBookmarks}
+              loading={queueLoading}
+              streak={streak}
+              intentCounts={intentCounts}
+              collapsedSections={collapsedSections}
+              toggleSection={toggleSection}
+              getBookmarkHref={getBookmarkHref}
+              handleSetIntent={handleSetIntent}
+            />
+          ) : viewMode === "browse" ? (
             <>
               {!isFiltering && recentlySaved.length > 0 && (
                 <section className="mb-6">

@@ -103,6 +103,10 @@ function mergeSettings(raw?: Partial<UserSettings>): UserSettings {
       raw.recommendationSource === "random" || raw.recommendationSource === "pinned"
         ? raw.recommendationSource
         : DEFAULT_DEMO_SETTINGS.recommendationSource,
+    dailyQueueSize:
+      typeof raw.dailyQueueSize === "number" && raw.dailyQueueSize >= 3 && raw.dailyQueueSize <= 10
+        ? raw.dailyQueueSize
+        : DEFAULT_DEMO_SETTINGS.dailyQueueSize,
   };
 }
 

@@ -28,6 +28,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   backgroundMode: "images",
   searchEngine: "google",
   recommendationSource: "random",
+  dailyQueueSize: 5,
 };
 
 function normalizeSettings(value: unknown): UserSettings {
@@ -64,6 +65,12 @@ function normalizeSettings(value: unknown): UserSettings {
       VALID_RECOMMENDATION_SOURCES.includes(raw.recommendationSource as RecommendationSource)
         ? (raw.recommendationSource as RecommendationSource)
         : DEFAULT_SETTINGS.recommendationSource,
+    dailyQueueSize:
+      typeof raw.dailyQueueSize === "number" &&
+      raw.dailyQueueSize >= 3 &&
+      raw.dailyQueueSize <= 10
+        ? raw.dailyQueueSize
+        : DEFAULT_SETTINGS.dailyQueueSize,
   };
 }
 
