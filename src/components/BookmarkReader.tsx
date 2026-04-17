@@ -7,18 +7,21 @@ import {
   SunIcon,
   MoonIcon,
 } from "@phosphor-icons/react";
-import type { Bookmark, Highlight, SelectionRange, ThreadTweet } from "../types";
+import type { Bookmark, BookmarkIntent, Highlight, SelectionRange, ThreadTweet } from "../types";
 import { cn } from "../lib/cn";
 import {
   useReaderAvailabilityState,
   useRuntimeActions,
 } from "../stores/selectors";
+import { setIntent } from "../db/intent-repo";
+import { runtimeStore } from "../stores/runtime-store";
 
 import { resolveTweetKind } from "./reader/utils";
 import { TweetContent } from "./reader/TweetContent";
 import { SelectionToolbar } from "./reader/SelectionToolbar";
 import { HighlightPopover } from "./reader/HighlightPopover";
 import { NotePopover } from "./reader/NotePopover";
+import { IntentTray } from "./reader/IntentTray";
 import { useReadingProgress } from "../hooks/useReadingProgress";
 import { useTheme } from "../hooks/useTheme";
 import { useHighlights } from "../hooks/useHighlights";
@@ -137,6 +140,7 @@ export function BookmarkReader({
     });
 
   const [notePanelState, setNotePanelState] = useState<NotePanelState | null>(null);
+  const [showIntentTray, setShowIntentTray] = useState(false);
 
   useEffect(() => {
     const container = articleRef.current;
@@ -193,8 +197,24 @@ export function BookmarkReader({
     } else {
       onMarkAsRead?.(bookmark.tweetId);
       setReadOverride(true);
+      setShowIntentTray(true);
     }
   }, [effectiveMarkedRead, onMarkAsRead, onMarkAsUnread, bookmark.tweetId]);
+
+  const handleIntentSelect = useCallback(
+    (intent: BookmarkIntent) => {
+      const now = new Date().toISOString();
+      runtimeStore.setState((state) => ({
+        bookmarks: state.bookmarks.map((b) =>
+          b.id === bookmark.id
+            ? { ...b, intent, intentSource: "manual" as const, intentAssignedAt: now }
+            : b,
+        ),
+      }));
+      void setIntent(bookmark.id, { intent, intentSource: "manual" });
+    },
+    [bookmark.id],
+  );
 
   const displayBookmark = useMemo(() => {
     if (!resolvedBookmark) return bookmark;
@@ -214,6 +234,7 @@ export function BookmarkReader({
   );
 
   useHotkeys("escape", (event) => {
+    if (showIntentTray) return;
     const target = event.target;
     if (target instanceof HTMLElement && target.closest("input, textarea, [contenteditable]")) {
       return;
@@ -221,7 +242,7 @@ export function BookmarkReader({
     onBack();
   }, {
     preventDefault: true,
-  }, [onBack]);
+  }, [onBack, showIntentTray]);
 
   useHotkeys("j, ArrowRight", () => {
     if (!nextHref) return;
@@ -427,6 +448,13 @@ export function BookmarkReader({
             }
             setNotePanelState(null);
           }}
+        />
+      )}
+
+      {showIntentTray && (
+        <IntentTray
+          onSelect={handleIntentSelect}
+          onDismiss={() => setShowIntentTray(false)}
         />
       )}
     </div>
