@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import {
   ArrowsClockwiseIcon,
+  CaretDownIcon,
+  CheckCircleIcon,
   EnvelopeSimpleIcon,
   GearSixIcon,
   InfoIcon,
@@ -51,6 +53,7 @@ import {
 import { CLOCK_UPDATE_MS } from "../lib/constants";
 import { useStreak } from "../hooks/useStreak";
 import { useDailyQueue } from "../hooks/useDailyQueue";
+import { useDailyStats } from "../hooks/useDailyStats";
 import { useSettings } from "../hooks/useSettings";
 
 interface Props {
@@ -195,6 +198,12 @@ export function NewTabHome({
   }, [queue]);
 
   const hasActiveQueue = queueBookmarks.length > 0 && !queueLoading && remainingQueueIds.length > 0;
+  const queueDone = Boolean(
+    queue &&
+    queue.bookmarkIds.length > 0 &&
+    queue.completedIds.length >= queue.bookmarkIds.length,
+  );
+  const dailyStats = useDailyStats(bookmarks, queueDone);
 
   useEffect(() => {
     if (!queue || queueBookmarks.length === 0) return;
@@ -376,6 +385,48 @@ export function NewTabHome({
           </article>
         );
       case "bookmark_card": {
+        if (queueDone) {
+          const statItems = [
+            { value: dailyStats.readCount, label: "READ" },
+            { value: dailyStats.filedToActCount, label: "FILED TO ACT" },
+            ...(dailyStats.timeMinutes > 0
+              ? [{ value: `${dailyStats.timeMinutes}m`, label: "TIME" }]
+              : []),
+          ];
+          return (
+            <article
+              className={cn(cardBase, "animate-fade-in text-center")}
+            >
+              <div className="flex min-h-32 flex-col items-center justify-center gap-4 max-sm:min-h-28">
+                <span className="inline-flex size-12 items-center justify-center rounded-full bg-accent/10">
+                  <CheckCircleIcon weight="fill" className="size-7 text-accent" />
+                </span>
+                <div>
+                  <h2 className="font-serif text-xl font-medium text-home-fg-secondary">
+                    Done for today.
+                  </h2>
+                  <p className="mt-1 text-sm italic text-home-fg-muted">
+                    Come back tomorrow for the next three.
+                  </p>
+                </div>
+                {statItems.length > 0 && (
+                  <div className="flex items-center gap-4">
+                    {statItems.map((s) => (
+                      <div key={s.label} className="flex flex-col items-center">
+                        <span className="text-base font-semibold tabular-nums text-home-fg-secondary">
+                          {s.value}
+                        </span>
+                        <span className="text-xxs font-medium uppercase tracking-extra-wide text-home-fg-muted">
+                          {s.label}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </article>
+          );
+        }
         const cardItem = hasActiveQueue ? currentQueueItem : currentItem;
         if (!cardItem) return null;
         const intentBadge = cardItem.bookmark.intent
@@ -762,7 +813,7 @@ export function NewTabHome({
         <footer className="mx-auto w-full max-w-lg space-y-4 pb-6">
           {renderFooterCard()}
 
-          {hasActiveQueue && showCardButtons && queueBookmarks.length > 1 && (
+          {hasActiveQueue && showCardButtons && !queueDone && queueBookmarks.length > 1 && (
             <div className="flex items-center justify-center gap-2.5">
               <div className="flex items-center gap-1.5">
                 {queueBookmarks.map((b, i) => (
@@ -790,7 +841,18 @@ export function NewTabHome({
             </div>
           )}
 
-          {hasActiveQueue && showCardButtons ? (
+          {queueDone && showCardButtons ? (
+            <div className="flex justify-center">
+              <button
+                type="button"
+                onClick={onOpenReading}
+                className="flex flex-col items-center gap-1 text-on-bg-muted transition-colors duration-150 ease-hover hover:text-on-bg"
+                aria-label="Browse library"
+              >
+                <CaretDownIcon className="size-5 animate-[bounce_2s_ease-in-out_infinite]" />
+              </button>
+            </div>
+          ) : hasActiveQueue && showCardButtons ? (
             <div className="flex items-center justify-center gap-2.5 max-sm:gap-2">
               <Button
                 variant="secondary"
