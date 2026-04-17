@@ -14,6 +14,7 @@ import { SearchEnginePicker } from "./SearchEnginePicker";
 import type {
   BackgroundMode,
   Bookmark,
+  BookmarkIntent,
   RecommendationSource,
   SearchEngineId,
 } from "../types";
@@ -25,6 +26,7 @@ import {
   pickTitle,
   pickExcerpt,
   estimateReadingMinutes,
+  inferKindBadge,
 } from "../lib/bookmark-utils";
 import { cn } from "../lib/cn";
 import { Button } from "./ui/Button";
@@ -48,6 +50,8 @@ import {
 
 import { CLOCK_UPDATE_MS } from "../lib/constants";
 import { useStreak } from "../hooks/useStreak";
+import { useDailyQueue } from "../hooks/useDailyQueue";
+import { useSettings } from "../hooks/useSettings";
 
 interface Props {
   bookmarks: Bookmark[];
@@ -70,6 +74,24 @@ interface Props {
   syncButtonStateOverride?: SyncButtonState;
   offlineModeOverride?: boolean;
   onLogin?: () => void;
+}
+
+const INTENT_BADGE_STYLES: Record<BookmarkIntent, { label: string; className: string } | null> = {
+  read_soon: { label: "Read soon", className: "bg-accent/15 text-accent" },
+  reference: { label: "Reference", className: "bg-home-fg-muted/15 text-home-fg-muted" },
+  act_on: { label: "Act on", className: "bg-accent-700/15 text-accent-700 dark:bg-accent-400/15 dark:text-accent-400" },
+  unsorted: null,
+};
+
+function formatSaveAge(createdAt: number): string {
+  const hours = Math.floor((Date.now() - createdAt) / 3_600_000);
+  if (hours < 1) return "just now";
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days}d ago`;
+  const months = Math.floor(days / 30);
+  if (months < 12) return `${months}mo ago`;
+  return `${Math.floor(days / 365)}y ago`;
 }
 
 interface DecoratedBookmark {
@@ -110,6 +132,15 @@ export function NewTabHome({
   const searchRef = useRef<HTMLInputElement>(null);
   const prevWallpaperUrlRef = useRef<string | null>(null);
   const streak = useStreak();
+  const { settings } = useSettings();
+  const {
+    queue,
+    queueBookmarks,
+    loading: queueLoading,
+    markCompleted,
+    markSkipped,
+  } = useDailyQueue(bookmarks, settings.dailyQueueSize);
+  const [queuePosition, setQueuePosition] = useState(0);
   const { wallpaperUrl, wallpaperCredit, gradientCss } =
     useWallpaper(backgroundMode);
   const { sites: topSites } = useTopSites(topSitesLimit, showTopSites);
@@ -155,7 +186,43 @@ export function NewTabHome({
     const index = Math.floor(mountSeed * pool.length);
     return pool[index];
   }, [items, unreadItems, mountSeed, recommendationSource]);
-  const runtimeFooterState = useFooterState(Boolean(currentItem), isResetting);
+
+  const remainingQueueIds = useMemo(() => {
+    if (!queue) return [];
+    return queue.bookmarkIds.filter(
+      (id) => !queue.completedIds.includes(id) && !queue.skippedIds.includes(id),
+    );
+  }, [queue]);
+
+  const hasActiveQueue = queueBookmarks.length > 0 && !queueLoading && remainingQueueIds.length > 0;
+
+  useEffect(() => {
+    if (!queue || queueBookmarks.length === 0) return;
+    const firstRemaining = queue.bookmarkIds.findIndex(
+      (id) => !queue.completedIds.includes(id) && !queue.skippedIds.includes(id),
+    );
+    if (firstRemaining >= 0) {
+      setQueuePosition(firstRemaining);
+    }
+  }, [queue?.completedIds.length, queue?.skippedIds.length, queue?.bookmarkIds, queueBookmarks.length, queue]);
+
+  const currentQueueItem: DecoratedBookmark | null = useMemo(() => {
+    const bookmark = queueBookmarks[queuePosition] ?? null;
+    if (!bookmark) return null;
+    return {
+      bookmark,
+      title: pickTitle(bookmark),
+      excerpt: pickExcerpt(bookmark),
+      minutes: detailedTweetIds.has(bookmark.tweetId)
+        ? estimateReadingMinutes(bookmark)
+        : null,
+      isRead: openedTweetIds.has(bookmark.tweetId),
+    };
+  }, [queueBookmarks, queuePosition, detailedTweetIds, openedTweetIds]);
+
+  const displayItem = hasActiveQueue ? currentQueueItem : currentItem;
+
+  const runtimeFooterState = useFooterState(Boolean(displayItem), isResetting);
   const syncButton = syncButtonStateOverride ?? runtimeSyncButton;
   const offlineMode = offlineModeOverride ?? runtimeOfflineMode;
   const footerState = footerStateOverride ?? runtimeFooterState;
@@ -183,40 +250,59 @@ export function NewTabHome({
 
   const surpriseMe = useCallback(() => {
     if (items.length === 0) return;
-    const pool = unreadItems.length > 0 ? unreadItems : items;
+    const readSoonPool = items.filter((item) => item.bookmark.intent === "read_soon");
+    const pool = readSoonPool.length > 0 ? readSoonPool : unreadItems.length > 0 ? unreadItems : items;
     const pick = pool[Math.floor(Math.random() * pool.length)];
     openItem(pick);
   }, [items, unreadItems, openItem]);
+
+  const handleReadNow = useCallback(() => {
+    if (!currentQueueItem) return;
+    markCompleted(currentQueueItem.bookmark.id);
+    onOpenBookmark(currentQueueItem.bookmark);
+  }, [currentQueueItem, markCompleted, onOpenBookmark]);
+
+  const handleSkip = useCallback(() => {
+    if (!currentQueueItem) return;
+    markSkipped(currentQueueItem.bookmark.id);
+  }, [currentQueueItem, markSkipped]);
 
   useHotkeys("/", () => searchRef.current?.focus(), {
     preventDefault: true,
   });
 
   useHotkeys(
+    "r",
+    () => { if (hasActiveQueue) handleReadNow(); },
+    { preventDefault: true },
+    [hasActiveQueue, handleReadNow],
+  );
+
+  useHotkeys(
     "space",
-    () => openItem(currentItem ?? null),
-    {
-      preventDefault: true,
+    () => {
+      if (hasActiveQueue) handleReadNow();
+      else openItem(currentItem ?? null);
     },
-    [currentItem, openItem],
+    { preventDefault: true },
+    [hasActiveQueue, handleReadNow, currentItem, openItem],
   );
 
   useHotkeys(
     "l",
     () => onOpenReading(),
-    {
-      preventDefault: true,
-    },
+    { preventDefault: true },
     [onOpenReading],
   );
 
   useHotkeys(
     "s",
-    () => surpriseMe(),
-    {
-      preventDefault: true,
+    () => {
+      if (hasActiveQueue) handleSkip();
+      else surpriseMe();
     },
-    [surpriseMe],
+    { preventDefault: true },
+    [hasActiveQueue, handleSkip, surpriseMe],
   );
 
   const showCardButtons = footerState === "bookmark_card";
@@ -289,16 +375,32 @@ export function NewTabHome({
             </Button>
           </article>
         );
-      case "bookmark_card":
-        if (!currentItem) return null;
+      case "bookmark_card": {
+        const cardItem = hasActiveQueue ? currentQueueItem : currentItem;
+        if (!cardItem) return null;
+        const intentBadge = cardItem.bookmark.intent
+          ? INTENT_BADGE_STYLES[cardItem.bookmark.intent]
+          : null;
+        const kindLabel = inferKindBadge(cardItem.bookmark);
+        const handleCardClick = (e: React.MouseEvent | React.KeyboardEvent) => {
+          e.preventDefault();
+          if (hasActiveQueue) {
+            handleReadNow();
+          } else {
+            onOpenBookmark(cardItem.bookmark);
+          }
+        };
         return (
           <a
-            href={getBookmarkHref(currentItem.bookmark)}
+            key={cardItem.bookmark.tweetId}
+            href={getBookmarkHref(cardItem.bookmark)}
             className={cn(
               cardBase,
               "block cursor-pointer p-4 no-underline hover:bg-main-bg-hover max-sm:py-3.5",
               cardEngaged && "bg-main-bg-hover",
+              hasActiveQueue && "animate-card-in",
             )}
+            onClick={handleCardClick}
             onMouseEnter={() => setCardEngaged(true)}
             onMouseLeave={() => setCardEngaged(false)}
             onFocusCapture={() => setCardEngaged(true)}
@@ -315,24 +417,22 @@ export function NewTabHome({
               if (event.key === " ") {
                 event.preventDefault();
                 event.stopPropagation();
-                onOpenBookmark(currentItem.bookmark);
+                handleCardClick(event);
               }
             }}
-            aria-label={`Read ${currentItem.title} by @${
-              currentItem.bookmark.author.screenName
+            aria-label={`Read ${cardItem.title} by @${
+              cardItem.bookmark.author.screenName
             }${
-              currentItem.minutes !== null
-                ? `, ${currentItem.minutes} min read`
+              cardItem.minutes !== null
+                ? `, ${cardItem.minutes} min read`
                 : ""
             }`}
           >
             <div className="flex min-h-32 flex-col translate-y-0 opacity-100 transition-[transform,opacity] duration-200 ease-overlay-in max-sm:min-h-28">
-              <div className="flex justify-between">
+              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
                   <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
-                    {recommendationSource === "pinned"
-                      ? "pinned"
-                      : "your next read"}
+                    your next read
                   </p>
                   {offlineMode && (
                     <span title="Not signed in — showing cached bookmarks">
@@ -340,36 +440,58 @@ export function NewTabHome({
                     </span>
                   )}
                 </div>
-                <kbd className="ml-2 border-home-secondary-border bg-accent-tint text-home-fg-muted shadow-kbd">
-                  Space
-                </kbd>
+                {intentBadge && (
+                  <span
+                    className={cn(
+                      "shrink-0 rounded px-1.5 py-0.5 text-xxs font-medium",
+                      intentBadge.className,
+                    )}
+                  >
+                    {intentBadge.label}
+                  </span>
+                )}
+                {!intentBadge && !hasActiveQueue && (
+                  <kbd className="ml-2 border-home-secondary-border bg-accent-tint text-home-fg-muted shadow-kbd">
+                    Space
+                  </kbd>
+                )}
               </div>
               <div className="mt-4 flex flex-col gap-1">
                 <h2 className="capitalize font-serif line-clamp-2 text-balance text-lg font-medium leading-snug text-home-fg-secondary max-sm:text-base lg:text-xl">
-                  {currentItem.title}
+                  {cardItem.title}
                 </h2>
                 <p className="line-clamp-1 text-xs text-home-description/80">
-                  {currentItem.excerpt}
+                  {cardItem.excerpt}
                 </p>
+                {(cardItem.minutes !== null || kindLabel) && (
+                  <p className="mt-0.5 text-xxs text-home-fg-muted">
+                    {cardItem.minutes !== null && `${cardItem.minutes} min`}
+                    {cardItem.minutes !== null && kindLabel && " · "}
+                    {kindLabel && kindLabel.toLowerCase()}
+                  </p>
+                )}
               </div>
               <div className="mt-auto flex items-center gap-2.5 pt-3">
                 <img
-                  src={currentItem.bookmark.author.profileImageUrl}
-                  alt={`@${currentItem.bookmark.author.screenName}`}
+                  src={cardItem.bookmark.author.profileImageUrl}
+                  alt={`@${cardItem.bookmark.author.screenName}`}
                   className="size-6 shrink-0 rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.06)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]"
                 />
                 <div className="min-w-0 flex flex-col gap-1">
                   <p className="truncate text-xxs font-medium text-home-fg-secondary">
-                    {currentItem.bookmark.author.name}
+                    {cardItem.bookmark.author.name}
                   </p>
                   <p className="truncate text-xxs text-home-fg-muted">
-                    @{currentItem.bookmark.author.screenName}
+                    @{cardItem.bookmark.author.screenName}
+                    {" · "}
+                    {formatSaveAge(cardItem.bookmark.createdAt)}
                   </p>
                 </div>
               </div>
             </div>
           </a>
         );
+      }
       case "syncing_bootstrap":
         return (
           <article className={cardCentered}>
@@ -637,37 +759,97 @@ export function NewTabHome({
           </section>
         </main>
 
-        <footer className="mx-auto w-full max-w-lg space-y-6 pb-6">
+        <footer className="mx-auto w-full max-w-lg space-y-4 pb-6">
           {renderFooterCard()}
 
-          <div
-            className={cn(
-              "flex items-center justify-between gap-2.5 max-sm:gap-2",
-              !showCardButtons && "invisible pointer-events-none",
-            )}
-            aria-hidden={!showCardButtons || undefined}
-          >
-            <Button
-              variant="secondary"
-              className="bg-home-secondary-bg px-5 py-2.5 font-semibold leading-none text-home-secondary-text shadow-glass transition-colors duration-150 ease-hover hover:bg-main-bg-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80"
-              onClick={onOpenReading}
+          {hasActiveQueue && showCardButtons && queueBookmarks.length > 1 && (
+            <div className="flex items-center justify-center gap-2.5">
+              <div className="flex items-center gap-1.5">
+                {queueBookmarks.map((b, i) => (
+                  <button
+                    key={b.id}
+                    type="button"
+                    onClick={() => setQueuePosition(i)}
+                    className={cn(
+                      "size-2 rounded-full transition-colors duration-150 ease-hover",
+                      i === queuePosition
+                        ? "bg-accent scale-125"
+                        : queue?.completedIds.includes(b.id)
+                          ? "bg-white/50"
+                          : queue?.skippedIds.includes(b.id)
+                            ? "bg-white/20"
+                            : "bg-white/30",
+                    )}
+                    aria-label={`Queue item ${i + 1}`}
+                  />
+                ))}
+              </div>
+              <span className="text-xxs tabular-nums text-on-bg-muted">
+                {queuePosition + 1} / {queueBookmarks.length}
+              </span>
+            </div>
+          )}
+
+          {hasActiveQueue && showCardButtons ? (
+            <div className="flex items-center justify-center gap-2.5 max-sm:gap-2">
+              <Button
+                variant="secondary"
+                className="bg-home-accent px-5 py-2.5 font-semibold leading-none text-white shadow-glass transition-colors duration-150 ease-hover hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80"
+                onClick={handleReadNow}
+              >
+                Read now
+                <kbd className="ml-2 border-white/20 bg-white/15 text-white/70 shadow-kbd">
+                  R
+                </kbd>
+              </Button>
+              <Button
+                variant="secondary"
+                className="bg-home-secondary-bg px-5 py-2.5 font-semibold leading-none text-home-secondary-text shadow-glass transition-colors duration-150 ease-hover hover:bg-main-bg-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80"
+                onClick={handleSkip}
+              >
+                Skip
+                <kbd className="ml-2 border-home-secondary-border bg-accent-tint text-home-fg-muted shadow-kbd">
+                  S
+                </kbd>
+              </Button>
+              <Button
+                variant="ghost"
+                className="bg-transparent px-4 py-2.5 font-semibold leading-none text-on-bg-muted transition-colors duration-150 ease-hover hover:text-on-bg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80"
+                onClick={onOpenReading}
+              >
+                Browse queue
+              </Button>
+            </div>
+          ) : (
+            <div
+              className={cn(
+                "flex items-center justify-between gap-2.5 max-sm:gap-2",
+                !showCardButtons && "invisible pointer-events-none",
+              )}
+              aria-hidden={!showCardButtons || undefined}
             >
-              Open reading list
-              <kbd className="ml-2 border-home-secondary-border bg-accent-tint text-home-fg-muted shadow-kbd">
-                L
-              </kbd>
-            </Button>
-            <Button
-              variant="secondary"
-              className="bg-home-secondary-bg px-5 py-2.5 font-semibold leading-none text-home-secondary-text shadow-glass transition-colors duration-150 ease-hover hover:bg-main-bg-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80"
-              onClick={surpriseMe}
-            >
-              Surprise me
-              <kbd className="ml-2 border-home-secondary-border bg-accent-tint text-home-fg-muted shadow-kbd">
-                S
-              </kbd>
-            </Button>
-          </div>
+              <Button
+                variant="secondary"
+                className="bg-home-secondary-bg px-5 py-2.5 font-semibold leading-none text-home-secondary-text shadow-glass transition-colors duration-150 ease-hover hover:bg-main-bg-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80"
+                onClick={onOpenReading}
+              >
+                Open reading list
+                <kbd className="ml-2 border-home-secondary-border bg-accent-tint text-home-fg-muted shadow-kbd">
+                  L
+                </kbd>
+              </Button>
+              <Button
+                variant="secondary"
+                className="bg-home-secondary-bg px-5 py-2.5 font-semibold leading-none text-home-secondary-text shadow-glass transition-colors duration-150 ease-hover hover:bg-main-bg-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80"
+                onClick={surpriseMe}
+              >
+                Surprise me
+                <kbd className="ml-2 border-home-secondary-border bg-accent-tint text-home-fg-muted shadow-kbd">
+                  S
+                </kbd>
+              </Button>
+            </div>
+          )}
 
           <p
             className={cn(
