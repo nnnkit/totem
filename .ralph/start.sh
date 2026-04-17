@@ -11,7 +11,7 @@ if [[ "$1" == "local" || "$1" == "docker" ]]; then
   MODE="$1"; shift
 fi
 ITERATIONS=$(get_iterations "$1")
-BRANCH="${2:-ralph/auto}"
+BRANCH="${2:-ralph/worktree}"
 
 echo "=== RALPH ==="
 echo "Mode:       $MODE"
@@ -70,10 +70,9 @@ run_local() {
   echo ""
 
   # Run the RALPH loop (uses native Seatbelt sandbox via sandbox.json)
+  # Each iteration pushes its own `feat/<N>-<slug>` branch and opens a PR,
+  # so no bulk push is needed at the end.
   .ralph/run.sh "$ITERATIONS"
-
-  # Push results
-  push_results
 }
 
 # ─────────────────────────────────────────────────
@@ -154,23 +153,7 @@ run_docker() {
     echo ""
   done
 
-  # Push from host (workspace syncs between sandbox and host)
-  push_results
-}
-
-# ─────────────────────────────────────────────────
-# Shared: push results
-# ─────────────────────────────────────────────────
-push_results() {
-  unpushed=$(git rev-list HEAD --not --remotes 2>/dev/null | wc -l | tr -d ' ')
-  if [ "$unpushed" -gt 0 ]; then
-    echo ""
-    echo "Pushing $unpushed commit(s)..."
-    git push -u origin "$BRANCH"
-  else
-    echo ""
-    echo "No new commits to push."
-  fi
+  # Iterations push their own `feat/<N>-<slug>` branches as they go.
 }
 
 # ─────────────────────────────────────────────────
