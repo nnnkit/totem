@@ -207,6 +207,12 @@ export interface ReadingProgress {
   completed: boolean;
 }
 
+export interface ReadLogEntry {
+  id?: number;
+  bookmarkId: string;
+  markedReadAt: number;
+}
+
 export interface Highlight {
   id: string;
   tweetId: string;

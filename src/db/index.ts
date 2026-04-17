@@ -4,6 +4,7 @@ import type {
   TweetDetailCache,
   ReadingProgress,
   Highlight,
+  ReadLogEntry,
 } from "../types";
 import { sanitizeBookmark } from "../lib/sanitize";
 import { emitReaderActivity } from "../lib/reader-activity";
@@ -15,6 +16,7 @@ import {
   STORE_TWEET_DETAILS as DETAIL_STORE_NAME,
   STORE_READING_PROGRESS as PROGRESS_STORE_NAME,
   STORE_HIGHLIGHTS as HIGHLIGHTS_STORE_NAME,
+  STORE_READ_LOG as READ_LOG_STORE_NAME,
 } from "../lib/constants";
 import { LEGACY_IDB_DATABASE_NAME } from "../lib/storage-keys";
 
@@ -49,6 +51,13 @@ interface XBookmarksDbSchema extends DBSchema {
     indexes: {
       tweetId: string;
       createdAt: number;
+    };
+  };
+  read_log: {
+    key: number;
+    value: ReadLogEntry;
+    indexes: {
+      markedReadAt: number;
     };
   };
 }
@@ -137,6 +146,19 @@ function createDb(dbName: string) {
       }
       if (!highlightsStore.indexNames.contains("createdAt")) {
         highlightsStore.createIndex("createdAt", "createdAt", {
+          unique: false,
+        });
+      }
+
+      const readLogStore = db.objectStoreNames.contains(READ_LOG_STORE_NAME)
+        ? tx.objectStore(READ_LOG_STORE_NAME)
+        : db.createObjectStore(READ_LOG_STORE_NAME, {
+            keyPath: "id",
+            autoIncrement: true,
+          });
+
+      if (!readLogStore.indexNames.contains("markedReadAt")) {
+        readLogStore.createIndex("markedReadAt", "markedReadAt", {
           unique: false,
         });
       }
@@ -332,13 +354,14 @@ export async function getAllBookmarks(): Promise<Bookmark[]> {
 export async function clearAllLocalData(): Promise<void> {
   const db = await getDb();
   const tx = db.transaction(
-    [STORE_NAME, DETAIL_STORE_NAME, PROGRESS_STORE_NAME, HIGHLIGHTS_STORE_NAME],
+    [STORE_NAME, DETAIL_STORE_NAME, PROGRESS_STORE_NAME, HIGHLIGHTS_STORE_NAME, READ_LOG_STORE_NAME],
     "readwrite",
   );
   tx.objectStore(STORE_NAME).clear();
   tx.objectStore(DETAIL_STORE_NAME).clear();
   tx.objectStore(PROGRESS_STORE_NAME).clear();
   tx.objectStore(HIGHLIGHTS_STORE_NAME).clear();
+  tx.objectStore(READ_LOG_STORE_NAME).clear();
   await tx.done;
 }
 
@@ -564,6 +587,21 @@ export async function getHighlightCountsByTweetIds(
     }
   }
   return result;
+}
+
+export async function appendReadLogEntry(bookmarkId: string): Promise<void> {
+  if (!bookmarkId) return;
+  const db = await getDb();
+  await db.add(READ_LOG_STORE_NAME, {
+    bookmarkId,
+    markedReadAt: Date.now(),
+  } as ReadLogEntry);
+  emitReaderActivity();
+}
+
+export async function getReadLog(): Promise<ReadLogEntry[]> {
+  const db = await getDb();
+  return db.getAllFromIndex(READ_LOG_STORE_NAME, "markedReadAt");
 }
 
 export async function cleanupOldTweetDetails(

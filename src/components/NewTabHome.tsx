@@ -47,6 +47,7 @@ import {
 } from "../stores/selectors";
 
 import { CLOCK_UPDATE_MS } from "../lib/constants";
+import { useStreak } from "../hooks/useStreak";
 
 interface Props {
   bookmarks: Bookmark[];
@@ -108,6 +109,7 @@ export function NewTabHome({
   const [mountSeed] = useState(() => Math.random());
   const searchRef = useRef<HTMLInputElement>(null);
   const prevWallpaperUrlRef = useRef<string | null>(null);
+  const streak = useStreak();
   const { wallpaperUrl, wallpaperCredit, gradientCss } =
     useWallpaper(backgroundMode);
   const { sites: topSites } = useTopSites(topSitesLimit, showTopSites);
@@ -477,7 +479,26 @@ export function NewTabHome({
       <div className="totem-grain pointer-events-none absolute inset-0" />
 
       <header className="relative z-20 flex w-full items-center justify-between px-6 pt-5 sm:px-8">
-        <TotemLogo className="size-8" />
+        <div className="flex items-center gap-3">
+          <TotemLogo className="size-8" />
+          {streak.current > 0 && (
+            <span
+              className={cn(
+                "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xxs font-semibold tracking-wide transition-colors duration-150 ease-hover",
+                streak.earnedToday
+                  ? "bg-accent-500/20 text-accent-400"
+                  : "bg-white/10 text-on-bg-muted",
+              )}
+              title={`${streak.current} day streak${streak.earnedToday ? " — earned today" : ""}`}
+            >
+              <span aria-hidden>🔥</span>
+              {streak.current} {streak.current === 1 ? "day" : "days"}
+              {streak.earnedToday && (
+                <span className="text-accent-300"> · +1 today</span>
+              )}
+            </span>
+          )}
+        </div>
         <div className="flex items-center gap-2">
           {syncButton.visible && (
             <Button

@@ -7,6 +7,7 @@ import {
   markReadingProgressUncompleted,
   getTweetDetailCache,
   getAllReadingProgress,
+  appendReadLogEntry,
 } from "./db";
 import { pickRelatedBookmarks } from "./lib/related";
 import { resetLocalData } from "./lib/reset";
@@ -672,6 +673,13 @@ function ReaderRouteApp() {
     });
   }, [actions, displayBookmark, localBookmark, localBookmarkSnapshot]);
 
+  const handleMarkAsRead = useCallback((tweetId: string) => {
+    void markReadingProgressCompleted(tweetId);
+    if (displayBookmark && displayBookmark.tweetId === tweetId) {
+      void appendReadLogEntry(displayBookmark.id);
+    }
+  }, [displayBookmark]);
+
   const bookmarkAction = !offlineMode && displayBookmark?.bookmarked
     ? {
       label:
@@ -711,7 +719,7 @@ function ReaderRouteApp() {
               : undefined
           }
           bookmarkAction={bookmarkAction}
-          onMarkAsRead={markReadingProgressCompleted}
+          onMarkAsRead={handleMarkAsRead}
           onMarkAsUnread={markReadingProgressUncompleted}
           loadDetail={
             externalReader?.status === "ready" && externalReader.bookmark
