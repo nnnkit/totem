@@ -43,12 +43,14 @@ import {
   SYNC_MAX_PAGES_PER_JOB,
   WEEK_MS,
 } from "../lib/constants";
+import { classifyBatch } from "../lib/classifier";
 import {
   CS_DB_CLEANUP_AT,
   CS_LAST_SOFT_SYNC,
   CS_LAST_SYNC,
   CS_SOFT_SYNC_NEEDED,
   LS_BOOT_SYNC_POLICY,
+  LS_CLASSIFIER_BACKLOG_DONE,
   LS_MANUAL_SYNC_REQUIRED,
 } from "../lib/storage-keys";
 import type {
@@ -576,6 +578,24 @@ export function createRuntimeStore() {
         syncStatus: state.syncStatus === "syncing" ? state.syncStatus : "idle",
       }));
 
+      if (!localStorage.getItem(LS_CLASSIFIER_BACKLOG_DONE) && bookmarks.length > 0) {
+        try {
+          const classified = classifyBatch(bookmarks);
+          if (classified.length > 0) {
+            await upsertBookmarks(classified);
+            const classifiedIds = new Set(classified.map((b) => b.tweetId));
+            setRuntimeState((state) => ({
+              bookmarks: state.bookmarks.map((b) =>
+                classifiedIds.has(b.tweetId)
+                  ? (classified.find((c) => c.tweetId === b.tweetId) ?? b)
+                  : b,
+              ),
+            }));
+          }
+          localStorage.setItem(LS_CLASSIFIER_BACKLOG_DONE, "1");
+        } catch {}
+      }
+
       if (allowAutoSync) {
         maybeStartAutomaticSync();
       }
@@ -942,6 +962,21 @@ export function createRuntimeStore() {
               syncBlockedReason: null,
             });
             completionStatus = "success";
+
+            try {
+              const classified = classifyBatch(get().bookmarks);
+              if (classified.length > 0) {
+                await upsertBookmarks(classified);
+                const classifiedIds = new Set(classified.map((b) => b.tweetId));
+                setRuntimeState((state) => ({
+                  bookmarks: state.bookmarks.map((b) =>
+                    classifiedIds.has(b.tweetId)
+                      ? (classified.find((c) => c.tweetId === b.tweetId) ?? b)
+                      : b,
+                  ),
+                }));
+              }
+            } catch {}
           }
         }
       } catch (error) {

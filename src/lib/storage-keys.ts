@@ -10,6 +10,7 @@ export const LS_MANUAL_SYNC_REQUIRED = "totem_manual_sync_required";
 export const LS_BOOT_SYNC_POLICY = "totem_boot_sync_policy";
 export const LS_PINNED_TWEETS = "totem_pinned_tweets";
 export const LS_READER_ACTIVITY = "totem_reader_activity";
+export const LS_CLASSIFIER_BACKLOG_DONE = "totem_classifier_backlog_done";
 
 export const LOCAL_STORAGE_KEYS = [
   LS_READING_TAB,

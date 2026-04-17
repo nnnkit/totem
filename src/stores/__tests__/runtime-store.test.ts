@@ -5,7 +5,7 @@ import {
   selectRuntimeMode,
 } from "../runtime-store";
 import type { Bookmark, RuntimeSnapshot } from "../../types";
-import { LS_BOOT_SYNC_POLICY } from "../../lib/storage-keys";
+import { LS_BOOT_SYNC_POLICY, LS_CLASSIFIER_BACKLOG_DONE } from "../../lib/storage-keys";
 import type { RuntimeState } from "../runtime-store";
 
 const mocks = vi.hoisted(() => ({
@@ -193,6 +193,7 @@ beforeEach(() => {
   mocks.getDetailedTweetIds.mockResolvedValue(new Set<string>());
   mocks.setActiveAccountId.mockImplementation(() => "totem_acct_acct-1");
   mocks.upsertBookmarks.mockResolvedValue(undefined);
+  localStorage.setItem(LS_CLASSIFIER_BACKLOG_DONE, "1");
 });
 
 describe("runtime-store boot", () => {
