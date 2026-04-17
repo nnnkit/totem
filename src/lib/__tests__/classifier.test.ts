@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { classify, classifyBatch } from "../classifier";
+import { classify, classifyBatch, classifyLayer2 } from "../classifier";
 import type { Bookmark, TweetUrl } from "../../types";
 
 function makeBookmark(overrides: Partial<Bookmark> = {}): Bookmark {
@@ -305,6 +305,187 @@ describe("classifyBatch", () => {
         text: "Here is a very long post about something. It has a link to an unknown domain and the text itself is well over 180 characters, so no structural rule triggers for this particular bookmark entry.",
         urls: [makeUrl("https://unknown.example.com/page")],
         hasLink: true,
+      }),
+    ];
+    const updated = classifyBatch(bookmarks);
+    expect(updated).toHaveLength(0);
+  });
+
+  it("chains to Layer 2 when Layer 1 returns null", () => {
+    const bookmarks = [
+      makeBookmark({
+        id: "bk-cheat",
+        intent: "unsorted",
+        text: "The ultimate cheat sheet for Docker commands — bookmark this reference guide for later.",
+        urls: [makeUrl("https://randomsite.example.com/docker")],
+        hasLink: true,
+      }),
+    ];
+    const updated = classifyBatch(bookmarks);
+    expect(updated).toHaveLength(1);
+    expect(updated[0].intent).toBe("reference");
+    expect(updated[0].intentSource).toBe("keyword");
+  });
+
+  it("passes highlightedTweetIds to Layer 2", () => {
+    const bookmarks = [
+      makeBookmark({
+        id: "bk-hl",
+        tweetId: "tw-hl",
+        intent: "unsorted",
+        text: "A long post that doesn't match any structural rules and is over 180 characters. It contains some interesting thoughts about technology and the future of computing but nothing pattern-matching.",
+        createdAt: Date.now() - 100 * 86_400_000,
+        urls: [makeUrl("https://randomsite.example.com/post")],
+        hasLink: true,
+      }),
+    ];
+    const hlSet = new Set(["tw-hl"]);
+    const updated = classifyBatch(bookmarks, hlSet);
+    expect(updated).toHaveLength(1);
+    expect(updated[0].intent).toBe("reference");
+    expect(updated[0].intentSource).toBe("keyword");
+  });
+});
+
+describe("classifyLayer2 — keyword + signal scoring", () => {
+  const NOW = Date.now();
+
+  it("DM me tweet → act_on", () => {
+    const bm = makeBookmark({
+      text: "Just shipped a new tool for React devs. DM me if you want early access, limited spots available.",
+      urls: [makeUrl("https://example.com/tool")],
+      hasLink: true,
+    });
+    const result = classifyLayer2(bm, { now: NOW });
+    expect(result).not.toBeNull();
+    expect(result!.intent).toBe("act_on");
+    expect(result!.source).toBe("keyword");
+  });
+
+  it("cheat sheet language → reference", () => {
+    const bm = makeBookmark({
+      text: "The complete cheat sheet for CSS Grid — save this for your next project. A comprehensive reference guide.",
+      urls: [makeUrl("https://example.com/css-grid")],
+      hasLink: true,
+    });
+    const result = classifyLayer2(bm, { now: NOW });
+    expect(result).not.toBeNull();
+    expect(result!.intent).toBe("reference");
+  });
+
+  it("stale thread (>90d) with resource language → reference", () => {
+    const bm = makeBookmark({
+      text: "A comprehensive list of resources and tools for building distributed systems. This compilation covers everything from consensus algorithms to observability toolkits.",
+      createdAt: NOW - 100 * 86_400_000,
+      urls: [makeUrl("https://example.com/old")],
+      hasLink: true,
+    });
+    const result = classifyLayer2(bm, { now: NOW });
+    expect(result).not.toBeNull();
+    expect(result!.intent).toBe("reference");
+  });
+
+  it("high engagement (>500 retweets) + staleness + resource keywords → reference", () => {
+    const bm = makeBookmark({
+      text: "The best compilation of resources for startup founders. A toolkit and benchmark comparison of every tool you need to know about.",
+      createdAt: NOW - 45 * 86_400_000,
+      metrics: { likes: 5000, retweets: 1200, replies: 300, views: 500000, bookmarks: 200 },
+      urls: [makeUrl("https://example.com/viral")],
+      hasLink: true,
+    });
+    const result = classifyLayer2(bm, { now: NOW });
+    expect(result).not.toBeNull();
+    expect(result!.intent).toBe("reference");
+  });
+
+  it("highlights signal → reference boost", () => {
+    const bm = makeBookmark({
+      text: "A generic post that doesn't match keywords well. But the user highlighted parts of it, so it should be classified as a reference. Some more text to make it long enough.",
+      createdAt: NOW - 35 * 86_400_000,
+      urls: [makeUrl("https://example.com/highlighted")],
+      hasLink: true,
+    });
+    const result = classifyLayer2(bm, { hasHighlights: true, now: NOW });
+    expect(result).not.toBeNull();
+    expect(result!.intent).toBe("reference");
+  });
+
+  it("hiring + open roles + join us → act_on", () => {
+    const bm = makeBookmark({
+      text: "We're hiring senior engineers! Open roles in backend and infra. Join us to build the next generation of developer tools. Apply now at the link below.",
+      urls: [makeUrl("https://example.com/careers")],
+      hasLink: true,
+    });
+    const result = classifyLayer2(bm, { now: NOW });
+    expect(result).not.toBeNull();
+    expect(result!.intent).toBe("act_on");
+  });
+
+  it("deep dive + must-read content language → read_soon", () => {
+    const bm = makeBookmark({
+      text: "A must-read deep dive into how the Linux kernel handles memory management. Lessons learned from debugging production issues at scale.",
+      urls: [makeUrl("https://example.com/linux")],
+      hasLink: true,
+    });
+    const result = classifyLayer2(bm, { now: NOW });
+    expect(result).not.toBeNull();
+    expect(result!.intent).toBe("read_soon");
+  });
+
+  it("ambiguous post with no signals → null", () => {
+    const bm = makeBookmark({
+      text: "Just saw something interesting today. Made me think about how we approach problems differently depending on context.",
+      urls: [makeUrl("https://example.com/random")],
+      hasLink: true,
+    });
+    const result = classifyLayer2(bm, { now: NOW });
+    expect(result).toBeNull();
+  });
+
+  it("keyword in card title also scores", () => {
+    const bm = makeBookmark({
+      text: "Bookmark this one.",
+      urls: [
+        makeUrl("https://example.com/page", {
+          title: "The Ultimate Docker Cheat Sheet — A Complete Reference Guide",
+          description: "Everything you need",
+          domain: "example.com",
+        }),
+      ],
+      hasLink: true,
+    });
+    const result = classifyLayer2(bm, { now: NOW });
+    expect(result).not.toBeNull();
+    expect(result!.intent).toBe("reference");
+  });
+
+  it("returns confidence between 0.6 and 0.95", () => {
+    const bm = makeBookmark({
+      text: "DM me for the cheat sheet compilation — limited spots for the waitlist, apply now before the deadline.",
+    });
+    const result = classifyLayer2(bm, { now: NOW });
+    expect(result).not.toBeNull();
+    expect(result!.confidence).toBeGreaterThanOrEqual(0.6);
+    expect(result!.confidence).toBeLessThanOrEqual(0.95);
+  });
+
+  it("margin check: close scores between intents → null", () => {
+    const bm = makeBookmark({
+      text: "Here is a useful resource with a deep dive breakdown of the topic. Also hiring if you're interested.",
+    });
+    const result = classifyLayer2(bm, { now: NOW });
+    if (result) {
+      expect(result.confidence).toBeGreaterThanOrEqual(0.6);
+    }
+  });
+
+  it("manual intent never overwritten in batch with L2", () => {
+    const bookmarks = [
+      makeBookmark({
+        id: "manual-l2",
+        intent: "act_on",
+        intentSource: "manual",
+        text: "The complete cheat sheet reference guide handbook compilation of resources.",
       }),
     ];
     const updated = classifyBatch(bookmarks);

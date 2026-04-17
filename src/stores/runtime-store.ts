@@ -20,6 +20,7 @@ import {
   deleteBookmarksByTweetIds,
   getAllBookmarks,
   getDetailedTweetIds,
+  getHighlightCountsByTweetIds,
   setActiveAccountId,
   upsertBookmarks,
 } from "../db";
@@ -580,7 +581,12 @@ export function createRuntimeStore() {
 
       if (!localStorage.getItem(LS_CLASSIFIER_BACKLOG_DONE) && bookmarks.length > 0) {
         try {
-          const classified = classifyBatch(bookmarks);
+          const hlCounts = await getHighlightCountsByTweetIds(bookmarks.map((b) => b.tweetId));
+          const hlSet = new Set<string>();
+          for (const [tid, c] of hlCounts) {
+            if (c.highlights > 0 || c.notes > 0) hlSet.add(tid);
+          }
+          const classified = classifyBatch(bookmarks, hlSet);
           if (classified.length > 0) {
             await upsertBookmarks(classified);
             const classifiedIds = new Set(classified.map((b) => b.tweetId));
@@ -964,7 +970,13 @@ export function createRuntimeStore() {
             completionStatus = "success";
 
             try {
-              const classified = classifyBatch(get().bookmarks);
+              const allBm = get().bookmarks;
+              const hlCounts = await getHighlightCountsByTweetIds(allBm.map((b) => b.tweetId));
+              const hlSet = new Set<string>();
+              for (const [tid, c] of hlCounts) {
+                if (c.highlights > 0 || c.notes > 0) hlSet.add(tid);
+              }
+              const classified = classifyBatch(allBm, hlSet);
               if (classified.length > 0) {
                 await upsertBookmarks(classified);
                 const classifiedIds = new Set(classified.map((b) => b.tweetId));
