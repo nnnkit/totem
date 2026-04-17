@@ -21,8 +21,6 @@ import {
   type ReturnSurface,
 } from "./lib/reader-navigation";
 import { resolveReaderRouteBookmarks } from "./lib/reader-route";
-import type { ReadingTab } from "./lib/reading-list";
-import { LS_READING_TAB } from "./lib/storage-keys";
 import { NewTabHome } from "./components/NewTabHome";
 import { BookmarkReader } from "./components/BookmarkReader";
 import { BookmarksList } from "./components/BookmarksList";
@@ -99,14 +97,6 @@ interface ExternalReaderState {
 }
 
 type AppView = "home" | "reading";
-
-function readStoredReadingTab(): ReadingTab {
-  const stored = localStorage.getItem(LS_READING_TAB);
-  if (stored === "unread" || stored === "continue" || stored === "read") {
-    return stored;
-  }
-  return "unread";
-}
 
 function openBookmarkInCurrentTab(tweetId: string, returnSurface: ReturnSurface) {
   window.location.assign(getReaderUrl(tweetId, undefined, returnSurface));
@@ -222,7 +212,6 @@ function NewTabRouteApp() {
     getNewTabView() === "reading" ? "reading" : "home"
   );
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [readingTab, setReadingTab] = useState<ReadingTab>(() => readStoredReadingTab());
   const [toast, setToast] = useState<ToastState | null>(null);
   const [isResetting, setIsResetting] = useState(false);
 
@@ -234,15 +223,6 @@ function NewTabRouteApp() {
     displayBookmarks,
     `${activeAccountId || "__none__"}:${displayBookmarks.length}:${offlineMode ? "offline" : "online"}`,
   );
-
-  const restoreReadingTab = useCallback(() => {
-    setReadingTab(readStoredReadingTab());
-  }, []);
-
-  const handleReadingTabChange = useCallback((tab: ReadingTab) => {
-    setReadingTab(tab);
-    localStorage.setItem(LS_READING_TAB, tab);
-  }, []);
 
   const notifySyncBlocked = useCallback((reason?: string, retryAfterMs?: number) => {
     const code = reason as SyncBlockedReason | undefined;
@@ -320,13 +300,12 @@ function NewTabRouteApp() {
     } catch {
     } finally {
       refreshContinueReading();
-      restoreReadingTab();
       setView("home");
       setSettingsOpen(false);
       setIsResetting(false);
       window.location.reload();
     }
-  }, [actions, isResetting, refreshContinueReading, restoreReadingTab]);
+  }, [actions, isResetting, refreshContinueReading]);
 
   useEffect(() => {
     actions.setReaderActive(false);
@@ -417,8 +396,6 @@ function NewTabRouteApp() {
       <BookmarksList
         continueReadingItems={continueReading}
         unreadBookmarks={allUnread}
-        activeTab={readingTab}
-        onTabChange={handleReadingTabChange}
         onOpenBookmark={openBookmarkFromReading}
         getBookmarkHref={getReadingBookmarkHref}
         onSync={handleSync}
@@ -441,10 +418,7 @@ function NewTabRouteApp() {
         getBookmarkHref={getHomeBookmarkHref}
         recommendationSource={settings.recommendationSource}
         onOpenSettings={() => setSettingsOpen(true)}
-        onOpenReading={() => {
-          restoreReadingTab();
-          setView("reading");
-        }}
+        onOpenReading={() => setView("reading")}
         isResetting={isResetting}
       />
     );
