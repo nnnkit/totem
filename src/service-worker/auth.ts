@@ -28,12 +28,14 @@ import {
 import {
   CS_ACCOUNT_CONTEXT_ID,
   CS_BOOKMARK_EVENTS,
+} from "../lib/storage-keys";
+import {
   CS_LAST_SYNC,
   CS_LAST_SOFT_SYNC,
   CS_SOFT_SYNC_NEEDED,
   CS_SYNC_ORCHESTRATOR_STATE,
   CS_RUNTIME_STATE_V2,
-} from "../lib/storage-keys";
+} from "./storage-keys-sw";
 
 // ── Constants ───────────────────────────────────────────────────
 

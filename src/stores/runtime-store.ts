@@ -35,6 +35,7 @@ import {
   DB_INIT_TIMEOUT_MS,
   DETAIL_CACHE_RETENTION_MS,
   PAGE_FETCH_TIMEOUT_MS,
+  READER_DETAIL_TIMEOUT_MS,
   SYNC_ABORT_TIMEOUT_FULL_MS,
   SYNC_ABORT_TIMEOUT_INCREMENTAL_MS,
   SYNC_ABORT_TIMEOUT_MAX_MS,
@@ -43,14 +44,7 @@ import {
   SYNC_MAX_PAGES_PER_JOB,
   WEEK_MS,
 } from "../lib/constants";
-import {
-  CS_DB_CLEANUP_AT,
-  CS_LAST_SOFT_SYNC,
-  CS_LAST_SYNC,
-  CS_SOFT_SYNC_NEEDED,
-  LS_BOOT_SYNC_POLICY,
-  LS_MANUAL_SYNC_REQUIRED,
-} from "../lib/storage-keys";
+import { CS_DB_CLEANUP_AT } from "../lib/storage-keys";
 import type {
   ApiCapability,
   ApiCapabilityState,
@@ -73,7 +67,6 @@ export type RuntimeMode =
   | "offline_cached"
   | "online_ready";
 
-export type BootSyncPolicy = "auto" | "manual_only_until_seeded";
 export type SyncJobKind = "none" | "bootstrap" | "backfill";
 
 export interface SyncUiState {
@@ -131,7 +124,6 @@ interface ActiveSyncLease {
 
 interface SyncOptions {
   trigger?: "manual" | "auto";
-  requestedMode?: SyncMode;
   localCountHint?: number;
 }
 
@@ -149,6 +141,7 @@ export interface RuntimeActions {
   setReaderActive: (active: boolean) => void;
   detailCached: (tweetId: string) => void;
   loadReaderDetail: (tweetId: string) => ReturnType<typeof fetchTweetDetail>;
+  applyRuntimeSnapshot: (snapshot: RuntimeSnapshot) => Promise<void>;
 }
 
 export interface RuntimeState {
@@ -165,7 +158,6 @@ export interface RuntimeState {
   syncStatus: SyncStatus;
   syncJobKind: SyncJobKind;
   syncBlockedReason: SyncBlockedReason | null;
-  bootPolicy: BootSyncPolicy;
   bootGeneration: number;
   syncGeneration: number;
   readerActive: boolean;
@@ -277,34 +269,6 @@ function syncFailureStatus(message: string): SyncStatus {
   return "error";
 }
 
-function readBootPolicy(): BootSyncPolicy {
-  try {
-    const stored = localStorage.getItem(LS_BOOT_SYNC_POLICY);
-    if (stored === "manual_only_until_seeded" || stored === "auto") {
-      return stored;
-    }
-
-    if (localStorage.getItem(LS_MANUAL_SYNC_REQUIRED) === "1") {
-      localStorage.setItem(LS_BOOT_SYNC_POLICY, "manual_only_until_seeded");
-      localStorage.removeItem(LS_MANUAL_SYNC_REQUIRED);
-      return "manual_only_until_seeded";
-    }
-  } catch {}
-
-  return "auto";
-}
-
-function persistBootPolicy(policy: BootSyncPolicy): void {
-  try {
-    if (policy === "auto") {
-      localStorage.removeItem(LS_BOOT_SYNC_POLICY);
-    } else {
-      localStorage.setItem(LS_BOOT_SYNC_POLICY, policy);
-    }
-    localStorage.removeItem(LS_MANUAL_SYNC_REQUIRED);
-  } catch {}
-}
-
 function hasReadableCache(state: Pick<RuntimeState, "bookmarks" | "detailedTweetIds">): boolean {
   if (state.bookmarks.length === 0) return false;
   return state.bookmarks.some((bookmark) => state.detailedTweetIds.has(bookmark.tweetId));
@@ -375,21 +339,7 @@ function shouldRestrictToCachedDetails(state: RuntimeState): boolean {
 }
 
 function shouldAutoSync(state: RuntimeState): boolean {
-  return state.bootPolicy === "auto" &&
-    state.authPhase === "ready";
-}
-
-function shouldResumeSeedSync(state: RuntimeState): boolean {
-  return state.bootPolicy === "manual_only_until_seeded" &&
-    state.bookmarks.length > 0 &&
-    state.authPhase === "ready";
-}
-
-function shouldSkipHydrationForLoggedOutReset(
-  state: RuntimeState,
-  phase: AuthPhase,
-): boolean {
-  return phase === "need_login" && state.bootPolicy === "manual_only_until_seeded";
+  return state.authPhase === "ready";
 }
 
 function createInitialState(actions: RuntimeActions): RuntimeState {
@@ -410,7 +360,6 @@ function createInitialState(actions: RuntimeActions): RuntimeState {
     syncStatus: "loading",
     syncJobKind: "none",
     syncBlockedReason: null,
-    bootPolicy: "auto",
     bootGeneration: 0,
     syncGeneration: 0,
     readerActive: false,
@@ -425,7 +374,6 @@ export function createRuntimeStore() {
   let processingBookmarkEvents = false;
   let authRequestId = 0;
   let cleanupStarted = false;
-  let resumedSeedSyncBootGeneration = -1;
 
   const useRuntimeStoreBase = create<RuntimeState>((set, get) => {
     const setRuntimeState = (
@@ -525,16 +473,6 @@ export function createRuntimeStore() {
     const maybeStartAutomaticSync = () => {
       const state = get();
       if (state.syncStatus === "syncing") return;
-
-      if (shouldResumeSeedSync(state)) {
-        if (resumedSeedSyncBootGeneration === state.bootGeneration) return;
-        resumedSeedSyncBootGeneration = state.bootGeneration;
-        void sync({
-          trigger: "manual",
-          requestedMode: "full",
-        }).catch(() => {});
-        return;
-      }
 
       if (shouldAutoSync(state)) {
         void sync({ trigger: "auto" }).catch(() => {});
@@ -638,12 +576,19 @@ export function createRuntimeStore() {
       }
 
       const accountChanged = nextAccountId !== state.activeAccountId;
-      const skipHydrationForLoggedOutReset = shouldSkipHydrationForLoggedOutReset(state, phase);
       const needsHydration = options.allowHydration &&
-        !skipHydrationForLoggedOutReset &&
         (accountChanged || !state.bookmarksLoaded || !state.detailedIdsLoaded);
 
-      if (needsHydration) {
+      // Invalidate any in-flight sync when the runtime's view of the session
+      // becomes non-ready. Without this, a push snapshot reporting
+      // logged_out / connecting while a sync is mid-flight would leave the
+      // local lease and activeSyncController alive, continuing to write into
+      // a DB the runtime no longer owns.
+      const shouldReleaseActiveWork =
+        needsHydration ||
+        (state.syncStatus === "syncing" && phase !== "ready");
+
+      if (shouldReleaseActiveWork) {
         stopSync();
         void releaseActiveLease("skipped");
       }
@@ -663,21 +608,10 @@ export function createRuntimeStore() {
         activeAccountId: nextAccountId,
         authRetryDelayMs,
         bootGeneration: nextBootGeneration,
-        bookmarksLoaded: skipHydrationForLoggedOutReset
-          ? true
-          : needsHydration
-            ? false
-            : state.bookmarksLoaded,
-        detailedIdsLoaded: skipHydrationForLoggedOutReset
-          ? true
-          : needsHydration
-            ? false
-            : state.detailedIdsLoaded,
-        bookmarks: skipHydrationForLoggedOutReset || needsHydration ? [] : state.bookmarks,
-        detailedTweetIds:
-          skipHydrationForLoggedOutReset || needsHydration
-            ? new Set<string>()
-            : state.detailedTweetIds,
+        bookmarksLoaded: needsHydration ? false : state.bookmarksLoaded,
+        detailedIdsLoaded: needsHydration ? false : state.detailedIdsLoaded,
+        bookmarks: needsHydration ? [] : state.bookmarks,
+        detailedTweetIds: needsHydration ? new Set<string>() : state.detailedTweetIds,
         syncStatus:
           phase === "need_login" && state.syncStatus === "syncing"
             ? "idle"
@@ -739,15 +673,11 @@ export function createRuntimeStore() {
         typeof options.localCountHint === "number" && Number.isFinite(options.localCountHint)
           ? options.localCountHint
           : startingLocalCount;
-      const requestedMode =
-        options.requestedMode ?? (trigger === "manual" ? "full" : undefined);
-      const requestedModeForReservation = requestedMode;
 
       const policy = await reserveSyncRun({
         accountId,
         trigger,
         localCount,
-        requestedMode: requestedModeForReservation,
       }).catch(() => null);
 
       if (!policy) {
@@ -821,19 +751,9 @@ export function createRuntimeStore() {
 
       let completionStatus: "success" | "failure" | "timeout" = "failure";
       let completionErrorCode: string | undefined;
-      let seededPolicyCleared = false;
       const syncTimer = setTimeout(() => {
         abortSync(true);
       }, timeout);
-
-      const maybeClearBootPolicy = () => {
-        if (seededPolicyCleared) return;
-        if (trigger !== "manual") return;
-        if (get().bootPolicy !== "manual_only_until_seeded") return;
-        persistBootPolicy("auto");
-        seededPolicyCleared = true;
-        setRuntimeState({ bootPolicy: "auto" });
-      };
 
       const onPage = async (pageNew: Bookmark[]) => {
         if (abortState.aborted || get().syncGeneration !== syncGeneration) return;
@@ -920,22 +840,9 @@ export function createRuntimeStore() {
               }));
             }
 
-            const now = Date.now();
-            if (mode === "incremental") {
-              await chrome.storage.local.set({
-                [CS_LAST_SYNC]: now,
-                [CS_LAST_SOFT_SYNC]: now,
-              });
-            } else {
-              await chrome.storage.local.set({ [CS_LAST_SYNC]: now });
-            }
-
-            await chrome.storage.local.remove(CS_SOFT_SYNC_NEEDED);
-
-            if (mode === "full" && reconcileResult.terminationReason === "complete") {
-              maybeClearBootPolicy();
-            }
-
+            // CS_LAST_SYNC / CS_LAST_SOFT_SYNC / CS_SOFT_SYNC_NEEDED are
+            // written by the SW's COMPLETE_SYNC handler based on the
+            // reported completion status. One writer per persisted fact.
             setRuntimeState({
               syncStatus: "idle",
               syncJobKind: "none",
@@ -964,9 +871,8 @@ export function createRuntimeStore() {
         }
 
         if (abortState.isTimeout && get().syncGeneration === syncGeneration) {
-          try {
-            await chrome.storage.local.set({ [CS_LAST_SYNC]: Date.now() });
-          } catch {}
+          // CS_LAST_SYNC is written by the SW's COMPLETE_SYNC handler when
+          // status === "timeout". No runtime-side mirror write.
           clearSyncForGeneration(syncGeneration);
           completionStatus = "timeout";
         }
@@ -1005,7 +911,6 @@ export function createRuntimeStore() {
         authRequestId += 1;
         setRuntimeState({
           bootGeneration,
-          bootPolicy: readBootPolicy(),
           authPhase: "loading",
           authRetryDelayMs: null,
           bookmarksLoaded: false,
@@ -1076,6 +981,23 @@ export function createRuntimeStore() {
 
       refresh: async () => sync({ trigger: "manual" }),
 
+      /**
+       * Apply a RuntimeSnapshot pushed from the service worker.
+       *
+       * Used by the `chrome.storage.onChanged` subscription in RuntimeProvider:
+       * when the SW persists a new snapshot to `CS_RUNTIME_STATE_V2`, the
+       * runtime picks up SW-mirrored facts (capability, session, account)
+       * without re-RPC'ing or re-hydrating IDB. This is the reactive
+       * invalidation channel that replaces "wait for the next heartbeat".
+       */
+      applyRuntimeSnapshot: async (snapshot: RuntimeSnapshot) => {
+        const payload = normalizeAuthPayloadFromSnapshot(snapshot);
+        await applyAuthPayload(payload, {
+          allowHydration: false,
+          allowAutoSync: false,
+        });
+      },
+
       handleBookmarkEvents: async () => {
         if (processingBookmarkEvents) return;
         if (get().authPhase !== "ready") return;
@@ -1121,7 +1043,10 @@ export function createRuntimeStore() {
                 await upsertBookmarks(deduped);
                 prefetchController.reconcile();
               }
-              await chrome.storage.local.set({ [CS_LAST_SOFT_SYNC]: Date.now() });
+              // CS_LAST_SOFT_SYNC is the SW's record of a completed sync run
+              // and is not written here. Bookmark-event-driven page refreshes
+              // are a different flow (no reservation, no orchestrator state)
+              // and must not mirror the SW's key.
             } catch {
               createFetchSucceeded = false;
             }
@@ -1136,12 +1061,10 @@ export function createRuntimeStore() {
       },
 
       prepareForReset: () => {
-        persistBootPolicy("manual_only_until_seeded");
         prefetchController.stop();
         stopSync();
         authRequestId += 1;
         setRuntimeState((state) => ({
-          bootPolicy: "manual_only_until_seeded",
           syncGeneration: state.syncGeneration + 1,
           syncStatus: "idle",
           syncJobKind: "none",
@@ -1202,7 +1125,11 @@ export function createRuntimeStore() {
       },
 
       loadReaderDetail: async (tweetId: string) => {
-        const detail = await fetchTweetDetail(tweetId);
+        const detail = await withTimeout(
+          fetchTweetDetail(tweetId),
+          READER_DETAIL_TIMEOUT_MS,
+          new Error("DETAIL_TIMEOUT"),
+        );
         get().actions.detailCached(tweetId);
         prefetchController.reconcile();
         return detail;

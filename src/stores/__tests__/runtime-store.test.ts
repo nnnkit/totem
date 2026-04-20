@@ -5,7 +5,6 @@ import {
   selectRuntimeMode,
 } from "../runtime-store";
 import type { Bookmark, RuntimeSnapshot } from "../../types";
-import { LS_BOOT_SYNC_POLICY } from "../../lib/storage-keys";
 import type { RuntimeState } from "../runtime-store";
 
 const mocks = vi.hoisted(() => ({
@@ -209,20 +208,19 @@ describe("runtime-store boot", () => {
     expect(selectDisplayBookmarks(state)).toEqual([]);
   });
 
-  it("skips hydration after reset when logged out and manual sync is required", async () => {
-    localStorage.setItem(LS_BOOT_SYNC_POLICY, "manual_only_until_seeded");
+  it("still reads IDB on boot after a reset so cached bookmarks resurface when the user is logged out", async () => {
+    const cached = createBookmark("tweet-1");
+    mocks.getAllBookmarks.mockResolvedValue([cached]);
+    mocks.getDetailedTweetIds.mockResolvedValue(new Set(["tweet-1"]));
 
     const store = createRuntimeStore();
     await store.getState().actions.boot();
 
     const state = store.getState();
-    expect(selectRuntimeMode(state)).toBe("offline_empty");
-    expect(state.bookmarksLoaded).toBe(true);
-    expect(state.detailedIdsLoaded).toBe(true);
-    expect(state.bookmarks).toEqual([]);
-    expect(state.detailedTweetIds).toEqual(new Set());
-    expect(mocks.getAllBookmarks).not.toHaveBeenCalled();
-    expect(mocks.getDetailedTweetIds).not.toHaveBeenCalled();
+    expect(mocks.getAllBookmarks).toHaveBeenCalled();
+    expect(mocks.getDetailedTweetIds).toHaveBeenCalled();
+    expect(selectRuntimeMode(state)).toBe("offline_cached");
+    expect(state.bookmarks).toEqual([cached]);
   });
 
   it("settles to offline_cached when logged out and cached details exist", async () => {
@@ -239,8 +237,7 @@ describe("runtime-store boot", () => {
     expect(mocks.setActiveAccountId).toHaveBeenCalledWith("acct-1");
   });
 
-  it("automatically resumes a partial seeded import on boot", async () => {
-    localStorage.setItem(LS_BOOT_SYNC_POLICY, "manual_only_until_seeded");
+  it("kicks off an auto sync on boot when logged in and hydrated", async () => {
     const cached = createBookmark("tweet-1");
     mocks.getRuntimeSnapshot.mockResolvedValue(runtimeSnapshot({
       sessionState: "logged_in",
@@ -263,9 +260,8 @@ describe("runtime-store boot", () => {
 
     expect(mocks.reserveSyncRun).toHaveBeenCalledWith({
       accountId: "acct-1",
-      trigger: "manual",
+      trigger: "auto",
       localCount: 1,
-      requestedMode: "full",
     });
   });
 
@@ -308,18 +304,18 @@ describe("runtime-store boot", () => {
     }
   });
 
-  it("preserves a persisted manual-only boot policy during reset prep", () => {
+  it("clears in-memory bookmarks and detail ids during reset prep", () => {
     const store = createRuntimeStore();
+    store.setState({
+      bookmarks: [createBookmark("tweet-1")],
+      detailedTweetIds: new Set(["tweet-1"]),
+    });
 
     store.getState().actions.prepareForReset();
 
     const state = store.getState();
-    expect(state.bootPolicy).toBe("manual_only_until_seeded");
     expect(state.bookmarks).toEqual([]);
-    expect(localStorage.setItem).toHaveBeenCalledWith(
-      "totem_boot_sync_policy",
-      "manual_only_until_seeded",
-    );
+    expect(state.detailedTweetIds).toEqual(new Set());
   });
 });
 
@@ -346,8 +342,7 @@ describe("runtime-store sync", () => {
     });
   }
 
-  it("forces full manual sync while seeding after reset even if bookmarks already exist", async () => {
-    localStorage.setItem(LS_BOOT_SYNC_POLICY, "manual_only_until_seeded");
+  it("does not send requestedMode — the orchestrator decides mode", async () => {
     mocks.reserveSyncRun.mockResolvedValue({
       allow: false,
       mode: null,
@@ -356,7 +351,6 @@ describe("runtime-store sync", () => {
 
     const store = createRuntimeStore();
     primeReadyState(store, {
-      bootPolicy: "manual_only_until_seeded",
       bookmarks: [createBookmark("tweet-1")],
     });
 
@@ -366,16 +360,14 @@ describe("runtime-store sync", () => {
       accountId: "acct-1",
       trigger: "manual",
       localCount: 1,
-      requestedMode: "full",
     });
   });
 
-  it("keeps manual-only policy and reports an error when a full seed sync is incomplete", async () => {
-    localStorage.setItem(LS_BOOT_SYNC_POLICY, "manual_only_until_seeded");
+  it("reports an error and keeps partial bookmarks when a full seed sync is incomplete", async () => {
     mocks.reserveSyncRun.mockResolvedValue({
       allow: true,
       mode: "full",
-      reason: "manual",
+      reason: "manual_seed",
       leaseId: "lease-1",
       accountKey: "acct-1",
     });
@@ -386,9 +378,7 @@ describe("runtime-store sync", () => {
     });
 
     const store = createRuntimeStore();
-    primeReadyState(store, {
-      bootPolicy: "manual_only_until_seeded",
-    });
+    primeReadyState(store);
 
     await store.getState().actions.refresh();
 
@@ -396,8 +386,6 @@ describe("runtime-store sync", () => {
     expect(mocks.fetchBookmarkPage).toHaveBeenCalledTimes(2);
     expect(state.bookmarks).toHaveLength(100);
     expect(state.syncStatus).toBe("error");
-    expect(state.bootPolicy).toBe("manual_only_until_seeded");
-    expect(localStorage.getItem(LS_BOOT_SYNC_POLICY)).toBe("manual_only_until_seeded");
     expect(mocks.completeSyncRun).toHaveBeenCalledWith({
       accountId: "acct-1",
       leaseId: "lease-1",
@@ -408,12 +396,11 @@ describe("runtime-store sync", () => {
     });
   });
 
-  it("clears manual-only policy only after a complete full seed sync", async () => {
-    localStorage.setItem(LS_BOOT_SYNC_POLICY, "manual_only_until_seeded");
+  it("completes successfully after a full seed sync and reports success to the orchestrator", async () => {
     mocks.reserveSyncRun.mockResolvedValue({
       allow: true,
       mode: "full",
-      reason: "manual",
+      reason: "manual_seed",
       leaseId: "lease-2",
       accountKey: "acct-1",
     });
@@ -430,16 +417,12 @@ describe("runtime-store sync", () => {
       });
 
     const store = createRuntimeStore();
-    primeReadyState(store, {
-      bootPolicy: "manual_only_until_seeded",
-    });
+    primeReadyState(store);
 
     await store.getState().actions.refresh();
 
     const state = store.getState();
     expect(state.syncStatus).toBe("idle");
-    expect(state.bootPolicy).toBe("auto");
-    expect(localStorage.getItem(LS_BOOT_SYNC_POLICY)).toBeNull();
     expect(mocks.completeSyncRun).toHaveBeenCalledWith({
       accountId: "acct-1",
       leaseId: "lease-2",
@@ -614,5 +597,196 @@ describe("runtime-store auth flows", () => {
     await store.getState().actions.startLogin();
     expect(store.getState().authPhase).toBe("ready");
     expect(store.getState().sessionState).toBe("logged_in");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Reactive snapshot push (applyRuntimeSnapshot)
+// ---------------------------------------------------------------------------
+
+describe("runtime-store applyRuntimeSnapshot", () => {
+  function primeReadyState(
+    store: ReturnType<typeof createRuntimeStore>,
+    overrides: Partial<RuntimeState> = {},
+  ) {
+    store.setState({
+      authPhase: "ready",
+      authState: "authenticated",
+      sessionState: "logged_in",
+      capability: {
+        bookmarksApi: "ready",
+        detailApi: "unknown",
+      },
+      activeAccountId: "acct-1",
+      bookmarksLoaded: true,
+      detailedIdsLoaded: true,
+      syncStatus: "idle",
+      syncJobKind: "none",
+      syncBlockedReason: null,
+      ...overrides,
+    });
+  }
+
+  it("propagates a capability upgrade (detailApi unknown → ready) without re-hydrating IDB", async () => {
+    const store = createRuntimeStore();
+    const cached = createBookmark("tweet-1");
+    primeReadyState(store, {
+      bookmarks: [cached],
+      detailedTweetIds: new Set(["tweet-1"]),
+    });
+
+    await store.getState().actions.applyRuntimeSnapshot(
+      runtimeSnapshot({
+        sessionState: "logged_in",
+        authPhase: "ready",
+        accountContextId: "acct-1",
+        capability: {
+          bookmarksApi: "ready",
+          detailApi: "ready",
+        },
+      }),
+    );
+
+    const state = store.getState();
+    expect(state.capability.detailApi).toBe("ready");
+    // Bookmarks must not be cleared by a push update.
+    expect(state.bookmarks).toEqual([cached]);
+    expect(state.detailedTweetIds).toEqual(new Set(["tweet-1"]));
+    // Hydration path should not have been re-invoked.
+    expect(mocks.getAllBookmarks).not.toHaveBeenCalled();
+    expect(mocks.getDetailedTweetIds).not.toHaveBeenCalled();
+  });
+
+  it("transitions ready → need_login when the SW reports a logged_out snapshot", async () => {
+    const store = createRuntimeStore();
+    primeReadyState(store);
+
+    await store.getState().actions.applyRuntimeSnapshot(
+      runtimeSnapshot({
+        sessionState: "logged_out",
+        authPhase: "need_login",
+        accountContextId: "acct-1",
+      }),
+    );
+
+    expect(store.getState().authPhase).toBe("need_login");
+    expect(store.getState().sessionState).toBe("logged_out");
+  });
+
+  it("is idempotent: applying an identical snapshot leaves state unchanged", async () => {
+    const store = createRuntimeStore();
+    primeReadyState(store);
+    const before = store.getState();
+
+    await store.getState().actions.applyRuntimeSnapshot(
+      runtimeSnapshot({
+        sessionState: "logged_in",
+        authPhase: "ready",
+        accountContextId: "acct-1",
+        capability: { bookmarksApi: "ready", detailApi: "unknown" },
+      }),
+    );
+
+    const after = store.getState();
+    expect(after.capability).toEqual(before.capability);
+    expect(after.authPhase).toBe(before.authPhase);
+    expect(after.bookmarks).toBe(before.bookmarks);
+  });
+
+  it("does not start a sync on push-applied snapshots (allowAutoSync: false)", async () => {
+    const store = createRuntimeStore();
+    primeReadyState(store);
+
+    await store.getState().actions.applyRuntimeSnapshot(
+      runtimeSnapshot({
+        sessionState: "logged_in",
+        authPhase: "ready",
+        accountContextId: "acct-1",
+      }),
+    );
+
+    expect(mocks.reserveSyncRun).not.toHaveBeenCalled();
+  });
+
+  async function startHangingSync(
+    store: ReturnType<typeof createRuntimeStore>,
+  ): Promise<void> {
+    // Reserve succeeds; first page fetch hangs so the sync stays in-flight
+    // (lease + activeSyncController both set inside the closure).
+    mocks.reserveSyncRun.mockResolvedValue({
+      allow: true,
+      mode: "full",
+      reason: "manual",
+      leaseId: "lease-race",
+      accountKey: "acct-1",
+    });
+    mocks.fetchBookmarkPage.mockImplementation(
+      () => new Promise(() => {}), // never resolves — simulates in-flight
+    );
+
+    // Kick off the sync but don't await it — it'll be interrupted by
+    // the snapshot push releasing the lease.
+    void store.getState().actions.refresh();
+
+    // Let the reservation and lease setup complete before we push.
+    await Promise.resolve();
+    await Promise.resolve();
+  }
+
+  it("releases an in-flight lease when a push snapshot transitions ready → logged_out", async () => {
+    const store = createRuntimeStore();
+    primeReadyState(store);
+
+    await startHangingSync(store);
+    expect(store.getState().syncStatus).toBe("syncing");
+
+    mocks.completeSyncRun.mockClear();
+
+    await store.getState().actions.applyRuntimeSnapshot(
+      runtimeSnapshot({
+        sessionState: "logged_out",
+        authPhase: "need_login",
+        accountContextId: "acct-1",
+      }),
+    );
+
+    // The push path must tell the SW the in-flight run is abandoned, not
+    // silently flip local syncStatus to idle and leave the lease dangling.
+    // Let the microtask from releaseActiveLease() flush.
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(mocks.completeSyncRun).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: "skipped",
+        leaseId: "lease-race",
+      }),
+    );
+    expect(store.getState().authPhase).toBe("need_login");
+  });
+
+  it("does NOT release the lease when the push keeps the session ready (capability-only upgrade)", async () => {
+    const store = createRuntimeStore();
+    primeReadyState(store);
+
+    await startHangingSync(store);
+    expect(store.getState().syncStatus).toBe("syncing");
+
+    mocks.completeSyncRun.mockClear();
+
+    await store.getState().actions.applyRuntimeSnapshot(
+      runtimeSnapshot({
+        sessionState: "logged_in",
+        authPhase: "ready",
+        accountContextId: "acct-1",
+        capability: { bookmarksApi: "ready", detailApi: "ready" },
+      }),
+    );
+
+    // Capability went unknown → ready; session stayed ready. Sync must
+    // continue untouched — pushing a capability upgrade through the lease
+    // machinery would cancel healthy work.
+    expect(mocks.completeSyncRun).not.toHaveBeenCalled();
+    expect(store.getState().syncStatus).toBe("syncing");
   });
 });

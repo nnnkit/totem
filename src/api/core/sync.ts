@@ -27,14 +27,12 @@ export async function reserveSyncRun(input: {
   accountId: string | null;
   trigger: SyncTrigger;
   localCount: number;
-  requestedMode?: SyncMode;
 }): Promise<SyncReservationDecision> {
   const response = (await chrome.runtime.sendMessage({
     type: "REQUEST_SYNC",
     accountId: input.accountId,
     trigger: input.trigger,
     localCount: input.localCount,
-    requestedMode: input.requestedMode,
   })) as RuntimeResponse;
 
   if (response?.error) throw new Error(runtimeError(response));

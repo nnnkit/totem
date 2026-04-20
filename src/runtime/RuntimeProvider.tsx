@@ -10,11 +10,18 @@ import {
   CS_BOOKMARK_EVENTS,
   CS_USER_ID,
 } from "../lib/storage-keys";
+// Allowlisted runtime-side import of an SW-owned key: RuntimeProvider
+// subscribes to the SW's snapshot writes via chrome.storage.onChanged — it
+// reads the key to match change events, never to write. Any use of this
+// import to call chrome.storage.local.set/remove is caught by the
+// source-grep test in src/lib/__tests__/storage-invariants.test.ts.
+import { CS_RUNTIME_STATE_V2 } from "../service-worker/storage-keys-sw";
 import {
   useAuthPhase,
   useAuthRetryDelayMs,
   useRuntimeActions,
 } from "../stores/selectors";
+import type { RuntimeSnapshot } from "../types";
 
 export function RuntimeProvider({ children }: PropsWithChildren) {
   const actions = useRuntimeActions();
@@ -71,6 +78,16 @@ export function RuntimeProvider({ children }: PropsWithChildren) {
 
       if (changes[CS_BOOKMARK_EVENTS]) {
         void actions.handleBookmarkEvents();
+      }
+
+      // Reactive snapshot push: the SW writes CS_RUNTIME_STATE_V2 after
+      // every sync reservation / completion / capability update. Apply it
+      // directly so UI-visible facts (capability, session state) propagate
+      // without waiting for the next auth heartbeat.
+      const snapshotChange = changes[CS_RUNTIME_STATE_V2];
+      if (snapshotChange && snapshotChange.newValue && !hasAuthChange) {
+        const snapshot = snapshotChange.newValue as RuntimeSnapshot;
+        void actions.applyRuntimeSnapshot(snapshot);
       }
     };
 

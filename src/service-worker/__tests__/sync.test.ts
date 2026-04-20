@@ -54,7 +54,7 @@ beforeEach(() => {
 });
 
 describe("sync lease lifecycle", () => {
-  it("grants a manual lease for logged-in user", async () => {
+  it("grants a manual lease for logged-in user as a full seed when never synced", async () => {
     const { handlers } = createTestDeps();
     const result = (await handlers.REQUEST_SYNC(
       { type: "REQUEST_SYNC", trigger: "manual", localCount: 0 } as MessageRequest,
@@ -63,7 +63,10 @@ describe("sync lease lifecycle", () => {
 
     expect(result.ok).toBe(true);
     expect(result.allow).toBe(true);
-    expect(result.mode).toBe("quick"); // manual trigger defaults to "quick" when no requestedMode
+    // Self-heal: no prior lastFullSyncAt → orchestrator forces a full seed,
+    // regardless of trigger or localCount.
+    expect(result.mode).toBe("full");
+    expect(result.reason).toBe("manual_seed");
     expect(result.leaseId).toBeTruthy();
     expect(result.accountKey).toBe("acct-1");
   });
@@ -208,8 +211,36 @@ describe("sync lease lifecycle", () => {
     expect(retry.reason).toBe("rate_limited");
   });
 
-  it("selects incremental mode for auto sync with existing bookmarks", async () => {
-    const { handlers } = createTestDeps();
+  it("selects incremental mode for auto sync once the account has a prior full sync", async () => {
+    const { handlers, storage } = createTestDeps();
+
+    // Seed orchestrator state with a prior successful full sync so the
+    // self-heal condition (lastFullSyncAt === 0) doesn't force "full".
+    // Make lastAttemptAt/lastSuccessAt far enough in the past to avoid
+    // auto_backoff (5min) and fresh_cache (4hr) blocks.
+    await storage.set({
+      totem_sync_orchestrator_state: {
+        version: 1,
+        accounts: {
+          "acct-1": {
+            inFlight: null,
+            lastSuccessAt: Date.now() - 5 * 60 * 60 * 1000,
+            lastFullSyncAt: Date.now() - 5 * 60 * 60 * 1000,
+            lastIncrementalSyncAt: 0,
+            manualCooldownUntil: 0,
+            rateLimitBackoffUntil: 0,
+            rateLimitConsecutive: 0,
+            lastAttemptAt: Date.now() - 5 * 60 * 60 * 1000,
+            lastCompletedAt: 0,
+            lastCompletedStatus: null,
+            lastDecisionAt: 0,
+            lastDecisionReason: null,
+            lastError: null,
+            lastFailureCode: null,
+          },
+        },
+      },
+    });
 
     const result = (await handlers.REQUEST_SYNC(
       { type: "REQUEST_SYNC", trigger: "auto", localCount: 100 } as MessageRequest,
@@ -230,5 +261,22 @@ describe("sync lease lifecycle", () => {
 
     expect(result.allow).toBe(true);
     expect(result.mode).toBe("full");
+  });
+
+  it("selects full mode for auto sync with bookmarks when no prior full sync exists (self-heal)", async () => {
+    const { handlers } = createTestDeps();
+
+    // Fresh orchestrator state: lastFullSyncAt === 0.
+    // Even with 100 local bookmarks, orchestrator forces a full sync once
+    // so lastFullSyncAt gets written — heals the historical split-brain
+    // where runtime thought it was seeded but SW had no record.
+    const result = (await handlers.REQUEST_SYNC(
+      { type: "REQUEST_SYNC", trigger: "auto", localCount: 100 } as MessageRequest,
+      {} as chrome.runtime.MessageSender,
+    )) as Record<string, unknown>;
+
+    expect(result.allow).toBe(true);
+    expect(result.mode).toBe("full");
+    expect(result.reason).toBe("bootstrap_seed");
   });
 });

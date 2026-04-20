@@ -71,7 +71,6 @@ export interface RequestSyncRequest {
   accountId?: string | null;
   trigger: SyncTrigger;
   localCount: number;
-  requestedMode?: SyncMode;
 }
 
 export interface CompleteSyncRequest {

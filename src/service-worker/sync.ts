@@ -14,9 +14,12 @@ import type { HandlerMap } from "./index";
 import { getSessionSnapshot, buildRuntimeSnapshot } from "./auth";
 import { normalizeSyncAccountId } from "../lib/sw-pure";
 import {
+  CS_LAST_SOFT_SYNC,
+  CS_LAST_SYNC,
+  CS_SOFT_SYNC_NEEDED,
   CS_SYNC_ORCHESTRATOR_STATE,
   CS_RUNTIME_STATE_V2,
-} from "../lib/storage-keys";
+} from "./storage-keys-sw";
 
 // ── Constants ───────────────────────────────────────────────────
 
@@ -43,6 +46,12 @@ export interface SyncInFlight {
 export interface SyncAccountState {
   inFlight: SyncInFlight | null;
   lastSuccessAt: number;
+  // INVARIANT: the SW's record of a completed full reconcile for this account.
+  // Not a claim about IDB contents. IDB may have rows without this being set
+  // (e.g. post-restore from a previous install with a wiped SW state), and
+  // `lastFullSyncAt === 0` forces the orchestrator to pick `full` on the
+  // next reservation so the runtime re-walks pages and confirms completeness.
+  // Only ever written by `handleSyncPolicyComplete` on a successful `full` run.
   lastFullSyncAt: number;
   lastIncrementalSyncAt: number;
   manualCooldownUntil: number;
@@ -237,14 +246,6 @@ export function createSyncHandlers(deps: SyncDeps = {}): HandlerMap {
       const now = Date.now();
       const trigger =
         msg.trigger === "manual" ? ("manual" as const) : ("auto" as const);
-      const requestedMode =
-        msg.requestedMode === "incremental"
-          ? "incremental"
-          : msg.requestedMode === "quick"
-            ? "quick"
-            : msg.requestedMode === "full"
-              ? "full"
-              : null;
       const localCount = normalizeFiniteNumber(msg.localCount, 0);
 
       const state = await readState();
@@ -360,13 +361,21 @@ export function createSyncHandlers(deps: SyncDeps = {}): HandlerMap {
         return returnBlocked("cooldown", account);
       }
 
-      let mode: string | null = null;
-      let reason = "fresh_cache";
+      // Mode is derived purely from the orchestrator's own state — the caller
+      // does not get to request a mode. `lastFullSyncAt === 0` means this
+      // account has never completed a full sync for this orchestrator, so
+      // the next run must be full, regardless of localCount or trigger. This
+      // self-heals the historical split-brain where runtime thought it was
+      // seeded but the SW had no record.
+      const needsFullSync = account.lastFullSyncAt <= 0;
+
+      let mode: string;
+      let reason: string;
 
       if (trigger === "manual") {
-        mode = requestedMode || "quick";
-        reason = "manual";
-      } else if (localCount <= 0) {
+        mode = needsFullSync ? "full" : "incremental";
+        reason = needsFullSync ? "manual_seed" : "manual";
+      } else if (needsFullSync) {
         if (
           account.lastAttemptAt > 0 &&
           now - account.lastAttemptAt < SYNC_ORCHESTRATOR_AUTO_BACKOFF_MS
@@ -374,7 +383,7 @@ export function createSyncHandlers(deps: SyncDeps = {}): HandlerMap {
           return returnBlocked("auto_backoff", account);
         }
         mode = "full";
-        reason = "bootstrap_empty";
+        reason = localCount <= 0 ? "bootstrap_empty" : "bootstrap_seed";
       } else {
         if (
           account.lastSuccessAt > 0 &&
@@ -516,6 +525,29 @@ export function createSyncHandlers(deps: SyncDeps = {}): HandlerMap {
 
       state.accounts[accountKey] = next;
       await writeState(state);
+
+      // Mirror the completion timestamp into the cache-summary keys the
+      // runtime's snapshot consumes. Single writer: the SW. The runtime
+      // never writes these keys — preventing the split-brain that previously
+      // let `totem_last_sync` disagree with the orchestrator's record.
+      const cacheStorage = defaultChromeStorage();
+      if (cacheStorage) {
+        try {
+          if (status === "success") {
+            const cacheWrite: Record<string, number> = { [CS_LAST_SYNC]: now };
+            if (mode === "incremental") {
+              cacheWrite[CS_LAST_SOFT_SYNC] = now;
+            }
+            await cacheStorage.set(cacheWrite);
+            await cacheStorage.remove(CS_SOFT_SYNC_NEEDED);
+          } else if (status === "timeout") {
+            await cacheStorage.set({ [CS_LAST_SYNC]: now });
+          }
+        } catch {
+          // non-fatal: cache-summary write is best-effort
+        }
+      }
+
       const snapshot = await buildSnapshot(state).catch(() => null);
       if (snapshot) {
         await persistRuntimeStateV2(snapshot).catch(() => {});
@@ -524,9 +556,22 @@ export function createSyncHandlers(deps: SyncDeps = {}): HandlerMap {
     });
   }
 
+  async function handleResetSwState(): Promise<unknown> {
+    // Serialize against any in-flight orchestrator mutation so we don't
+    // stomp a reservation that's mid-write. Once we own the lock, wipe the
+    // orchestrator state durably; the runtime's reset also removes it, but
+    // doing it here makes the reset a single atomic RPC from the runtime's
+    // perspective (send → ack → safe to delete the DB).
+    return withSyncOrchestratorLock(async () => {
+      await writeState(createEmptySyncOrchestratorState());
+      return { ok: true };
+    });
+  }
+
   return {
     REQUEST_SYNC: handleSyncPolicyReserve,
     COMPLETE_SYNC: handleSyncPolicyComplete,
+    RESET_SW_STATE: handleResetSwState,
   };
 }
 

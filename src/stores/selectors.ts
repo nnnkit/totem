@@ -27,7 +27,6 @@ import {
 } from "./runtime-store";
 
 export type {
-  BootSyncPolicy,
   FooterState,
   ReaderAvailabilityState,
   RuntimeMode,
@@ -40,6 +39,9 @@ export interface ReaderAvailabilitySelection extends ReaderAvailabilityState {
   errorKind: DetailErrorKind;
 }
 
+// Stable reference: `actions` is built once in createInitialState and never
+// reassigned, so this selector returns the same object across renders.
+// Callers can safely include the return value in a useEffect dependency array.
 export function useRuntimeActions(): RuntimeActions {
   return useRuntimeStoreBase((state) => state.actions);
 }

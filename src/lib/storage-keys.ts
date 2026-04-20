@@ -25,19 +25,29 @@ export const LOCAL_STORAGE_KEYS = [
 
 export const CS_DB_CLEANUP_AT = "totem_db_cleanup_at";
 export const CS_LAST_RECONCILE = "totem_last_reconcile";
-export const CS_LAST_SYNC = "totem_last_sync";
 export const CS_BOOKMARK_EVENTS = "totem_bookmark_events";
 export const CS_AUTH_HEADERS = "totem_auth_headers";
 export const CS_AUTH_TIME = "totem_auth_time";
 export const CS_USER_ID = "totem_user_id";
 export const CS_ACCOUNT_CONTEXT_ID = "totem_account_context_id";
 export const CS_AUTH_STATE = "totem_auth_state";
-export const CS_LAST_SOFT_SYNC = "totem_last_light_sync";
-export const CS_SOFT_SYNC_NEEDED = "totem_light_sync_needed";
-export const CS_SYNC_ORCHESTRATOR_STATE = "totem_sync_orchestrator_state";
 export const CS_SYNC_AUTO_ENABLED = "totem_sync_auto_enabled";
 export const CS_RUNTIME_AUDIT = "totem_runtime_audit";
-export const CS_RUNTIME_STATE_V2 = "totem_runtime_state_v2";
+
+// ─── SW-owned keys — deliberately NOT exported here ──────────────────────
+// (see ARCHITECTURE.md §16 Invariant #1).
+//
+// CS_SYNC_ORCHESTRATOR_STATE, CS_RUNTIME_STATE_V2, CS_LAST_SYNC,
+// CS_LAST_SOFT_SYNC, CS_SOFT_SYNC_NEEDED live in
+// service-worker/storage-keys-sw.ts. Runtime code does not import them;
+// it reads their values through the SW-owned RuntimeSnapshot or through
+// chrome.storage.onChanged subscriptions on string-literal keys.
+//
+// The reset pathway (src/lib/reset.ts) imports them directly from the SW
+// module as an explicit, allowlisted exception — its job is to wipe them.
+//
+// If you need one of these keys from runtime code, you almost certainly
+// want to read it via the snapshot instead. Ask before exposing.
 
 // These are written/read exclusively by service worker modules (src/service-worker/).
 // Listed here so reset (chrome.storage.local.clear()) covers them.
@@ -64,7 +74,6 @@ export const LEGACY_LOCAL_STORAGE_KEY_MAP = {
 export const LEGACY_CHROME_LOCAL_KEY_MAP = {
   xbt_db_cleanup_at: CS_DB_CLEANUP_AT,
   xbt_last_reconcile: CS_LAST_RECONCILE,
-  xbt_last_sync: CS_LAST_SYNC,
   xbt_bookmark_events: CS_BOOKMARK_EVENTS,
   xbt_auth_headers: CS_AUTH_HEADERS,
   xbt_auth_time: CS_AUTH_TIME,
@@ -72,9 +81,14 @@ export const LEGACY_CHROME_LOCAL_KEY_MAP = {
   // no dedicated legacy key existed for account context. It is derived and
   // persisted by current runtime flows.
   xbt_auth_state: CS_AUTH_STATE,
-  xbt_last_light_sync: CS_LAST_SOFT_SYNC,
-  xbt_light_sync_needed: CS_SOFT_SYNC_NEEDED,
-  xbt_sync_orchestrator_state: CS_SYNC_ORCHESTRATOR_STATE,
+  // SW-owned legacy mappings — strings inlined rather than imported so
+  // runtime code doesn't gain symbolic access to SW-owned keys through
+  // this file. The reset pathway reads the current names from
+  // service-worker/storage-keys-sw.ts directly.
+  xbt_last_sync: "totem_last_sync",
+  xbt_last_light_sync: "totem_last_light_sync",
+  xbt_light_sync_needed: "totem_light_sync_needed",
+  xbt_sync_orchestrator_state: "totem_sync_orchestrator_state",
   // service-worker-only keys
   xbt_graphql_catalog: "totem_graphql_catalog",
   xbt_sw_cleanup_at: "totem_sw_cleanup_at",
