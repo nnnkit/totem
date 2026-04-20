@@ -501,3 +501,94 @@ If you need one sentence for the whole system, use this:
 > The service worker decides whether Totem is allowed to sync, IndexedDB remembers what Totem already knows, and the runtime store decides what the UI should show right now.
 
 That split is the backbone of the current architecture.
+
+## 16. Load-Bearing Invariants
+
+These are the properties that a previous bug class ("loading loop after reset", "infinite Opening this post in Totem…" spinner) violated. The current architecture makes each of them unrepresentable. If future work re-violates one, the old class of bug comes back.
+
+### Invariant 1: Single writer per persisted fact
+
+Every piece of durable state has exactly one writer. Other processes read; they never mirror, predict, or cache their own copy.
+
+| Fact | Writer | Readers |
+|---|---|---|
+| `lastFullSyncAt`, `lastIncrementalSyncAt`, sync orchestrator state | service worker | runtime store (via snapshot) |
+| `totem_last_sync`, `totem_last_light_sync`, `totem_light_sync_needed` | service worker (on `COMPLETE_SYNC`) | runtime store (via `cacheSummary`) |
+| `totem_runtime_state_v2` (full runtime snapshot) | service worker | runtime store (via `chrome.storage.onChanged` push) |
+| account-scoped IndexedDB bookmarks, details, progress, highlights | runtime store | UI (via selectors) |
+
+**How violations used to sneak in:** the runtime flipped `bootPolicy` to `auto` *before* confirming `completeSyncRun` on the SW. If the confirmation failed, the two sides drifted. Deleting `bootPolicy` entirely and making `lastFullSyncAt` the sole seeded-ness truth removed the ability to express that drift.
+
+### Invariant 2: Seeded-ness is derived, never stored
+
+"Has this account ever completed a full sync?" is `snapshot.accounts[accountId].lastFullSyncAt > 0`. Nothing else persists the boolean. The SW orchestrator self-heals by forcing `mode = "full"` whenever `lastFullSyncAt <= 0`, regardless of trigger or local bookmark count — so even if a previous install populated IDB before the SW was aware, one sync cycle reconciles.
+
+### Invariant 3: Sync in-flight is bounded by ready-state
+
+Whenever the runtime's session view transitions away from `ready` — whether via hydration, auth-check refresh, or a pushed snapshot — `stopSync()` and `releaseActiveLease("skipped")` fire. A sync run cannot outlive the session it started in. This is what prevents a sync from writing into a DB the runtime no longer owns.
+
+**Guarded at:** `applyAuthPayload` in `src/stores/runtime-store.ts`. The single gate is:
+
+```ts
+const shouldReleaseActiveWork =
+  needsHydration ||
+  (state.syncStatus === "syncing" && phase !== "ready");
+```
+
+### Invariant 4: UI never gates on `appMode === "initializing"`
+
+The reader route used to have `if (appMode === "initializing") return;` silently in its fetch effect. If the runtime ever stuck in `initializing`, the reader spun forever. That guard is gone. The reader's fetch runs whenever a tweetId is present. Loading / ready / error are the only three states the UI renders — no dead-end guards.
+
+### Invariant 5: Every error screen has an action that resolves its own error
+
+`classifyDetailError` distinguishes `auth | rate_limited | not_found | offline | other`. Each kind maps to a distinct message and a distinct primary action in `ExternalReaderShell`:
+
+| Kind | Primary action | Retry shown? |
+|---|---|---|
+| `auth` | Log in | Yes (secondary) |
+| `rate_limited` | Open on X | No (Retry is futile under cooldown) |
+| `not_found` | Open on X | No (tweet is gone) |
+| `offline` | OfflineBanner (Log in CTA) | Handled by banner |
+| `other` | Retry | Yes (primary) |
+
+If a new terminal error code is added to `TERMINAL_ERROR_CODES` in `src/api/core/posts.ts` without being classified in `src/components/reader/detail-error.ts`, the classifier throws at module load. A new code cannot silently fall back to "other" — which would reintroduce the dead-end error screen.
+
+### Invariant 6: Retry is for transport failures, never for server classifications
+
+`fetchTweetDetail` retries exactly once, and only when `chrome.runtime.sendMessage` itself throws (MV3 service worker was asleep). A structured error envelope from the SW — `NO_AUTH`, `AUTH_EXPIRED`, `RATE_LIMITED`, `DETAIL_NOT_FOUND` — propagates to the caller without a second round-trip. Retrying them would stack a second failing request on top of the first and delay the user reaching the action that actually resolves the error.
+
+### Invariant 7: One in-flight fetch per (tweetId) across callers
+
+The reader and the prefetch controller both call `fetchTweetDetail`. A module-level `inflight: Map<string, Promise<...>>` collapses concurrent calls for the same tweetId into a single sendMessage. The entry is removed on settle.
+
+### Invariant 8: The reader hook is loader-shaped, not useEffect-shaped
+
+`useReaderDetail(tweetId)` returns a discriminated union `{ status: "idle" | "pending" | "success" | "error", ... }` plus `refetch()`. Stale-response cancellation is encoded in a pure reducer (events whose tweetId doesn't match the pending tweetId are dropped). No `cancelled` flag, no `retryKey` counter, no three-setter success path. Promoting this to a router loader later is a rename, not a rewrite.
+
+### Invariant 9: Reset is an atomic RPC to the service worker
+
+`resetLocalData()` blocks on a `RESET_SW_STATE` ack before deleting IDB. The SW handler takes the orchestrator lock, wipes persisted orchestrator state, and acks inside the lock. There is no window where the runtime has deleted the DB but the SW is still mid-write. `totem_boot_sync_policy` is no longer preserved — nothing about the old mirror survives.
+
+---
+
+If you're editing code that touches any of these, and you find yourself undoing one, that's the signal to stop and rethink. These invariants exist because each one fixed a specific, user-visible, reproducible bug. Re-violating one brings that bug back.
+
+## 17. Enforcement
+
+Invariants #1, #5, and #6 are **enforced at test time** — violating one of them fails CI, not code review. The rest are convention + tests + documentation.
+
+| # | Invariant | How it's enforced |
+|---|---|---|
+| 1 | Single writer per persisted fact | `storage-invariants.test.ts` source-greps for `chrome.storage.local.set/remove` of SW-owned keys from non-SW files. SW-owned keys live in `src/service-worker/storage-keys-sw.ts`; a second grep-test forbids imports of that file except from an explicit allowlist (`reset.ts`, `RuntimeProvider.tsx`). |
+| 2 | Seeded-ness is derived, never stored | Convention. The state field and its persistence layer are both deleted. Reintroducing a mirror would require re-adding both. |
+| 3 | Sync in-flight is bounded by ready-state | Behavioral tests in `runtime-store.test.ts` verify the release on `syncing → non-ready`. |
+| 4 | UI never gates on `appMode === "initializing"` | Convention. The specific gate is removed; adding it back would require an explicit diff. |
+| 5 | Every error screen has an action that resolves its own error | Module-load assertion `assertAllTerminalCodesClassified()` in `detail-error.ts` iterates `TERMINAL_ERROR_CODES` and throws at test-suite import time if any code isn't classified. Build-breaking. |
+| 6 | Retry is for transport failures, never for server classifications | `storage-invariants.test.ts` source-greps for `try/catch/for/while` loops around `fetchTweetDetail` / `loadReaderDetail` outside `posts.ts`. |
+| 7 | One in-flight fetch per tweetId | Behavioral tests in `api/__tests__/posts.test.ts` verify the dedup map collapses concurrent calls. |
+| 8 | Reader hook is loader-shaped | Type-enforced: the discriminated union makes `.data` inaccessible in `pending` / `error` states. |
+| 9 | Reset is an atomic RPC | Behavioral tests in `reset.test.ts` verify `RESET_SW_STATE` is sent and awaited before IDB delete. |
+
+### Adding a new violation path
+
+If you're adding something new that legitimately needs to write a SW-owned key, or legitimately needs to retry `fetchTweetDetail`, or legitimately needs to import from `storage-keys-sw.ts`, the right move is to update the `ALLOWED_*` list in `storage-invariants.test.ts` with a comment explaining why — not to bypass the grep. The allowlist is intentionally visible so the decision is reviewable in a single diff.
