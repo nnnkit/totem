@@ -24,16 +24,43 @@ flowchart LR
   SEL --> UI["Home / Reading List / Reader"]
   STORE --> IDB
   STORE --> SW
-  STORE --> CL
+  CL -.->|"onChanged<br/>(reactive push)"| RP
+```
+
+### Writer ownership (single writer per persisted fact)
+
+Each durable piece of state has exactly one writer. Everyone else reads. This is the invariant that fixes the "loading loop on every reload" bug class — see §16 Invariant #1.
+
+```mermaid
+flowchart TB
+  subgraph SW_OWNED["🟦 Service worker writes — runtime reads"]
+    direction LR
+    ORCH["totem_sync_orchestrator_state<br/>(lease, cooldown, lastFullSyncAt)"]
+    RTV2["totem_runtime_state_v2<br/>(RuntimeSnapshot)"]
+    LS["totem_last_sync<br/>totem_last_light_sync<br/>totem_light_sync_needed"]
+    AUTH_W["totem_auth_headers<br/>totem_auth_state<br/>totem_user_id"]
+  end
+
+  subgraph RT_OWNED["🟩 Runtime writes"]
+    direction LR
+    IDB_RW["IndexedDB<br/>(bookmarks, tweet_details,<br/>reading_progress, highlights)"]
+    LSO["localStorage<br/>(reading tab, sorts, pinned,<br/>reader activity)"]
+    CLEAN["totem_db_cleanup_at"]
+  end
+
+  subgraph SHARED["🟨 Either writes — documented per key"]
+    direction LR
+    BE["totem_bookmark_events<br/>(SW enqueues, runtime acks)"]
+  end
 ```
 
 ### Layer responsibilities
 
 | Layer | Owns | Does not own |
 |---|---|---|
-| Service worker | auth/session snapshot, query ID discovery, sync reservation/cooldown/in-flight policy | UI mode, bookmark rendering |
+| Service worker | auth/session snapshot, query ID discovery, sync reservation/cooldown/in-flight policy, `lastFullSyncAt` | UI mode, bookmark rendering |
 | IndexedDB | durable bookmark metadata, tweet details, reading progress, highlights | auth/session truth |
-| Runtime store | boot sequencing, runtime mode, sync UI state, selector outputs, reader/prefetch coordination | network interception, durable sync policy |
+| Runtime store | boot sequencing, runtime mode, sync UI state, selector outputs, reader/prefetch coordination | any persisted flag that answers "am I seeded" |
 | Components | rendering and local interaction state | business logic for auth/sync/offline mode |
 
 ## 2. Runtime Architecture
@@ -112,25 +139,26 @@ This mode is not the full UI contract. UI consumes more specific selectors such 
 
 | Field group | Examples | Why it exists |
 |---|---|---|
-| Auth | `authPhase`, `authState`, `sessionState`, `capability`, `activeAccountId`, `hasQueryId` | runtime truth from service worker |
+| Auth | `authPhase`, `authState`, `sessionState`, `capability`, `activeAccountId` | runtime mirror of SW snapshot; never persisted by the runtime |
 | Hydration | `bookmarksLoaded`, `detailedIdsLoaded` | prevents false loading/offline states |
 | Data | `bookmarks`, `detailedTweetIds` | bookmark list + offline-readable detail index |
 | Sync | `syncStatus`, `syncJobKind`, `syncBlockedReason` | separates blocking bootstrap from background work |
-| Reset/seed policy | `bootPolicy` | controls post-reset startup and incomplete initial imports |
 | Safety | `bootGeneration`, `syncGeneration` | ignores stale async completions |
 | Reader/prefetch | `readerActive`, `prefetchStatus` | controls offline detail warmup |
+
+> **Note:** there is no runtime-side "seeded" flag. "Has this account ever completed a full sync?" is derived from the SW-owned `snapshot.accounts[id].lastFullSyncAt > 0`. See §16 Invariant #2.
 
 ### Important invariants
 
 - Account context must be set before any IndexedDB read.
-- `initializing` ends only after auth and hydration have settled, unless reset policy explicitly short-circuits logged-out boot.
+- `initializing` ends only after auth and hydration have settled. There are no early-exit shortcuts.
 - `bootstrap` with visible content normalizes to `backfill`.
 - `logged_out` can never remain in `authPhase = "ready"`.
-- Components should not branch directly on raw `authPhase`, `syncStatus`, or `bootPolicy`.
+- Components should not branch directly on raw `authPhase` or `syncStatus`; they consume selectors (§13).
 
 ## 4. Boot Sequence
 
-Boot is centralized in `runtime-store.ts`.
+Boot is centralized in `runtime-store.ts`. It is linear: no branches based on a persisted "am I seeded" flag.
 
 ```mermaid
 sequenceDiagram
@@ -141,26 +169,29 @@ sequenceDiagram
 
   UI->>Store: boot()
   Store->>Store: increment bootGeneration
-  Store->>Store: read persisted boot policy
   Store->>SW: getRuntimeSnapshot()
   alt snapshot/auth resolves
     Store->>Store: derive auth phase + account context
     Store->>DB: setActiveAccountId(accountContextId)
-    alt logged out after reset
-      Store->>Store: settle immediately to offline_empty
-    else normal hydration
-      par bookmarks
-        Store->>DB: getAllBookmarks()
-      and detail IDs
-        Store->>DB: getDetailedTweetIds()
-      end
-      Store->>Store: mark hydration complete
-      Store->>Store: maybe auto-sync or resume seed sync
+    par bookmarks
+      Store->>DB: getAllBookmarks()
+    and detail IDs
+      Store->>DB: getDetailedTweetIds()
+    end
+    Store->>Store: mark hydration complete
+    alt authPhase is ready
+      Store->>Store: maybe auto-sync
     end
   else auth unavailable
     Store->>Store: enter connecting with retry/watchdog
   end
 ```
+
+**What is deliberately absent from this diagram:**
+
+- No "read persisted boot policy" step — the runtime no longer stores one.
+- No "logged-out shortcut" branch — every boot reads IDB. The old shortcut silently wiped cached bookmarks on transient `need_login` and was the root of the post-reset loading loop.
+- No "resume seed sync" branch — `maybe auto-sync` handles both first-boot and recovery cases uniformly; the SW decides mode via self-heal (§6).
 
 ### Why boot is generation-safe
 
@@ -221,7 +252,7 @@ Worker/orchestrator modes:
 
 - `full`
 - `incremental`
-- `quick`
+- `quick` (defined in the type but currently unused by the self-heal selector)
 
 Runtime UI job kinds:
 
@@ -232,6 +263,28 @@ These are intentionally different concepts:
 
 - worker mode controls how much remote work is attempted
 - job kind controls how the UI behaves while that work runs
+
+### How the orchestrator picks mode (self-heal)
+
+Mode is derived purely from the orchestrator's own state. The caller cannot request a mode — the `requestedMode` parameter was removed so the runtime can't express a wrong thing. The decision lives in `src/service-worker/sync.ts` `handleSyncPolicyReserve`:
+
+```mermaid
+flowchart TD
+  Start["reserveSyncRun()"] --> Guards{"in-flight?<br/>rate-limited?<br/>cooldown?"}
+  Guards -->|blocked| Return["returnBlocked(reason)"]
+  Guards -->|ok| NeedFull{"lastFullSyncAt<br/>=== 0 ?"}
+  NeedFull -->|yes| Trigger1{trigger?}
+  NeedFull -->|no| Trigger2{trigger?}
+  Trigger1 -->|manual| FullSeed["mode=full<br/>reason=manual_seed"]
+  Trigger1 -->|auto + empty| FullBootstrap["mode=full<br/>reason=bootstrap_empty"]
+  Trigger1 -->|auto + has data| FullSeedBS["mode=full<br/>reason=bootstrap_seed"]
+  Trigger2 -->|manual| Inc1["mode=incremental<br/>reason=manual"]
+  Trigger2 -->|auto| FreshCheck{lastSuccessAt<br/>recent?}
+  FreshCheck -->|yes| FreshBlock["returnBlocked<br/>fresh_cache"]
+  FreshCheck -->|no| Inc2["mode=incremental<br/>reason=background_stale"]
+```
+
+**Why this matters:** `lastFullSyncAt === 0` means "this orchestrator has never recorded a completed full sync for this account." The next run is therefore full, regardless of what the runtime's IDB currently holds. If a previous install's IDB is still on disk but the SW state was wiped (extension reinstall, profile migration, `RESET_SW_STATE`), the full reconcile walks pages against the existing `localIds` set, deduplicates, and confirms completeness in one pass. No wasted downloads; no stuck state.
 
 ### Bootstrap vs backfill
 
@@ -258,7 +311,7 @@ The runtime store merges each page into state immediately, then persists it to I
 
 ## 7. Incomplete Initial Seed Handling
 
-This is the most important post-reset edge case.
+The most important post-reset edge case, now handled by self-heal instead of a persisted flag.
 
 ### Problem
 
@@ -268,34 +321,26 @@ X can sometimes return exactly 100 bookmarks with no continuation cursor. That l
 
 ```mermaid
 flowchart TD
-  ManualSync["Manual full sync after reset"] --> Page100["X returns 100 bookmarks, no cursor"]
-  Page100 --> Persist["Persist visible bookmarks"]
-  Persist --> MarkIncomplete["completeSyncRun(... errorCode=INCOMPLETE_FULL_SYNC)"]
-  MarkIncomplete --> KeepSeed["bootPolicy stays manual_only_until_seeded"]
-  KeepSeed --> Reload["refresh / open new tab"]
-  Reload --> Resume["boot auto-resumes one full sync"]
-  Resume --> Complete["seed completes normally"]
+  ManualSync["Manual full sync (first time)"] --> Page100["X returns 100 bookmarks, no cursor"]
+  Page100 --> Persist["Persist visible bookmarks to IDB"]
+  Persist --> MarkIncomplete["completeSyncRun(errorCode=INCOMPLETE_FULL_SYNC)"]
+  MarkIncomplete --> KeepRaw["SW: lastFullSyncAt stays 0<br/>(completion was not success)"]
+  KeepRaw --> Reload["refresh / open new tab"]
+  Reload --> NextSync["auto-sync on boot"]
+  NextSync --> SelfHeal["SW self-heal: lastFullSyncAt=0<br/>→ mode=full"]
+  SelfHeal --> Complete["full reconcile walks remaining pages<br/>lastFullSyncAt = now"]
 ```
 
 ### Rules
 
-- visible bookmarks are kept
-- seed policy is not cleared
-- manual failure cooldown is **not** applied for `INCOMPLETE_FULL_SYNC`
-- on the next boot, if:
-  - boot policy is still `manual_only_until_seeded`
-  - bookmarks already exist
-  - user is logged in
-  - bookmark API is ready
-- then the runtime automatically resumes one `full` sync for that boot
+- Visible bookmarks are kept locally (IDB) even when the full reconcile is incomplete.
+- `lastFullSyncAt` is only set to `now` when `handleSyncPolicyComplete` sees `status === "success"` with `mode === "full"` — so `INCOMPLETE_FULL_SYNC` (treated as a failure) leaves it at 0.
+- Manual failure cooldown is **not** applied for `INCOMPLETE_FULL_SYNC` — users can retry immediately.
+- On the next boot, auto-sync fires; the orchestrator sees `lastFullSyncAt === 0` and picks `mode=full` again automatically. No flag to read, no flag to clear.
 
-This preserves the simple user journey:
+### What changed vs. the old flow
 
-1. reset
-2. log in
-3. click sync once
-4. if X flakes, partial bookmarks stay visible
-5. refresh/new tab continues the import automatically
+The legacy flow used a `bootPolicy` field persisted in `localStorage` that stayed `manual_only_until_seeded` across reloads until a full sync succeeded. That mirror could drift from the SW's view (the split-brain that Phase 1 killed). The new flow derives the same behavior from SW state only — see §16 Invariant #2.
 
 ## 8. Bookmark Events
 
@@ -315,30 +360,73 @@ flowchart LR
 
 ### Important detail
 
-Seed mode no longer suppresses bookmark events. Post-reset seeding blocks auto-sync policy, not normal event ingestion.
+Bookmark event ingestion is orthogonal to the sync lifecycle. It never touches `lastFullSyncAt`, never reserves a lease, and never writes to SW-owned cache-summary keys. The event-driven flow mutates IDB directly and relies on the SW's reservation lifecycle to handle real sync runs.
 
 ## 9. Detail Cache and Reader Flow
 
 Bookmarks alone are not enough for offline reading. The reader and prefetch loop both contribute to the same detail-cache index.
 
-### Reader flow
+### Reader flow (loader-shaped)
+
+The reader route calls `useReaderDetail(tweetId)` — a hook with the same shape as a router loader:
+
+```ts
+type ReaderDetailState =
+  | { status: "idle" }
+  | { status: "pending"; tweetId: string }
+  | { status: "success"; tweetId: string; data: TweetDetailContent }
+  | { status: "error";   tweetId: string; error: string };
+```
+
+Stale-response cancellation is encoded in a pure reducer, not in a `cancelled` flag. A late `resolved` / `error` event whose `tweetId` doesn't match the currently-pending `tweetId` collapses to a no-op (see §16 Invariant #8).
 
 ```mermaid
 sequenceDiagram
-  participant UI as Reader
+  participant UI as Reader route
+  participant Hook as useReaderDetail
   participant Store as Runtime Store
-  participant SW as Service Worker/API
+  participant API as fetchTweetDetail
   participant DB as IndexedDB
+  participant SW as Service Worker
 
-  UI->>Store: loadReaderDetail(tweetId)
-  Store->>SW: fetchTweetDetail(tweetId)
-  SW-->>Store: detail payload
-  Store->>DB: persist tweet detail
-  Store->>Store: detailCached(tweetId)
-  Store-->>UI: reader + offline cache update
+  UI->>Hook: useReaderDetail(tweetId)
+  Hook->>Store: actions.loadReaderDetail(tweetId)
+  Store->>API: fetchTweetDetail(tweetId)
+  API->>DB: getTweetDetailCache(tweetId)
+  alt cache hit
+    DB-->>API: cached detail
+    API-->>Store: { focalTweet, thread }
+  else cache miss
+    API->>API: inflight.get(tweetId)?
+    alt concurrent caller exists
+      API-->>API: reuse in-flight promise
+    else fresh call
+      API->>SW: FETCH_TWEET_DETAIL (with one transport retry)
+      SW-->>API: detail payload OR classified error
+      API->>DB: upsertTweetDetailCache(...)
+    end
+  end
+  API-->>Store: TweetDetailContent OR throw classified error
+  Store-->>Hook: resolve OR reject
+  Hook->>Hook: dispatch({type: "resolved" | "error" | "not_found"})
+  Hook-->>UI: new state (stale tweetId events dropped)
 ```
 
-`detailCached(tweetId)` updates the in-memory `detailedTweetIds` set immediately so offline filtering stays correct without waiting for a later refresh.
+`actions.detailCached(tweetId)` updates the in-memory `detailedTweetIds` set immediately so offline filtering stays correct without waiting for a later refresh. The in-flight Map in `fetchTweetDetail` ensures reader + prefetch don't fire duplicate requests for the same tweetId (§16 Invariant #7).
+
+### Reader error classification
+
+Every error surface gives the user an action that resolves *that specific* error. A new terminal error code from the SW cannot silently fall back to a generic Retry — `classifyDetailError` has a module-load assertion forcing every code in `TERMINAL_ERROR_CODES` to map to a kind (§16 Invariant #5).
+
+```mermaid
+flowchart LR
+  Fetch["fetchTweetDetail error"] --> Classify{classifyDetailError}
+  Classify -->|NO_AUTH<br/>AUTH_EXPIRED| Auth["kind=auth<br/>primary: Log in"]
+  Classify -->|RATE_LIMITED| Rate["kind=rate_limited<br/>primary: Open on X<br/>Retry hidden"]
+  Classify -->|DETAIL_NOT_FOUND| NF["kind=not_found<br/>primary: Open on X<br/>Retry hidden"]
+  Classify -->|network needles<br/>or navigator.offline| Off["kind=offline<br/>OfflineBanner"]
+  Classify -->|anything else| Other["kind=other<br/>primary: Retry"]
+```
 
 ### Offline-readable bookmarks
 
@@ -388,31 +476,63 @@ Database naming:
 
 The runtime store calls `setActiveAccountId(accountContextId)` before hydration so it opens the correct database.
 
-### chrome.storage.local
+### chrome.storage.local (split by writer)
 
-Used for:
+Keys are split across two files so a compile-time / test-time boundary separates SW-owned writes from runtime-owned writes:
 
-- auth/session capture
-- runtime snapshot from service worker
-- sync orchestrator state
-- bookmark event queue
-- last sync timestamps
-- runtime audit and cache summary
+**`src/lib/storage-keys.ts`** — shared constants, read by anyone, written by their respective owners:
+
+- `CS_AUTH_HEADERS`, `CS_AUTH_STATE`, `CS_AUTH_TIME` — written by SW (webRequest capture)
+- `CS_USER_ID`, `CS_ACCOUNT_CONTEXT_ID` — written by SW from twid cookie
+- `CS_BOOKMARK_EVENTS` — written by SW (event capture)
+- `CS_DB_CLEANUP_AT`, `CS_RUNTIME_AUDIT` — written by runtime
+- `CS_LAST_RECONCILE`, `CS_SYNC_AUTO_ENABLED` — legacy/telemetry
+
+**`src/service-worker/storage-keys-sw.ts`** — SW-exclusive writers. Physical file boundary enforced by a source-grep test:
+
+- `CS_SYNC_ORCHESTRATOR_STATE` — lease + cooldown + `lastFullSyncAt`
+- `CS_RUNTIME_STATE_V2` — full `RuntimeSnapshot`
+- `CS_LAST_SYNC`, `CS_LAST_SOFT_SYNC` — cache-summary timestamps
+- `CS_SOFT_SYNC_NEEDED` — soft-sync hint
+
+Only two runtime files are allowed to *import* from `storage-keys-sw`: `lib/reset.ts` (wipes them) and `runtime/RuntimeProvider.tsx` (matches change events). See §16 Invariant #1 and §17.
 
 ### localStorage
 
-Used sparingly for app-local state, including:
+Used sparingly for app-local state: reading tab, sorts, wallpaper, pinned tweets, reader activity. **No `totem_boot_sync_policy`** — that key was removed in Phase 1. Legacy cleanup still lists it in `LEGACY_LOCAL_STORAGE_KEY_MAP` so existing users' localStorage is scrubbed on first reset after upgrade.
 
-- `totem_boot_sync_policy`
+## 11.5. Reactive SW → UI Snapshot Push
 
-Boot policies:
+The SW owns `RuntimeSnapshot`. When it persists a new one to `CS_RUNTIME_STATE_V2`, the runtime picks it up *reactively* — not by polling on the next heartbeat — through a `chrome.storage.onChanged` subscription.
 
-- `auto`
-- `manual_only_until_seeded`
+```mermaid
+sequenceDiagram
+  participant SW as Service Worker
+  participant Storage as chrome.storage.local
+  participant RP as RuntimeProvider
+  participant Store as Runtime Store
+  participant UI as Components
+
+  Note over SW: sync reserved / completed /<br/>capability upgraded
+  SW->>Storage: set CS_RUNTIME_STATE_V2 = snapshot
+  Storage-->>RP: onChanged event
+  RP->>RP: filter out auth-keys branch<br/>(checkAuth handles those)
+  RP->>Store: actions.applyRuntimeSnapshot(snapshot)
+  Store->>Store: applyAuthPayload(<br/>  allowHydration: false,<br/>  allowAutoSync: false)
+  Store->>UI: selectors re-render
+```
+
+**What this replaces:** before Phase 3, the runtime only re-read the SW snapshot on the next heartbeat (45 s) or next `checkAuth()`. A capability upgrade mid-session (e.g., a query ID discovered 2 s after the extension opened) was invisible to the UI until the next heartbeat. Now it propagates on the same event loop tick.
+
+**Guardrails:**
+
+- `applyRuntimeSnapshot` passes `allowHydration: false, allowAutoSync: false` — a push never re-reads IDB and never starts a sync. It only updates auth/capability/session mirrors from the snapshot.
+- If a push snapshot flips the session to non-ready mid-sync, `applyAuthPayload` releases the active lease through the SW (`shouldReleaseActiveWork` in §16 Invariant #3). A sync can never outlive its session.
+- The listener skips the snapshot branch when an auth-keys change fires in the same batch — `checkAuth()` will re-fetch and apply the same data. Avoids double-work.
 
 ## 12. Reset Flow
 
-Reset is intentionally split between runtime preparation and durable storage cleanup.
+Reset is an **atomic RPC** — the runtime blocks on the SW's ack before touching IDB, so no in-flight sync can write to a database that's about to be deleted.
 
 ```mermaid
 sequenceDiagram
@@ -421,27 +541,30 @@ sequenceDiagram
   participant Reset as resetLocalData()
   participant SW as Service Worker
   participant DB as IndexedDB
+  participant CS as chrome.storage
 
   UI->>Store: prepareForReset()
-  Store->>Store: set bootPolicy=manual_only_until_seeded
+  Store->>Store: abort in-flight sync
   Store->>Store: clear in-memory bookmarks/details
   UI->>Reset: resetLocalData()
   Reset->>SW: RESET_SW_STATE
-  Reset->>DB: close connections + delete DBs
-  Reset->>Reset: preserve boot policy key
-  Reset->>chrome.storage: remove non-auth runtime keys
+  activate SW
+  SW->>SW: withSyncOrchestratorLock()
+  SW->>CS: write empty orchestrator state
+  SW-->>Reset: { ok: true }
+  deactivate SW
+  Reset->>DB: closeDb()
+  Reset->>DB: deleteDatabase(default + all account DBs)
+  Reset->>CS: localStorage.removeItem(all known keys)
+  Reset->>CS: chrome.storage.local.remove(non-auth keys)
 ```
 
 ### Reset goals
 
-- keep auth capture when possible so login recovery is cheaper
-- clear local bookmark/detail/progress/highlight state
-- preserve boot policy so the next boot knows reset happened
-- prevent the logged-out post-reset flow from blocking forever on hydration
-
-### Logged-out reset shortcut
-
-If boot policy is `manual_only_until_seeded` and auth resolves to logged out, boot settles directly to `offline_empty` instead of waiting on cache hydration. This avoids the old "loading forever after reset" failure mode.
+- Keep auth capture when possible so login recovery is cheaper.
+- Clear local bookmark/detail/progress/highlight state.
+- **No runtime "am I reset" flag** — the next boot's `lastFullSyncAt === 0` fully describes the post-reset state; the self-heal handles it (§6).
+- The ack handshake prevents silent DB corruption from in-flight writes.
 
 ## 13. Component Rendering Rules
 
@@ -462,24 +585,27 @@ This keeps home, reading list, and reader aligned.
 
 ### Runtime and UI state
 
-- `src/stores/runtime-store.ts`
-- `src/stores/selectors.ts`
-- `src/runtime/RuntimeProvider.tsx`
-- `src/stores/prefetch-controller.ts`
+- `src/stores/runtime-store.ts` — single source of truth for UI-facing runtime
+- `src/stores/selectors.ts` — the only API components read from
+- `src/runtime/RuntimeProvider.tsx` — effect shell + reactive snapshot subscription
+- `src/stores/prefetch-controller.ts` — detail warmup loop
+- `src/hooks/useReaderDetail.ts` — loader-shaped hook for the reader route
 
 ### Service worker and API boundary
 
-- `public/service-worker.js`
-- `src/api/core/auth.ts`
-- `src/api/core/bookmarks.ts`
-- `src/api/core/posts.ts`
-- `src/api/core/sync.ts`
+- `src/service-worker/index.ts` (bundled → `public/service-worker.js`)
+- `src/service-worker/auth.ts` — session/snapshot building
+- `src/service-worker/sync.ts` — reservation/completion/reset handlers, self-heal mode
+- `src/service-worker/api-proxy.ts` — tweet detail + bookmark mutation proxies
+- `src/service-worker/query-id.ts` — GraphQL query-ID discovery
+- `src/api/core/auth.ts`, `bookmarks.ts`, `posts.ts`, `sync.ts` — runtime-side RPC wrappers
 
 ### Persistence
 
-- `src/db/index.ts`
-- `src/lib/reset.ts`
-- `src/lib/storage-keys.ts`
+- `src/db/index.ts` — account-scoped IndexedDB
+- `src/lib/reset.ts` — atomic reset with SW ack
+- `src/lib/storage-keys.ts` — shared key constants (runtime + SW read this)
+- `src/service-worker/storage-keys-sw.ts` — SW-owned key constants (non-SW imports forbidden; see §17)
 
 ### Sync helpers
 
@@ -489,10 +615,15 @@ This keeps home, reading list, and reader aligned.
 
 ### Components
 
-- `src/App.tsx`
+- `src/App.tsx` — route switch, reader route, error shell with classified actions
 - `src/components/NewTabHome.tsx`
 - `src/components/BookmarksList.tsx`
 - `src/components/BookmarkReader.tsx`
+- `src/components/reader/detail-error.ts` — classifier (module-load assertion forces exhaustive coverage)
+
+### Invariant enforcement
+
+- `src/lib/__tests__/storage-invariants.test.ts` — CI-enforced source-grep guards for Invariants #1 and #6. Red-team verified to fire on deliberate violations.
 
 ## 15. Mental Model
 
