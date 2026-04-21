@@ -227,9 +227,7 @@ stateDiagram-v2
 ### Meaning of online states
 
 - `online_ready`: user is logged in and bookmark API is usable
-- `online_blocked`: user exists, but bookmark API/query ID is not ready yet
-
-This is why the app can show a "finish X setup" style state instead of a misleading sync CTA.
+- When the bookmark API / query ID is not yet ready while the user is otherwise logged in, the runtime stays in `connecting` — there is no dedicated "online but blocked" mode in the code today. Selectors (see §13) surface a "finish X setup" style UI instead of a misleading sync CTA.
 
 ## 6. Sync Architecture
 
