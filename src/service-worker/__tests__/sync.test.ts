@@ -385,6 +385,49 @@ describe("sync lease lifecycle", () => {
     expect(result.mode).toBe("incremental");
   });
 
+  it("does not force full on auto sync when localCount=0 but a prior full sync is fresh (empty account)", async () => {
+    const { handlers, storage } = createTestDeps();
+
+    // Empty-account steady state: user legitimately has 0 bookmarks on X.
+    // Auto-sync must not re-seed "full" every cycle — that's wasted API.
+    // Manual sync with the same shape (see earlier test) still forces full
+    // because the user explicitly asked for a reseed. FINDINGS §2 review feedback.
+    const now = Date.now();
+    await storage.set({
+      totem_sync_orchestrator_state: {
+        version: 1,
+        accounts: {
+          "acct-1": {
+            inFlight: null,
+            lastSuccessAt: now - 30 * 60 * 1000,
+            lastFullSyncAt: now - 30 * 60 * 1000,
+            lastIncrementalSyncAt: 0,
+            manualCooldownUntil: 0,
+            rateLimitBackoffUntil: 0,
+            rateLimitConsecutive: 0,
+            lastAttemptAt: now - 30 * 60 * 1000,
+            lastCompletedAt: now - 30 * 60 * 1000,
+            lastCompletedStatus: "success",
+            lastDecisionAt: 0,
+            lastDecisionReason: null,
+            lastError: null,
+            lastFailureCode: null,
+          },
+        },
+      },
+    });
+
+    const result = (await handlers.REQUEST_SYNC(
+      { type: "REQUEST_SYNC", trigger: "auto", localCount: 0 } as MessageRequest,
+      {} as chrome.runtime.MessageSender,
+    )) as Record<string, unknown>;
+
+    // fresh_cache applies because lastCompletedStatus is "success" and we're
+    // still inside the 4h window.
+    expect(result.allow).toBe(false);
+    expect(result.reason).toBe("fresh_cache");
+  });
+
   it("bypasses fresh_cache on auto sync when last completion was a skip (mid-sync refresh)", async () => {
     const { handlers, storage } = createTestDeps();
 

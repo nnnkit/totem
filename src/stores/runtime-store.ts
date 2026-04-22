@@ -633,6 +633,7 @@ export function createRuntimeStore() {
       const accountChanged = nextAccountId !== state.activeAccountId;
       const needsHydration = options.allowHydration &&
         (accountChanged || !state.bookmarksLoaded || !state.detailedIdsLoaded);
+      const phaseChanged = phase !== state.authPhase;
 
       // Invalidate any in-flight sync when the runtime's view of the session
       // becomes non-ready. Without this, a push snapshot reporting
@@ -646,6 +647,14 @@ export function createRuntimeStore() {
       if (shouldReleaseActiveWork) {
         stopSync();
         void releaseActiveLease("skipped");
+      }
+
+      // An auth/account transition invalidates whatever block window a prior
+      // sync decision set up — the account we're talking to may have changed,
+      // and a pending long timer (e.g. 4h fresh_cache) would otherwise silence
+      // the post-login auto-sync. See the guard in maybeStartAutomaticSync.
+      if (accountChanged || (phaseChanged && phase === "ready")) {
+        clearScheduledAutoRetry();
       }
 
       const nextBootGeneration = needsHydration

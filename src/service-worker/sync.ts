@@ -13,6 +13,7 @@ import type { MessageRequest } from "../types/messages";
 import type { HandlerMap } from "./index";
 import { getSessionSnapshot, buildRuntimeSnapshot } from "./auth";
 import { normalizeSyncAccountId } from "../lib/sw-pure";
+import { closeDb } from "../db";
 import {
   CS_LAST_SOFT_SYNC,
   CS_LAST_SYNC,
@@ -415,21 +416,24 @@ export function createSyncHandlers(deps: SyncDeps = {}): HandlerMap {
       }
 
       // Mode is derived purely from the orchestrator's own state — the caller
-      // does not get to request a mode. Two split-brain conditions both force
-      // a full seed: the historical one where runtime thought it was seeded
-      // but the SW had no record (`lastFullSyncAt === 0`), and the symmetric
-      // post-reset case where the SW remembers a prior full sync but the DB
-      // is empty (`localCount <= 0`). Without the second check, the manual
-      // sync after a reset picks `incremental` and fetches only the delta
-      // since `lastFullSyncAt`, leaving the wiped bookmarks gone (FINDINGS §2).
-      const needsFullSync = account.lastFullSyncAt <= 0 || localCount <= 0;
+      // does not get to request a mode. `lastFullSyncAt === 0` forces a full
+      // seed (historical split-brain: runtime thought it was seeded but the
+      // SW had no record).
+      const needsFullSync = account.lastFullSyncAt <= 0;
+      // The symmetric post-reset case is a user-asked operation: the SW
+      // remembers a prior full sync but the DB is empty. Handle it only on
+      // the manual path so an empty-account user (localCount === 0 is the
+      // steady state for them) isn't re-seeded every auto-sync forever.
+      const manualSeedFromEmpty =
+        trigger === "manual" && !needsFullSync && localCount <= 0;
 
       let mode: string;
       let reason: string;
 
       if (trigger === "manual") {
-        mode = needsFullSync ? "full" : "incremental";
-        reason = needsFullSync ? "manual_seed" : "manual";
+        const forceFull = needsFullSync || manualSeedFromEmpty;
+        mode = forceFull ? "full" : "incremental";
+        reason = forceFull ? "manual_seed" : "manual";
       } else if (needsFullSync) {
         if (
           account.lastAttemptAt > 0 &&
@@ -649,9 +653,13 @@ export function createSyncHandlers(deps: SyncDeps = {}): HandlerMap {
     // stomp a reservation that's mid-write. Once we own the lock, wipe the
     // orchestrator state durably; the runtime's reset also removes it, but
     // doing it here makes the reset a single atomic RPC from the runtime's
-    // perspective (send → ack → safe to delete the DB).
+    // perspective (send → ack → safe to delete the DB). We also drop the
+    // SW's cached IDB handle before acking so the ack genuinely implies
+    // "SW has released the DB" — the CS_RESET_EPOCH onChanged listener is
+    // a best-effort backstop, not a guarantee.
     return withSyncOrchestratorLock(async () => {
       await writeState(createEmptySyncOrchestratorState());
+      closeDb();
       return { ok: true };
     });
   }

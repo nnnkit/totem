@@ -25,7 +25,7 @@ Observation-only session. Driven via Chrome DevTools Protocol (raw WS) against a
 
 ### 1. Reset is silently incomplete when any extension page is open — ✅ RESOLVED
 
-Fixed by adding a `CS_RESET_EPOCH` broadcast. `reset.ts` writes the epoch first; the SW (`service-worker/index.ts`) and every page's `RuntimeProvider` drop their IDB handle on change; `handleResetSwState` (sync.ts:628) also calls `closeDb()` before acking. Reset waits 400 ms for listeners to drain, then `deleteDatabase` runs unblocked. Verified: on-disk `000003.log` (2.7 MB, 339 bookmarks) was replaced by fresh `000008.ldb`/`000009.log` after reset with a second reader tab open.
+Fixed by adding a `CS_RESET_EPOCH` broadcast. `reset.ts` writes the epoch first; the SW (`service-worker/index.ts`) and every page's `RuntimeProvider` drop their IDB handle on change; `handleResetSwState` now also calls `closeDb()` inside the orchestrator lock before acking (`service-worker/sync.ts`), so the ack genuinely implies the SW has released the DB — the broadcast listener is a best-effort backstop. Reset waits 400 ms for listeners to drain, then `deleteDatabase` runs unblocked. Verified: on-disk `000003.log` (2.7 MB, 339 bookmarks) was replaced by fresh `000008.ldb`/`000009.log` after reset with a second reader tab open.
 
 _Original finding below._
 
@@ -48,7 +48,7 @@ _Original finding below._
 
 ### 2. Post-reset sync picks `incremental` when user expects `full` — ✅ RESOLVED
 
-Fixed at `service-worker/sync.ts:408`: the `needsFullSync` derivation now OR's `localCount <= 0` into the check. An empty DB + non-zero `lastFullSyncAt` (the post-reset shape) now flows into the `manual_seed` / `bootstrap_empty` path and fetches the whole account. Verified live: forced state `lastFullSyncAt=now-60s`, called `REQUEST_SYNC` with `localCount:0` → got `mode: full, reason: manual_seed`. Pre-fix this returned `incremental`. New test: `src/service-worker/__tests__/sync.test.ts` "forces full mode for manual sync when localCount is zero even after a prior full sync".
+Fixed at `service-worker/sync.ts`: on the manual trigger path, a zero `localCount` now forces `manual_seed` even when a prior full sync is fresh — `manualSeedFromEmpty`. The auto path intentionally does **not** force full on empty `localCount` (empty-X-account users would be re-seeded every cycle), so auto sync on an empty-but-fresh account still blocks with `fresh_cache`. Verified live: `REQUEST_SYNC trigger:manual localCount:0 lastFullSyncAt=now-30min` → `mode: full, reason: manual_seed`; `REQUEST_SYNC trigger:auto localCount:0` → `blocked, reason: fresh_cache`. New tests cover both paths.
 
 _Original finding below._
 
@@ -132,7 +132,7 @@ So the API call succeeded (SW says so) but no rows landed in the DB. Meanwhile e
 ### 5. Continuous `[TOTEM-DIAG] sync.reserve blocked` log (the spinner-always-on signal) — ✅ RESOLVED
 
 Two-part fix:
-- Runtime-side (`stores/runtime-store.ts:510`): `maybeStartAutomaticSync` now early-returns when a retry is already pending (`scheduledAutoRetryTimer !== null`). Prevents rapid re-firing within a single page when auth/visibility/hydration events all try to kick a sync.
+- Runtime-side (`stores/runtime-store.ts`): `maybeStartAutomaticSync` now early-returns when a retry is already pending (`scheduledAutoRetryTimer !== null`). Prevents rapid re-firing within a single page when auth/visibility/hydration events all try to kick a sync. `applyAuthPayload` clears the pending retry on account change or on a transition into `phase === "ready"`, so a stale 4 h `fresh_cache` timer doesn't silence the post-login auto-sync.
 - SW-side (`service-worker/sync.ts` `returnBlocked`): dedupe the block log per-account when the same reason was already persisted within 2 s (`RESERVE_BLOCK_LOG_DEDUPE_MS`). Kills cross-page fan-out noise.
 
 Verified live with 3 newtab pages open: pre-fix log cadence ~0.6/s; post-fix ~0.2/s and the first-of-reason log still fires for visibility.
