@@ -385,6 +385,48 @@ describe("sync lease lifecycle", () => {
     expect(result.mode).toBe("incremental");
   });
 
+  it("bypasses fresh_cache on auto sync when last completion was a skip (mid-sync refresh)", async () => {
+    const { handlers, storage } = createTestDeps();
+
+    // Post-interrupt scenario: lastSuccessAt is recent (within 4h window)
+    // but the most recent completion was a skip — the user reloaded mid-
+    // sync and released the lease. Auto-sync should still run (governed by
+    // auto_backoff, not fresh_cache). FINDINGS §3.
+    const now = Date.now();
+    await storage.set({
+      totem_sync_orchestrator_state: {
+        version: 1,
+        accounts: {
+          "acct-1": {
+            inFlight: null,
+            lastSuccessAt: now - 30 * 60 * 1000,
+            lastFullSyncAt: now - 30 * 60 * 1000,
+            lastIncrementalSyncAt: 0,
+            manualCooldownUntil: 0,
+            rateLimitBackoffUntil: 0,
+            rateLimitConsecutive: 0,
+            lastAttemptAt: now - 10 * 60 * 1000,
+            lastCompletedAt: now - 10 * 60 * 1000,
+            lastCompletedStatus: "skipped",
+            lastDecisionAt: 0,
+            lastDecisionReason: null,
+            lastError: null,
+            lastFailureCode: null,
+          },
+        },
+      },
+    });
+
+    const result = (await handlers.REQUEST_SYNC(
+      { type: "REQUEST_SYNC", trigger: "auto", localCount: 100 } as MessageRequest,
+      {} as chrome.runtime.MessageSender,
+    )) as Record<string, unknown>;
+
+    expect(result.allow).toBe(true);
+    expect(result.mode).toBe("incremental");
+    expect(result.reason).toBe("background_stale");
+  });
+
   it("selects full mode for auto sync with no bookmarks", async () => {
     const { handlers } = createTestDeps();
 

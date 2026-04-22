@@ -425,7 +425,15 @@ export function createSyncHandlers(deps: SyncDeps = {}): HandlerMap {
         mode = "full";
         reason = localCount <= 0 ? "bootstrap_empty" : "bootstrap_seed";
       } else {
+        // fresh_cache gates auto-syncs after a recent *successful* completion.
+        // If the most recent completion was skipped or failed — typically
+        // because a mid-sync reload released the lease — don't treat the
+        // stale lastSuccessAt as proof of freshness; fall through so the
+        // auto_backoff window governs retry cadence instead (FINDINGS §3).
+        const lastCompletionWasSuccess =
+          account.lastCompletedStatus === "success";
         if (
+          lastCompletionWasSuccess &&
           account.lastSuccessAt > 0 &&
           now - account.lastSuccessAt < SYNC_ORCHESTRATOR_AUTO_INTERVAL_MS
         ) {

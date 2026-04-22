@@ -68,7 +68,15 @@ So the UX-level "Sync" after a reset does not re-seed; it asks for bookmarks *si
 
 ---
 
-### 3. Mid-sync refresh: inconsistent state, silent drop, 4-hour lockout
+### 3. Mid-sync refresh: inconsistent state, silent drop, 4-hour lockout — ✅ RESOLVED
+
+Fixed at `service-worker/sync.ts` (else branch of mode decision): the `fresh_cache` gate now requires `lastCompletedStatus === "success"`. A mid-sync reload sets `lastCompletedStatus: "skipped"` (unchanged behavior), but subsequent auto-syncs now fall through to `auto_backoff` (5 min) instead of being held in `fresh_cache` for 4 h. Live-verified: with `lastCompletedStatus: "skipped"` + `lastSuccessAt` 30 min ago, `REQUEST_SYNC trigger=auto` returns `mode: incremental, reason: background_stale` (pre-fix returned `blocked/fresh_cache`). New test: `src/service-worker/__tests__/sync.test.ts` "bypasses fresh_cache on auto sync when last completion was a skip".
+
+Pre-existing worktree changes (`SYNC_ORCHESTRATOR_SEED_BACKOFF_MS=30s`, `SYNC_ORCHESTRATOR_AUTO_RECLAIM_MS=90s`) also attack the lockout by shortening seed backoff and reclaiming orphaned leases — both landed in the previous commit.
+
+_Original finding below._
+
+
 
 Reproducer: full sync running → user reloads newtab.
 
