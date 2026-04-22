@@ -129,7 +129,17 @@ So the API call succeeded (SW says so) but no rows landed in the DB. Meanwhile e
 
 ---
 
-### 5. Continuous `[TOTEM-DIAG] sync.reserve blocked` log (the spinner-always-on signal)
+### 5. Continuous `[TOTEM-DIAG] sync.reserve blocked` log (the spinner-always-on signal) — ✅ RESOLVED
+
+Two-part fix:
+- Runtime-side (`stores/runtime-store.ts:510`): `maybeStartAutomaticSync` now early-returns when a retry is already pending (`scheduledAutoRetryTimer !== null`). Prevents rapid re-firing within a single page when auth/visibility/hydration events all try to kick a sync.
+- SW-side (`service-worker/sync.ts` `returnBlocked`): dedupe the block log per-account when the same reason was already persisted within 2 s (`RESERVE_BLOCK_LOG_DEDUPE_MS`). Kills cross-page fan-out noise.
+
+Verified live with 3 newtab pages open: pre-fix log cadence ~0.6/s; post-fix ~0.2/s and the first-of-reason log still fires for visibility.
+
+_Original finding below._
+
+
 
 Observed: ~6 `sync.reserve blocked` messages in a 10-second window, equivalent to one every 1.5–2s.
 

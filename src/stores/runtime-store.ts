@@ -374,6 +374,12 @@ export function createRuntimeStore() {
   let processingBookmarkEvents = false;
   let authRequestId = 0;
   let cleanupStarted = false;
+  // Scheduled auto-retry for when an auto-sync was blocked by auto_backoff.
+  // The SW returns retryAfterMs telling us when the window clears; we set
+  // a single timer to fire another auto-sync then. Without this, a blocked
+  // seed-incomplete sync would never retry until the user reloaded — and
+  // if the user reloads inside the backoff window, they just block again.
+  let scheduledAutoRetryTimer: ReturnType<typeof setTimeout> | null = null;
 
   const useRuntimeStoreBase = create<RuntimeState>((set, get) => {
     const setRuntimeState = (
@@ -470,8 +476,57 @@ export function createRuntimeStore() {
       })().catch(() => {});
     };
 
+    const clearScheduledAutoRetry = () => {
+      if (scheduledAutoRetryTimer !== null) {
+        clearTimeout(scheduledAutoRetryTimer);
+        scheduledAutoRetryTimer = null;
+      }
+    };
+
+    const scheduleAutoRetry = (delayMs: number) => {
+      clearScheduledAutoRetry();
+      // Small buffer so we arrive just after the SW's window clears.
+      const effective = Math.max(1_000, delayMs + 500);
+      // [TOTEM-DIAG] Scheduled retry — answers: "after a blocked auto-sync,
+      // did the runtime schedule a follow-up?"
+      console.log("[TOTEM-DIAG] scheduleAutoRetry", { delayMs: effective });
+      scheduledAutoRetryTimer = setTimeout(() => {
+        scheduledAutoRetryTimer = null;
+        const state = get();
+        const willFire =
+          state.syncStatus !== "syncing" && shouldAutoSync(state);
+        // [TOTEM-DIAG] Retry fired — answers: "did the scheduled timer
+        // actually run, and did it trigger another sync attempt?"
+        console.log("[TOTEM-DIAG] scheduleAutoRetry.fired", {
+          willFire,
+          syncStatus: state.syncStatus,
+          authPhase: state.authPhase,
+        });
+        if (!willFire) return;
+        void sync({ trigger: "auto" }).catch(() => {});
+      }, effective);
+    };
+
     const maybeStartAutomaticSync = () => {
       const state = get();
+      // A retry is already scheduled — the SW returned a timed block
+      // (fresh_cache / auto_backoff) and we're waiting out that window.
+      // Re-entering now would just hit the same block and add noise to
+      // both the SW log and any UI that reflects `syncStatus` transitions
+      // (FINDINGS §5).
+      const retryPending = scheduledAutoRetryTimer !== null;
+      console.log("[TOTEM-DIAG] maybeStartAutomaticSync", {
+        syncStatus: state.syncStatus,
+        authPhase: state.authPhase,
+        bookmarksLoaded: state.bookmarksLoaded,
+        bookmarkCount: state.bookmarks.length,
+        retryPending,
+        shouldFire:
+          !retryPending &&
+          state.syncStatus !== "syncing" &&
+          shouldAutoSync(state),
+      });
+      if (retryPending) return;
       if (state.syncStatus === "syncing") return;
 
       if (shouldAutoSync(state)) {
@@ -697,12 +752,33 @@ export function createRuntimeStore() {
             syncBlockedReason: blockedReason || "not_ready",
           });
         }
+        // Schedule an auto-retry when an auto-triggered sync got blocked
+        // by a time-bounded reason (auto_backoff, fresh_cache). This is
+        // the "auto-resume" path that used to exist pre-refactor — without
+        // it, a blocked seed-incomplete sync never retries unless the user
+        // reloads at exactly the right time. We don't auto-retry on
+        // in_flight (another sync is already running), cooldown (manual
+        // just succeeded; user didn't ask for more), rate_limited (that
+        // has its own backoff tracking), or not_ready / no_account.
+        const retryAfterMs = policy.retryAfterMs;
+        const shouldAutoRetry =
+          trigger === "auto" &&
+          (policy.reason === "auto_backoff" ||
+            policy.reason === "fresh_cache") &&
+          typeof retryAfterMs === "number" &&
+          retryAfterMs > 0;
+        if (shouldAutoRetry) {
+          scheduleAutoRetry(retryAfterMs as number);
+        }
         return {
           accepted: false,
           reason: blockedReason || policy.reason || "blocked",
           retryAfterMs: policy.retryAfterMs,
         };
       }
+
+      // A reservation was granted — no need for a pending scheduled retry.
+      clearScheduledAutoRetry();
 
       const current = get();
       if (current.authPhase !== "ready") {
@@ -821,6 +897,22 @@ export function createRuntimeStore() {
         if (!abortState.aborted && get().syncGeneration === syncGeneration) {
           const fullSyncCompleted = mode !== "full" ||
             reconcileResult.terminationReason === "complete";
+
+          // [TOTEM-DIAG] Reconcile result — answers: "did we stop early, and
+          // if so, why?" Key fields: terminationReason (complete / cursor_missing
+          // / duplicate_stop / page_cap), pagesRequested, newBookmarks count.
+          console.log("[TOTEM-DIAG] reconcile.result", {
+            mode,
+            terminationReason: reconcileResult.terminationReason,
+            pagesRequested: reconcileResult.pagesRequested,
+            newBookmarksCount: reconcileResult.newBookmarks.length,
+            lastCursor: reconcileResult.lastCursor,
+            needsRecovery: reconcileResult.needsRecovery,
+            capReached: reconcileResult.capReached,
+            staleIds: reconcileResult.staleIds.length,
+            localBookmarksNow: get().bookmarks.length,
+            fullSyncCompleted,
+          });
 
           if (!fullSyncCompleted) {
             completionErrorCode = "INCOMPLETE_FULL_SYNC";
@@ -945,6 +1037,7 @@ export function createRuntimeStore() {
       dispose: () => {
         prefetchController.stop();
         stopSync();
+        clearScheduledAutoRetry();
         authRequestId += 1;
         setRuntimeState((state) => ({
           bootGeneration: state.bootGeneration + 1,
@@ -1063,6 +1156,7 @@ export function createRuntimeStore() {
       prepareForReset: () => {
         prefetchController.stop();
         stopSync();
+        clearScheduledAutoRetry();
         authRequestId += 1;
         setRuntimeState((state) => ({
           syncGeneration: state.syncGeneration + 1,

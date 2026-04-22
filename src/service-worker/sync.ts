@@ -40,6 +40,12 @@ const SYNC_ORCHESTRATOR_MANUAL_RECLAIM_MS = 90_000;
 // reclaim, every reload gets blocked with `in_flight` for up to
 // SYNC_ORCHESTRATOR_LOCK_TTL_MS (12 min). Symmetric with the manual path.
 const SYNC_ORCHESTRATOR_AUTO_RECLAIM_MS = 90_000;
+// Window within which a repeat of the same block reason for the same
+// account is considered noise. Multiple open pages + focus/visibility
+// events fan out into redundant REQUEST_SYNC calls; suppressing the log
+// for back-to-back duplicates (FINDINGS §5) keeps the diagnostic readable
+// without hiding first-of-reason transitions.
+const RESERVE_BLOCK_LOG_DEDUPE_MS = 2_000;
 const SYNC_ORCHESTRATOR_MANUAL_SUCCESS_COOLDOWN_MS = 15 * 60 * 1000;
 const SYNC_ORCHESTRATOR_MANUAL_FAILURE_RETRY_MS = 30_000;
 const SYNC_ORCHESTRATOR_RATE_LIMIT_BACKOFF_BASE_MS = 60_000;
@@ -314,6 +320,13 @@ export function createSyncHandlers(deps: SyncDeps = {}): HandlerMap {
       ) => {
         const safeAccountKey = accountKey || "__none__";
         const retryAfterMs = retryAfterFor(reason, account ?? null);
+        // Suppress log spam when multiple pages (or rapid-fire subscribers)
+        // all hit the same block decision in quick succession. The previous
+        // decision we persisted tells us whether this is a duplicate.
+        const isDuplicate =
+          account?.lastDecisionReason === reason &&
+          account?.lastDecisionAt > 0 &&
+          now - account.lastDecisionAt < RESERVE_BLOCK_LOG_DEDUPE_MS;
         if (accountKey) {
           state.accounts[accountKey] = {
             ...(account || createEmptySyncAccountState()),
@@ -326,18 +339,20 @@ export function createSyncHandlers(deps: SyncDeps = {}): HandlerMap {
         if (snapshot) {
           await persistRuntimeStateV2(snapshot).catch(() => {});
         }
-        // [TOTEM-DIAG] Reserve blocked — answers: "sync didn't run on refresh,
-        // what blocked it?" (cooldown / fresh_cache / in_flight / auto_backoff
-        // / rate_limited / not_ready / no_account)
-        console.log("[TOTEM-DIAG] sync.reserve blocked", {
-          trigger,
-          reason,
-          retryAfterMs,
-          lastFullSyncAt: account?.lastFullSyncAt ?? 0,
-          lastAttemptAt: account?.lastAttemptAt ?? 0,
-          lastSuccessAt: account?.lastSuccessAt ?? 0,
-          inFlightStartedAt: account?.inFlight?.startedAt ?? null,
-        });
+        if (!isDuplicate) {
+          // [TOTEM-DIAG] Reserve blocked — answers: "sync didn't run on
+          // refresh, what blocked it?" (cooldown / fresh_cache / in_flight
+          // / auto_backoff / rate_limited / not_ready / no_account)
+          console.log("[TOTEM-DIAG] sync.reserve blocked", {
+            trigger,
+            reason,
+            retryAfterMs,
+            lastFullSyncAt: account?.lastFullSyncAt ?? 0,
+            lastAttemptAt: account?.lastAttemptAt ?? 0,
+            lastSuccessAt: account?.lastSuccessAt ?? 0,
+            inFlightStartedAt: account?.inFlight?.startedAt ?? null,
+          });
+        }
         return {
           ok: true,
           allow: false,
