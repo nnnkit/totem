@@ -46,7 +46,13 @@ _Original finding below._
 
 ---
 
-### 2. Post-reset sync picks `incremental` when user expects `full`
+### 2. Post-reset sync picks `incremental` when user expects `full` — ✅ RESOLVED
+
+Fixed at `service-worker/sync.ts:408`: the `needsFullSync` derivation now OR's `localCount <= 0` into the check. An empty DB + non-zero `lastFullSyncAt` (the post-reset shape) now flows into the `manual_seed` / `bootstrap_empty` path and fetches the whole account. Verified live: forced state `lastFullSyncAt=now-60s`, called `REQUEST_SYNC` with `localCount:0` → got `mode: full, reason: manual_seed`. Pre-fix this returned `incremental`. New test: `src/service-worker/__tests__/sync.test.ts` "forces full mode for manual sync when localCount is zero even after a prior full sync".
+
+_Original finding below._
+
+
 
 Sequence observed:
 1. Reset wipes orchestrator state → `lastFullSyncAt: 0` ✅
