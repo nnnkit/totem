@@ -26,7 +26,8 @@ import {
   extractTweetIdFromVariables,
   extractGraphqlOperationName,
 } from "../lib/sw-pure";
-import { CS_ACCOUNT_CONTEXT_ID, SYNC_SETTINGS } from "../lib/storage-keys";
+import { CS_ACCOUNT_CONTEXT_ID, CS_RESET_EPOCH, SYNC_SETTINGS } from "../lib/storage-keys";
+import { closeDb } from "../db";
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -433,6 +434,14 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
       ? newVal.showOpenInTotem
       : true;
   syncOpenInTotemScript(enabled);
+});
+
+// Reset broadcast: reset.ts writes CS_RESET_EPOCH right before deleting the
+// IDB. Drop our cached DB handle so the delete isn't blocked.
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName !== "local") return;
+  if (!changes[CS_RESET_EPOCH]) return;
+  closeDb();
 });
 
 // ══════════════════════════════════════════════════════════════

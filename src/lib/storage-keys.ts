@@ -26,6 +26,9 @@ export const LOCAL_STORAGE_KEYS = [
 export const CS_DB_CLEANUP_AT = "totem_db_cleanup_at";
 export const CS_LAST_RECONCILE = "totem_last_reconcile";
 export const CS_BOOKMARK_EVENTS = "totem_bookmark_events";
+// Broadcast signal — reset.ts writes it, every open page + the SW drop their
+// IDB handles on change so the subsequent deleteDatabase() isn't blocked.
+export const CS_RESET_EPOCH = "totem_reset_epoch";
 export const CS_AUTH_HEADERS = "totem_auth_headers";
 export const CS_AUTH_TIME = "totem_auth_time";
 export const CS_USER_ID = "totem_user_id";

@@ -3,11 +3,13 @@ import {
   AUTH_CONNECTING_TIMEOUT_MS,
   AUTH_HEARTBEAT_MS,
 } from "../lib/constants";
+import { closeDb } from "../db";
 import {
   CS_ACCOUNT_CONTEXT_ID,
   CS_AUTH_HEADERS,
   CS_AUTH_STATE,
   CS_BOOKMARK_EVENTS,
+  CS_RESET_EPOCH,
   CS_USER_ID,
 } from "../lib/storage-keys";
 // Allowlisted runtime-side import of an SW-owned key: RuntimeProvider
@@ -65,6 +67,12 @@ export function RuntimeProvider({ children }: PropsWithChildren) {
       areaName: string,
     ) => {
       if (areaName !== "local") return;
+
+      // Reset broadcast: drop our IDB handle so the resetting tab's
+      // deleteDatabase() isn't blocked by this page's live connection.
+      if (changes[CS_RESET_EPOCH]) {
+        closeDb();
+      }
 
       const hasAuthChange = Boolean(
         changes[CS_AUTH_HEADERS] ||
