@@ -489,7 +489,7 @@ export function createRuntimeStore() {
       const effective = Math.max(1_000, delayMs + 500);
       // [TOTEM-DIAG] Scheduled retry — answers: "after a blocked auto-sync,
       // did the runtime schedule a follow-up?"
-      console.log("[TOTEM-DIAG] scheduleAutoRetry", { delayMs: effective });
+      console.debug("[TOTEM-DIAG] scheduleAutoRetry", { delayMs: effective });
       scheduledAutoRetryTimer = setTimeout(() => {
         scheduledAutoRetryTimer = null;
         const state = get();
@@ -497,7 +497,7 @@ export function createRuntimeStore() {
           state.syncStatus !== "syncing" && shouldAutoSync(state);
         // [TOTEM-DIAG] Retry fired — answers: "did the scheduled timer
         // actually run, and did it trigger another sync attempt?"
-        console.log("[TOTEM-DIAG] scheduleAutoRetry.fired", {
+        console.debug("[TOTEM-DIAG] scheduleAutoRetry.fired", {
           willFire,
           syncStatus: state.syncStatus,
           authPhase: state.authPhase,
@@ -515,7 +515,7 @@ export function createRuntimeStore() {
       // both the SW log and any UI that reflects `syncStatus` transitions
       // (FINDINGS §5).
       const retryPending = scheduledAutoRetryTimer !== null;
-      console.log("[TOTEM-DIAG] maybeStartAutomaticSync", {
+      console.debug("[TOTEM-DIAG] maybeStartAutomaticSync", {
         syncStatus: state.syncStatus,
         authPhase: state.authPhase,
         bookmarksLoaded: state.bookmarksLoaded,
@@ -910,7 +910,7 @@ export function createRuntimeStore() {
           // [TOTEM-DIAG] Reconcile result — answers: "did we stop early, and
           // if so, why?" Key fields: terminationReason (complete / cursor_missing
           // / duplicate_stop / page_cap), pagesRequested, newBookmarks count.
-          console.log("[TOTEM-DIAG] reconcile.result", {
+          console.debug("[TOTEM-DIAG] reconcile.result", {
             mode,
             terminationReason: reconcileResult.terminationReason,
             pagesRequested: reconcileResult.pagesRequested,

@@ -344,7 +344,7 @@ export function createSyncHandlers(deps: SyncDeps = {}): HandlerMap {
           // [TOTEM-DIAG] Reserve blocked — answers: "sync didn't run on
           // refresh, what blocked it?" (cooldown / fresh_cache / in_flight
           // / auto_backoff / rate_limited / not_ready / no_account)
-          console.log("[TOTEM-DIAG] sync.reserve blocked", {
+          console.debug("[TOTEM-DIAG] sync.reserve blocked", {
             trigger,
             reason,
             retryAfterMs,
@@ -396,7 +396,7 @@ export function createSyncHandlers(deps: SyncDeps = {}): HandlerMap {
           // completing its run. Clearing the orphaned lease so this one can
           // take over. Without this, MV3 service-worker unload flakiness
           // traps users in `in_flight` for up to 12 minutes.
-          console.log("[TOTEM-DIAG] sync.reserve reclaim", {
+          console.debug("[TOTEM-DIAG] sync.reserve reclaim", {
             trigger,
             leaseAgeMs: leaseAge,
             reclaimedLeaseId: account.inFlight.leaseId,
@@ -485,7 +485,7 @@ export function createSyncHandlers(deps: SyncDeps = {}): HandlerMap {
       // [TOTEM-DIAG] Reserve decision — answers: "why did the orchestrator
       // pick this mode / reason on refresh?" Log BEFORE returning so the
       // reservation grants are always visible in SW console.
-      console.log("[TOTEM-DIAG] sync.reserve allow", {
+      console.debug("[TOTEM-DIAG] sync.reserve allow", {
         trigger,
         localCount,
         lastFullSyncAt: account.lastFullSyncAt,
@@ -609,7 +609,7 @@ export function createSyncHandlers(deps: SyncDeps = {}): HandlerMap {
 
       // [TOTEM-DIAG] Complete — answers: "did the previous run stamp
       // lastFullSyncAt, which would push the next refresh to incremental?"
-      console.log("[TOTEM-DIAG] sync.complete", {
+      console.debug("[TOTEM-DIAG] sync.complete", {
         trigger,
         mode,
         status,
