@@ -9,10 +9,7 @@ import { ToggleGroup } from "@base-ui/react/toggle-group";
 import { Toggle } from "@base-ui/react/toggle";
 import type { UserSettings } from "../types";
 import type { ThemePreference } from "../hooks/useTheme";
-import {
-  resolveHighlightColor,
-  type HighlightColor,
-} from "../lib/highlight-colors";
+import { resolveHighlightColor } from "../lib/highlight-colors";
 import { cn } from "../lib/cn";
 import { Modal } from "./ui/Modal";
 import { Button } from "./ui/Button";
