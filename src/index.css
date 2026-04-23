@@ -470,6 +470,7 @@
         color: inherit;
         background-color: transparent;
         background-repeat: no-repeat;
+        background-size: 100% 100%;
         box-decoration-break: clone;
         -webkit-box-decoration-break: clone;
         cursor: pointer;
@@ -493,6 +494,43 @@
         );
     }
 
+    mark.totem-highlight[data-color="yellow"] {
+        background-image: linear-gradient(
+            104deg,
+            rgba(255, 230, 0, 0) 0.9%,
+            rgba(255, 230, 0, 1.25) 2.4%,
+            rgba(255, 230, 0, 0.5) 5.8%,
+            rgba(255, 230, 0, 0.1) 93%,
+            rgba(255, 230, 0, 0.7) 96%,
+            rgba(255, 230, 0, 0) 98%
+        );
+    }
+
+    mark.totem-highlight[data-color="mint"] {
+        background-image: linear-gradient(
+            104deg,
+            rgba(130, 220, 170, 0) 0.9%,
+            rgba(130, 220, 170, 1) 2.4%,
+            rgba(130, 220, 170, 0.45) 5.8%,
+            rgba(130, 220, 170, 0.1) 93%,
+            rgba(130, 220, 170, 0.65) 96%,
+            rgba(130, 220, 170, 0) 98%
+        );
+    }
+
+    mark.totem-highlight[data-color="dark"]:not([data-has-note="true"]) {
+        color: #fff;
+        background-image: linear-gradient(
+            104deg,
+            rgba(20, 20, 20, 0) 0.9%,
+            rgba(20, 20, 20, 1) 2.4%,
+            rgba(20, 20, 20, 0.92) 5.8%,
+            rgba(20, 20, 20, 0.92) 93%,
+            rgba(20, 20, 20, 1) 96%,
+            rgba(20, 20, 20, 0) 98%
+        );
+    }
+
     [data-theme="dark"] mark.totem-highlight[data-color="classic"]:not([data-has-note="true"]) {
         color: #1a1a1a;
         background-image: linear-gradient(
@@ -504,6 +542,63 @@
             rgba(255, 160, 135, 1) 96%,
             rgba(255, 160, 135, 0) 98%
         );
+    }
+
+    [data-theme="dark"] mark.totem-highlight[data-color="yellow"]:not([data-has-note="true"]) {
+        color: #1a1a1a;
+        background-image: linear-gradient(
+            104deg,
+            rgba(255, 228, 80, 0) 0.9%,
+            rgba(255, 228, 80, 1) 2.4%,
+            rgba(255, 228, 80, 0.9) 5.8%,
+            rgba(255, 228, 80, 0.9) 93%,
+            rgba(255, 228, 80, 1) 96%,
+            rgba(255, 228, 80, 0) 98%
+        );
+    }
+
+    [data-theme="dark"] mark.totem-highlight[data-color="mint"]:not([data-has-note="true"]) {
+        color: #102a1c;
+        background-image: linear-gradient(
+            104deg,
+            rgba(140, 230, 180, 0) 0.9%,
+            rgba(140, 230, 180, 1) 2.4%,
+            rgba(140, 230, 180, 0.9) 5.8%,
+            rgba(140, 230, 180, 0.9) 93%,
+            rgba(140, 230, 180, 1) 96%,
+            rgba(140, 230, 180, 0) 98%
+        );
+    }
+
+    [data-theme="dark"] mark.totem-highlight[data-color="dark"]:not([data-has-note="true"]) {
+        color: #0a0a0a;
+        background-image: linear-gradient(
+            104deg,
+            rgba(240, 236, 226, 0) 0.9%,
+            rgba(240, 236, 226, 1) 2.4%,
+            rgba(240, 236, 226, 0.92) 5.8%,
+            rgba(240, 236, 226, 0.92) 93%,
+            rgba(240, 236, 226, 1) 96%,
+            rgba(240, 236, 226, 0) 98%
+        );
+    }
+
+    mark.totem-highlight[data-fresh="true"] {
+        background-size: 0% 100%;
+        animation: marker-swipe 720ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+
+    @keyframes marker-swipe {
+        to {
+            background-size: 100% 100%;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        mark.totem-highlight[data-fresh="true"] {
+            animation: none;
+            background-size: 100% 100%;
+        }
     }
 
     mark.totem-highlight[data-has-note="true"] {
@@ -535,7 +630,35 @@
     }
 
     mark.totem-highlight-new {
-        /* Swipe-on animation is wired up in phase 3 via data-fresh. */
+        /* Swipe-on animation is wired up via data-fresh. */
+    }
+
+    .totem-color-dot {
+        display: inline-block;
+        border-radius: 999px;
+        box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1);
+    }
+
+    .totem-color-dot[data-color="classic"] {
+        background: rgba(226, 128, 103, 0.9);
+    }
+
+    .totem-color-dot[data-color="yellow"] {
+        background: rgba(255, 230, 0, 0.95);
+    }
+
+    .totem-color-dot[data-color="mint"] {
+        background: rgba(130, 220, 170, 0.9);
+    }
+
+    .totem-color-dot[data-color="dark"] {
+        background: #141414;
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.15);
+    }
+
+    [data-theme="dark"] .totem-color-dot[data-color="dark"] {
+        background: #f0ece2;
+        box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.2);
     }
 
     .totem-popover[data-open] {

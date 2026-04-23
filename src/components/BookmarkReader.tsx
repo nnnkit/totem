@@ -22,6 +22,7 @@ import { NotePopover } from "./reader/NotePopover";
 import { useReadingProgress } from "../hooks/useReadingProgress";
 import { useTheme } from "../hooks/useTheme";
 import { useHighlights } from "../hooks/useHighlights";
+import { DEFAULT_HIGHLIGHT_COLOR, type HighlightColor } from "../lib/highlight-colors";
 import { Button } from "./ui/Button";
 import {
   copyArticleMarkdownToClipboard,
@@ -83,6 +84,9 @@ export function BookmarkReader({
   const [detailThread, setDetailThread] = useState<ThreadTweet[]>([]);
   const [detailLoading, setDetailLoading] = useState(true);
   const [detailError, setDetailError] = useState<string | null>(null);
+  const [sessionHighlightColor, setSessionHighlightColor] = useState<HighlightColor>(
+    DEFAULT_HIGHLIGHT_COLOR,
+  );
   const { isCompleted } = useReadingProgress({
     tweetId: bookmark.tweetId,
     contentReady: !detailLoading,
@@ -399,7 +403,9 @@ export function BookmarkReader({
       <SelectionToolbar
         containerRef={articleRef}
         tweetUrl={`https://x.com/${displayBookmark.author.screenName}/status/${displayBookmark.tweetId}`}
-        onHighlight={(ranges) => addHighlight(ranges)}
+        defaultColor={sessionHighlightColor}
+        onHighlight={(ranges, color) => addHighlight(ranges, { color })}
+        onDefaultColorChange={setSessionHighlightColor}
         onAddNote={handleAddNoteFromToolbar}
       />
 
