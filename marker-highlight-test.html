@@ -1,0 +1,743 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Marker highlight — per-highlight color</title>
+<style>
+  :root {
+    --bg: #faf8f4;
+    --paper: #ffffff;
+    --text: #1a1a1a;
+    --muted: #6b6b6b;
+    --faint: #a8a5a0;
+    --border: rgba(0, 0, 0, 0.08);
+    --border-strong: rgba(0, 0, 0, 0.14);
+    --shadow: 0 4px 14px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.06);
+  }
+  [data-theme="dark"] {
+    --bg: #0f0f10;
+    --paper: #1a1a1c;
+    --text: #e8e6e1;
+    --muted: #8a8880;
+    --faint: #555;
+    --border: rgba(255, 255, 255, 0.08);
+    --border-strong: rgba(255, 255, 255, 0.16);
+    --shadow: 0 4px 14px rgba(0, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.3);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .app { min-height: 100vh; display: flex; flex-direction: column; }
+
+  .header {
+    position: sticky; top: 0; z-index: 30;
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 20px;
+    background: color-mix(in oklab, var(--bg) 85%, transparent);
+    backdrop-filter: saturate(180%) blur(18px);
+    -webkit-backdrop-filter: saturate(180%) blur(18px);
+    border-bottom: 1px solid var(--border);
+  }
+  .header .title { font-size: 13px; font-weight: 600; color: var(--muted); }
+  .header .spacer { flex: 1; }
+
+  .icon-btn {
+    appearance: none; background: transparent; color: var(--text);
+    border: 1px solid transparent; border-radius: 8px;
+    height: 32px; padding: 0 10px; display: inline-flex; align-items: center; gap: 6px;
+    font: inherit; font-size: 13px; cursor: pointer;
+  }
+  .icon-btn:hover { background: color-mix(in oklab, var(--text) 6%, transparent); }
+
+  .segmented {
+    display: inline-flex; align-items: center;
+    background: color-mix(in oklab, var(--text) 5%, transparent);
+    border: 1px solid var(--border); border-radius: 8px; padding: 2px;
+  }
+  .segmented button {
+    appearance: none; font: inherit; font-size: 12px; cursor: pointer;
+    background: transparent; color: var(--muted); border: none;
+    padding: 5px 10px; border-radius: 6px;
+  }
+  .segmented button[aria-pressed="true"] {
+    background: var(--paper); color: var(--text);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+  }
+
+  .swatch-btn {
+    appearance: none; cursor: pointer;
+    border: 1px solid var(--border-strong); background: var(--paper);
+    border-radius: 999px; padding: 4px 10px 4px 6px;
+    display: inline-flex; align-items: center; gap: 8px;
+    font: inherit; font-size: 12px; color: var(--muted); height: 32px;
+  }
+  .swatch-btn:hover { border-color: color-mix(in oklab, var(--text) 25%, transparent); }
+  .swatch-dot {
+    width: 18px; height: 18px; border-radius: 999px;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.1); display: inline-block;
+    background: var(--next-swatch, rgba(226, 128, 103, 0.85));
+  }
+
+  .popover {
+    position: absolute; z-index: 50;
+    background: var(--paper); border: 1px solid var(--border-strong);
+    border-radius: 12px; padding: 10px; box-shadow: var(--shadow);
+    display: none; min-width: 220px;
+  }
+  .popover.open { display: block; }
+  .popover h4 {
+    margin: 0 0 8px; font-size: 11px; font-weight: 600;
+    color: var(--muted); letter-spacing: 0.04em; text-transform: uppercase;
+  }
+  .popover .hint {
+    font-size: 11px; color: var(--faint); margin-top: 10px; padding-top: 10px;
+    border-top: 1px solid var(--border); line-height: 1.5;
+  }
+
+  ul.palette { display: flex; gap: 10px; flex-wrap: wrap; list-style: none; padding: 0; margin: 0; }
+  ul.palette > li { text-align: center; }
+  ul.palette button {
+    appearance: none; cursor: pointer; background: transparent; border: none; padding: 2px;
+    border-radius: 999px; display: inline-flex; align-items: center; justify-content: center;
+  }
+  ul.palette .dot {
+    width: 26px; height: 26px; border-radius: 999px;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.08); display: inline-block;
+  }
+  ul.palette button[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--text); }
+  ul.palette .label {
+    display: block; margin-top: 4px; font-size: 10px; color: var(--muted); text-align: center;
+  }
+
+  .primer {
+    max-width: 680px; margin: 28px auto 0; padding: 18px 22px;
+    background: var(--paper); border: 1px solid var(--border); border-radius: 14px;
+    font-size: 13px; line-height: 1.6;
+  }
+  .primer h3 { margin: 0 0 6px; font-size: 13px; }
+  .primer p { margin: 0 0 8px; color: var(--muted); }
+  .primer .current-pattern {
+    display: inline-flex; gap: 6px; align-items: center;
+    font-size: 12px; color: var(--text);
+    background: color-mix(in oklab, var(--text) 6%, transparent);
+    padding: 4px 10px; border-radius: 999px; font-weight: 600;
+  }
+
+  .reader {
+    flex: 1; max-width: 680px; margin: 0 auto; padding: 28px 24px 160px;
+    font-family: Charter, "Iowan Old Style", Georgia, serif;
+    font-size: 19px; line-height: 1.75;
+  }
+  .reader h1 { font-size: 28px; line-height: 1.25; margin: 0 0 6px; }
+  .reader .byline { color: var(--muted); font-size: 13px; margin-bottom: 32px; font-family: inherit; }
+  .reader p { margin: 0 0 18px; }
+
+  .sel-toolbar {
+    position: absolute; z-index: 40;
+    display: none;
+    background: var(--paper); color: var(--text);
+    border: 1px solid var(--border-strong);
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+    padding: 4px;
+    transform: translate(-50%, -110%);
+    animation: sel-in 120ms ease-out;
+  }
+  @keyframes sel-in {
+    from { opacity: 0; transform: translate(-50%, -100%); }
+    to   { opacity: 1; transform: translate(-50%, -110%); }
+  }
+  .sel-toolbar.open { display: flex; align-items: center; gap: 2px; }
+
+  .sel-toolbar button {
+    appearance: none; background: transparent; color: var(--text);
+    border: none; border-radius: 7px;
+    padding: 6px 10px; font: inherit; font-size: 13px; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .sel-toolbar button:hover { background: color-mix(in oklab, var(--text) 8%, transparent); }
+  .sel-toolbar .current-dot {
+    width: 10px; height: 10px; border-radius: 999px;
+    background: var(--next-swatch, rgba(226, 128, 103, 0.85));
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.1);
+  }
+  .sel-toolbar .divider {
+    width: 1px; align-self: stretch;
+    background: var(--border); margin: 0 2px;
+  }
+
+  .sel-toolbar[data-pattern="single"] .p-single { display: inline-flex; }
+  .sel-toolbar[data-pattern="single"] .p-dots,
+  .sel-toolbar[data-pattern="single"] .p-split { display: none; }
+
+  .sel-toolbar[data-pattern="dots"] .p-dots { display: inline-flex; align-items: center; gap: 2px; padding: 2px 4px; }
+  .sel-toolbar[data-pattern="dots"] .p-single,
+  .sel-toolbar[data-pattern="dots"] .p-split { display: none; }
+  .sel-toolbar .dot-btn {
+    padding: 6px; border-radius: 999px; cursor: pointer;
+    background: transparent; border: none;
+  }
+  .sel-toolbar .dot-btn:hover { background: color-mix(in oklab, var(--text) 8%, transparent); }
+  .sel-toolbar .dot-btn .dot {
+    width: 18px; height: 18px; border-radius: 999px;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.1);
+    display: inline-block;
+  }
+  .sel-toolbar .dot-btn[aria-pressed="true"] .dot {
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.1), 0 0 0 2px var(--text);
+  }
+
+  .sel-toolbar[data-pattern="split"] .p-split { display: inline-flex; align-items: center; }
+  .sel-toolbar[data-pattern="split"] .p-single,
+  .sel-toolbar[data-pattern="split"] .p-dots { display: none; }
+  .sel-toolbar .caret-btn {
+    padding: 6px 8px; min-width: 26px; display: inline-flex; justify-content: center;
+    color: var(--muted);
+  }
+  .sel-toolbar .caret-btn:hover { color: var(--text); }
+
+  .inline-palette {
+    position: absolute;
+    top: calc(100% + 6px); right: 0;
+    background: var(--paper); border: 1px solid var(--border-strong);
+    border-radius: 10px; box-shadow: var(--shadow);
+    padding: 10px; display: none;
+    animation: sel-in 120ms ease-out;
+  }
+  .inline-palette.open { display: block; }
+
+  /* Edit popover (clicking an existing highlight) */
+  .edit-popover {
+    position: absolute; z-index: 45;
+    background: var(--paper); border: 1px solid var(--border-strong);
+    border-radius: 10px; box-shadow: var(--shadow);
+    padding: 6px; display: none;
+    transform: translate(-50%, -110%);
+    animation: sel-in 120ms ease-out;
+  }
+  .edit-popover.open { display: flex; align-items: center; gap: 4px; }
+  .edit-popover .dot-btn {
+    padding: 5px; border-radius: 999px; cursor: pointer;
+    background: transparent; border: none;
+  }
+  .edit-popover .dot-btn:hover { background: color-mix(in oklab, var(--text) 8%, transparent); }
+  .edit-popover .dot-btn .dot {
+    width: 16px; height: 16px; border-radius: 999px;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.1); display: inline-block;
+  }
+  .edit-popover .dot-btn[aria-pressed="true"] .dot {
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.1), 0 0 0 2px var(--text);
+  }
+  .edit-popover .trash {
+    appearance: none; background: transparent; border: none;
+    padding: 6px 8px; border-radius: 7px; cursor: pointer; color: var(--muted);
+    font: inherit; font-size: 13px;
+  }
+  .edit-popover .trash:hover { color: #c0392b; background: color-mix(in oklab, #c0392b 10%, transparent); }
+  .edit-popover .divider {
+    width: 1px; align-self: stretch; background: var(--border); margin: 0 2px;
+  }
+
+  .settings {
+    max-width: 680px; margin: 40px auto 0; padding: 20px 24px;
+    background: var(--paper); border: 1px solid var(--border); border-radius: 14px;
+    font-size: 13px;
+  }
+  .settings h3 { margin: 0 0 4px; font-size: 13px; }
+  .settings p.desc { color: var(--muted); margin: 0 0 14px; font-size: 12px; }
+
+  /* ===========================================================
+     HIGHLIGHT STYLES — per-highlight color
+     =========================================================== */
+  mark.m {
+    color: inherit;
+    padding: 0 3px; margin: 0 -3px;
+    border-radius: 1px;
+    background-color: transparent;
+    background-repeat: no-repeat;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+    cursor: pointer;
+  }
+
+  mark.m[data-color="classic"] {
+    background-image: linear-gradient(104deg,
+      rgba(226, 128, 103, 0)     0.9%,
+      rgba(226, 128, 103, 0.9)   2.4%,
+      rgba(226, 128, 103, 0.4)   5.8%,
+      rgba(226, 128, 103, 0.1)   93%,
+      rgba(226, 128, 103, 0.6)   96%,
+      rgba(226, 128, 103, 0)     98%);
+  }
+  mark.m[data-color="yellow"] {
+    background-image: linear-gradient(104deg,
+      rgba(255, 230, 0, 0)     0.9%,
+      rgba(255, 230, 0, 1.25)  2.4%,
+      rgba(255, 230, 0, 0.5)   5.8%,
+      rgba(255, 230, 0, 0.1)   93%,
+      rgba(255, 230, 0, 0.7)   96%,
+      rgba(255, 230, 0, 0)     98%);
+  }
+  mark.m[data-color="mint"] {
+    background-image: linear-gradient(104deg,
+      rgba(130, 220, 170, 0)     0.9%,
+      rgba(130, 220, 170, 1)     2.4%,
+      rgba(130, 220, 170, 0.45)  5.8%,
+      rgba(130, 220, 170, 0.1)   93%,
+      rgba(130, 220, 170, 0.65)  96%,
+      rgba(130, 220, 170, 0)     98%);
+  }
+  mark.m[data-color="dark"] {
+    color: #fff;
+    background-image: linear-gradient(104deg,
+      rgba(20, 20, 20, 0)     0.9%,
+      rgba(20, 20, 20, 1)     2.4%,
+      rgba(20, 20, 20, 0.92)  5.8%,
+      rgba(20, 20, 20, 0.92)  93%,
+      rgba(20, 20, 20, 1)     96%,
+      rgba(20, 20, 20, 0)     98%);
+  }
+
+  [data-theme="dark"] mark.m[data-color="classic"] {
+    color: #1a1a1a;
+    background-image: linear-gradient(104deg,
+      rgba(255, 160, 135, 0)     0.9%,
+      rgba(255, 160, 135, 1)     2.4%,
+      rgba(255, 160, 135, 0.88)  5.8%,
+      rgba(255, 160, 135, 0.88)  93%,
+      rgba(255, 160, 135, 1)     96%,
+      rgba(255, 160, 135, 0)     98%);
+  }
+  [data-theme="dark"] mark.m[data-color="yellow"] {
+    color: #1a1a1a;
+    background-image: linear-gradient(104deg,
+      rgba(255, 228, 80, 0)     0.9%,
+      rgba(255, 228, 80, 1)     2.4%,
+      rgba(255, 228, 80, 0.9)   5.8%,
+      rgba(255, 228, 80, 0.9)   93%,
+      rgba(255, 228, 80, 1)     96%,
+      rgba(255, 228, 80, 0)     98%);
+  }
+  [data-theme="dark"] mark.m[data-color="mint"] {
+    color: #102a1c;
+    background-image: linear-gradient(104deg,
+      rgba(140, 230, 180, 0)     0.9%,
+      rgba(140, 230, 180, 1)     2.4%,
+      rgba(140, 230, 180, 0.9)   5.8%,
+      rgba(140, 230, 180, 0.9)   93%,
+      rgba(140, 230, 180, 1)     96%,
+      rgba(140, 230, 180, 0)     98%);
+  }
+  [data-theme="dark"] mark.m[data-color="dark"] {
+    color: #0a0a0a;
+    background-image: linear-gradient(104deg,
+      rgba(240, 236, 226, 0)    0.9%,
+      rgba(240, 236, 226, 1)    2.4%,
+      rgba(240, 236, 226, 0.92) 5.8%,
+      rgba(240, 236, 226, 0.92) 93%,
+      rgba(240, 236, 226, 1)    96%,
+      rgba(240, 236, 226, 0)    98%);
+  }
+
+  mark.m[data-fresh="true"] {
+    background-size: 0% 100%;
+    animation: marker-swipe 720ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+  @keyframes marker-swipe { to { background-size: 100% 100%; } }
+  @media (prefers-reduced-motion: reduce) {
+    mark.m[data-fresh="true"] { animation: none; background-size: 100% 100%; }
+  }
+
+  .dot-classic { background: rgba(226, 128, 103, 0.85); }
+  .dot-yellow  { background: rgba(255, 230, 0, 0.85); }
+  .dot-mint    { background: rgba(130, 220, 170, 0.85); }
+  .dot-dark    { background: #141414; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.1); }
+  [data-theme="dark"] .dot-dark { background: #f0ece2; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.15); }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header class="header">
+    <span class="title">Totem · Reading</span>
+    <div class="spacer"></div>
+
+    <div class="segmented" role="tablist" aria-label="Selection toolbar pattern">
+      <button id="tab-single" aria-pressed="false">A · Single</button>
+      <button id="tab-dots"   aria-pressed="false">B · Dots</button>
+      <button id="tab-split"  aria-pressed="true">C · Split</button>
+    </div>
+
+    <button class="icon-btn" id="btn-theme" aria-label="Toggle theme">&#x1F313;</button>
+
+    <button class="swatch-btn" id="btn-swatch" aria-haspopup="true" aria-expanded="false">
+      <span class="swatch-dot" id="swatch-dot"></span>
+      <span id="swatch-label">Classic</span>
+    </button>
+  </header>
+
+  <div class="popover" id="pop-page" role="dialog" aria-label="Default color for new highlights">
+    <h4>Default for new highlights</h4>
+    <ul class="palette" id="palette-page">
+      <li><button data-color="classic"><span class="dot dot-classic"></span></button><span class="label">Classic</span></li>
+      <li><button data-color="yellow"><span class="dot dot-yellow"></span></button><span class="label">Yellow</span></li>
+      <li><button data-color="mint"><span class="dot dot-mint"></span></button><span class="label">Mint</span></li>
+      <li><button data-color="dark"><span class="dot dot-dark"></span></button><span class="label">Dark</span></li>
+    </ul>
+    <div class="hint">This sticks until you pick a different color. Existing highlights keep their own color — tap any one to change it.</div>
+  </div>
+
+  <section class="primer">
+    <h3>Selection toolbar — pick a pattern above and try it</h3>
+    <p>Mix colors freely on the same page. Select text to highlight; tap an existing highlight to change its color or delete it.</p>
+    <div class="current-pattern" id="primer-label"></div>
+    <p id="primer-desc" style="margin-top: 8px;"></p>
+  </section>
+
+  <main class="reader" id="reader">
+    <h1>On the morning of the regime change</h1>
+    <div class="byline">Multi-color demo: the three pre-placed highlights use different colors. Add your own.</div>
+
+    <p><mark class="m" data-color="classic">A whole civilization will die tonight</mark>, never to be brought back again. I don't want that to happen, but it probably will. However, now that we have <mark class="m" data-color="mint">Complete and Total Regime Change</mark>, where everything is different than it was before, maybe we stand a chance.</p>
+
+    <p>The morning sky had the color of a bruise that's been left too long &mdash; purple at the center, yellowing out toward the edges. Birds flew in patterns nobody recognized. Across the valley, the old towers were being disassembled one story at a time, not dramatically, just patiently, like someone undoing a knot they'd been studying for years.</p>
+
+    <p>Nobody had told the children yet. Nobody had told <mark class="m" data-color="yellow">the people who work the early shift at the bakery</mark>, who were already pulling trays out of ovens that ran on the old schedule, timed to a world that was about to be replaced with a different world running on a different clock. The bread would come out fine. It always does.</p>
+
+    <p>Later, someone would write that the day felt ordinary until it didn't &mdash; which is how these things always feel, apparently, and which is the kind of sentence that appears in every book about every such day, and which never quite captures it.</p>
+  </main>
+
+  <section class="settings">
+    <h3>Default highlight color (user preference)</h3>
+    <p class="desc">Used on new articles before you pick anything. Inside an article, the header swatch is your live session default — it updates as you pick colors.</p>
+    <ul class="palette" id="palette-default">
+      <li><button data-color="classic"><span class="dot dot-classic"></span></button><span class="label">Classic</span></li>
+      <li><button data-color="yellow"><span class="dot dot-yellow"></span></button><span class="label">Yellow</span></li>
+      <li><button data-color="mint"><span class="dot dot-mint"></span></button><span class="label">Mint</span></li>
+      <li><button data-color="dark"><span class="dot dot-dark"></span></button><span class="label">Dark</span></li>
+    </ul>
+  </section>
+</div>
+
+<div class="sel-toolbar" id="sel-toolbar" data-pattern="split">
+  <div class="p-single">
+    <button id="btn-hl-single">
+      <span class="current-dot"></span>
+      Highlight
+    </button>
+  </div>
+
+  <div class="p-dots" id="dots-wrap"></div>
+
+  <div class="p-split" style="position: relative;">
+    <button id="btn-hl-split">
+      <span class="current-dot"></span>
+      Highlight
+    </button>
+    <div class="divider"></div>
+    <button id="btn-caret" class="caret-btn" aria-label="Choose color" aria-haspopup="true" aria-expanded="false">
+      <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M2 4l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div class="inline-palette" id="split-palette" role="dialog" aria-label="Choose color">
+      <ul class="palette" id="palette-split">
+        <li><button data-color="classic"><span class="dot dot-classic"></span></button><span class="label">Classic</span></li>
+        <li><button data-color="yellow"><span class="dot dot-yellow"></span></button><span class="label">Yellow</span></li>
+        <li><button data-color="mint"><span class="dot dot-mint"></span></button><span class="label">Mint</span></li>
+        <li><button data-color="dark"><span class="dot dot-dark"></span></button><span class="label">Dark</span></li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- Edit popover for existing highlights -->
+<div class="edit-popover" id="edit-popover" role="dialog" aria-label="Edit highlight"></div>
+
+<script>
+  const COLORS = {
+    classic: { label: 'Classic', swatch: 'rgba(226, 128, 103, 0.85)', dotClass: 'dot-classic' },
+    yellow:  { label: 'Yellow',  swatch: 'rgba(255, 230, 0, 0.95)',   dotClass: 'dot-yellow' },
+    mint:    { label: 'Mint',    swatch: 'rgba(130, 220, 170, 0.9)',  dotClass: 'dot-mint' },
+    dark:    { label: 'Dark',    swatch: '#141414',                   dotClass: 'dot-dark' },
+  };
+
+  const PATTERN_INFO = {
+    single: {
+      label: 'Pattern A — Single action',
+      desc: 'One highlight button, uses the session default (header swatch). To change the color for a specific highlight, pick it from the header swatch first.',
+    },
+    dots: {
+      label: 'Pattern B — Inline color dots',
+      desc: 'All four colors in the toolbar. Tap one to highlight in that color and set it as the new session default.',
+    },
+    split: {
+      label: 'Pattern C — Split button',
+      desc: 'Primary button uses the current session default; caret opens a mini palette. Picking a color creates the highlight in that color AND makes it the new default.',
+    },
+  };
+
+  const root   = document.documentElement;
+  const reader = document.getElementById('reader');
+  const swatchBtn   = document.getElementById('btn-swatch');
+  const swatchDot   = document.getElementById('swatch-dot');
+  const swatchLabel = document.getElementById('swatch-label');
+  const popPage = document.getElementById('pop-page');
+  const palettePage    = document.getElementById('palette-page');
+  const paletteDefault = document.getElementById('palette-default');
+  const paletteSplit   = document.getElementById('palette-split');
+  const selToolbar = document.getElementById('sel-toolbar');
+  const editPopover = document.getElementById('edit-popover');
+
+  let userDefault = localStorage.getItem('totem-demo-default') || 'classic';
+  let nextColor   = userDefault;
+  let pattern     = localStorage.getItem('totem-demo-pattern') || 'split';
+
+  function swatchFor(c) {
+    if (c === 'dark' && root.getAttribute('data-theme') === 'dark') return '#f0ece2';
+    return COLORS[c].swatch;
+  }
+  function setNextColor(c) {
+    nextColor = c;
+    const s = swatchFor(c);
+    swatchDot.style.background = s;
+    swatchLabel.textContent = COLORS[c].label;
+    root.style.setProperty('--next-swatch', s);
+    updatePaletteSelection(palettePage, c);
+    updatePaletteSelection(paletteSplit, c);
+    buildDots();
+  }
+  function setUserDefault(c) {
+    userDefault = c;
+    localStorage.setItem('totem-demo-default', c);
+    updatePaletteSelection(paletteDefault, c);
+  }
+  function updatePaletteSelection(container, c) {
+    container.querySelectorAll('button[data-color]').forEach((b) => {
+      b.setAttribute('aria-pressed', b.dataset.color === c);
+    });
+  }
+
+  function applyPattern(p) {
+    pattern = p;
+    localStorage.setItem('totem-demo-pattern', p);
+    selToolbar.setAttribute('data-pattern', p);
+    ['single','dots','split'].forEach((k) => {
+      document.getElementById('tab-' + k).setAttribute('aria-pressed', String(k === p));
+    });
+    document.getElementById('primer-label').textContent = PATTERN_INFO[p].label;
+    document.getElementById('primer-desc').textContent = PATTERN_INFO[p].desc;
+  }
+
+  function buildDots() {
+    const wrap = document.getElementById('dots-wrap');
+    wrap.replaceChildren();
+    Object.entries(COLORS).forEach(([key, info]) => {
+      const b = document.createElement('button');
+      b.className = 'dot-btn';
+      b.dataset.color = key;
+      b.title = info.label;
+      b.setAttribute('aria-label', 'Highlight ' + info.label);
+      b.setAttribute('aria-pressed', String(key === nextColor));
+      const d = document.createElement('span');
+      d.className = 'dot ' + info.dotClass;
+      b.appendChild(d);
+      b.addEventListener('mousedown', (e) => e.preventDefault());
+      b.addEventListener('click', () => {
+        setNextColor(key);
+        applyHighlightToSelection();
+      });
+      wrap.appendChild(b);
+    });
+  }
+
+  setNextColor(nextColor);
+  setUserDefault(userDefault);
+  applyPattern(pattern);
+
+  document.getElementById('btn-theme').addEventListener('click', () => {
+    const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    setNextColor(nextColor);
+  });
+
+  document.getElementById('tab-single').addEventListener('click', () => applyPattern('single'));
+  document.getElementById('tab-dots').addEventListener('click', () => applyPattern('dots'));
+  document.getElementById('tab-split').addEventListener('click', () => applyPattern('split'));
+
+  // Header swatch popover
+  function positionPopover() {
+    const r = swatchBtn.getBoundingClientRect();
+    popPage.style.top  = (r.bottom + window.scrollY + 8) + 'px';
+    popPage.style.left = (r.right + window.scrollX - popPage.offsetWidth) + 'px';
+  }
+  function toggleHeaderPopover(open) {
+    const next = open ?? !popPage.classList.contains('open');
+    popPage.classList.toggle('open', next);
+    swatchBtn.setAttribute('aria-expanded', String(next));
+    if (next) positionPopover();
+  }
+  swatchBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleHeaderPopover(); });
+  document.addEventListener('click', (e) => {
+    if (!popPage.contains(e.target) && e.target !== swatchBtn) toggleHeaderPopover(false);
+    const splitPal = document.getElementById('split-palette');
+    const caretBtn = document.getElementById('btn-caret');
+    if (!splitPal.contains(e.target) && e.target !== caretBtn && !caretBtn.contains(e.target)) {
+      closeSplitPalette();
+    }
+    if (!editPopover.contains(e.target) && !e.target.closest('mark.m')) {
+      hideEditPopover();
+    }
+  });
+  window.addEventListener('resize', () => { if (popPage.classList.contains('open')) positionPopover(); });
+
+  palettePage.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-color]'); if (!btn) return;
+    setNextColor(btn.dataset.color);
+    toggleHeaderPopover(false);
+  });
+  paletteDefault.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-color]'); if (!btn) return;
+    setUserDefault(btn.dataset.color);
+  });
+
+  // Selection toolbar
+  let lastRange = null;
+  function hideSelToolbar() { selToolbar.classList.remove('open'); closeSplitPalette(); }
+  function showSelToolbar(rect) {
+    selToolbar.style.top  = (rect.top + window.scrollY) + 'px';
+    selToolbar.style.left = (rect.left + rect.width / 2 + window.scrollX) + 'px';
+    selToolbar.classList.add('open');
+  }
+
+  document.addEventListener('selectionchange', () => {
+    const sel = document.getSelection();
+    if (!sel || sel.isCollapsed || sel.rangeCount === 0) return hideSelToolbar();
+    const range = sel.getRangeAt(0);
+    if (!reader.contains(range.commonAncestorContainer)) return hideSelToolbar();
+    if (range.startContainer.parentElement?.closest('mark.m') || range.endContainer.parentElement?.closest('mark.m')) {
+      return hideSelToolbar();
+    }
+    const r = range.getBoundingClientRect();
+    if (r.width < 2 && r.height < 2) return hideSelToolbar();
+    lastRange = range.cloneRange();
+    showSelToolbar(r);
+    hideEditPopover();
+  });
+
+  function applyHighlightToSelection() {
+    const sel = document.getSelection();
+    let range = (sel && sel.rangeCount > 0 && !sel.isCollapsed) ? sel.getRangeAt(0) : lastRange;
+    if (!range) return;
+    const frag = range.extractContents();
+    const mark = document.createElement('mark');
+    mark.className = 'm';
+    mark.dataset.color = nextColor;
+    mark.dataset.fresh = 'true';
+    mark.appendChild(frag);
+    range.insertNode(mark);
+    mark.addEventListener('animationend', () => mark.removeAttribute('data-fresh'), { once: true });
+    sel?.removeAllRanges();
+    lastRange = null;
+    hideSelToolbar();
+  }
+
+  const btnSingle = document.getElementById('btn-hl-single');
+  btnSingle.addEventListener('mousedown', (e) => e.preventDefault());
+  btnSingle.addEventListener('click', applyHighlightToSelection);
+
+  const btnHlSplit = document.getElementById('btn-hl-split');
+  btnHlSplit.addEventListener('mousedown', (e) => e.preventDefault());
+  btnHlSplit.addEventListener('click', applyHighlightToSelection);
+
+  const caretBtn = document.getElementById('btn-caret');
+  function openSplitPalette() {
+    document.getElementById('split-palette').classList.add('open');
+    caretBtn.setAttribute('aria-expanded', 'true');
+  }
+  function closeSplitPalette() {
+    document.getElementById('split-palette').classList.remove('open');
+    caretBtn.setAttribute('aria-expanded', 'false');
+  }
+  caretBtn.addEventListener('mousedown', (e) => e.preventDefault());
+  caretBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const open = document.getElementById('split-palette').classList.contains('open');
+    if (open) closeSplitPalette(); else openSplitPalette();
+  });
+  paletteSplit.addEventListener('mousedown', (e) => e.preventDefault());
+  paletteSplit.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-color]'); if (!btn) return;
+    setNextColor(btn.dataset.color);
+    closeSplitPalette();
+    applyHighlightToSelection();
+  });
+
+  // ---- Edit existing highlight ----
+  function hideEditPopover() { editPopover.classList.remove('open'); editPopover.replaceChildren(); }
+
+  function buildEditPopover(markEl) {
+    editPopover.replaceChildren();
+    Object.entries(COLORS).forEach(([key, info]) => {
+      const b = document.createElement('button');
+      b.className = 'dot-btn';
+      b.dataset.color = key;
+      b.title = info.label;
+      b.setAttribute('aria-label', 'Change to ' + info.label);
+      b.setAttribute('aria-pressed', String(key === markEl.dataset.color));
+      const d = document.createElement('span');
+      d.className = 'dot ' + info.dotClass;
+      b.appendChild(d);
+      b.addEventListener('mousedown', (e) => e.preventDefault());
+      b.addEventListener('click', (e) => {
+        e.stopPropagation();
+        markEl.dataset.color = key;
+        editPopover.querySelectorAll('button[data-color]').forEach((btn) => {
+          btn.setAttribute('aria-pressed', String(btn.dataset.color === key));
+        });
+      });
+      editPopover.appendChild(b);
+    });
+    const divider = document.createElement('div');
+    divider.className = 'divider';
+    editPopover.appendChild(divider);
+
+    const trash = document.createElement('button');
+    trash.className = 'trash';
+    trash.textContent = 'Remove';
+    trash.addEventListener('mousedown', (e) => e.preventDefault());
+    trash.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const parent = markEl.parentNode;
+      while (markEl.firstChild) parent.insertBefore(markEl.firstChild, markEl);
+      parent.removeChild(markEl);
+      parent.normalize();
+      hideEditPopover();
+    });
+    editPopover.appendChild(trash);
+  }
+
+  function showEditPopover(markEl) {
+    buildEditPopover(markEl);
+    const r = markEl.getBoundingClientRect();
+    editPopover.style.top  = (r.top + window.scrollY) + 'px';
+    editPopover.style.left = (r.left + r.width / 2 + window.scrollX) + 'px';
+    editPopover.classList.add('open');
+  }
+
+  reader.addEventListener('click', (e) => {
+    const m = e.target.closest('mark.m');
+    if (!m) return;
+    e.stopPropagation();
+    showEditPopover(m);
+  });
+</script>
+
+</body>
+</html>
