@@ -243,9 +243,7 @@ export function NewTabHome({
       case "loading":
         return (
           <article className={cn(cardBase, "flex items-center justify-center")}>
-            <div className="animate-logo-shine">
-              <TotemLogo className="size-10" />
-            </div>
+            <TotemLogo loading className="size-10" />
           </article>
         );
       case "connecting":
@@ -255,15 +253,7 @@ export function NewTabHome({
               Connecting to X&hellip;
             </p>
             <div className="mt-4 flex justify-center">
-              <svg
-                viewBox="0 0 24 24"
-                className="size-6 animate-spin text-accent"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
-                <path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round" />
-              </svg>
+              <TotemLogo loading className="size-10" />
             </div>
             <p className="mt-4 text-pretty text-base text-home-empty">
               Syncing your session in the background.
@@ -375,15 +365,7 @@ export function NewTabHome({
               Syncing your bookmarks&hellip;
             </p>
             <div className="mt-4 flex justify-center">
-              <svg
-                viewBox="0 0 24 24"
-                className="size-6 animate-spin text-accent"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
-                <path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round" />
-              </svg>
+              <TotemLogo loading className="size-10" />
             </div>
             <p className="mt-4 text-pretty text-base text-home-empty">
               Fetching bookmarks from your account. This may take a moment.

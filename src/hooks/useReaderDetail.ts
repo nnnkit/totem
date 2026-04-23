@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useReducer, useState } from "react";
-import { useRuntimeActions } from "../stores/selectors";
+import { useBookmarksLoaded, useRuntimeActions } from "../stores/selectors";
 import type { TweetDetailContent } from "../api/parsers";
 
 /**
@@ -76,6 +76,25 @@ export interface UseReaderDetailReturn {
 const INITIAL_STATE: ReaderDetailState = { status: "idle" };
 
 /**
+ * Pure gate for whether a detail fetch should fire. Exported for testing —
+ * the hook composes it with live `bookmarksLoaded` from the store, so the
+ * hook itself stays a thin wrapper over state we can exercise directly.
+ *
+ * `bookmarksLoaded` gates the fetch because getDb() in the DB layer reads
+ * the active account's dbName at call time. Firing before
+ * hydrateCurrentAccount has run setActiveAccountId routes the read (and any
+ * upsert) at the default "totem" DB, returning empty cache and polluting
+ * the wrong database. When hydration completes, bookmarksLoaded flips true
+ * and the effect reruns with the account DB pointed correctly.
+ */
+export function shouldFetchReaderDetail(
+  tweetId: string | null,
+  bookmarksLoaded: boolean,
+): tweetId is string {
+  return Boolean(tweetId) && bookmarksLoaded;
+}
+
+/**
  * Loader-shaped hook for a single tweet's reader detail.
  *
  * Replaces the useEffect+cancelled+retryKey triad the reader route used to
@@ -87,6 +106,7 @@ const INITIAL_STATE: ReaderDetailState = { status: "idle" };
  */
 export function useReaderDetail(tweetId: string | null): UseReaderDetailReturn {
   const actions = useRuntimeActions();
+  const bookmarksLoaded = useBookmarksLoaded();
   const [state, dispatch] = useReducer(reduceReaderDetail, INITIAL_STATE);
   const [refetchNonce, setRefetchNonce] = useState(0);
 
@@ -95,7 +115,7 @@ export function useReaderDetail(tweetId: string | null): UseReaderDetailReturn {
   }, []);
 
   useEffect(() => {
-    if (!tweetId) {
+    if (!shouldFetchReaderDetail(tweetId, bookmarksLoaded)) {
       dispatch({ type: "reset" });
       return;
     }
@@ -120,7 +140,7 @@ export function useReaderDetail(tweetId: string | null): UseReaderDetailReturn {
           error instanceof Error && error.message ? error.message : "DETAIL_ERROR";
         dispatch({ type: "error", tweetId, error: message });
       });
-  }, [actions, tweetId, refetchNonce]);
+  }, [actions, tweetId, refetchNonce, bookmarksLoaded]);
 
   return { state, refetch };
 }

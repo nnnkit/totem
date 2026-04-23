@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   reduceReaderDetail,
+  shouldFetchReaderDetail,
   type ReaderDetailState,
 } from "../useReaderDetail";
 import type { Bookmark, ThreadTweet } from "../../types";
@@ -137,5 +138,26 @@ describe("reduceReaderDetail", () => {
     };
     const next = reduceReaderDetail(success, { type: "reset" });
     expect(next).toEqual({ status: "idle" });
+  });
+});
+
+describe("shouldFetchReaderDetail", () => {
+  it("returns false when tweetId is null", () => {
+    expect(shouldFetchReaderDetail(null, true)).toBe(false);
+  });
+
+  it("returns false when tweetId is empty string", () => {
+    expect(shouldFetchReaderDetail("", true)).toBe(false);
+  });
+
+  it("returns false when bookmarksLoaded is false, even with a tweetId", () => {
+    // Guards against firing before hydrateCurrentAccount runs
+    // setActiveAccountId — otherwise getDb() reads from the default "totem"
+    // database instead of the account-scoped one.
+    expect(shouldFetchReaderDetail("1", false)).toBe(false);
+  });
+
+  it("returns true only when tweetId is present and bookmarks have hydrated", () => {
+    expect(shouldFetchReaderDetail("1", true)).toBe(true);
   });
 });

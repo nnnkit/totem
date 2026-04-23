@@ -257,6 +257,33 @@ export function createSyncHandlers(deps: SyncDeps = {}): HandlerMap {
   const readState = deps.readState ?? readSyncOrchestratorState;
   const writeState = deps.writeState ?? writeSyncOrchestratorState;
 
+  /**
+   * Reservation state machine — decides whether a REQUEST_SYNC is allowed,
+   * and if so, at what mode. All decisions are derived from orchestrator
+   * state + session snapshot; callers never request a mode.
+   *
+   * Block reasons and their retry windows:
+   *   no_account / not_ready   — no retry (session issue)
+   *   in_flight                — SYNC_ORCHESTRATOR_LOCK_TTL_MS (12 min hard cap)
+   *                              reclaimable early at MANUAL_RECLAIM / AUTO_RECLAIM (90s each)
+   *                              for orphaned leases from SW-unload races
+   *   rate_limited             — exponential (base 60s, cap 15 min) per-account
+   *   cooldown                 — MANUAL_SUCCESS_COOLDOWN (15 min); manual only
+   *   auto_backoff             — SEED_BACKOFF (30s) when lastFullSyncAt===0,
+   *                              else AUTO_BACKOFF (5 min); auto only
+   *   fresh_cache              — AUTO_INTERVAL (4h); auto only, and only when
+   *                              the last completion was a success
+   *
+   * Mode selection once allowed:
+   *   manual + (needsFullSync || localCount<=0)  → full   (reason: manual_seed)
+   *   manual otherwise                           → incremental (reason: manual)
+   *   auto + needsFullSync                       → full   (bootstrap_seed | bootstrap_empty)
+   *   auto otherwise                             → incremental (background_stale)
+   *
+   * needsFullSync := lastFullSyncAt <= 0. The only writer of lastFullSyncAt
+   * is handleSyncPolicyComplete on a successful full run — so a SW state wipe
+   * or a mid-sync lease release re-forces a full reconcile next time.
+   */
   async function handleSyncPolicyReserve(
     message: MessageRequest,
   ): Promise<unknown> {

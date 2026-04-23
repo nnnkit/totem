@@ -29,6 +29,7 @@ import { SettingsModal } from "./components/SettingsModal";
 import { Toast } from "./components/ui/Toast";
 import { Button } from "./components/ui/Button";
 import { OfflineBanner } from "./components/ui/OfflineBanner";
+import { TotemLoading } from "./components/ui/TotemLoading";
 import { resolveReaderErrorView } from "./components/reader/reader-error-view";
 import { useContinueReading } from "./hooks/useContinueReading";
 import { useReaderDetail } from "./hooks/useReaderDetail";
@@ -164,12 +165,7 @@ function ExternalReaderShell({
         <div className="flex flex-1 flex-col justify-center">
           {status === "loading" ? (
             <div className="rounded-2xl border border-border bg-surface-card p-8">
-              <div className="flex items-center gap-3 text-sm text-muted">
-                <span className="animate-spin">
-                  <span className="block size-4 rounded-full border-2 border-accent border-t-transparent" />
-                </span>
-                Opening this post in Totem...
-              </div>
+              <TotemLoading label="Opening this post in Totem..." />
             </div>
           ) : availability.errorKind === "offline" ? (
             <OfflineBanner onLogin={onLogin} />
@@ -516,11 +512,8 @@ function ReaderRouteApp() {
 
   const fetchExternalDetail =
     Boolean(readTweetId) && !localBookmark && !hiddenBookmark;
-  // Wait for hydrateCurrentAccount before hitting the detail cache: getDb()
-  // memoizes a handle on the DB name active at call time, so firing pre-
-  // hydration sticks the default "totem" handle for the rest of the session.
   const { state: readerDetail, refetch: refetchReaderDetail } = useReaderDetail(
-    fetchExternalDetail && bookmarksLoaded ? readTweetId : null,
+    fetchExternalDetail ? readTweetId : null,
   );
 
   useEffect(() => {
