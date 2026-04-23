@@ -216,3 +216,34 @@ Invariant #6.`,
     ).toEqual([]);
   });
 });
+
+describe("Invariant #7 — reading progress must be joined to the full bookmark set", () => {
+  // useContinueReading drives the Continue / Unread / Read tabs. It joins
+  // progress rows against the bookmark list it's given. If a caller passes
+  // `displayBookmarks` (the cache-restricted subset used for offline-safe
+  // recommendations), rows whose bookmarks are temporarily filtered out
+  // silently disappear from the reading tab — even though the progress
+  // record is fine. This was the root cause of the "opened articles don't
+  // land in the reading tab" regression after the dual-writer refactor.
+  it("no caller passes displayBookmarks to useContinueReading", () => {
+    const files = readAllSourceFiles();
+    const violations: Array<{ path: string; snippet: string }> = [];
+
+    const pattern = /useContinueReading\s*\(\s*displayBookmarks\b/g;
+
+    for (const file of files) {
+      const matches = file.content.match(pattern) ?? [];
+      for (const match of matches) {
+        violations.push({ path: file.path, snippet: match });
+      }
+    }
+
+    expect(
+      violations.map((v) => `${v.path}: ${v.snippet}`),
+      `useContinueReading is being called with displayBookmarks. That set is
+cache-restricted — during connecting/reauthing it omits bookmarks whose
+detail isn't cached, which silently drops their progress rows from the
+reading tab. Pass the full set (useAllBookmarks) instead.`,
+    ).toEqual([]);
+  });
+});

@@ -75,6 +75,14 @@ export function useAllBookmarks() {
   return useRuntimeStoreBase(selectBookmarks);
 }
 
+// True once hydrateCurrentAccount has pointed the IDB layer at the
+// active-account database. Side effects that write to IDB on page load
+// must wait for this — otherwise they land in the default "totem" DB
+// before setActiveAccountId runs. See reader progress write in App.tsx.
+export function useBookmarksLoaded(): boolean {
+  return useRuntimeStoreBase((state) => state.bookmarksLoaded);
+}
+
 export function useDetailedTweetIds() {
   return useRuntimeStoreBase(selectDetailedTweetIds);
 }

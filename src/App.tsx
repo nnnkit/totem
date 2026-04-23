@@ -35,6 +35,7 @@ import { useReaderDetail } from "./hooks/useReaderDetail";
 import {
   useActiveAccountId,
   useAllBookmarks,
+  useBookmarksLoaded,
   useDetailedTweetIds,
   useDisplayBookmarks,
   useIsOffline,
@@ -242,8 +243,8 @@ function NewTabRouteApp() {
     allUnread,
     refresh: refreshContinueReading,
   } = useContinueReading(
-    displayBookmarks,
-    `${activeAccountId || "__none__"}:${displayBookmarks.length}:${offlineMode ? "offline" : "online"}`,
+    bookmarks,
+    `${activeAccountId || "__none__"}:${bookmarks.length}:${offlineMode ? "offline" : "online"}`,
   );
 
   const restoreReadingTab = useCallback(() => {
@@ -489,6 +490,7 @@ function ReaderRouteApp() {
   const actions = useRuntimeActions();
   const allBookmarks = useAllBookmarks();
   const displayBookmarks = useDisplayBookmarks();
+  const bookmarksLoaded = useBookmarksLoaded();
   const offlineMode = useIsOffline();
   const readTweetId = useMemo(() => getReaderTweetId(), []);
   const returnSurface = useMemo(() => getReaderReturnSurface(), []);
@@ -529,12 +531,16 @@ function ReaderRouteApp() {
       goToNewTab(returnSurface);
       return;
     }
+    // Wait for hydrateCurrentAccount to point IDB at the account DB.
+    // Without this gate, getDb() captures the default "totem" DB and the
+    // progress write is invisible to the account-scoped reads on return.
+    if (!bookmarksLoaded) return;
     if (hiddenBookmark) {
       goToNewTab(returnSurface);
       return;
     }
     ensureReadingProgressExists(readTweetId).catch(() => {});
-  }, [hiddenBookmark, readTweetId, returnSurface]);
+  }, [bookmarksLoaded, hiddenBookmark, readTweetId, returnSurface]);
 
   useEffect(() => {
     if (localBookmark) {
