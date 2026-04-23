@@ -6,6 +6,8 @@ import {
   deleteHighlight as dbDeleteHighlight,
   getHighlightsByTweetId,
 } from "../db";
+import { resolveHighlightColor } from "../lib/highlight-colors";
+import type { HighlightColor } from "../lib/highlight-colors";
 
 const DOM_MUTATION_OBSERVER_OPTIONS: MutationObserverInit = {
   childList: true,
@@ -48,7 +50,9 @@ function wrapTextRange(
   endOffset: number,
   highlightId: string,
   flash: boolean,
+  color: string,
 ): Element[] {
+  const resolvedColor = resolveHighlightColor(color);
   const textNodes = getTextNodesInSection(section);
   let charCount = 0;
   const wrappedMarks: Element[] = [];
@@ -82,9 +86,18 @@ function wrapTextRange(
     const afterText = textNode.textContent!.slice(overlapEnd);
 
     const mark = document.createElement("mark");
-    mark.className = flash ? "totem-highlight totem-highlight-new" : "totem-highlight";
+    mark.className = "totem-highlight";
     mark.dataset.highlightId = highlightId;
+    mark.dataset.color = resolvedColor;
     mark.textContent = highlightText;
+    if (flash) {
+      mark.dataset.fresh = "true";
+      mark.addEventListener(
+        "animationend",
+        () => mark.removeAttribute("data-fresh"),
+        { once: true },
+      );
+    }
 
     if (beforeText) {
       parent.insertBefore(document.createTextNode(beforeText), textNode);
@@ -150,7 +163,7 @@ export function useHighlights({ tweetId, contentReady, containerRef }: Props) {
       if (actualText !== h.selectedText) continue;
 
       const shouldFlash = flashIdsRef.current.has(h.id) && !h.note;
-      const marks = wrapTextRange(section, h.startOffset, h.endOffset, h.id, shouldFlash);
+      const marks = wrapTextRange(section, h.startOffset, h.endOffset, h.id, shouldFlash, h.color);
 
       if (shouldFlash) {
         flashIdsRef.current.delete(h.id);
@@ -293,10 +306,14 @@ export function useHighlights({ tweetId, contentReady, containerRef }: Props) {
   );
 
   const addHighlight = useCallback(
-    async (ranges: SelectionRange[], options?: { note?: string | null; type?: "highlight" | "note" }) => {
+    async (
+      ranges: SelectionRange[],
+      options?: { note?: string | null; type?: "highlight" | "note"; color?: HighlightColor },
+    ) => {
       const created: Highlight[] = [];
       const note = options?.note ?? null;
       const type = options?.type ?? "highlight";
+      const color = resolveHighlightColor(options?.color);
 
       for (const range of ranges) {
         const highlight: Highlight = {
@@ -307,7 +324,7 @@ export function useHighlights({ tweetId, contentReady, containerRef }: Props) {
           endOffset: range.endOffset,
           selectedText: range.selectedText,
           note,
-          color: "green",
+          color,
           createdAt: Date.now(),
           type,
         };
@@ -344,6 +361,22 @@ export function useHighlights({ tweetId, contentReady, containerRef }: Props) {
     [],
   );
 
+  const updateHighlightColor = useCallback(
+    async (id: string, color: HighlightColor) => {
+      const existing = highlightsRef.current.get(id);
+      if (!existing) return;
+
+      const resolved = resolveHighlightColor(color);
+      if (existing.color === resolved) return;
+
+      const updated = { ...existing, color: resolved };
+      highlightsRef.current.set(id, updated);
+      await upsertHighlight(updated);
+      setRevision((r) => r + 1);
+    },
+    [],
+  );
+
   const getHighlight = useCallback((id: string) => {
     return highlightsRef.current.get(id) || null;
   }, []);
@@ -352,5 +385,13 @@ export function useHighlights({ tweetId, contentReady, containerRef }: Props) {
     pendingNoteIdRef.current = id;
   }, []);
 
-  return { addHighlight, removeHighlight, updateHighlightNote, getHighlight, applyNow: runApplyNow, setPendingNoteId };
+  return {
+    addHighlight,
+    removeHighlight,
+    updateHighlightNote,
+    updateHighlightColor,
+    getHighlight,
+    applyNow: runApplyNow,
+    setPendingNoteId,
+  };
 }

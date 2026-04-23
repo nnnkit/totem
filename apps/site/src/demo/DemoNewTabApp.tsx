@@ -103,6 +103,10 @@ function mergeSettings(raw?: Partial<UserSettings>): UserSettings {
       raw.recommendationSource === "random" || raw.recommendationSource === "pinned"
         ? raw.recommendationSource
         : DEFAULT_DEMO_SETTINGS.recommendationSource,
+    defaultHighlightColor:
+      typeof raw.defaultHighlightColor === "string"
+        ? raw.defaultHighlightColor
+        : DEFAULT_DEMO_SETTINGS.defaultHighlightColor,
   };
 }
 

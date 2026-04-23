@@ -1,10 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { HighlighterIcon, LightningIcon, NotePencilIcon } from "@phosphor-icons/react";
+import {
+  CaretDownIcon,
+  HighlighterIcon,
+  LightningIcon,
+  NotePencilIcon,
+} from "@phosphor-icons/react";
 import type { SelectionRange } from "../../types";
+import { type HighlightColor } from "../../lib/highlight-colors";
 import { buildGrokUrl } from "./utils";
 import { Button } from "../ui/Button";
 import { PopoverContent, Popover } from "../ui/Popover";
 import { Separator } from "../ui/Separator";
+import { ColorDot } from "./ColorDot";
+import { HighlightColorPicker } from "./HighlightColorPicker";
 
 function getTextOffsetInSection(section: Element, node: Node, offset: number): number {
   const walker = document.createTreeWalker(section, NodeFilter.SHOW_TEXT);
@@ -116,15 +124,28 @@ interface ToolbarState {
 interface Props {
   containerRef: React.RefObject<HTMLElement | null>;
   tweetUrl: string;
-  onHighlight: (ranges: SelectionRange[]) => void;
+  defaultColor: HighlightColor;
+  onHighlight: (ranges: SelectionRange[], color: HighlightColor) => void;
+  onDefaultColorChange: (color: HighlightColor) => void;
   onAddNote: (ranges: SelectionRange[]) => void;
 }
 
-export function SelectionToolbar({ containerRef, tweetUrl, onHighlight, onAddNote }: Props) {
+export function SelectionToolbar({
+  containerRef,
+  tweetUrl,
+  defaultColor,
+  onHighlight,
+  onDefaultColorChange,
+  onAddNote,
+}: Props) {
   const [state, setState] = useState<ToolbarState | null>(null);
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const dismissTimeoutRef = useRef<number>(0);
 
-  const dismiss = useCallback(() => setState(null), []);
+  const dismiss = useCallback(() => {
+    setState(null);
+    setPaletteOpen(false);
+  }, []);
 
   useEffect(() => {
     const handleMouseUp = () => {
@@ -184,7 +205,14 @@ export function SelectionToolbar({ containerRef, tweetUrl, onHighlight, onAddNot
 
   const handleHighlight = () => {
     if (!state) return;
-    onHighlight(state.ranges);
+    onHighlight(state.ranges, defaultColor);
+    dismiss();
+  };
+
+  const handleHighlightWithColor = (color: HighlightColor) => {
+    if (!state) return;
+    if (color !== defaultColor) onDefaultColorChange(color);
+    onHighlight(state.ranges, color);
     dismiss();
   };
 
@@ -212,6 +240,18 @@ export function SelectionToolbar({ containerRef, tweetUrl, onHighlight, onAddNot
               <Button variant="ghost" size="sm" onClick={handleHighlight} className="gap-1.5">
                 <HighlighterIcon weight="bold" className="size-4" />
                 <span>Highlight</span>
+                <ColorDot color={defaultColor} size="xs" />
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => setPaletteOpen((v) => !v)}
+                aria-label="Choose highlight color"
+                aria-expanded={paletteOpen}
+                aria-haspopup="true"
+              >
+                <CaretDownIcon weight="bold" className="size-3" />
               </Button>
 
               <Separator orientation="vertical" />
@@ -236,6 +276,16 @@ export function SelectionToolbar({ containerRef, tweetUrl, onHighlight, onAddNot
                 <span>Ask Grok</span>
               </Button>
             </div>
+            {paletteOpen && (
+              <div className="border-t border-border px-2 py-1.5">
+                <HighlightColorPicker
+                  value={defaultColor}
+                  onChange={handleHighlightWithColor}
+                  groupLabel="Highlight color"
+                  optionLabel={(c) => `Highlight in ${c}`}
+                />
+              </div>
+            )}
           </PopoverContent>
         </Popover.Positioner>
       </Popover.Portal>

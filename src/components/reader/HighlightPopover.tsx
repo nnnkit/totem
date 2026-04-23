@@ -1,9 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
 import { XIcon, NotePencilIcon } from "@phosphor-icons/react";
 import type { Highlight } from "../../types";
+import {
+  resolveHighlightColor,
+  type HighlightColor,
+} from "../../lib/highlight-colors";
 import { Button } from "../ui/Button";
 import { PopoverContent, Popover } from "../ui/Popover";
 import { Separator } from "../ui/Separator";
+import { HighlightColorPicker } from "./HighlightColorPicker";
 
 interface PopoverState {
   highlight: Highlight;
@@ -14,6 +19,7 @@ interface Props {
   containerRef: React.RefObject<HTMLElement | null>;
   getHighlight: (id: string) => Highlight | null;
   onDelete: (id: string) => void;
+  onRecolor: (id: string, color: HighlightColor) => void;
   onAddNote: (highlight: Highlight, anchorEl: HTMLElement) => void;
   onOpenNote: (highlight: Highlight, anchorEl: HTMLElement) => void;
 }
@@ -22,6 +28,7 @@ export function HighlightPopover({
   containerRef,
   getHighlight,
   onDelete,
+  onRecolor,
   onAddNote,
   onOpenNote,
 }: Props) {
@@ -92,6 +99,14 @@ export function HighlightPopover({
               </div>
             ) : (
               <div className="flex items-center gap-1 px-2 py-1.5">
+                <HighlightColorPicker
+                  size="sm"
+                  value={resolveHighlightColor(highlight.color)}
+                  onChange={(c) => onRecolor(highlight.id, c)}
+                  groupLabel="Change highlight color"
+                  optionLabel={(c) => `Change color to ${c}`}
+                />
+                <Separator orientation="vertical" />
                 <Button
                   variant="ghost"
                   size="sm"

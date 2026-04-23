@@ -220,7 +220,7 @@ export function NewTabHome({
   const showCardButtons = footerState === "bookmark_card";
 
   const cardBase =
-    "relative min-h-40 overflow-hidden rounded px-6 py-6 bg-main-bg shadow-glass transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 max-sm:min-h-36 max-sm:px-4 max-sm:py-4";
+    "relative min-h-40 overflow-hidden rounded px-6 py-6 bg-main-bg shadow-glass transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring max-sm:min-h-36 max-sm:px-4 max-sm:py-4";
   const cardCentered = cn(cardBase, "text-center");
   const handleLoginButton = useCallback(() => {
     if (onLogin) {
@@ -628,7 +628,7 @@ export function NewTabHome({
           >
             <Button
               variant="secondary"
-              className="bg-home-secondary-bg px-5 py-2.5 font-semibold leading-none text-home-secondary-text shadow-glass transition-colors duration-150 ease-hover hover:bg-main-bg-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80"
+              className="bg-home-secondary-bg px-5 py-2.5 font-semibold leading-none text-home-secondary-text shadow-glass transition-colors duration-150 ease-hover hover:bg-main-bg-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
               onClick={onOpenReading}
             >
               Open reading list
@@ -638,7 +638,7 @@ export function NewTabHome({
             </Button>
             <Button
               variant="secondary"
-              className="bg-home-secondary-bg px-5 py-2.5 font-semibold leading-none text-home-secondary-text shadow-glass transition-colors duration-150 ease-hover hover:bg-main-bg-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80"
+              className="bg-home-secondary-bg px-5 py-2.5 font-semibold leading-none text-home-secondary-text shadow-glass transition-colors duration-150 ease-hover hover:bg-main-bg-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
               onClick={surpriseMe}
             >
               Surprise me
@@ -686,7 +686,7 @@ export function NewTabHome({
           <Popover.Root>
             <Popover.Trigger
               type="button"
-              className="flex size-11 items-center justify-center text-on-bg-ghost transition-colors duration-150 ease-hover hover:text-on-bg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80"
+              className="flex size-11 items-center justify-center text-on-bg-ghost transition-colors duration-150 ease-hover hover:text-on-bg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
               aria-label="Support"
               title="Support"
             >

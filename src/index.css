@@ -47,6 +47,7 @@
     --color-muted: var(--muted);
     --color-border: var(--border);
     --color-success: var(--success);
+    --color-focus-ring: var(--focus-ring);
 
     /* Home page tokens — defaults here, scoped overrides in .totem-home */
     --color-on-bg: transparent;
@@ -241,6 +242,9 @@
         /* Borders */
         --border: #DCDCDC;
 
+        /* Focus ring — neutral, calmer than brand accent */
+        --focus-ring: rgba(26, 26, 26, 0.38);
+
         /* Status */
         --success: #15803d;
 
@@ -258,10 +262,8 @@
         --sh-keyword: #cf222e;
         --sh-comment: #a19595;
 
-        /* Highlights */
-        --highlight-bg: rgba(226, 128, 103, 0.16);
-        --highlight-bg-hover: rgba(226, 128, 103, 0.26);
-        --highlight-bg-active: rgba(226, 128, 103, 0.3);
+        /* Highlights — fill colors live in per-mark data-color rules; this var
+           only drives the wavy underline used when a highlight has a note. */
         --highlight-underline: rgba(226, 128, 103, 0.75);
         --note-pill-bg: rgba(73, 109, 146, 0.12);
         --note-pill-fg: #44627f;
@@ -291,6 +293,9 @@
             /* Borders */
             --border: #2A2A2D;
 
+            /* Focus ring — neutral, calmer than brand accent */
+            --focus-ring: rgba(245, 243, 240, 0.4);
+
             /* Status */
             --success: #22c55e;
 
@@ -308,10 +313,7 @@
             --sh-keyword: #f47067;
             --sh-comment: #636c76;
 
-            /* Highlights */
-            --highlight-bg: rgba(226, 128, 103, 0.18);
-            --highlight-bg-hover: rgba(226, 128, 103, 0.3);
-            --highlight-bg-active: rgba(226, 128, 103, 0.38);
+            /* Highlights — see comment in :root */
             --highlight-underline: rgba(226, 128, 103, 0.75);
             --note-pill-bg: rgba(124, 165, 206, 0.18);
             --note-pill-fg: #c5ddf3;
@@ -339,6 +341,9 @@
         /* Borders */
         --border: #2A2A2D;
 
+        /* Focus ring — neutral, calmer than brand accent */
+        --focus-ring: rgba(245, 243, 240, 0.4);
+
         /* Status */
         --success: #22c55e;
 
@@ -356,10 +361,7 @@
         --sh-keyword: #f47067;
         --sh-comment: #636c76;
 
-        /* Highlights */
-        --highlight-bg: rgba(226, 128, 103, 0.18);
-        --highlight-bg-hover: rgba(226, 128, 103, 0.3);
-        --highlight-bg-active: rgba(226, 128, 103, 0.38);
+        /* Highlights — see comment in :root */
         --highlight-underline: rgba(226, 128, 103, 0.75);
         --note-pill-bg: rgba(124, 165, 206, 0.18);
         --note-pill-fg: #c5ddf3;
@@ -394,9 +396,8 @@
             [role="button"],
             [tabindex]:not([tabindex="-1"])
         ):focus-visible {
-        outline: 2px solid color-mix(in srgb, var(--accent) 84%, white);
+        outline: 1px solid var(--focus-ring);
         outline-offset: 2px;
-        box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 16%, transparent);
     }
 
     :where(
@@ -467,20 +468,159 @@
     }
 
     mark.totem-highlight {
-        background-color: var(--highlight-bg);
         color: inherit;
+        background-color: transparent;
+        background-repeat: no-repeat;
+        background-size: 100% 100%;
         box-decoration-break: clone;
         -webkit-box-decoration-break: clone;
         cursor: pointer;
-        border-radius: 2px;
-        transition: background-color 150ms ease;
+        border-radius: 1px;
+        /* Padding + negative margin extend the ink box past the text so the
+           gradient's fade-to-transparent tails sit outside the letters. This
+           matters especially in dark mode where highlighted text is dark:
+           without this, the last glyph on each line would be dark-on-dark at
+           the fade zone. No effect on surrounding layout. */
+        padding-inline: 0.3em;
+        margin-inline: -0.3em;
+        transition: filter 150ms ease;
     }
 
     mark.totem-highlight:hover {
-        background-color: var(--highlight-bg-hover);
+        filter: brightness(0.96) saturate(1.05);
+    }
+
+    mark.totem-highlight[data-color="classic"] {
+        background-image: linear-gradient(
+            104deg,
+            rgba(226, 128, 103, 0) 0.9%,
+            rgba(226, 128, 103, 0.9) 2.4%,
+            rgba(226, 128, 103, 0.4) 5.8%,
+            rgba(226, 128, 103, 0.1) 93%,
+            rgba(226, 128, 103, 0.6) 96%,
+            rgba(226, 128, 103, 0) 98%
+        );
+    }
+
+    mark.totem-highlight[data-color="yellow"] {
+        background-image: linear-gradient(
+            104deg,
+            rgba(255, 230, 0, 0) 0.9%,
+            rgba(255, 230, 0, 1.25) 2.4%,
+            rgba(255, 230, 0, 0.5) 5.8%,
+            rgba(255, 230, 0, 0.1) 93%,
+            rgba(255, 230, 0, 0.7) 96%,
+            rgba(255, 230, 0, 0) 98%
+        );
+    }
+
+    mark.totem-highlight[data-color="mint"] {
+        background-image: linear-gradient(
+            104deg,
+            rgba(130, 220, 170, 0) 0.9%,
+            rgba(130, 220, 170, 1) 2.4%,
+            rgba(130, 220, 170, 0.45) 5.8%,
+            rgba(130, 220, 170, 0.1) 93%,
+            rgba(130, 220, 170, 0.65) 96%,
+            rgba(130, 220, 170, 0) 98%
+        );
+    }
+
+    mark.totem-highlight[data-color="dark"]:not([data-has-note="true"]) {
+        color: #fff;
+        background-image: linear-gradient(
+            104deg,
+            rgba(20, 20, 20, 0) 0.9%,
+            rgba(20, 20, 20, 1) 2.4%,
+            rgba(20, 20, 20, 0.92) 5.8%,
+            rgba(20, 20, 20, 0.92) 93%,
+            rgba(20, 20, 20, 1) 96%,
+            rgba(20, 20, 20, 0) 98%
+        );
+    }
+
+    /* Dark mode — low-alpha tinted wash over dark page. Same painterly
+       peak→valley→peak shape as light mode but the entire alpha range is
+       shifted down ~60% so the fill reads as a subtle tint, not bright paint.
+       Body text color is preserved (light) — don't force dark text. Readwise
+       / Obsidian / Kindle / Instapaper all converge on this pattern; forcing
+       dark text on bright fill in dark mode is a losing approach. */
+    /* Dark mode — saturated light-mode hues, softened peak alphas and
+       smoother transitions so the gradient reads as ink rather than a
+       metallic specular highlight. Peaks are closer to the valley (ratio
+       1.3x vs 2.3x before) and the transitions are more gradual. */
+    [data-theme="dark"] mark.totem-highlight[data-color="classic"]:not([data-has-note="true"]) {
+        background-image: linear-gradient(
+            104deg,
+            rgba(226, 128, 103, 0) 1%,
+            rgba(226, 128, 103, 0.28) 6%,
+            rgba(226, 128, 103, 0.22) 25%,
+            rgba(226, 128, 103, 0.2) 75%,
+            rgba(226, 128, 103, 0.24) 94%,
+            rgba(226, 128, 103, 0) 99%
+        );
+    }
+
+    [data-theme="dark"] mark.totem-highlight[data-color="yellow"]:not([data-has-note="true"]) {
+        background-image: linear-gradient(
+            104deg,
+            rgba(255, 230, 0, 0) 1%,
+            rgba(255, 230, 0, 0.28) 6%,
+            rgba(255, 230, 0, 0.22) 25%,
+            rgba(255, 230, 0, 0.2) 75%,
+            rgba(255, 230, 0, 0.24) 94%,
+            rgba(255, 230, 0, 0) 99%
+        );
+    }
+
+    [data-theme="dark"] mark.totem-highlight[data-color="mint"]:not([data-has-note="true"]) {
+        background-image: linear-gradient(
+            104deg,
+            rgba(130, 220, 170, 0) 1%,
+            rgba(130, 220, 170, 0.28) 6%,
+            rgba(130, 220, 170, 0.22) 25%,
+            rgba(130, 220, 170, 0.2) 75%,
+            rgba(130, 220, 170, 0.24) 94%,
+            rgba(130, 220, 170, 0) 99%
+        );
+    }
+
+    /* Dark variant keeps its inverted-polarity "redaction" identity — this is
+       the one color that is meant to stand out as a bold block rather than a
+       subtle wash. Fill stays solid, text stays dark. */
+    [data-theme="dark"] mark.totem-highlight[data-color="dark"]:not([data-has-note="true"]) {
+        color: #0a0a0a;
+        background-image: linear-gradient(
+            104deg,
+            rgba(240, 236, 226, 0) 0.9%,
+            rgba(240, 236, 226, 1) 2.4%,
+            rgba(240, 236, 226, 0.85) 5.8%,
+            rgba(240, 236, 226, 0.75) 93%,
+            rgba(240, 236, 226, 1) 96%,
+            rgba(240, 236, 226, 0) 98%
+        );
+    }
+
+    mark.totem-highlight[data-fresh="true"] {
+        background-size: 0% 100%;
+        animation: marker-swipe 720ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+
+    @keyframes marker-swipe {
+        to {
+            background-size: 100% 100%;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        mark.totem-highlight[data-fresh="true"] {
+            animation: none;
+            background-size: 100% 100%;
+        }
     }
 
     mark.totem-highlight[data-has-note="true"] {
+        background-image: none;
         background-color: transparent;
         color: inherit;
         text-decoration: underline wavy;
@@ -493,6 +633,7 @@
     }
 
     mark.totem-highlight[data-has-note="true"]:hover {
+        filter: none;
         background-color: transparent;
         text-decoration-color: var(--highlight-underline);
     }
@@ -506,17 +647,32 @@
         }
     }
 
-    @keyframes highlight-flash {
-        from {
-            background-color: var(--highlight-bg-active);
-        }
-        to {
-            background-color: var(--highlight-bg);
-        }
+    .totem-color-dot {
+        display: inline-block;
+        border-radius: 999px;
+        box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1);
     }
 
-    mark.totem-highlight-new {
-        animation: highlight-flash 600ms ease-out forwards;
+    .totem-color-dot[data-color="classic"] {
+        background: rgba(226, 128, 103, 0.9);
+    }
+
+    .totem-color-dot[data-color="yellow"] {
+        background: rgba(255, 230, 0, 0.95);
+    }
+
+    .totem-color-dot[data-color="mint"] {
+        background: rgba(130, 220, 170, 0.9);
+    }
+
+    .totem-color-dot[data-color="dark"] {
+        background: #141414;
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.15);
+    }
+
+    [data-theme="dark"] .totem-color-dot[data-color="dark"] {
+        background: #f0ece2;
+        box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.2);
     }
 
     .totem-popover[data-open] {

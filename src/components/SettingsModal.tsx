@@ -9,11 +9,13 @@ import { ToggleGroup } from "@base-ui/react/toggle-group";
 import { Toggle } from "@base-ui/react/toggle";
 import type { UserSettings } from "../types";
 import type { ThemePreference } from "../hooks/useTheme";
+import { resolveHighlightColor } from "../lib/highlight-colors";
 import { cn } from "../lib/cn";
 import { Modal } from "./ui/Modal";
 import { Button } from "./ui/Button";
 import { Switch } from "./ui/Switch";
 import { Select } from "./ui/Select";
+import { HighlightColorPicker } from "./reader/HighlightColorPicker";
 
 interface Props {
   open: boolean;
@@ -127,6 +129,30 @@ export function SettingsModal({
                   </ToggleGroup>
                 </div>
 
+              </div>
+            </section>
+
+            <section className="py-4 first:pt-0 last:pb-0">
+              <h3 className="text-sm font-semibold text-muted mb-1.5">
+                Reading
+              </h3>
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between min-h-10 gap-4">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-sm text-foreground/80">
+                      Default highlight color
+                    </span>
+                    <span className="text-xxs text-muted/60 leading-snug">
+                      Used for new highlights in a fresh article
+                    </span>
+                  </div>
+                  <HighlightColorPicker
+                    value={resolveHighlightColor(settings.defaultHighlightColor)}
+                    onChange={(c) => onUpdateSettings({ defaultHighlightColor: c })}
+                    groupLabel="Default highlight color"
+                    optionLabel={(c) => `Default color ${c}`}
+                  />
+                </div>
               </div>
             </section>
 
