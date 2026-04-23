@@ -661,6 +661,13 @@ export function createRuntimeStore() {
         ? state.bootGeneration + 1
         : state.bootGeneration;
 
+      // On the snapshot-push path (allowHydration=false) we can't also call
+      // setActiveAccountId on the DB layer, so leave activeAccountId as-is
+      // and let the follow-up checkAuth be the sole writer that moves the
+      // store + IDB pointer together.
+      const nextStoreAccountId =
+        accountChanged && !options.allowHydration ? state.activeAccountId : nextAccountId;
+
       setRuntimeState({
         authPhase: phase,
         authState: payload.authState,
@@ -669,7 +676,7 @@ export function createRuntimeStore() {
           bookmarksApi: payload.bookmarksApi,
           detailApi: payload.detailApi,
         },
-        activeAccountId: nextAccountId,
+        activeAccountId: nextStoreAccountId,
         authRetryDelayMs,
         bootGeneration: nextBootGeneration,
         bookmarksLoaded: needsHydration ? false : state.bookmarksLoaded,

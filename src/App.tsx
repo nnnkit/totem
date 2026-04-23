@@ -516,8 +516,11 @@ function ReaderRouteApp() {
 
   const fetchExternalDetail =
     Boolean(readTweetId) && !localBookmark && !hiddenBookmark;
+  // Wait for hydrateCurrentAccount before hitting the detail cache: getDb()
+  // memoizes a handle on the DB name active at call time, so firing pre-
+  // hydration sticks the default "totem" handle for the rest of the session.
   const { state: readerDetail, refetch: refetchReaderDetail } = useReaderDetail(
-    fetchExternalDetail ? readTweetId : null,
+    fetchExternalDetail && bookmarksLoaded ? readTweetId : null,
   );
 
   useEffect(() => {
