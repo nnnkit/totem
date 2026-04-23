@@ -243,6 +243,18 @@ function NewTabRouteApp() {
     `${activeAccountId || "__none__"}:${bookmarks.length}:${offlineMode ? "offline" : "online"}`,
   );
 
+  // In offline mode, hide uncached bookmarks from the Unread tab — clicking
+  // one would fail since we can't fetch detail. Continue Reading is left
+  // intact on purpose: reading-progress rows must survive cache restriction
+  // (invariant #7 in storage-invariants.test.ts).
+  const visibleUnread = useMemo(
+    () =>
+      offlineMode
+        ? allUnread.filter((bookmark) => detailedTweetIds.has(bookmark.tweetId))
+        : allUnread,
+    [offlineMode, allUnread, detailedTweetIds],
+  );
+
   const restoreReadingTab = useCallback(() => {
     setReadingTab(readStoredReadingTab());
   }, []);
@@ -424,7 +436,7 @@ function NewTabRouteApp() {
     ? (
       <BookmarksList
         continueReadingItems={continueReading}
-        unreadBookmarks={allUnread}
+        unreadBookmarks={visibleUnread}
         activeTab={readingTab}
         onTabChange={handleReadingTabChange}
         onOpenBookmark={openBookmarkFromReading}

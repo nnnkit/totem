@@ -12,7 +12,8 @@
     "storage",
     "webRequest",
     "declarativeNetRequest",
-    "scripting"
+    "scripting",
+    "cookies"
   ],
   "optional_permissions": [
     "topSites",

@@ -261,12 +261,17 @@ chrome.webRequest.onSendHeaders.addListener(
         .catch(() => {});
     }
 
-    // Track auth state from protected operations
+    // Track auth state from protected operations.
+    // A request only counts as the auth trio when the cookie still carries
+    // a valid twid. Post-logout x.com pings often still have a stale
+    // authorization JWT and x-csrf-token, so without the twid gate we'd
+    // re-arm totem_auth_headers and flip the session back to logged_in.
     const protectedOperation = isAuthProtectedOperation(details.url);
     const hasAuthTrio = Boolean(
       headers["authorization"] &&
         headers["cookie"] &&
-        headers["x-csrf-token"],
+        headers["x-csrf-token"] &&
+        userIdFromHeader,
     );
     if (protectedOperation && !extensionInitiated) {
       if (hasAuthTrio) {
@@ -277,12 +282,7 @@ chrome.webRequest.onSendHeaders.addListener(
     }
 
     // Store auth headers (only from real user browsing, not extension requests)
-    if (
-      !extensionInitiated &&
-      headers["authorization"] &&
-      headers["cookie"] &&
-      headers["x-csrf-token"]
-    ) {
+    if (!extensionInitiated && hasAuthTrio) {
       chrome.storage.local.set({
         totem_auth_headers: headers,
         totem_auth_time: Date.now(),
@@ -373,6 +373,29 @@ chrome.webRequest.onCompleted.addListener(
   },
   { urls: ["https://x.com/i/api/graphql/*"] },
 );
+
+// ── Authoritative logout signal: twid cookie removal ─────────
+// The twid cookie is ground truth for Twitter session identity. Watching it
+// catches every logout cause (UI button, session expiry, manual clear, account
+// switch) without URL sniffing or waiting for a 401 on the next API call.
+
+if (typeof chrome.cookies?.onChanged?.addListener === "function") {
+  chrome.cookies.onChanged.addListener((changeInfo) => {
+    const cookie = changeInfo.cookie;
+    if (cookie.name !== "twid") return;
+    const normalizedDomain = cookie.domain.replace(/^\./, "");
+    if (normalizedDomain !== "x.com") return;
+
+    const userId = changeInfo.removed ? null : parseTwidUserId(cookie.value);
+    if (userId) return;
+
+    markAuthLoggedOut(
+      `cookie_twid_${changeInfo.cause}`,
+      true,
+      chrome.storage.local,
+    ).catch(() => {});
+  });
+}
 
 // ── Extension icon click ─────────────────────────────────────
 

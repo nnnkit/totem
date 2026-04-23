@@ -185,20 +185,27 @@ export async function getSessionSnapshot(
   const authHeaders = stored.totem_auth_headers as
     | Record<string, string>
     | undefined;
-  const hasAuthHeader = Boolean(authHeaders?.authorization);
+  // A stored authorization JWT is only a valid session signal when the cookie
+  // still identifies a user via twid. Without this, post-logout x.com traffic
+  // that briefly carries the old JWT but an empty twid could re-arm the trio
+  // and mask the logged_out state.
+  const storedCookieHeader =
+    typeof authHeaders?.cookie === "string" ? authHeaders.cookie : "";
+  const storedTwidUserId = parseTwidUserId(
+    getCookieHeaderValue(storedCookieHeader, "twid"),
+  );
+  const hasAuthHeader = Boolean(
+    authHeaders?.authorization && storedTwidUserId,
+  );
 
-  if (!userId && typeof authHeaders?.cookie === "string") {
-    const twidRaw = getCookieHeaderValue(authHeaders.cookie, "twid");
-    const parsedUserId = parseTwidUserId(twidRaw);
-    if (parsedUserId) {
-      userId = parsedUserId;
-      storage
-        .set({
-          totem_user_id: parsedUserId,
-          [CS_ACCOUNT_CONTEXT_ID]: parsedUserId,
-        })
-        .catch(() => {});
-    }
+  if (!userId && storedTwidUserId) {
+    userId = storedTwidUserId;
+    storage
+      .set({
+        totem_user_id: storedTwidUserId,
+        [CS_ACCOUNT_CONTEXT_ID]: storedTwidUserId,
+      })
+      .catch(() => {});
   }
 
   const storedAccountContextId =
