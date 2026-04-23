@@ -1,6 +1,6 @@
 # Totem — Regression Test Plan
 
-Manual, real-world tests that cover the sync/reset/IDB changes made in 2026-04 (see `FINDINGS.md` for the underlying diagnoses) plus end-to-end integration with reader, settings, and multi-tab behaviour.
+Manual, real-world tests that cover the sync/reset/IDB changes made in 2026-04 plus end-to-end integration with reader, settings, and multi-tab behaviour.
 
 Run items from §12 as a minimum before shipping. Individual sections are useful when touching the relevant subsystem.
 
@@ -146,6 +146,5 @@ Walk through in one sitting, ~10 min:
 
 ## Reference
 
-- `FINDINGS.md` — what each fix addresses, commit SHAs.
 - `ARCHITECTURE.md` — sync orchestrator invariants (§16), DB lifecycle (§15).
 - `CLAUDE.md` — project conventions.

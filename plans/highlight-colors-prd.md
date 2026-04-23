@@ -11,8 +11,6 @@
 
 Replace the current flat coral highlight wash with a hand-drawn "marker swipe" rendering, and give users a palette of four colors (Classic, Yellow, Mint, Dark) that can be mixed freely within the same article. Color is per-highlight. The color picker lives in a **split-button selection toolbar** (primary Highlight button + caret that opens a mini palette) and again on the existing edit popover for recoloring old highlights.
 
-A prototype exists at `marker-highlight-test.html` in the repo root, used as the visual spec for this PRD. Delete after merge.
-
 ---
 
 ## 2. Goals / Non-goals
@@ -199,7 +197,6 @@ Exit criteria: the user's chosen default survives a reload.
 
 ### Phase 6 — Cleanup
 
-- Delete `marker-highlight-test.html`.
 - Remove any temporary shims from Phase 1 if unused.
 - Docs update if we have an internal feature log.
 

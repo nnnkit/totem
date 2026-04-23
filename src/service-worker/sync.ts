@@ -635,8 +635,12 @@ export function createSyncHandlers(deps: SyncDeps = {}): HandlerMap {
           } else if (status === "timeout") {
             await cacheStorage.set({ [CS_LAST_SYNC]: now });
           }
-        } catch {
-          // non-fatal: cache-summary write is best-effort
+        } catch (err) {
+          // Non-fatal: orchestrator state is already persisted, and the
+          // runtime reads through the snapshot. A stale cache-summary key
+          // only affects the legacy telemetry surface. Surface the failure
+          // so a reader console can spot persistent write failures.
+          console.warn("[TOTEM-DIAG] sync.complete cache-summary write failed", err);
         }
       }
 

@@ -23,7 +23,6 @@ import { useReadingProgress } from "../hooks/useReadingProgress";
 import { useTheme } from "../hooks/useTheme";
 import { useHighlights } from "../hooks/useHighlights";
 import {
-  DEFAULT_HIGHLIGHT_COLOR,
   resolveHighlightColor,
   type HighlightColor,
 } from "../lib/highlight-colors";
@@ -91,7 +90,7 @@ export function BookmarkReader({
   const [detailLoading, setDetailLoading] = useState(true);
   const [detailError, setDetailError] = useState<string | null>(null);
   const [sessionHighlightColor, setSessionHighlightColor] = useState<HighlightColor>(() =>
-    resolveHighlightColor(defaultHighlightColor) ?? DEFAULT_HIGHLIGHT_COLOR,
+    resolveHighlightColor(defaultHighlightColor),
   );
 
   useEffect(() => {
