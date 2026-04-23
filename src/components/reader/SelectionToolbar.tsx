@@ -6,15 +6,13 @@ import {
   NotePencilIcon,
 } from "@phosphor-icons/react";
 import type { SelectionRange } from "../../types";
-import {
-  HIGHLIGHT_COLORS,
-  type HighlightColor,
-} from "../../lib/highlight-colors";
+import { type HighlightColor } from "../../lib/highlight-colors";
 import { buildGrokUrl } from "./utils";
 import { Button } from "../ui/Button";
 import { PopoverContent, Popover } from "../ui/Popover";
 import { Separator } from "../ui/Separator";
 import { ColorDot } from "./ColorDot";
+import { HighlightColorPicker } from "./HighlightColorPicker";
 
 function getTextOffsetInSection(section: Element, node: Node, offset: number): number {
   const walker = document.createTreeWalker(section, NodeFilter.SHOW_TEXT);
@@ -279,19 +277,13 @@ export function SelectionToolbar({
               </Button>
             </div>
             {paletteOpen && (
-              <div className="flex items-center gap-1 border-t border-border px-2 py-1.5">
-                {HIGHLIGHT_COLORS.map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => handleHighlightWithColor(c)}
-                    className="rounded-full p-1.5 transition-colors hover:bg-surface-hover"
-                    aria-label={`Highlight in ${c}`}
-                    aria-pressed={c === defaultColor}
-                  >
-                    <ColorDot color={c} size="md" selected={c === defaultColor} />
-                  </button>
-                ))}
+              <div className="border-t border-border px-2 py-1.5">
+                <HighlightColorPicker
+                  value={defaultColor}
+                  onChange={handleHighlightWithColor}
+                  groupLabel="Highlight color"
+                  optionLabel={(c) => `Highlight in ${c}`}
+                />
               </div>
             )}
           </PopoverContent>

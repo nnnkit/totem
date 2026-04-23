@@ -2,14 +2,13 @@ import { useCallback, useEffect, useState } from "react";
 import { XIcon, NotePencilIcon } from "@phosphor-icons/react";
 import type { Highlight } from "../../types";
 import {
-  HIGHLIGHT_COLORS,
   resolveHighlightColor,
   type HighlightColor,
 } from "../../lib/highlight-colors";
 import { Button } from "../ui/Button";
 import { PopoverContent, Popover } from "../ui/Popover";
 import { Separator } from "../ui/Separator";
-import { ColorDot } from "./ColorDot";
+import { HighlightColorPicker } from "./HighlightColorPicker";
 
 interface PopoverState {
   highlight: Highlight;
@@ -100,24 +99,13 @@ export function HighlightPopover({
               </div>
             ) : (
               <div className="flex items-center gap-1 px-2 py-1.5">
-                {HIGHLIGHT_COLORS.map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => {
-                      onRecolor(highlight.id, c);
-                    }}
-                    className="rounded-full p-1 transition-colors hover:bg-surface-hover"
-                    aria-label={`Change color to ${c}`}
-                    aria-pressed={resolveHighlightColor(highlight.color) === c}
-                  >
-                    <ColorDot
-                      color={c}
-                      size="sm"
-                      selected={resolveHighlightColor(highlight.color) === c}
-                    />
-                  </button>
-                ))}
+                <HighlightColorPicker
+                  size="sm"
+                  value={resolveHighlightColor(highlight.color)}
+                  onChange={(c) => onRecolor(highlight.id, c)}
+                  groupLabel="Change highlight color"
+                  optionLabel={(c) => `Change color to ${c}`}
+                />
                 <Separator orientation="vertical" />
                 <Button
                   variant="ghost"

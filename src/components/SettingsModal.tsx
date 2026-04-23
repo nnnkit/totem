@@ -10,7 +10,6 @@ import { Toggle } from "@base-ui/react/toggle";
 import type { UserSettings } from "../types";
 import type { ThemePreference } from "../hooks/useTheme";
 import {
-  HIGHLIGHT_COLORS,
   resolveHighlightColor,
   type HighlightColor,
 } from "../lib/highlight-colors";
@@ -19,7 +18,7 @@ import { Modal } from "./ui/Modal";
 import { Button } from "./ui/Button";
 import { Switch } from "./ui/Switch";
 import { Select } from "./ui/Select";
-import { ColorDot } from "./reader/ColorDot";
+import { HighlightColorPicker } from "./reader/HighlightColorPicker";
 
 interface Props {
   open: boolean;
@@ -150,25 +149,12 @@ export function SettingsModal({
                       Used for new highlights in a fresh article
                     </span>
                   </div>
-                  <div className="flex items-center gap-1">
-                    {HIGHLIGHT_COLORS.map((c) => {
-                      const current = resolveHighlightColor(settings.defaultHighlightColor);
-                      return (
-                        <button
-                          key={c}
-                          type="button"
-                          onClick={() =>
-                            onUpdateSettings({ defaultHighlightColor: c satisfies HighlightColor })
-                          }
-                          className="rounded-full p-1.5 transition-colors hover:bg-foreground/6"
-                          aria-label={`Default color ${c}`}
-                          aria-pressed={c === current}
-                        >
-                          <ColorDot color={c} size="md" selected={c === current} />
-                        </button>
-                      );
-                    })}
-                  </div>
+                  <HighlightColorPicker
+                    value={resolveHighlightColor(settings.defaultHighlightColor)}
+                    onChange={(c) => onUpdateSettings({ defaultHighlightColor: c })}
+                    groupLabel="Default highlight color"
+                    optionLabel={(c) => `Default color ${c}`}
+                  />
                 </div>
               </div>
             </section>
