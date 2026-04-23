@@ -490,6 +490,7 @@ function ReaderRouteApp() {
   const allBookmarks = useAllBookmarks();
   const displayBookmarks = useDisplayBookmarks();
   const offlineMode = useIsOffline();
+  const { settings } = useSettings();
   const readTweetId = useMemo(() => getReaderTweetId(), []);
   const returnSurface = useMemo(() => getReaderReturnSurface(), []);
   const [toast, setToast] = useState<ToastState | null>(null);
@@ -656,6 +657,7 @@ function ReaderRouteApp() {
           bookmarkAction={bookmarkAction}
           onMarkAsRead={markReadingProgressCompleted}
           onMarkAsUnread={markReadingProgressUncompleted}
+          defaultHighlightColor={settings.defaultHighlightColor}
           loadDetail={
             readerDetail.status === "success"
               ? async (tweetId) => {

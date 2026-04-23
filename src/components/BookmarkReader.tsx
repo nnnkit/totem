@@ -23,7 +23,11 @@ import { NotePopover } from "./reader/NotePopover";
 import { useReadingProgress } from "../hooks/useReadingProgress";
 import { useTheme } from "../hooks/useTheme";
 import { useHighlights } from "../hooks/useHighlights";
-import { DEFAULT_HIGHLIGHT_COLOR, type HighlightColor } from "../lib/highlight-colors";
+import {
+  DEFAULT_HIGHLIGHT_COLOR,
+  resolveHighlightColor,
+  type HighlightColor,
+} from "../lib/highlight-colors";
 import { Button } from "./ui/Button";
 import {
   copyArticleMarkdownToClipboard,
@@ -49,6 +53,7 @@ interface Props {
   onMarkAsRead?: (tweetId: string) => void;
   onMarkAsUnread?: (tweetId: string) => void;
   onLogin?: () => void;
+  defaultHighlightColor?: string;
   loadDetail?: (tweetId: string) => Promise<{
     focalTweet: Bookmark | null;
     thread: ThreadTweet[];
@@ -73,6 +78,7 @@ export function BookmarkReader({
   onMarkAsRead,
   onMarkAsUnread,
   onLogin,
+  defaultHighlightColor,
   loadDetail,
 }: Props) {
   const articleRef = useRef<HTMLElement>(null);
@@ -85,9 +91,13 @@ export function BookmarkReader({
   const [detailThread, setDetailThread] = useState<ThreadTweet[]>([]);
   const [detailLoading, setDetailLoading] = useState(true);
   const [detailError, setDetailError] = useState<string | null>(null);
-  const [sessionHighlightColor, setSessionHighlightColor] = useState<HighlightColor>(
-    DEFAULT_HIGHLIGHT_COLOR,
+  const [sessionHighlightColor, setSessionHighlightColor] = useState<HighlightColor>(() =>
+    resolveHighlightColor(defaultHighlightColor) ?? DEFAULT_HIGHLIGHT_COLOR,
   );
+
+  useEffect(() => {
+    setSessionHighlightColor(resolveHighlightColor(defaultHighlightColor));
+  }, [defaultHighlightColor]);
   const { isCompleted } = useReadingProgress({
     tweetId: bookmark.tweetId,
     contentReady: !detailLoading,

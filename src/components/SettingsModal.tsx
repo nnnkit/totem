@@ -9,11 +9,17 @@ import { ToggleGroup } from "@base-ui/react/toggle-group";
 import { Toggle } from "@base-ui/react/toggle";
 import type { UserSettings } from "../types";
 import type { ThemePreference } from "../hooks/useTheme";
+import {
+  HIGHLIGHT_COLORS,
+  resolveHighlightColor,
+  type HighlightColor,
+} from "../lib/highlight-colors";
 import { cn } from "../lib/cn";
 import { Modal } from "./ui/Modal";
 import { Button } from "./ui/Button";
 import { Switch } from "./ui/Switch";
 import { Select } from "./ui/Select";
+import { ColorDot } from "./reader/ColorDot";
 
 interface Props {
   open: boolean;
@@ -127,6 +133,43 @@ export function SettingsModal({
                   </ToggleGroup>
                 </div>
 
+              </div>
+            </section>
+
+            <section className="py-4 first:pt-0 last:pb-0">
+              <h3 className="text-sm font-semibold text-muted mb-1.5">
+                Reading
+              </h3>
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between min-h-10 gap-4">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-sm text-foreground/80">
+                      Default highlight color
+                    </span>
+                    <span className="text-xxs text-muted/60 leading-snug">
+                      Used for new highlights in a fresh article
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    {HIGHLIGHT_COLORS.map((c) => {
+                      const current = resolveHighlightColor(settings.defaultHighlightColor);
+                      return (
+                        <button
+                          key={c}
+                          type="button"
+                          onClick={() =>
+                            onUpdateSettings({ defaultHighlightColor: c satisfies HighlightColor })
+                          }
+                          className="rounded p-1.5 transition-colors hover:bg-foreground/6"
+                          aria-label={`Default color ${c}`}
+                          aria-pressed={c === current}
+                        >
+                          <ColorDot color={c} size="md" selected={c === current} />
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
             </section>
 

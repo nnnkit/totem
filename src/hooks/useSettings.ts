@@ -7,6 +7,10 @@ import type {
 } from "../types";
 import { hasChromeStorageSync, hasChromeStorageOnChanged } from "../lib/chrome";
 import { SYNC_SETTINGS } from "../lib/storage-keys";
+import {
+  DEFAULT_HIGHLIGHT_COLOR,
+  resolveHighlightColor,
+} from "../lib/highlight-colors";
 
 const VALID_BACKGROUND_MODES: BackgroundMode[] = ["gradient", "images"];
 const VALID_RECOMMENDATION_SOURCES: RecommendationSource[] = ["random", "pinned"];
@@ -28,6 +32,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   backgroundMode: "images",
   searchEngine: "google",
   recommendationSource: "random",
+  defaultHighlightColor: DEFAULT_HIGHLIGHT_COLOR,
 };
 
 function normalizeSettings(value: unknown): UserSettings {
@@ -64,6 +69,11 @@ function normalizeSettings(value: unknown): UserSettings {
       VALID_RECOMMENDATION_SOURCES.includes(raw.recommendationSource as RecommendationSource)
         ? (raw.recommendationSource as RecommendationSource)
         : DEFAULT_SETTINGS.recommendationSource,
+    defaultHighlightColor: resolveHighlightColor(
+      typeof raw.defaultHighlightColor === "string"
+        ? raw.defaultHighlightColor
+        : undefined,
+    ),
   };
 }
 
