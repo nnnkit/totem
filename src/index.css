@@ -467,6 +467,13 @@
         -webkit-box-decoration-break: clone;
         cursor: pointer;
         border-radius: 1px;
+        /* Padding + negative margin extend the ink box past the text so the
+           gradient's fade-to-transparent tails sit outside the letters. This
+           matters especially in dark mode where highlighted text is dark:
+           without this, the last glyph on each line would be dark-on-dark at
+           the fade zone. No effect on surrounding layout. */
+        padding-inline: 0.18em;
+        margin-inline: -0.18em;
         transition: filter 150ms ease;
     }
 
@@ -523,14 +530,18 @@
         );
     }
 
+    /* Dark mode: same "paint stroke" shape as light mode (peaks at ends, valley
+       in the middle) but floored higher so dark text keeps contrast against
+       the fill throughout. The variation is what makes it read as ink; the
+       floor is what keeps it legible. */
     [data-theme="dark"] mark.totem-highlight[data-color="classic"]:not([data-has-note="true"]) {
         color: #1a1a1a;
         background-image: linear-gradient(
             104deg,
             rgba(255, 160, 135, 0) 0.9%,
             rgba(255, 160, 135, 1) 2.4%,
-            rgba(255, 160, 135, 0.88) 5.8%,
-            rgba(255, 160, 135, 0.88) 93%,
+            rgba(255, 160, 135, 0.75) 5.8%,
+            rgba(255, 160, 135, 0.55) 93%,
             rgba(255, 160, 135, 1) 96%,
             rgba(255, 160, 135, 0) 98%
         );
@@ -542,8 +553,8 @@
             104deg,
             rgba(255, 228, 80, 0) 0.9%,
             rgba(255, 228, 80, 1) 2.4%,
-            rgba(255, 228, 80, 0.9) 5.8%,
-            rgba(255, 228, 80, 0.9) 93%,
+            rgba(255, 228, 80, 0.75) 5.8%,
+            rgba(255, 228, 80, 0.55) 93%,
             rgba(255, 228, 80, 1) 96%,
             rgba(255, 228, 80, 0) 98%
         );
@@ -555,21 +566,23 @@
             104deg,
             rgba(140, 230, 180, 0) 0.9%,
             rgba(140, 230, 180, 1) 2.4%,
-            rgba(140, 230, 180, 0.9) 5.8%,
-            rgba(140, 230, 180, 0.9) 93%,
+            rgba(140, 230, 180, 0.75) 5.8%,
+            rgba(140, 230, 180, 0.55) 93%,
             rgba(140, 230, 180, 1) 96%,
             rgba(140, 230, 180, 0) 98%
         );
     }
 
+    /* Dark variant keeps a higher floor (0.75 vs 0.55) — the near-black text
+       needs the off-white fill to stay solid for the polarity-flip look. */
     [data-theme="dark"] mark.totem-highlight[data-color="dark"]:not([data-has-note="true"]) {
         color: #0a0a0a;
         background-image: linear-gradient(
             104deg,
             rgba(240, 236, 226, 0) 0.9%,
             rgba(240, 236, 226, 1) 2.4%,
-            rgba(240, 236, 226, 0.92) 5.8%,
-            rgba(240, 236, 226, 0.92) 93%,
+            rgba(240, 236, 226, 0.85) 5.8%,
+            rgba(240, 236, 226, 0.75) 93%,
             rgba(240, 236, 226, 1) 96%,
             rgba(240, 236, 226, 0) 98%
         );

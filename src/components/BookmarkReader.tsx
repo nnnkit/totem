@@ -18,7 +18,6 @@ import { resolveTweetKind } from "./reader/utils";
 import { TweetContent } from "./reader/TweetContent";
 import { SelectionToolbar } from "./reader/SelectionToolbar";
 import { HighlightPopover } from "./reader/HighlightPopover";
-import { HighlightColorSwatch } from "./reader/HighlightColorSwatch";
 import { NotePopover } from "./reader/NotePopover";
 import { useReadingProgress } from "../hooks/useReadingProgress";
 import { useTheme } from "../hooks/useTheme";
@@ -341,21 +340,16 @@ export function BookmarkReader({
           <Button variant="ghost" size="icon" onClick={onBack} aria-label="Back to bookmarks" title="Back">
             <ArrowLeftIcon className="size-5" />
           </Button>
-          <div className="ml-auto flex items-center gap-1">
-            <HighlightColorSwatch
-              color={sessionHighlightColor}
-              onChange={setSessionHighlightColor}
-            />
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setThemePreference(resolvedTheme === "dark" ? "light" : "dark")}
-              aria-label="Toggle theme"
-              title={resolvedTheme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-            >
-              {resolvedTheme === "dark" ? <SunIcon className="size-5" /> : <MoonIcon className="size-5" />}
-            </Button>
-          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="ml-auto"
+            onClick={() => setThemePreference(resolvedTheme === "dark" ? "light" : "dark")}
+            aria-label="Toggle theme"
+            title={resolvedTheme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          >
+            {resolvedTheme === "dark" ? <SunIcon className="size-5" /> : <MoonIcon className="size-5" />}
+          </Button>
         </div>
       </div>
 
