@@ -530,56 +530,51 @@
         );
     }
 
-    /* Dark mode: same dramatic "paint stroke" shape as light mode — dense at
-       the ends, thin in the middle. A subtle text-shadow in the fill's hue
-       keeps dark-colored text readable even where the fill thins to ~15%
-       alpha over the dark page. In the dense zones the halo blends with the
-       fill and disappears; in the thin zones it rimlights the letters. */
+    /* Dark mode — low-alpha tinted wash over dark page. Same painterly
+       peak→valley→peak shape as light mode but the entire alpha range is
+       shifted down ~60% so the fill reads as a subtle tint, not bright paint.
+       Body text color is preserved (light) — don't force dark text. Readwise
+       / Obsidian / Kindle / Instapaper all converge on this pattern; forcing
+       dark text on bright fill in dark mode is a losing approach. */
     [data-theme="dark"] mark.totem-highlight[data-color="classic"]:not([data-has-note="true"]) {
-        color: #1a1a1a;
-        text-shadow: 0 0 3px rgba(255, 205, 190, 0.9);
         background-image: linear-gradient(
             104deg,
-            rgba(255, 160, 135, 0) 0.9%,
-            rgba(255, 160, 135, 1) 2.4%,
-            rgba(255, 160, 135, 0.45) 5.8%,
-            rgba(255, 160, 135, 0.15) 93%,
-            rgba(255, 160, 135, 0.7) 96%,
-            rgba(255, 160, 135, 0) 98%
+            rgba(226, 128, 103, 0) 0.9%,
+            rgba(226, 128, 103, 0.42) 2.4%,
+            rgba(226, 128, 103, 0.22) 5.8%,
+            rgba(226, 128, 103, 0.18) 93%,
+            rgba(226, 128, 103, 0.38) 96%,
+            rgba(226, 128, 103, 0) 98%
         );
     }
 
     [data-theme="dark"] mark.totem-highlight[data-color="yellow"]:not([data-has-note="true"]) {
-        color: #1a1a1a;
-        text-shadow: 0 0 3px rgba(255, 245, 170, 0.9);
         background-image: linear-gradient(
             104deg,
-            rgba(255, 228, 80, 0) 0.9%,
-            rgba(255, 228, 80, 1) 2.4%,
-            rgba(255, 228, 80, 0.45) 5.8%,
-            rgba(255, 228, 80, 0.15) 93%,
-            rgba(255, 228, 80, 0.7) 96%,
-            rgba(255, 228, 80, 0) 98%
+            rgba(255, 230, 0, 0) 0.9%,
+            rgba(255, 230, 0, 0.42) 2.4%,
+            rgba(255, 230, 0, 0.22) 5.8%,
+            rgba(255, 230, 0, 0.18) 93%,
+            rgba(255, 230, 0, 0.38) 96%,
+            rgba(255, 230, 0, 0) 98%
         );
     }
 
     [data-theme="dark"] mark.totem-highlight[data-color="mint"]:not([data-has-note="true"]) {
-        color: #102a1c;
-        text-shadow: 0 0 3px rgba(195, 245, 215, 0.9);
         background-image: linear-gradient(
             104deg,
-            rgba(140, 230, 180, 0) 0.9%,
-            rgba(140, 230, 180, 1) 2.4%,
-            rgba(140, 230, 180, 0.45) 5.8%,
-            rgba(140, 230, 180, 0.15) 93%,
-            rgba(140, 230, 180, 0.7) 96%,
-            rgba(140, 230, 180, 0) 98%
+            rgba(130, 220, 170, 0) 0.9%,
+            rgba(130, 220, 170, 0.42) 2.4%,
+            rgba(130, 220, 170, 0.22) 5.8%,
+            rgba(130, 220, 170, 0.18) 93%,
+            rgba(130, 220, 170, 0.38) 96%,
+            rgba(130, 220, 170, 0) 98%
         );
     }
 
-    /* Dark variant is an inverted polarity ("redaction" style) — fill stays
-       bold so the polarity-flip reads cleanly. No text-shadow needed because
-       the near-black text always has solid off-white fill underneath. */
+    /* Dark variant keeps its inverted-polarity "redaction" identity — this is
+       the one color that is meant to stand out as a bold block rather than a
+       subtle wash. Fill stays solid, text stays dark. */
     [data-theme="dark"] mark.totem-highlight[data-color="dark"]:not([data-has-note="true"]) {
         color: #0a0a0a;
         background-image: linear-gradient(
