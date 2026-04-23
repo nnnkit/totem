@@ -862,31 +862,67 @@
         background-size: 200px 200px;
     }
 
-    .animate-logo-shine {
+    .totem-logo {
+        display: inline-block;
         position: relative;
         overflow: hidden;
-        border-radius: 0.25rem;
+        border-radius: 18%;
+        transform-origin: center;
+        line-height: 0;
     }
 
-    .animate-logo-shine::after {
+    .totem-logo > svg {
+        display: block;
+        width: 100%;
+        height: 100%;
+    }
+
+    .totem-logo--loading {
+        animation: totem-logo-breath 1.8s cubic-bezier(0.645, 0.045, 0.355, 1)
+            infinite;
+    }
+
+    .totem-logo--loading::after {
         content: "";
         position: absolute;
         inset: 0;
         background: linear-gradient(
             120deg,
-            transparent 30%,
-            rgba(255, 255, 255, 0.12) 50%,
-            transparent 70%
+            transparent 35%,
+            rgba(255, 255, 255, 0.22) 50%,
+            transparent 65%
         );
-        animation: logo-shine 2s ease-in-out infinite;
+        animation: totem-logo-shine 1.6s cubic-bezier(0.645, 0.045, 0.355, 1)
+            infinite;
+        pointer-events: none;
     }
 
-    @keyframes logo-shine {
+    @keyframes totem-logo-breath {
+        0%,
+        100% {
+            transform: scale(1);
+        }
+        50% {
+            transform: scale(0.96);
+        }
+    }
+
+    @keyframes totem-logo-shine {
         0% {
             transform: translateX(-100%);
         }
         100% {
             transform: translateX(100%);
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .totem-logo--loading,
+        .totem-logo--loading::after {
+            animation: none;
+        }
+        .totem-logo--loading {
+            transform: none;
         }
     }
 }
