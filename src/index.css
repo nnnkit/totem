@@ -258,10 +258,8 @@
         --sh-keyword: #cf222e;
         --sh-comment: #a19595;
 
-        /* Highlights */
-        --highlight-bg: rgba(226, 128, 103, 0.16);
-        --highlight-bg-hover: rgba(226, 128, 103, 0.26);
-        --highlight-bg-active: rgba(226, 128, 103, 0.3);
+        /* Highlights — fill colors live in per-mark data-color rules; this var
+           only drives the wavy underline used when a highlight has a note. */
         --highlight-underline: rgba(226, 128, 103, 0.75);
         --note-pill-bg: rgba(73, 109, 146, 0.12);
         --note-pill-fg: #44627f;
@@ -308,10 +306,7 @@
             --sh-keyword: #f47067;
             --sh-comment: #636c76;
 
-            /* Highlights */
-            --highlight-bg: rgba(226, 128, 103, 0.18);
-            --highlight-bg-hover: rgba(226, 128, 103, 0.3);
-            --highlight-bg-active: rgba(226, 128, 103, 0.38);
+            /* Highlights — see comment in :root */
             --highlight-underline: rgba(226, 128, 103, 0.75);
             --note-pill-bg: rgba(124, 165, 206, 0.18);
             --note-pill-fg: #c5ddf3;
@@ -356,10 +351,7 @@
         --sh-keyword: #f47067;
         --sh-comment: #636c76;
 
-        /* Highlights */
-        --highlight-bg: rgba(226, 128, 103, 0.18);
-        --highlight-bg-hover: rgba(226, 128, 103, 0.3);
-        --highlight-bg-active: rgba(226, 128, 103, 0.38);
+        /* Highlights — see comment in :root */
         --highlight-underline: rgba(226, 128, 103, 0.75);
         --note-pill-bg: rgba(124, 165, 206, 0.18);
         --note-pill-fg: #c5ddf3;
@@ -627,10 +619,6 @@
         to {
             text-decoration-color: var(--highlight-underline);
         }
-    }
-
-    mark.totem-highlight-new {
-        /* Swipe-on animation is wired up via data-fresh. */
     }
 
     .totem-color-dot {
