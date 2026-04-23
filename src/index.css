@@ -467,20 +467,47 @@
     }
 
     mark.totem-highlight {
-        background-color: var(--highlight-bg);
         color: inherit;
+        background-color: transparent;
+        background-repeat: no-repeat;
         box-decoration-break: clone;
         -webkit-box-decoration-break: clone;
         cursor: pointer;
-        border-radius: 2px;
-        transition: background-color 150ms ease;
+        border-radius: 1px;
+        transition: filter 150ms ease;
     }
 
     mark.totem-highlight:hover {
-        background-color: var(--highlight-bg-hover);
+        filter: brightness(0.96) saturate(1.05);
+    }
+
+    mark.totem-highlight[data-color="classic"] {
+        background-image: linear-gradient(
+            104deg,
+            rgba(226, 128, 103, 0) 0.9%,
+            rgba(226, 128, 103, 0.9) 2.4%,
+            rgba(226, 128, 103, 0.4) 5.8%,
+            rgba(226, 128, 103, 0.1) 93%,
+            rgba(226, 128, 103, 0.6) 96%,
+            rgba(226, 128, 103, 0) 98%
+        );
+    }
+
+    [data-theme="dark"] mark.totem-highlight[data-color="classic"]:not([data-has-note="true"]) {
+        color: #1a1a1a;
+        background-image: linear-gradient(
+            104deg,
+            rgba(255, 160, 135, 0) 0.9%,
+            rgba(255, 160, 135, 1) 2.4%,
+            rgba(255, 160, 135, 0.88) 5.8%,
+            rgba(255, 160, 135, 0.88) 93%,
+            rgba(255, 160, 135, 1) 96%,
+            rgba(255, 160, 135, 0) 98%
+        );
     }
 
     mark.totem-highlight[data-has-note="true"] {
+        background-image: none;
         background-color: transparent;
         color: inherit;
         text-decoration: underline wavy;
@@ -493,6 +520,7 @@
     }
 
     mark.totem-highlight[data-has-note="true"]:hover {
+        filter: none;
         background-color: transparent;
         text-decoration-color: var(--highlight-underline);
     }
@@ -506,17 +534,8 @@
         }
     }
 
-    @keyframes highlight-flash {
-        from {
-            background-color: var(--highlight-bg-active);
-        }
-        to {
-            background-color: var(--highlight-bg);
-        }
-    }
-
     mark.totem-highlight-new {
-        animation: highlight-flash 600ms ease-out forwards;
+        /* Swipe-on animation is wired up in phase 3 via data-fresh. */
     }
 
     .totem-popover[data-open] {
