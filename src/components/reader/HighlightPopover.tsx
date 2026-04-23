@@ -107,7 +107,7 @@ export function HighlightPopover({
                     onClick={() => {
                       onRecolor(highlight.id, c);
                     }}
-                    className="rounded p-1 transition-colors hover:bg-surface-hover"
+                    className="rounded-full p-1 transition-colors hover:bg-surface-hover"
                     aria-label={`Change color to ${c}`}
                     aria-pressed={resolveHighlightColor(highlight.color) === c}
                   >

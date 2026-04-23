@@ -285,7 +285,7 @@ export function SelectionToolbar({
                     key={c}
                     type="button"
                     onClick={() => handleHighlightWithColor(c)}
-                    className="rounded p-1.5 transition-colors hover:bg-surface-hover"
+                    className="rounded-full p-1.5 transition-colors hover:bg-surface-hover"
                     aria-label={`Highlight in ${c}`}
                     aria-pressed={c === defaultColor}
                   >

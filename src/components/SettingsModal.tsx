@@ -160,7 +160,7 @@ export function SettingsModal({
                           onClick={() =>
                             onUpdateSettings({ defaultHighlightColor: c satisfies HighlightColor })
                           }
-                          className="rounded p-1.5 transition-colors hover:bg-foreground/6"
+                          className="rounded-full p-1.5 transition-colors hover:bg-foreground/6"
                           aria-label={`Default color ${c}`}
                           aria-pressed={c === current}
                         >

@@ -396,7 +396,7 @@
             [role="button"],
             [tabindex]:not([tabindex="-1"])
         ):focus-visible {
-        outline: 2px solid var(--focus-ring);
+        outline: 1px solid var(--focus-ring);
         outline-offset: 2px;
     }
 
@@ -545,39 +545,44 @@
        Body text color is preserved (light) — don't force dark text. Readwise
        / Obsidian / Kindle / Instapaper all converge on this pattern; forcing
        dark text on bright fill in dark mode is a losing approach. */
+    /* Dark-mode hues are desaturated pastel versions of the light-mode colors.
+       Saturated hues "pop" too aggressively against dark surfaces — even at
+       low alpha they read as shiny/neon. Muted pastels (Readwise / Material
+       Design pattern) still communicate the color identity but sit more
+       calmly on the page. */
     [data-theme="dark"] mark.totem-highlight[data-color="classic"]:not([data-has-note="true"]) {
         background-image: linear-gradient(
             104deg,
-            rgba(226, 128, 103, 0) 0.9%,
-            rgba(226, 128, 103, 0.34) 2.4%,
-            rgba(226, 128, 103, 0.24) 5.8%,
-            rgba(226, 128, 103, 0.2) 93%,
-            rgba(226, 128, 103, 0.26) 96%,
-            rgba(226, 128, 103, 0) 98%
+            rgba(228, 147, 142, 0) 0.9%,
+            rgba(228, 147, 142, 0.4) 2.4%,
+            rgba(228, 147, 142, 0.28) 5.8%,
+            rgba(228, 147, 142, 0.22) 93%,
+            rgba(228, 147, 142, 0.3) 96%,
+            rgba(228, 147, 142, 0) 98%
         );
     }
 
     [data-theme="dark"] mark.totem-highlight[data-color="yellow"]:not([data-has-note="true"]) {
         background-image: linear-gradient(
             104deg,
-            rgba(255, 230, 0, 0) 0.9%,
-            rgba(255, 230, 0, 0.34) 2.4%,
-            rgba(255, 230, 0, 0.24) 5.8%,
-            rgba(255, 230, 0, 0.2) 93%,
-            rgba(255, 230, 0, 0.26) 96%,
-            rgba(255, 230, 0, 0) 98%
+            rgba(251, 218, 131, 0) 0.9%,
+            rgba(251, 218, 131, 0.4) 2.4%,
+            rgba(251, 218, 131, 0.28) 5.8%,
+            rgba(251, 218, 131, 0.22) 93%,
+            rgba(251, 218, 131, 0.3) 96%,
+            rgba(251, 218, 131, 0) 98%
         );
     }
 
     [data-theme="dark"] mark.totem-highlight[data-color="mint"]:not([data-has-note="true"]) {
         background-image: linear-gradient(
             104deg,
-            rgba(130, 220, 170, 0) 0.9%,
-            rgba(130, 220, 170, 0.34) 2.4%,
-            rgba(130, 220, 170, 0.24) 5.8%,
-            rgba(130, 220, 170, 0.2) 93%,
-            rgba(130, 220, 170, 0.26) 96%,
-            rgba(130, 220, 170, 0) 98%
+            rgba(165, 205, 175, 0) 0.9%,
+            rgba(165, 205, 175, 0.4) 2.4%,
+            rgba(165, 205, 175, 0.28) 5.8%,
+            rgba(165, 205, 175, 0.22) 93%,
+            rgba(165, 205, 175, 0.3) 96%,
+            rgba(165, 205, 175, 0) 98%
         );
     }
 
