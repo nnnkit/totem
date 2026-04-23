@@ -472,8 +472,8 @@
            matters especially in dark mode where highlighted text is dark:
            without this, the last glyph on each line would be dark-on-dark at
            the fade zone. No effect on surrounding layout. */
-        padding-inline: 0.18em;
-        margin-inline: -0.18em;
+        padding-inline: 0.3em;
+        margin-inline: -0.3em;
         transition: filter 150ms ease;
     }
 
@@ -530,51 +530,56 @@
         );
     }
 
-    /* Dark mode: same "paint stroke" shape as light mode (peaks at ends, valley
-       in the middle) but floored higher so dark text keeps contrast against
-       the fill throughout. The variation is what makes it read as ink; the
-       floor is what keeps it legible. */
+    /* Dark mode: same dramatic "paint stroke" shape as light mode — dense at
+       the ends, thin in the middle. A subtle text-shadow in the fill's hue
+       keeps dark-colored text readable even where the fill thins to ~15%
+       alpha over the dark page. In the dense zones the halo blends with the
+       fill and disappears; in the thin zones it rimlights the letters. */
     [data-theme="dark"] mark.totem-highlight[data-color="classic"]:not([data-has-note="true"]) {
         color: #1a1a1a;
+        text-shadow: 0 0 3px rgba(255, 205, 190, 0.9);
         background-image: linear-gradient(
             104deg,
             rgba(255, 160, 135, 0) 0.9%,
             rgba(255, 160, 135, 1) 2.4%,
-            rgba(255, 160, 135, 0.75) 5.8%,
-            rgba(255, 160, 135, 0.55) 93%,
-            rgba(255, 160, 135, 1) 96%,
+            rgba(255, 160, 135, 0.45) 5.8%,
+            rgba(255, 160, 135, 0.15) 93%,
+            rgba(255, 160, 135, 0.7) 96%,
             rgba(255, 160, 135, 0) 98%
         );
     }
 
     [data-theme="dark"] mark.totem-highlight[data-color="yellow"]:not([data-has-note="true"]) {
         color: #1a1a1a;
+        text-shadow: 0 0 3px rgba(255, 245, 170, 0.9);
         background-image: linear-gradient(
             104deg,
             rgba(255, 228, 80, 0) 0.9%,
             rgba(255, 228, 80, 1) 2.4%,
-            rgba(255, 228, 80, 0.75) 5.8%,
-            rgba(255, 228, 80, 0.55) 93%,
-            rgba(255, 228, 80, 1) 96%,
+            rgba(255, 228, 80, 0.45) 5.8%,
+            rgba(255, 228, 80, 0.15) 93%,
+            rgba(255, 228, 80, 0.7) 96%,
             rgba(255, 228, 80, 0) 98%
         );
     }
 
     [data-theme="dark"] mark.totem-highlight[data-color="mint"]:not([data-has-note="true"]) {
         color: #102a1c;
+        text-shadow: 0 0 3px rgba(195, 245, 215, 0.9);
         background-image: linear-gradient(
             104deg,
             rgba(140, 230, 180, 0) 0.9%,
             rgba(140, 230, 180, 1) 2.4%,
-            rgba(140, 230, 180, 0.75) 5.8%,
-            rgba(140, 230, 180, 0.55) 93%,
-            rgba(140, 230, 180, 1) 96%,
+            rgba(140, 230, 180, 0.45) 5.8%,
+            rgba(140, 230, 180, 0.15) 93%,
+            rgba(140, 230, 180, 0.7) 96%,
             rgba(140, 230, 180, 0) 98%
         );
     }
 
-    /* Dark variant keeps a higher floor (0.75 vs 0.55) — the near-black text
-       needs the off-white fill to stay solid for the polarity-flip look. */
+    /* Dark variant is an inverted polarity ("redaction" style) — fill stays
+       bold so the polarity-flip reads cleanly. No text-shadow needed because
+       the near-black text always has solid off-white fill underneath. */
     [data-theme="dark"] mark.totem-highlight[data-color="dark"]:not([data-has-note="true"]) {
         color: #0a0a0a;
         background-image: linear-gradient(
