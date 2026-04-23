@@ -32,6 +32,7 @@ const QUERY_ID_OPS = [
   "CreateBookmark",
   "TweetDetail",
   "Bookmarks",
+  "UserByRestId",
 ] as const;
 
 export type QueryIdOperationName = (typeof QUERY_ID_OPS)[number];

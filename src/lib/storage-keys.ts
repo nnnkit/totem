@@ -33,6 +33,7 @@ export const CS_AUTH_HEADERS = "totem_auth_headers";
 export const CS_AUTH_TIME = "totem_auth_time";
 export const CS_USER_ID = "totem_user_id";
 export const CS_ACCOUNT_CONTEXT_ID = "totem_account_context_id";
+export const CS_VIEWER_PROFILE = "totem_viewer_profile";
 export const CS_AUTH_STATE = "totem_auth_state";
 export const CS_SYNC_AUTO_ENABLED = "totem_sync_auto_enabled";
 export const CS_RUNTIME_AUDIT = "totem_runtime_audit";

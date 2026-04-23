@@ -100,6 +100,10 @@ export interface FetchTweetDetailRequest {
   tweetId: string;
 }
 
+export interface FetchViewerProfileRequest {
+  type: "FETCH_VIEWER_PROFILE";
+}
+
 export interface BookmarkMutationRequest {
   type: "BOOKMARK_MUTATION";
   operation: BookmarkChangeType;
@@ -151,6 +155,7 @@ export type MessageRequest =
   | FetchBookmarksRequest
   | DeleteBookmarkRequest
   | FetchTweetDetailRequest
+  | FetchViewerProfileRequest
   | BookmarkMutationRequest
   | GetBookmarkEventsRequest
   | AckBookmarkEventsRequest
