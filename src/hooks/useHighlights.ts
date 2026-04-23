@@ -361,6 +361,22 @@ export function useHighlights({ tweetId, contentReady, containerRef }: Props) {
     [],
   );
 
+  const updateHighlightColor = useCallback(
+    async (id: string, color: HighlightColor) => {
+      const existing = highlightsRef.current.get(id);
+      if (!existing) return;
+
+      const resolved = resolveHighlightColor(color);
+      if (existing.color === resolved) return;
+
+      const updated = { ...existing, color: resolved };
+      highlightsRef.current.set(id, updated);
+      await upsertHighlight(updated);
+      setRevision((r) => r + 1);
+    },
+    [],
+  );
+
   const getHighlight = useCallback((id: string) => {
     return highlightsRef.current.get(id) || null;
   }, []);
@@ -369,5 +385,13 @@ export function useHighlights({ tweetId, contentReady, containerRef }: Props) {
     pendingNoteIdRef.current = id;
   }, []);
 
-  return { addHighlight, removeHighlight, updateHighlightNote, getHighlight, applyNow: runApplyNow, setPendingNoteId };
+  return {
+    addHighlight,
+    removeHighlight,
+    updateHighlightNote,
+    updateHighlightColor,
+    getHighlight,
+    applyNow: runApplyNow,
+    setPendingNoteId,
+  };
 }

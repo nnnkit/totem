@@ -1,9 +1,15 @@
 import { useCallback, useEffect, useState } from "react";
 import { XIcon, NotePencilIcon } from "@phosphor-icons/react";
 import type { Highlight } from "../../types";
+import {
+  HIGHLIGHT_COLORS,
+  resolveHighlightColor,
+  type HighlightColor,
+} from "../../lib/highlight-colors";
 import { Button } from "../ui/Button";
 import { PopoverContent, Popover } from "../ui/Popover";
 import { Separator } from "../ui/Separator";
+import { ColorDot } from "./ColorDot";
 
 interface PopoverState {
   highlight: Highlight;
@@ -14,6 +20,7 @@ interface Props {
   containerRef: React.RefObject<HTMLElement | null>;
   getHighlight: (id: string) => Highlight | null;
   onDelete: (id: string) => void;
+  onRecolor: (id: string, color: HighlightColor) => void;
   onAddNote: (highlight: Highlight, anchorEl: HTMLElement) => void;
   onOpenNote: (highlight: Highlight, anchorEl: HTMLElement) => void;
 }
@@ -22,6 +29,7 @@ export function HighlightPopover({
   containerRef,
   getHighlight,
   onDelete,
+  onRecolor,
   onAddNote,
   onOpenNote,
 }: Props) {
@@ -92,6 +100,25 @@ export function HighlightPopover({
               </div>
             ) : (
               <div className="flex items-center gap-1 px-2 py-1.5">
+                {HIGHLIGHT_COLORS.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => {
+                      onRecolor(highlight.id, c);
+                    }}
+                    className="rounded p-1 transition-colors hover:bg-surface-hover"
+                    aria-label={`Change color to ${c}`}
+                    aria-pressed={resolveHighlightColor(highlight.color) === c}
+                  >
+                    <ColorDot
+                      color={c}
+                      size="sm"
+                      selected={resolveHighlightColor(highlight.color) === c}
+                    />
+                  </button>
+                ))}
+                <Separator orientation="vertical" />
                 <Button
                   variant="ghost"
                   size="sm"
