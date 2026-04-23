@@ -6,6 +6,7 @@ import {
   deleteHighlight as dbDeleteHighlight,
   getHighlightsByTweetId,
 } from "../db";
+import { DEFAULT_HIGHLIGHT_COLOR, resolveHighlightColor } from "../lib/highlight-colors";
 
 const DOM_MUTATION_OBSERVER_OPTIONS: MutationObserverInit = {
   childList: true,
@@ -48,7 +49,9 @@ function wrapTextRange(
   endOffset: number,
   highlightId: string,
   flash: boolean,
+  color: string,
 ): Element[] {
+  const resolvedColor = resolveHighlightColor(color);
   const textNodes = getTextNodesInSection(section);
   let charCount = 0;
   const wrappedMarks: Element[] = [];
@@ -84,6 +87,7 @@ function wrapTextRange(
     const mark = document.createElement("mark");
     mark.className = flash ? "totem-highlight totem-highlight-new" : "totem-highlight";
     mark.dataset.highlightId = highlightId;
+    mark.dataset.color = resolvedColor;
     mark.textContent = highlightText;
 
     if (beforeText) {
@@ -150,7 +154,7 @@ export function useHighlights({ tweetId, contentReady, containerRef }: Props) {
       if (actualText !== h.selectedText) continue;
 
       const shouldFlash = flashIdsRef.current.has(h.id) && !h.note;
-      const marks = wrapTextRange(section, h.startOffset, h.endOffset, h.id, shouldFlash);
+      const marks = wrapTextRange(section, h.startOffset, h.endOffset, h.id, shouldFlash, h.color);
 
       if (shouldFlash) {
         flashIdsRef.current.delete(h.id);
@@ -307,7 +311,7 @@ export function useHighlights({ tweetId, contentReady, containerRef }: Props) {
           endOffset: range.endOffset,
           selectedText: range.selectedText,
           note,
-          color: "green",
+          color: DEFAULT_HIGHLIGHT_COLOR,
           createdAt: Date.now(),
           type,
         };
