@@ -59,12 +59,10 @@ function ensureStyles() {
       pointer-events: none;
     }
 
-    .totem-open-in-totem::after {
-      content: attr(data-tooltip);
-      position: absolute;
-      inset-block-end: calc(100% + 4px);
-      inset-inline-start: 50%;
-      translate: -50% 0;
+    #totem-open-in-totem-tooltip {
+      position: fixed;
+      top: 0;
+      left: 0;
       padding: 4px 8px;
       border-radius: 4px;
       background: rgba(101, 119, 134, 0.92);
@@ -76,22 +74,80 @@ function ensureStyles() {
       white-space: nowrap;
       pointer-events: none;
       opacity: 0;
+      visibility: hidden;
       z-index: 2147483647;
       transition: opacity 150ms ease;
     }
 
-    @media (hover: hover) {
-      .totem-open-in-totem:hover::after {
-        opacity: 1;
-      }
-    }
-
-    .totem-open-in-totem:focus-visible::after {
+    #totem-open-in-totem-tooltip[data-visible="true"] {
       opacity: 1;
+      visibility: visible;
     }
   `;
 
   document.head.appendChild(style);
+  ensureTooltipGlobals();
+}
+
+const TOOLTIP_ID = "totem-open-in-totem-tooltip";
+let tooltipEl: HTMLDivElement | null = null;
+let tooltipGlobalsInstalled = false;
+
+function getTooltipEl(): HTMLDivElement | null {
+  if (!(document.body instanceof HTMLElement)) return null;
+  if (tooltipEl && document.body.contains(tooltipEl)) return tooltipEl;
+  const el = document.createElement("div");
+  el.id = TOOLTIP_ID;
+  el.setAttribute("role", "tooltip");
+  document.body.appendChild(el);
+  tooltipEl = el;
+  return el;
+}
+
+function hideTooltip() {
+  if (tooltipEl) tooltipEl.dataset.visible = "false";
+}
+
+function ensureTooltipGlobals() {
+  if (tooltipGlobalsInstalled) return;
+  tooltipGlobalsInstalled = true;
+  window.addEventListener("scroll", hideTooltip, { passive: true, capture: true });
+  window.addEventListener("resize", hideTooltip, { passive: true });
+}
+
+function positionTooltip(button: HTMLElement, tooltip: HTMLDivElement) {
+  const gap = 6;
+  const padding = 4;
+  const buttonRect = button.getBoundingClientRect();
+
+  tooltip.style.visibility = "hidden";
+  tooltip.dataset.visible = "true";
+  const tipRect = tooltip.getBoundingClientRect();
+
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+
+  const belowTop = buttonRect.bottom + gap;
+  const aboveTop = buttonRect.top - gap - tipRect.height;
+  const fitsBelow = belowTop + tipRect.height <= viewportHeight - padding;
+  const fitsAbove = aboveTop >= padding;
+  const top = fitsBelow ? belowTop : fitsAbove ? aboveTop : belowTop;
+
+  let left = buttonRect.left + buttonRect.width / 2 - tipRect.width / 2;
+  left = Math.max(padding, Math.min(left, viewportWidth - tipRect.width - padding));
+
+  tooltip.style.left = `${Math.round(left)}px`;
+  tooltip.style.top = `${Math.round(top)}px`;
+  tooltip.style.visibility = "";
+}
+
+function showTooltip(button: HTMLButtonElement) {
+  const text = button.dataset.tooltip || "";
+  if (!text) return;
+  const tip = getTooltipEl();
+  if (!tip) return;
+  tip.textContent = text;
+  positionTooltip(button, tip);
 }
 
 function closestTweetArticle(node: Node | null): HTMLElement | null {
@@ -258,6 +314,10 @@ function createButton(tweetId: string): HTMLButtonElement {
     stopEvent(event);
     openTotemReader(tweetId);
   });
+  button.addEventListener("mouseenter", () => showTooltip(button));
+  button.addEventListener("mouseleave", hideTooltip);
+  button.addEventListener("focus", () => showTooltip(button));
+  button.addEventListener("blur", hideTooltip);
 
   return button;
 }
