@@ -30,7 +30,7 @@ export function Toast({
       className="fixed bottom-6 right-6 z-50"
       style={{
         animation: exiting
-          ? "toast-out 150ms ease-in forwards"
+          ? "toast-out 150ms ease-out forwards"
           : "toast-in 200ms cubic-bezier(0.23, 1, 0.32, 1) forwards",
       }}
       onAnimationEnd={() => {

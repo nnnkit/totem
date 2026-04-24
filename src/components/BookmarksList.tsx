@@ -683,8 +683,8 @@ export function BookmarksList({
                     href={getBookmarkHref(bookmark)}
                     className={cn(
                       "group/card relative flex min-w-0 flex-col gap-2 overflow-hidden rounded-lg rounded-tr-5 bg-surface-card p-3 shadow-[inset_0_0_0_1px] shadow-border/60 no-underline transition-[background-color] duration-200",
-                      "before:pointer-events-none before:absolute before:top-0 before:right-0 before:z-[3] before:size-6 before:-translate-y-1/2 before:translate-x-1/2 before:rotate-45 before:bg-surface before:shadow-[0_1px_0_0] before:shadow-border before:transition-all before:duration-180 before:content-['']",
-                      "after:pointer-events-none after:absolute after:top-0 after:right-0 after:z-[2] after:h-[22px] after:w-[22px] after:-translate-y-1.5 after:translate-x-1.5 after:rounded-bl-md after:border after:border-border after:bg-surface after:shadow-xs after:transition-all after:duration-180 after:content-['']",
+                      "before:pointer-events-none before:absolute before:top-0 before:right-0 before:z-[3] before:size-6 before:-translate-y-1/2 before:translate-x-1/2 before:rotate-45 before:bg-surface before:shadow-[0_1px_0_0] before:shadow-border before:transition-[width,height,box-shadow] before:duration-180 before:ease-[var(--ease-hover)] before:content-['']",
+                      "after:pointer-events-none after:absolute after:top-0 after:right-0 after:z-[2] after:h-[22px] after:w-[22px] after:-translate-y-1.5 after:translate-x-1.5 after:rounded-bl-md after:border after:border-border after:bg-surface after:shadow-xs after:transition-[width,height,box-shadow] after:duration-180 after:ease-[var(--ease-hover)] after:content-['']",
                       "hover:rounded-tr-[35px] hover:bg-surface-hover hover:before:size-10 hover:after:h-[34px] hover:after:w-[34px] hover:after:shadow-lg hover:after:shadow-black/5",
                       isFocused && "bg-surface-hover ring-1 ring-accent/30",
                     )}

@@ -8,7 +8,7 @@
 /* Easing scale:
    cubic-bezier(0.23, 1, 0.32, 1)                   — entrance animations
    cubic-bezier(0.215, 0.61, 0.355, 1)               — overlay entrance
-   ease-in                                            — all exits
+   ease-out                                           — all exits (snappier than ease-in at short durations)
    ease                                               — hover/color transitions
 */
 
@@ -101,12 +101,12 @@
 
     --animate-overlay-in: overlay-in 200ms cubic-bezier(0.215, 0.61, 0.355, 1)
         forwards;
-    --animate-overlay-out: overlay-out 150ms ease-in forwards;
+    --animate-overlay-out: overlay-out 150ms ease-out forwards;
     --animate-preview-in: preview-in 200ms cubic-bezier(0.23, 1, 0.32, 1)
         forwards;
-    --animate-preview-out: preview-out 150ms ease-in forwards;
+    --animate-preview-out: preview-out 150ms ease-out forwards;
     --animate-card-in: card-in 200ms cubic-bezier(0.23, 1, 0.32, 1) forwards;
-    --animate-card-out: card-out 150ms ease-in forwards;
+    --animate-card-out: card-out 150ms ease-out forwards;
     --animate-fade-in: fadeIn 400ms cubic-bezier(0.23, 1, 0.32, 1) forwards;
     --animate-demo-cursor: demo-cursor 2.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
     --animate-demo-pulse: demo-pulse 2.4s ease-out infinite;
@@ -675,33 +675,37 @@
         box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.2);
     }
 
+    .totem-popover {
+        transform-origin: var(--transform-origin, center);
+    }
+
     .totem-popover[data-open] {
         animation: popover-in 200ms cubic-bezier(0.23, 1, 0.32, 1) forwards;
     }
 
     .totem-popover[data-closed] {
-        animation: popover-out 150ms ease-in forwards;
+        animation: popover-out 150ms ease-out forwards;
     }
 
     @keyframes popover-in {
         from {
             opacity: 0;
-            transform: scale(0.92) translateY(4px);
+            transform: scale(0.96);
         }
         to {
             opacity: 1;
-            transform: scale(1) translateY(0);
+            transform: scale(1);
         }
     }
 
     @keyframes popover-out {
         from {
             opacity: 1;
-            transform: scale(1) translateY(0);
+            transform: scale(1);
         }
         to {
             opacity: 0;
-            transform: scale(0.96) translateY(2px);
+            transform: scale(0.97);
         }
     }
 
@@ -759,6 +763,15 @@
         animation-duration: 0.01ms !important;
         animation-iteration-count: 1 !important;
         transition-duration: 0.01ms !important;
+    }
+
+    /* Preserve opacity crossfades — they aid comprehension and are vestibular-safe. */
+    .totem-popover,
+    .totem-popover[data-open],
+    .totem-popover[data-closed] {
+        animation: none !important;
+        transition: opacity 120ms ease-out !important;
+        transform: none !important;
     }
 }
 
