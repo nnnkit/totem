@@ -11,6 +11,7 @@ import type { MessageRequest } from "../types/messages";
 import type { HandlerMap } from "./index";
 import { withQueryId, forceRediscoverQueryId } from "./query-id";
 import { markAuthAuthenticated, markAuthLoggedOut } from "./auth";
+import { CS_VIEWER_PROFILE } from "../lib/storage-keys";
 
 // ── Constants ───────────────────────────────────────────────────
 
@@ -422,10 +423,136 @@ export function createApiProxyHandlers(deps: ApiProxyDeps = {}): HandlerMap {
     });
   }
 
+  async function handleFetchViewerProfile(): Promise<unknown> {
+    return withQueryId("UserByRestId", async (queryId) => {
+      const stored = await storage.get([
+        "totem_auth_headers",
+        "totem_user_id",
+        "totem_features",
+      ]);
+
+      const userId =
+        typeof stored.totem_user_id === "string" ? stored.totem_user_id : "";
+      if (!userId) throw new Error("NO_USER_ID");
+
+      if (
+        !(stored.totem_auth_headers as Record<string, string> | undefined)
+          ?.authorization
+      ) {
+        throw new Error("NO_AUTH");
+      }
+
+      const features =
+        (stored.totem_features as string) || JSON.stringify(DEFAULT_FEATURES);
+
+      const params = new URLSearchParams({
+        variables: JSON.stringify({
+          userId,
+          withSafetyModeUserFields: true,
+        }),
+        features,
+        fieldToggles: JSON.stringify({
+          withAuxiliaryUserLabels: false,
+        }),
+      });
+
+      const url = `https://x.com/i/api/graphql/${queryId}/UserByRestId?${params}`;
+      const requestHeaders = await buildHeaders(storage);
+
+      const response = await fetchFn(url, {
+        method: "GET",
+        credentials: "include",
+        headers: requestHeaders,
+      });
+
+      if (!response.ok) {
+        if (response.status === 400) {
+          const freshId = await forceRediscoverQueryId("UserByRestId");
+          if (freshId && freshId !== queryId) {
+            throw new Error("QUERY_ID_STALE");
+          }
+        }
+        const body = await response.text().catch(() => "");
+        throw new Error(
+          `VIEWER_PROFILE_${response.status}: ${body.slice(0, 200)}`,
+        );
+      }
+
+      const json = (await response.json()) as unknown;
+      const profile = extractViewerProfile(userId, json);
+      if (!profile) throw new Error("VIEWER_PROFILE_PARSE_FAILED");
+
+      await storage.set({ [CS_VIEWER_PROFILE]: profile });
+      return { ok: true, profile };
+    });
+  }
+
   return {
     FETCH_BOOKMARKS: (msg) => handleFetchBookmarks(msg),
     DELETE_BOOKMARK: (msg) => handleDeleteBookmark(msg),
     FETCH_TWEET_DETAIL: (msg) => handleFetchTweetDetail(msg),
+    FETCH_VIEWER_PROFILE: () => handleFetchViewerProfile(),
+  };
+}
+
+interface ViewerProfilePayload {
+  userId: string;
+  screenName: string;
+  name: string;
+  profileImageUrl: string;
+  capturedAt: number;
+}
+
+function extractViewerProfile(
+  userId: string,
+  payload: unknown,
+): ViewerProfilePayload | null {
+  if (!payload || typeof payload !== "object") return null;
+
+  const data = (payload as Record<string, unknown>).data;
+  const user =
+    data && typeof data === "object"
+      ? (data as Record<string, unknown>).user
+      : null;
+  const result =
+    user && typeof user === "object"
+      ? (user as Record<string, unknown>).result
+      : null;
+  if (!result || typeof result !== "object") return null;
+
+  const resultRec = result as Record<string, unknown>;
+  const legacy =
+    resultRec.legacy && typeof resultRec.legacy === "object"
+      ? (resultRec.legacy as Record<string, unknown>)
+      : {};
+  const core =
+    resultRec.core && typeof resultRec.core === "object"
+      ? (resultRec.core as Record<string, unknown>)
+      : {};
+  const avatar =
+    resultRec.avatar && typeof resultRec.avatar === "object"
+      ? (resultRec.avatar as Record<string, unknown>)
+      : {};
+
+  const pickString = (value: unknown): string =>
+    typeof value === "string" ? value : "";
+
+  const screenName =
+    pickString(legacy.screen_name) || pickString(core.screen_name);
+  const name = pickString(legacy.name) || pickString(core.name);
+  const profileImageUrl =
+    pickString(legacy.profile_image_url_https) ||
+    pickString(avatar.image_url) ||
+    pickString(legacy.profile_image_url);
+
+  if (!screenName && !profileImageUrl) return null;
+
+  return {
+    userId,
+    screenName,
+    name,
+    profileImageUrl,
+    capturedAt: Date.now(),
   };
 }
 

@@ -200,7 +200,8 @@ describe("sync reservation → reconcile → completion → cooldown", () => {
 
     expect(reserve.ok).toBe(true);
     expect(reserve.allow).toBe(true);
-    expect(reserve.mode).toBe("quick");
+    // Fresh orchestrator state (lastFullSyncAt === 0) → self-heal forces full.
+    expect(reserve.mode).toBe("full");
     expect(reserve.leaseId).toBeTruthy();
     const leaseId = reserve.leaseId as string;
 
@@ -210,7 +211,7 @@ describe("sync reservation → reconcile → completion → cooldown", () => {
       accountId: "12345",
       leaseId,
       trigger: "manual",
-      mode: "quick",
+      mode: "full",
       status: "success",
     })) as Record<string, unknown>;
 

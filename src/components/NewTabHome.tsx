@@ -220,7 +220,7 @@ export function NewTabHome({
   const showCardButtons = footerState === "bookmark_card";
 
   const cardBase =
-    "relative min-h-40 overflow-hidden rounded px-6 py-6 bg-main-bg shadow-glass transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80 max-sm:min-h-36 max-sm:px-4 max-sm:py-4";
+    "relative min-h-40 overflow-hidden rounded px-6 py-6 bg-main-bg shadow-glass transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring max-sm:min-h-36 max-sm:px-4 max-sm:py-4";
   const cardCentered = cn(cardBase, "text-center");
   const handleLoginButton = useCallback(() => {
     if (onLogin) {
@@ -243,9 +243,7 @@ export function NewTabHome({
       case "loading":
         return (
           <article className={cn(cardBase, "flex items-center justify-center")}>
-            <div className="animate-logo-shine">
-              <TotemLogo className="size-10" />
-            </div>
+            <TotemLogo loading className="size-10" />
           </article>
         );
       case "connecting":
@@ -255,15 +253,7 @@ export function NewTabHome({
               Connecting to X&hellip;
             </p>
             <div className="mt-4 flex justify-center">
-              <svg
-                viewBox="0 0 24 24"
-                className="size-6 animate-spin text-accent"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
-                <path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round" />
-              </svg>
+              <TotemLogo loading className="size-10" />
             </div>
             <p className="mt-4 text-pretty text-base text-home-empty">
               Syncing your session in the background.
@@ -375,15 +365,7 @@ export function NewTabHome({
               Syncing your bookmarks&hellip;
             </p>
             <div className="mt-4 flex justify-center">
-              <svg
-                viewBox="0 0 24 24"
-                className="size-6 animate-spin text-accent"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
-                <path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round" />
-              </svg>
+              <TotemLogo loading className="size-10" />
             </div>
             <p className="mt-4 text-pretty text-base text-home-empty">
               Fetching bookmarks from your account. This may take a moment.
@@ -628,7 +610,7 @@ export function NewTabHome({
           >
             <Button
               variant="secondary"
-              className="bg-home-secondary-bg px-5 py-2.5 font-semibold leading-none text-home-secondary-text shadow-glass transition-colors duration-150 ease-hover hover:bg-main-bg-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80"
+              className="bg-home-secondary-bg px-5 py-2.5 font-semibold leading-none text-home-secondary-text shadow-glass transition-colors duration-150 ease-hover hover:bg-main-bg-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
               onClick={onOpenReading}
             >
               Open reading list
@@ -638,7 +620,7 @@ export function NewTabHome({
             </Button>
             <Button
               variant="secondary"
-              className="bg-home-secondary-bg px-5 py-2.5 font-semibold leading-none text-home-secondary-text shadow-glass transition-colors duration-150 ease-hover hover:bg-main-bg-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80"
+              className="bg-home-secondary-bg px-5 py-2.5 font-semibold leading-none text-home-secondary-text shadow-glass transition-colors duration-150 ease-hover hover:bg-main-bg-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
               onClick={surpriseMe}
             >
               Surprise me
@@ -686,7 +668,7 @@ export function NewTabHome({
           <Popover.Root>
             <Popover.Trigger
               type="button"
-              className="flex size-11 items-center justify-center text-on-bg-ghost transition-colors duration-150 ease-hover hover:text-on-bg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400/80"
+              className="flex size-11 items-center justify-center text-on-bg-ghost transition-colors duration-150 ease-hover hover:text-on-bg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
               aria-label="Support"
               title="Support"
             >

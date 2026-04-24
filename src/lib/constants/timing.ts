@@ -31,5 +31,6 @@ export const FETCH_READ_PAUSE_CHANCE = 0.15;
 export const FETCH_READ_PAUSE_MIN_MS = 1000;
 export const FETCH_READ_PAUSE_JITTER_MS = 2000;
 export const PAGE_FETCH_TIMEOUT_MS = 45_000;
+export const READER_DETAIL_TIMEOUT_MS = 12_000;
 
 export const PREFETCH_INTERVAL_MS = 2 * 60 * 1000;

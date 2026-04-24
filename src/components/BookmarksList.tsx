@@ -5,8 +5,6 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import {
   ArrowLeftIcon,
   ArrowsDownUpIcon,
-  CircleNotchIcon,
-  DownloadSimpleIcon,
   MagnifyingGlassIcon,
   PushPinIcon,
 } from "@phosphor-icons/react";
@@ -32,10 +30,7 @@ import {
   type ReadingTab,
 } from "../lib/reading-list";
 import { sortIndexToTimestamp, timeAgo } from "../lib/time";
-import { getAllBookmarks, getHighlightCountsByTweetIds, type HighlightCounts } from "../db";
-import { articleToMarkdown } from "../lib/export/article-to-markdown";
-import { downloadMarkdownFile } from "../lib/export/article-download";
-import { resolveReaderExportArticle } from "../lib/export/tweet-export";
+import { getHighlightCountsByTweetIds, type HighlightCounts } from "../db";
 import { subscribeToReaderActivity } from "../lib/reader-activity";
 import {
   useIsOffline,
@@ -497,46 +492,6 @@ export function BookmarksList({
     [unreadIdSet],
   );
 
-  const [isExporting, setIsExporting] = useState(false);
-
-  const handleExportAll = useCallback(async () => {
-    setIsExporting(true);
-    try {
-      const bookmarks = await getAllBookmarks();
-      const now = new Date();
-      const exportedAtLabel = now.toLocaleString();
-      const header = [
-        `# Bookmarks export`,
-        `> ${bookmarks.length} bookmarks — exported ${now.toLocaleDateString()}`,
-        "",
-      ].join("\n");
-
-      const sections = bookmarks
-        .map((bookmark) => {
-          const article = resolveReaderExportArticle(bookmark, []);
-          return articleToMarkdown(article, {
-            authorProfileImageUrl: bookmark.author.profileImageUrl,
-            metadata: {
-              postUrl: `https://x.com/${bookmark.author.screenName}/status/${bookmark.tweetId}`,
-              authorName: bookmark.author.name,
-              authorHandle: bookmark.author.screenName,
-              exportedAtLabel,
-            },
-          });
-        })
-        .filter(Boolean);
-
-      const body = `${header}\n${sections.join("\n---\n\n")}`;
-      const localDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-      downloadMarkdownFile(body, `bookmarks-${localDate}.md`);
-    } catch (err) {
-      console.error("Failed to export bookmarks", err);
-      alert("Failed to export bookmarks. Check the console for details.");
-    } finally {
-      setIsExporting(false);
-    }
-  }, []);
-
   const hasItems = visibleBookmarks.length > 0;
 
   const renderEmptyState = () => {
@@ -610,23 +565,7 @@ export function BookmarksList({
             <ArrowLeftIcon className="size-5" />
           </Button>
           <span className="text-lg font-semibold text-foreground">Reading</span>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => { void handleExportAll(); }}
-            disabled={isExporting}
-            aria-label="Export all bookmarks"
-            title={isExporting ? "Exporting…" : "Export all as Markdown"}
-            aria-busy={isExporting}
-            className="ml-auto shrink-0"
-          >
-            {isExporting ? (
-              <CircleNotchIcon className="size-5 animate-spin" />
-            ) : (
-              <DownloadSimpleIcon className="size-5" />
-            )}
-          </Button>
-          <div className="relative mr-1 w-40 shrink-0 transition-transform duration-150 ease-out focus-within:-translate-y-px sm:w-52 md:w-60">
+          <div className="relative ml-auto mr-1 w-40 shrink-0 transition-transform duration-150 ease-out focus-within:-translate-y-px sm:w-52 md:w-60">
             <MagnifyingGlassIcon className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted/65" />
             <Input
               ref={searchInputRef}
@@ -744,8 +683,8 @@ export function BookmarksList({
                     href={getBookmarkHref(bookmark)}
                     className={cn(
                       "group/card relative flex min-w-0 flex-col gap-2 overflow-hidden rounded-lg rounded-tr-5 bg-surface-card p-3 shadow-[inset_0_0_0_1px] shadow-border/60 no-underline transition-[background-color] duration-200",
-                      "before:pointer-events-none before:absolute before:top-0 before:right-0 before:z-[3] before:size-6 before:-translate-y-1/2 before:translate-x-1/2 before:rotate-45 before:bg-surface before:shadow-[0_1px_0_0] before:shadow-border before:transition-all before:duration-180 before:content-['']",
-                      "after:pointer-events-none after:absolute after:top-0 after:right-0 after:z-[2] after:h-[22px] after:w-[22px] after:-translate-y-1.5 after:translate-x-1.5 after:rounded-bl-md after:border after:border-border after:bg-surface after:shadow-xs after:transition-all after:duration-180 after:content-['']",
+                      "before:pointer-events-none before:absolute before:top-0 before:right-0 before:z-[3] before:size-6 before:-translate-y-1/2 before:translate-x-1/2 before:rotate-45 before:bg-surface before:shadow-[0_1px_0_0] before:shadow-border before:transition-[width,height,box-shadow] before:duration-180 before:ease-[var(--ease-hover)] before:content-['']",
+                      "after:pointer-events-none after:absolute after:top-0 after:right-0 after:z-[2] after:h-[22px] after:w-[22px] after:-translate-y-1.5 after:translate-x-1.5 after:rounded-bl-md after:border after:border-border after:bg-surface after:shadow-xs after:transition-[width,height,box-shadow] after:duration-180 after:ease-[var(--ease-hover)] after:content-['']",
                       "hover:rounded-tr-[35px] hover:bg-surface-hover hover:before:size-10 hover:after:h-[34px] hover:after:w-[34px] hover:after:shadow-lg hover:after:shadow-black/5",
                       isFocused && "bg-surface-hover ring-1 ring-accent/30",
                     )}

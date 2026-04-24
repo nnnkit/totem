@@ -27,7 +27,6 @@ import {
 } from "./runtime-store";
 
 export type {
-  BootSyncPolicy,
   FooterState,
   ReaderAvailabilityState,
   RuntimeMode,
@@ -40,6 +39,9 @@ export interface ReaderAvailabilitySelection extends ReaderAvailabilityState {
   errorKind: DetailErrorKind;
 }
 
+// Stable reference: `actions` is built once in createInitialState and never
+// reassigned, so this selector returns the same object across renders.
+// Callers can safely include the return value in a useEffect dependency array.
 export function useRuntimeActions(): RuntimeActions {
   return useRuntimeStoreBase((state) => state.actions);
 }
@@ -71,6 +73,14 @@ export function useDisplayBookmarks() {
 
 export function useAllBookmarks() {
   return useRuntimeStoreBase(selectBookmarks);
+}
+
+// True once hydrateCurrentAccount has pointed the IDB layer at the
+// active-account database. Side effects that write to IDB on page load
+// must wait for this — otherwise they land in the default "totem" DB
+// before setActiveAccountId runs. See reader progress write in App.tsx.
+export function useBookmarksLoaded(): boolean {
+  return useRuntimeStoreBase((state) => state.bookmarksLoaded);
 }
 
 export function useDetailedTweetIds() {

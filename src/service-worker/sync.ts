@@ -13,18 +13,40 @@ import type { MessageRequest } from "../types/messages";
 import type { HandlerMap } from "./index";
 import { getSessionSnapshot, buildRuntimeSnapshot } from "./auth";
 import { normalizeSyncAccountId } from "../lib/sw-pure";
+import { closeDb } from "../db";
 import {
+  CS_LAST_SOFT_SYNC,
+  CS_LAST_SYNC,
+  CS_SOFT_SYNC_NEEDED,
   CS_SYNC_ORCHESTRATOR_STATE,
   CS_RUNTIME_STATE_V2,
-} from "../lib/storage-keys";
+} from "./storage-keys-sw";
 
 // ── Constants ───────────────────────────────────────────────────
 
 const SYNC_ORCHESTRATOR_VERSION = 1;
 const SYNC_ORCHESTRATOR_LOCK_TTL_MS = 12 * 60 * 1000;
 const SYNC_ORCHESTRATOR_AUTO_BACKOFF_MS = 5 * 60 * 1000;
+// When the seed has never completed (`lastFullSyncAt === 0`), an auto-sync
+// retry represents a user reloading to resume — not unsolicited polling.
+// The 5-minute window is appropriate for incremental polling; it's wrong
+// for seed resume. Use a short window so a reload actually retries.
+const SYNC_ORCHESTRATOR_SEED_BACKOFF_MS = 30 * 1000;
 const SYNC_ORCHESTRATOR_AUTO_INTERVAL_MS = 4 * 60 * 60 * 1000;
 const SYNC_ORCHESTRATOR_MANUAL_RECLAIM_MS = 90_000;
+// An auto-triggered reserve can also reclaim an in-flight lease that's
+// older than this threshold. This recovers from orphaned leases — the
+// previous sync tab closed before its COMPLETE_SYNC could be delivered
+// (MV3 service-worker messaging during tab unload is unreliable). Without
+// reclaim, every reload gets blocked with `in_flight` for up to
+// SYNC_ORCHESTRATOR_LOCK_TTL_MS (12 min). Symmetric with the manual path.
+const SYNC_ORCHESTRATOR_AUTO_RECLAIM_MS = 90_000;
+// Window within which a repeat of the same block reason for the same
+// account is considered noise. Multiple open pages + focus/visibility
+// events fan out into redundant REQUEST_SYNC calls; suppressing the log
+// for back-to-back duplicates (FINDINGS §5) keeps the diagnostic readable
+// without hiding first-of-reason transitions.
+const RESERVE_BLOCK_LOG_DEDUPE_MS = 2_000;
 const SYNC_ORCHESTRATOR_MANUAL_SUCCESS_COOLDOWN_MS = 15 * 60 * 1000;
 const SYNC_ORCHESTRATOR_MANUAL_FAILURE_RETRY_MS = 30_000;
 const SYNC_ORCHESTRATOR_RATE_LIMIT_BACKOFF_BASE_MS = 60_000;
@@ -43,6 +65,12 @@ export interface SyncInFlight {
 export interface SyncAccountState {
   inFlight: SyncInFlight | null;
   lastSuccessAt: number;
+  // INVARIANT: the SW's record of a completed full reconcile for this account.
+  // Not a claim about IDB contents. IDB may have rows without this being set
+  // (e.g. post-restore from a previous install with a wiped SW state), and
+  // `lastFullSyncAt === 0` forces the orchestrator to pick `full` on the
+  // next reservation so the runtime re-walks pages and confirms completeness.
+  // Only ever written by `handleSyncPolicyComplete` on a successful `full` run.
   lastFullSyncAt: number;
   lastIncrementalSyncAt: number;
   manualCooldownUntil: number;
@@ -229,6 +257,33 @@ export function createSyncHandlers(deps: SyncDeps = {}): HandlerMap {
   const readState = deps.readState ?? readSyncOrchestratorState;
   const writeState = deps.writeState ?? writeSyncOrchestratorState;
 
+  /**
+   * Reservation state machine — decides whether a REQUEST_SYNC is allowed,
+   * and if so, at what mode. All decisions are derived from orchestrator
+   * state + session snapshot; callers never request a mode.
+   *
+   * Block reasons and their retry windows:
+   *   no_account / not_ready   — no retry (session issue)
+   *   in_flight                — SYNC_ORCHESTRATOR_LOCK_TTL_MS (12 min hard cap)
+   *                              reclaimable early at MANUAL_RECLAIM / AUTO_RECLAIM (90s each)
+   *                              for orphaned leases from SW-unload races
+   *   rate_limited             — exponential (base 60s, cap 15 min) per-account
+   *   cooldown                 — MANUAL_SUCCESS_COOLDOWN (15 min); manual only
+   *   auto_backoff             — SEED_BACKOFF (30s) when lastFullSyncAt===0,
+   *                              else AUTO_BACKOFF (5 min); auto only
+   *   fresh_cache              — AUTO_INTERVAL (4h); auto only, and only when
+   *                              the last completion was a success
+   *
+   * Mode selection once allowed:
+   *   manual + (needsFullSync || localCount<=0)  → full   (reason: manual_seed)
+   *   manual otherwise                           → incremental (reason: manual)
+   *   auto + needsFullSync                       → full   (bootstrap_seed | bootstrap_empty)
+   *   auto otherwise                             → incremental (background_stale)
+   *
+   * needsFullSync := lastFullSyncAt <= 0. The only writer of lastFullSyncAt
+   * is handleSyncPolicyComplete on a successful full run — so a SW state wipe
+   * or a mid-sync lease release re-forces a full reconcile next time.
+   */
   async function handleSyncPolicyReserve(
     message: MessageRequest,
   ): Promise<unknown> {
@@ -237,14 +292,6 @@ export function createSyncHandlers(deps: SyncDeps = {}): HandlerMap {
       const now = Date.now();
       const trigger =
         msg.trigger === "manual" ? ("manual" as const) : ("auto" as const);
-      const requestedMode =
-        msg.requestedMode === "incremental"
-          ? "incremental"
-          : msg.requestedMode === "quick"
-            ? "quick"
-            : msg.requestedMode === "full"
-              ? "full"
-              : null;
       const localCount = normalizeFiniteNumber(msg.localCount, 0);
 
       const state = await readState();
@@ -279,10 +326,12 @@ export function createSyncHandlers(deps: SyncDeps = {}): HandlerMap {
           );
         }
         if (reason === "auto_backoff") {
-          return Math.max(
-            0,
-            account.lastAttemptAt + SYNC_ORCHESTRATOR_AUTO_BACKOFF_MS - now,
-          );
+          // Match whichever backoff window the block used: seed-incomplete
+          // accounts use the short one, post-seed accounts the 5-min one.
+          const window = account.lastFullSyncAt <= 0
+            ? SYNC_ORCHESTRATOR_SEED_BACKOFF_MS
+            : SYNC_ORCHESTRATOR_AUTO_BACKOFF_MS;
+          return Math.max(0, account.lastAttemptAt + window - now);
         }
         if (reason === "fresh_cache") {
           return Math.max(
@@ -299,6 +348,13 @@ export function createSyncHandlers(deps: SyncDeps = {}): HandlerMap {
       ) => {
         const safeAccountKey = accountKey || "__none__";
         const retryAfterMs = retryAfterFor(reason, account ?? null);
+        // Suppress log spam when multiple pages (or rapid-fire subscribers)
+        // all hit the same block decision in quick succession. The previous
+        // decision we persisted tells us whether this is a duplicate.
+        const isDuplicate =
+          account?.lastDecisionReason === reason &&
+          account?.lastDecisionAt > 0 &&
+          now - account.lastDecisionAt < RESERVE_BLOCK_LOG_DEDUPE_MS;
         if (accountKey) {
           state.accounts[accountKey] = {
             ...(account || createEmptySyncAccountState()),
@@ -310,6 +366,20 @@ export function createSyncHandlers(deps: SyncDeps = {}): HandlerMap {
         const snapshot = await buildSnapshot(state).catch(() => null);
         if (snapshot) {
           await persistRuntimeStateV2(snapshot).catch(() => {});
+        }
+        if (!isDuplicate) {
+          // [TOTEM-DIAG] Reserve blocked — answers: "sync didn't run on
+          // refresh, what blocked it?" (cooldown / fresh_cache / in_flight
+          // / auto_backoff / rate_limited / not_ready / no_account)
+          console.debug("[TOTEM-DIAG] sync.reserve blocked", {
+            trigger,
+            reason,
+            retryAfterMs,
+            lastFullSyncAt: account?.lastFullSyncAt ?? 0,
+            lastAttemptAt: account?.lastAttemptAt ?? 0,
+            lastSuccessAt: account?.lastSuccessAt ?? 0,
+            inFlightStartedAt: account?.inFlight?.startedAt ?? null,
+          });
         }
         return {
           ok: true,
@@ -341,11 +411,23 @@ export function createSyncHandlers(deps: SyncDeps = {}): HandlerMap {
       }
 
       if (account.inFlight) {
+        const leaseAge = now - account.inFlight.startedAt;
         const canReclaimManualLock =
           trigger === "manual" &&
-          now - account.inFlight.startedAt >=
-            SYNC_ORCHESTRATOR_MANUAL_RECLAIM_MS;
-        if (canReclaimManualLock) {
+          leaseAge >= SYNC_ORCHESTRATOR_MANUAL_RECLAIM_MS;
+        const canReclaimAutoLock =
+          trigger === "auto" &&
+          leaseAge >= SYNC_ORCHESTRATOR_AUTO_RECLAIM_MS;
+        if (canReclaimManualLock || canReclaimAutoLock) {
+          // [TOTEM-DIAG] Lease reclaim — the previous sync tab died without
+          // completing its run. Clearing the orphaned lease so this one can
+          // take over. Without this, MV3 service-worker unload flakiness
+          // traps users in `in_flight` for up to 12 minutes.
+          console.debug("[TOTEM-DIAG] sync.reserve reclaim", {
+            trigger,
+            leaseAgeMs: leaseAge,
+            reclaimedLeaseId: account.inFlight.leaseId,
+          });
           account = { ...account, inFlight: null };
         } else {
           return returnBlocked("in_flight", account);
@@ -360,23 +442,44 @@ export function createSyncHandlers(deps: SyncDeps = {}): HandlerMap {
         return returnBlocked("cooldown", account);
       }
 
-      let mode: string | null = null;
-      let reason = "fresh_cache";
+      // Mode is derived purely from the orchestrator's own state — the caller
+      // does not get to request a mode. `lastFullSyncAt === 0` forces a full
+      // seed (historical split-brain: runtime thought it was seeded but the
+      // SW had no record).
+      const needsFullSync = account.lastFullSyncAt <= 0;
+      // The symmetric post-reset case is a user-asked operation: the SW
+      // remembers a prior full sync but the DB is empty. Handle it only on
+      // the manual path so an empty-account user (localCount === 0 is the
+      // steady state for them) isn't re-seeded every auto-sync forever.
+      const manualSeedFromEmpty =
+        trigger === "manual" && !needsFullSync && localCount <= 0;
+
+      let mode: string;
+      let reason: string;
 
       if (trigger === "manual") {
-        mode = requestedMode || "quick";
-        reason = "manual";
-      } else if (localCount <= 0) {
+        const forceFull = needsFullSync || manualSeedFromEmpty;
+        mode = forceFull ? "full" : "incremental";
+        reason = forceFull ? "manual_seed" : "manual";
+      } else if (needsFullSync) {
         if (
           account.lastAttemptAt > 0 &&
-          now - account.lastAttemptAt < SYNC_ORCHESTRATOR_AUTO_BACKOFF_MS
+          now - account.lastAttemptAt < SYNC_ORCHESTRATOR_SEED_BACKOFF_MS
         ) {
           return returnBlocked("auto_backoff", account);
         }
         mode = "full";
-        reason = "bootstrap_empty";
+        reason = localCount <= 0 ? "bootstrap_empty" : "bootstrap_seed";
       } else {
+        // fresh_cache gates auto-syncs after a recent *successful* completion.
+        // If the most recent completion was skipped or failed — typically
+        // because a mid-sync reload released the lease — don't treat the
+        // stale lastSuccessAt as proof of freshness; fall through so the
+        // auto_backoff window governs retry cadence instead (FINDINGS §3).
+        const lastCompletionWasSuccess =
+          account.lastCompletedStatus === "success";
         if (
+          lastCompletionWasSuccess &&
           account.lastSuccessAt > 0 &&
           now - account.lastSuccessAt < SYNC_ORCHESTRATOR_AUTO_INTERVAL_MS
         ) {
@@ -405,6 +508,20 @@ export function createSyncHandlers(deps: SyncDeps = {}): HandlerMap {
       if (snapshot) {
         await persistRuntimeStateV2(snapshot).catch(() => {});
       }
+
+      // [TOTEM-DIAG] Reserve decision — answers: "why did the orchestrator
+      // pick this mode / reason on refresh?" Log BEFORE returning so the
+      // reservation grants are always visible in SW console.
+      console.debug("[TOTEM-DIAG] sync.reserve allow", {
+        trigger,
+        localCount,
+        lastFullSyncAt: account.lastFullSyncAt,
+        lastAttemptAt: account.lastAttemptAt,
+        lastSuccessAt: account.lastSuccessAt,
+        needsFullSync,
+        chosenMode: mode,
+        chosenReason: reason,
+      });
 
       return { ok: true, allow: true, mode, reason, leaseId, accountKey };
     });
@@ -516,6 +633,44 @@ export function createSyncHandlers(deps: SyncDeps = {}): HandlerMap {
 
       state.accounts[accountKey] = next;
       await writeState(state);
+
+      // [TOTEM-DIAG] Complete — answers: "did the previous run stamp
+      // lastFullSyncAt, which would push the next refresh to incremental?"
+      console.debug("[TOTEM-DIAG] sync.complete", {
+        trigger,
+        mode,
+        status,
+        errorCode: errorCode || null,
+        stampedLastFullSyncAt:
+          status === "success" && mode === "full" ? next.lastFullSyncAt : 0,
+      });
+
+      // Mirror the completion timestamp into the cache-summary keys the
+      // runtime's snapshot consumes. Single writer: the SW. The runtime
+      // never writes these keys — preventing the split-brain that previously
+      // let `totem_last_sync` disagree with the orchestrator's record.
+      const cacheStorage = defaultChromeStorage();
+      if (cacheStorage) {
+        try {
+          if (status === "success") {
+            const cacheWrite: Record<string, number> = { [CS_LAST_SYNC]: now };
+            if (mode === "incremental") {
+              cacheWrite[CS_LAST_SOFT_SYNC] = now;
+            }
+            await cacheStorage.set(cacheWrite);
+            await cacheStorage.remove(CS_SOFT_SYNC_NEEDED);
+          } else if (status === "timeout") {
+            await cacheStorage.set({ [CS_LAST_SYNC]: now });
+          }
+        } catch (err) {
+          // Non-fatal: orchestrator state is already persisted, and the
+          // runtime reads through the snapshot. A stale cache-summary key
+          // only affects the legacy telemetry surface. Surface the failure
+          // so a reader console can spot persistent write failures.
+          console.warn("[TOTEM-DIAG] sync.complete cache-summary write failed", err);
+        }
+      }
+
       const snapshot = await buildSnapshot(state).catch(() => null);
       if (snapshot) {
         await persistRuntimeStateV2(snapshot).catch(() => {});
@@ -524,9 +679,26 @@ export function createSyncHandlers(deps: SyncDeps = {}): HandlerMap {
     });
   }
 
+  async function handleResetSwState(): Promise<unknown> {
+    // Serialize against any in-flight orchestrator mutation so we don't
+    // stomp a reservation that's mid-write. Once we own the lock, wipe the
+    // orchestrator state durably; the runtime's reset also removes it, but
+    // doing it here makes the reset a single atomic RPC from the runtime's
+    // perspective (send → ack → safe to delete the DB). We also drop the
+    // SW's cached IDB handle before acking so the ack genuinely implies
+    // "SW has released the DB" — the CS_RESET_EPOCH onChanged listener is
+    // a best-effort backstop, not a guarantee.
+    return withSyncOrchestratorLock(async () => {
+      await writeState(createEmptySyncOrchestratorState());
+      closeDb();
+      return { ok: true };
+    });
+  }
+
   return {
     REQUEST_SYNC: handleSyncPolicyReserve,
     COMPLETE_SYNC: handleSyncPolicyComplete,
+    RESET_SW_STATE: handleResetSwState,
   };
 }
 

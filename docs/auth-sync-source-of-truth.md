@@ -1,5 +1,7 @@
 # Auth + Sync Source of Truth
 
+> ⚠️ **Historical document (2026-03-01).** The Phase 1–4 refactor (April 2026) superseded several rules here: `bootPolicy` was deleted, `requestedMode` was removed from the sync reservation API, and seed resumption is now handled by SW-side self-heal on `lastFullSyncAt === 0`. The current canonical reference is [`ARCHITECTURE.md`](../ARCHITECTURE.md) §6, §7, §16. This file is kept for historical context and remaining still-accurate auth-phase rules.
+
 Last updated: 2026-03-01
 Scope: New Tab runtime behavior for auth, sync, offline cache, account context, and reset.
 

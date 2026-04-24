@@ -238,6 +238,7 @@ export interface UserSettings {
   backgroundMode: BackgroundMode;
   searchEngine: SearchEngineId;
   recommendationSource: RecommendationSource;
+  defaultHighlightColor: string;
 }
 
 export interface TotemSeedPayload {

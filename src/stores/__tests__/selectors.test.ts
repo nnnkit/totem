@@ -26,7 +26,6 @@ function makeState(overrides: Partial<RuntimeState> = {}): RuntimeState {
     syncStatus: "idle",
     syncJobKind: "none",
     syncBlockedReason: null,
-    bootPolicy: "auto",
     bootGeneration: 1,
     syncGeneration: 1,
     readerActive: false,
@@ -45,6 +44,7 @@ function makeState(overrides: Partial<RuntimeState> = {}): RuntimeState {
       setReaderActive: vi.fn(),
       detailCached: vi.fn(),
       loadReaderDetail: async () => ({ focalTweet: null, thread: [] }),
+      applyRuntimeSnapshot: async () => {},
     },
     ...overrides,
   };

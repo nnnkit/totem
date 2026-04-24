@@ -35,6 +35,7 @@ import {
   DB_INIT_TIMEOUT_MS,
   DETAIL_CACHE_RETENTION_MS,
   PAGE_FETCH_TIMEOUT_MS,
+  READER_DETAIL_TIMEOUT_MS,
   SYNC_ABORT_TIMEOUT_FULL_MS,
   SYNC_ABORT_TIMEOUT_INCREMENTAL_MS,
   SYNC_ABORT_TIMEOUT_MAX_MS,
@@ -43,14 +44,7 @@ import {
   SYNC_MAX_PAGES_PER_JOB,
   WEEK_MS,
 } from "../lib/constants";
-import {
-  CS_DB_CLEANUP_AT,
-  CS_LAST_SOFT_SYNC,
-  CS_LAST_SYNC,
-  CS_SOFT_SYNC_NEEDED,
-  LS_BOOT_SYNC_POLICY,
-  LS_MANUAL_SYNC_REQUIRED,
-} from "../lib/storage-keys";
+import { CS_DB_CLEANUP_AT } from "../lib/storage-keys";
 import type {
   ApiCapability,
   ApiCapabilityState,
@@ -73,7 +67,6 @@ export type RuntimeMode =
   | "offline_cached"
   | "online_ready";
 
-export type BootSyncPolicy = "auto" | "manual_only_until_seeded";
 export type SyncJobKind = "none" | "bootstrap" | "backfill";
 
 export interface SyncUiState {
@@ -131,7 +124,6 @@ interface ActiveSyncLease {
 
 interface SyncOptions {
   trigger?: "manual" | "auto";
-  requestedMode?: SyncMode;
   localCountHint?: number;
 }
 
@@ -149,6 +141,7 @@ export interface RuntimeActions {
   setReaderActive: (active: boolean) => void;
   detailCached: (tweetId: string) => void;
   loadReaderDetail: (tweetId: string) => ReturnType<typeof fetchTweetDetail>;
+  applyRuntimeSnapshot: (snapshot: RuntimeSnapshot) => Promise<void>;
 }
 
 export interface RuntimeState {
@@ -165,7 +158,6 @@ export interface RuntimeState {
   syncStatus: SyncStatus;
   syncJobKind: SyncJobKind;
   syncBlockedReason: SyncBlockedReason | null;
-  bootPolicy: BootSyncPolicy;
   bootGeneration: number;
   syncGeneration: number;
   readerActive: boolean;
@@ -277,34 +269,6 @@ function syncFailureStatus(message: string): SyncStatus {
   return "error";
 }
 
-function readBootPolicy(): BootSyncPolicy {
-  try {
-    const stored = localStorage.getItem(LS_BOOT_SYNC_POLICY);
-    if (stored === "manual_only_until_seeded" || stored === "auto") {
-      return stored;
-    }
-
-    if (localStorage.getItem(LS_MANUAL_SYNC_REQUIRED) === "1") {
-      localStorage.setItem(LS_BOOT_SYNC_POLICY, "manual_only_until_seeded");
-      localStorage.removeItem(LS_MANUAL_SYNC_REQUIRED);
-      return "manual_only_until_seeded";
-    }
-  } catch {}
-
-  return "auto";
-}
-
-function persistBootPolicy(policy: BootSyncPolicy): void {
-  try {
-    if (policy === "auto") {
-      localStorage.removeItem(LS_BOOT_SYNC_POLICY);
-    } else {
-      localStorage.setItem(LS_BOOT_SYNC_POLICY, policy);
-    }
-    localStorage.removeItem(LS_MANUAL_SYNC_REQUIRED);
-  } catch {}
-}
-
 function hasReadableCache(state: Pick<RuntimeState, "bookmarks" | "detailedTweetIds">): boolean {
   if (state.bookmarks.length === 0) return false;
   return state.bookmarks.some((bookmark) => state.detailedTweetIds.has(bookmark.tweetId));
@@ -375,21 +339,7 @@ function shouldRestrictToCachedDetails(state: RuntimeState): boolean {
 }
 
 function shouldAutoSync(state: RuntimeState): boolean {
-  return state.bootPolicy === "auto" &&
-    state.authPhase === "ready";
-}
-
-function shouldResumeSeedSync(state: RuntimeState): boolean {
-  return state.bootPolicy === "manual_only_until_seeded" &&
-    state.bookmarks.length > 0 &&
-    state.authPhase === "ready";
-}
-
-function shouldSkipHydrationForLoggedOutReset(
-  state: RuntimeState,
-  phase: AuthPhase,
-): boolean {
-  return phase === "need_login" && state.bootPolicy === "manual_only_until_seeded";
+  return state.authPhase === "ready";
 }
 
 function createInitialState(actions: RuntimeActions): RuntimeState {
@@ -410,7 +360,6 @@ function createInitialState(actions: RuntimeActions): RuntimeState {
     syncStatus: "loading",
     syncJobKind: "none",
     syncBlockedReason: null,
-    bootPolicy: "auto",
     bootGeneration: 0,
     syncGeneration: 0,
     readerActive: false,
@@ -425,7 +374,12 @@ export function createRuntimeStore() {
   let processingBookmarkEvents = false;
   let authRequestId = 0;
   let cleanupStarted = false;
-  let resumedSeedSyncBootGeneration = -1;
+  // Scheduled auto-retry for when an auto-sync was blocked by auto_backoff.
+  // The SW returns retryAfterMs telling us when the window clears; we set
+  // a single timer to fire another auto-sync then. Without this, a blocked
+  // seed-incomplete sync would never retry until the user reloaded — and
+  // if the user reloads inside the backoff window, they just block again.
+  let scheduledAutoRetryTimer: ReturnType<typeof setTimeout> | null = null;
 
   const useRuntimeStoreBase = create<RuntimeState>((set, get) => {
     const setRuntimeState = (
@@ -522,19 +476,58 @@ export function createRuntimeStore() {
       })().catch(() => {});
     };
 
+    const clearScheduledAutoRetry = () => {
+      if (scheduledAutoRetryTimer !== null) {
+        clearTimeout(scheduledAutoRetryTimer);
+        scheduledAutoRetryTimer = null;
+      }
+    };
+
+    const scheduleAutoRetry = (delayMs: number) => {
+      clearScheduledAutoRetry();
+      // Small buffer so we arrive just after the SW's window clears.
+      const effective = Math.max(1_000, delayMs + 500);
+      // [TOTEM-DIAG] Scheduled retry — answers: "after a blocked auto-sync,
+      // did the runtime schedule a follow-up?"
+      console.debug("[TOTEM-DIAG] scheduleAutoRetry", { delayMs: effective });
+      scheduledAutoRetryTimer = setTimeout(() => {
+        scheduledAutoRetryTimer = null;
+        const state = get();
+        const willFire =
+          state.syncStatus !== "syncing" && shouldAutoSync(state);
+        // [TOTEM-DIAG] Retry fired — answers: "did the scheduled timer
+        // actually run, and did it trigger another sync attempt?"
+        console.debug("[TOTEM-DIAG] scheduleAutoRetry.fired", {
+          willFire,
+          syncStatus: state.syncStatus,
+          authPhase: state.authPhase,
+        });
+        if (!willFire) return;
+        void sync({ trigger: "auto" }).catch(() => {});
+      }, effective);
+    };
+
     const maybeStartAutomaticSync = () => {
       const state = get();
+      // A retry is already scheduled — the SW returned a timed block
+      // (fresh_cache / auto_backoff) and we're waiting out that window.
+      // Re-entering now would just hit the same block and add noise to
+      // both the SW log and any UI that reflects `syncStatus` transitions
+      // (FINDINGS §5).
+      const retryPending = scheduledAutoRetryTimer !== null;
+      console.debug("[TOTEM-DIAG] maybeStartAutomaticSync", {
+        syncStatus: state.syncStatus,
+        authPhase: state.authPhase,
+        bookmarksLoaded: state.bookmarksLoaded,
+        bookmarkCount: state.bookmarks.length,
+        retryPending,
+        shouldFire:
+          !retryPending &&
+          state.syncStatus !== "syncing" &&
+          shouldAutoSync(state),
+      });
+      if (retryPending) return;
       if (state.syncStatus === "syncing") return;
-
-      if (shouldResumeSeedSync(state)) {
-        if (resumedSeedSyncBootGeneration === state.bootGeneration) return;
-        resumedSeedSyncBootGeneration = state.bootGeneration;
-        void sync({
-          trigger: "manual",
-          requestedMode: "full",
-        }).catch(() => {});
-        return;
-      }
 
       if (shouldAutoSync(state)) {
         void sync({ trigger: "auto" }).catch(() => {});
@@ -638,19 +631,42 @@ export function createRuntimeStore() {
       }
 
       const accountChanged = nextAccountId !== state.activeAccountId;
-      const skipHydrationForLoggedOutReset = shouldSkipHydrationForLoggedOutReset(state, phase);
       const needsHydration = options.allowHydration &&
-        !skipHydrationForLoggedOutReset &&
         (accountChanged || !state.bookmarksLoaded || !state.detailedIdsLoaded);
+      const phaseChanged = phase !== state.authPhase;
 
-      if (needsHydration) {
+      // Invalidate any in-flight sync when the runtime's view of the session
+      // becomes non-ready. Without this, a push snapshot reporting
+      // logged_out / connecting while a sync is mid-flight would leave the
+      // local lease and activeSyncController alive, continuing to write into
+      // a DB the runtime no longer owns.
+      const shouldReleaseActiveWork =
+        needsHydration ||
+        (state.syncStatus === "syncing" && phase !== "ready");
+
+      if (shouldReleaseActiveWork) {
         stopSync();
         void releaseActiveLease("skipped");
+      }
+
+      // An auth/account transition invalidates whatever block window a prior
+      // sync decision set up — the account we're talking to may have changed,
+      // and a pending long timer (e.g. 4h fresh_cache) would otherwise silence
+      // the post-login auto-sync. See the guard in maybeStartAutomaticSync.
+      if (accountChanged || (phaseChanged && phase === "ready")) {
+        clearScheduledAutoRetry();
       }
 
       const nextBootGeneration = needsHydration
         ? state.bootGeneration + 1
         : state.bootGeneration;
+
+      // On the snapshot-push path (allowHydration=false) we can't also call
+      // setActiveAccountId on the DB layer, so leave activeAccountId as-is
+      // and let the follow-up checkAuth be the sole writer that moves the
+      // store + IDB pointer together.
+      const nextStoreAccountId =
+        accountChanged && !options.allowHydration ? state.activeAccountId : nextAccountId;
 
       setRuntimeState({
         authPhase: phase,
@@ -660,24 +676,13 @@ export function createRuntimeStore() {
           bookmarksApi: payload.bookmarksApi,
           detailApi: payload.detailApi,
         },
-        activeAccountId: nextAccountId,
+        activeAccountId: nextStoreAccountId,
         authRetryDelayMs,
         bootGeneration: nextBootGeneration,
-        bookmarksLoaded: skipHydrationForLoggedOutReset
-          ? true
-          : needsHydration
-            ? false
-            : state.bookmarksLoaded,
-        detailedIdsLoaded: skipHydrationForLoggedOutReset
-          ? true
-          : needsHydration
-            ? false
-            : state.detailedIdsLoaded,
-        bookmarks: skipHydrationForLoggedOutReset || needsHydration ? [] : state.bookmarks,
-        detailedTweetIds:
-          skipHydrationForLoggedOutReset || needsHydration
-            ? new Set<string>()
-            : state.detailedTweetIds,
+        bookmarksLoaded: needsHydration ? false : state.bookmarksLoaded,
+        detailedIdsLoaded: needsHydration ? false : state.detailedIdsLoaded,
+        bookmarks: needsHydration ? [] : state.bookmarks,
+        detailedTweetIds: needsHydration ? new Set<string>() : state.detailedTweetIds,
         syncStatus:
           phase === "need_login" && state.syncStatus === "syncing"
             ? "idle"
@@ -739,15 +744,11 @@ export function createRuntimeStore() {
         typeof options.localCountHint === "number" && Number.isFinite(options.localCountHint)
           ? options.localCountHint
           : startingLocalCount;
-      const requestedMode =
-        options.requestedMode ?? (trigger === "manual" ? "full" : undefined);
-      const requestedModeForReservation = requestedMode;
 
       const policy = await reserveSyncRun({
         accountId,
         trigger,
         localCount,
-        requestedMode: requestedModeForReservation,
       }).catch(() => null);
 
       if (!policy) {
@@ -767,12 +768,33 @@ export function createRuntimeStore() {
             syncBlockedReason: blockedReason || "not_ready",
           });
         }
+        // Schedule an auto-retry when an auto-triggered sync got blocked
+        // by a time-bounded reason (auto_backoff, fresh_cache). This is
+        // the "auto-resume" path that used to exist pre-refactor — without
+        // it, a blocked seed-incomplete sync never retries unless the user
+        // reloads at exactly the right time. We don't auto-retry on
+        // in_flight (another sync is already running), cooldown (manual
+        // just succeeded; user didn't ask for more), rate_limited (that
+        // has its own backoff tracking), or not_ready / no_account.
+        const retryAfterMs = policy.retryAfterMs;
+        const shouldAutoRetry =
+          trigger === "auto" &&
+          (policy.reason === "auto_backoff" ||
+            policy.reason === "fresh_cache") &&
+          typeof retryAfterMs === "number" &&
+          retryAfterMs > 0;
+        if (shouldAutoRetry) {
+          scheduleAutoRetry(retryAfterMs as number);
+        }
         return {
           accepted: false,
           reason: blockedReason || policy.reason || "blocked",
           retryAfterMs: policy.retryAfterMs,
         };
       }
+
+      // A reservation was granted — no need for a pending scheduled retry.
+      clearScheduledAutoRetry();
 
       const current = get();
       if (current.authPhase !== "ready") {
@@ -821,19 +843,9 @@ export function createRuntimeStore() {
 
       let completionStatus: "success" | "failure" | "timeout" = "failure";
       let completionErrorCode: string | undefined;
-      let seededPolicyCleared = false;
       const syncTimer = setTimeout(() => {
         abortSync(true);
       }, timeout);
-
-      const maybeClearBootPolicy = () => {
-        if (seededPolicyCleared) return;
-        if (trigger !== "manual") return;
-        if (get().bootPolicy !== "manual_only_until_seeded") return;
-        persistBootPolicy("auto");
-        seededPolicyCleared = true;
-        setRuntimeState({ bootPolicy: "auto" });
-      };
 
       const onPage = async (pageNew: Bookmark[]) => {
         if (abortState.aborted || get().syncGeneration !== syncGeneration) return;
@@ -902,6 +914,22 @@ export function createRuntimeStore() {
           const fullSyncCompleted = mode !== "full" ||
             reconcileResult.terminationReason === "complete";
 
+          // [TOTEM-DIAG] Reconcile result — answers: "did we stop early, and
+          // if so, why?" Key fields: terminationReason (complete / cursor_missing
+          // / duplicate_stop / page_cap), pagesRequested, newBookmarks count.
+          console.debug("[TOTEM-DIAG] reconcile.result", {
+            mode,
+            terminationReason: reconcileResult.terminationReason,
+            pagesRequested: reconcileResult.pagesRequested,
+            newBookmarksCount: reconcileResult.newBookmarks.length,
+            lastCursor: reconcileResult.lastCursor,
+            needsRecovery: reconcileResult.needsRecovery,
+            capReached: reconcileResult.capReached,
+            staleIds: reconcileResult.staleIds.length,
+            localBookmarksNow: get().bookmarks.length,
+            fullSyncCompleted,
+          });
+
           if (!fullSyncCompleted) {
             completionErrorCode = "INCOMPLETE_FULL_SYNC";
             setRuntimeState({
@@ -920,22 +948,9 @@ export function createRuntimeStore() {
               }));
             }
 
-            const now = Date.now();
-            if (mode === "incremental") {
-              await chrome.storage.local.set({
-                [CS_LAST_SYNC]: now,
-                [CS_LAST_SOFT_SYNC]: now,
-              });
-            } else {
-              await chrome.storage.local.set({ [CS_LAST_SYNC]: now });
-            }
-
-            await chrome.storage.local.remove(CS_SOFT_SYNC_NEEDED);
-
-            if (mode === "full" && reconcileResult.terminationReason === "complete") {
-              maybeClearBootPolicy();
-            }
-
+            // CS_LAST_SYNC / CS_LAST_SOFT_SYNC / CS_SOFT_SYNC_NEEDED are
+            // written by the SW's COMPLETE_SYNC handler based on the
+            // reported completion status. One writer per persisted fact.
             setRuntimeState({
               syncStatus: "idle",
               syncJobKind: "none",
@@ -964,9 +979,8 @@ export function createRuntimeStore() {
         }
 
         if (abortState.isTimeout && get().syncGeneration === syncGeneration) {
-          try {
-            await chrome.storage.local.set({ [CS_LAST_SYNC]: Date.now() });
-          } catch {}
+          // CS_LAST_SYNC is written by the SW's COMPLETE_SYNC handler when
+          // status === "timeout". No runtime-side mirror write.
           clearSyncForGeneration(syncGeneration);
           completionStatus = "timeout";
         }
@@ -1005,7 +1019,6 @@ export function createRuntimeStore() {
         authRequestId += 1;
         setRuntimeState({
           bootGeneration,
-          bootPolicy: readBootPolicy(),
           authPhase: "loading",
           authRetryDelayMs: null,
           bookmarksLoaded: false,
@@ -1040,6 +1053,7 @@ export function createRuntimeStore() {
       dispose: () => {
         prefetchController.stop();
         stopSync();
+        clearScheduledAutoRetry();
         authRequestId += 1;
         setRuntimeState((state) => ({
           bootGeneration: state.bootGeneration + 1,
@@ -1075,6 +1089,23 @@ export function createRuntimeStore() {
       },
 
       refresh: async () => sync({ trigger: "manual" }),
+
+      /**
+       * Apply a RuntimeSnapshot pushed from the service worker.
+       *
+       * Used by the `chrome.storage.onChanged` subscription in RuntimeProvider:
+       * when the SW persists a new snapshot to `CS_RUNTIME_STATE_V2`, the
+       * runtime picks up SW-mirrored facts (capability, session, account)
+       * without re-RPC'ing or re-hydrating IDB. This is the reactive
+       * invalidation channel that replaces "wait for the next heartbeat".
+       */
+      applyRuntimeSnapshot: async (snapshot: RuntimeSnapshot) => {
+        const payload = normalizeAuthPayloadFromSnapshot(snapshot);
+        await applyAuthPayload(payload, {
+          allowHydration: false,
+          allowAutoSync: false,
+        });
+      },
 
       handleBookmarkEvents: async () => {
         if (processingBookmarkEvents) return;
@@ -1121,7 +1152,10 @@ export function createRuntimeStore() {
                 await upsertBookmarks(deduped);
                 prefetchController.reconcile();
               }
-              await chrome.storage.local.set({ [CS_LAST_SOFT_SYNC]: Date.now() });
+              // CS_LAST_SOFT_SYNC is the SW's record of a completed sync run
+              // and is not written here. Bookmark-event-driven page refreshes
+              // are a different flow (no reservation, no orchestrator state)
+              // and must not mirror the SW's key.
             } catch {
               createFetchSucceeded = false;
             }
@@ -1136,12 +1170,11 @@ export function createRuntimeStore() {
       },
 
       prepareForReset: () => {
-        persistBootPolicy("manual_only_until_seeded");
         prefetchController.stop();
         stopSync();
+        clearScheduledAutoRetry();
         authRequestId += 1;
         setRuntimeState((state) => ({
-          bootPolicy: "manual_only_until_seeded",
           syncGeneration: state.syncGeneration + 1,
           syncStatus: "idle",
           syncJobKind: "none",
@@ -1202,7 +1235,11 @@ export function createRuntimeStore() {
       },
 
       loadReaderDetail: async (tweetId: string) => {
-        const detail = await fetchTweetDetail(tweetId);
+        const detail = await withTimeout(
+          fetchTweetDetail(tweetId),
+          READER_DETAIL_TIMEOUT_MS,
+          new Error("DETAIL_TIMEOUT"),
+        );
         get().actions.detailCached(tweetId);
         prefetchController.reconcile();
         return detail;

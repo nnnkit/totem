@@ -22,6 +22,10 @@ import { NotePopover } from "./reader/NotePopover";
 import { useReadingProgress } from "../hooks/useReadingProgress";
 import { useTheme } from "../hooks/useTheme";
 import { useHighlights } from "../hooks/useHighlights";
+import {
+  resolveHighlightColor,
+  type HighlightColor,
+} from "../lib/highlight-colors";
 import { Button } from "./ui/Button";
 import {
   copyArticleMarkdownToClipboard,
@@ -47,6 +51,7 @@ interface Props {
   onMarkAsRead?: (tweetId: string) => void;
   onMarkAsUnread?: (tweetId: string) => void;
   onLogin?: () => void;
+  defaultHighlightColor?: string;
   loadDetail?: (tweetId: string) => Promise<{
     focalTweet: Bookmark | null;
     thread: ThreadTweet[];
@@ -71,6 +76,7 @@ export function BookmarkReader({
   onMarkAsRead,
   onMarkAsUnread,
   onLogin,
+  defaultHighlightColor,
   loadDetail,
 }: Props) {
   const articleRef = useRef<HTMLElement>(null);
@@ -83,6 +89,13 @@ export function BookmarkReader({
   const [detailThread, setDetailThread] = useState<ThreadTweet[]>([]);
   const [detailLoading, setDetailLoading] = useState(true);
   const [detailError, setDetailError] = useState<string | null>(null);
+  const [sessionHighlightColor, setSessionHighlightColor] = useState<HighlightColor>(() =>
+    resolveHighlightColor(defaultHighlightColor),
+  );
+
+  useEffect(() => {
+    setSessionHighlightColor(resolveHighlightColor(defaultHighlightColor));
+  }, [defaultHighlightColor]);
   const { isCompleted } = useReadingProgress({
     tweetId: bookmark.tweetId,
     contentReady: !detailLoading,
@@ -129,7 +142,7 @@ export function BookmarkReader({
     };
   }, [actions, bookmark.tweetId, bookmark.sortIndex, loadDetail]);
 
-  const { addHighlight, removeHighlight, updateHighlightNote, getHighlight, applyNow, setPendingNoteId } =
+  const { addHighlight, removeHighlight, updateHighlightNote, updateHighlightColor, getHighlight, applyNow, setPendingNoteId } =
     useHighlights({
       tweetId: bookmark.tweetId,
       contentReady: !detailLoading,
@@ -399,7 +412,9 @@ export function BookmarkReader({
       <SelectionToolbar
         containerRef={articleRef}
         tweetUrl={`https://x.com/${displayBookmark.author.screenName}/status/${displayBookmark.tweetId}`}
-        onHighlight={(ranges) => addHighlight(ranges)}
+        defaultColor={sessionHighlightColor}
+        onHighlight={(ranges, color) => addHighlight(ranges, { color })}
+        onDefaultColorChange={setSessionHighlightColor}
         onAddNote={handleAddNoteFromToolbar}
       />
 
@@ -407,6 +422,7 @@ export function BookmarkReader({
         containerRef={articleRef}
         getHighlight={getHighlight}
         onDelete={removeHighlight}
+        onRecolor={(id, color) => { void updateHighlightColor(id, color); }}
         onAddNote={(hl, anchorEl) => setNotePanelState({ highlight: hl, anchorEl })}
         onOpenNote={(hl, anchorEl) => setNotePanelState({ highlight: hl, anchorEl })}
       />

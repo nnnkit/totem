@@ -71,7 +71,6 @@ export interface RequestSyncRequest {
   accountId?: string | null;
   trigger: SyncTrigger;
   localCount: number;
-  requestedMode?: SyncMode;
 }
 
 export interface CompleteSyncRequest {
@@ -99,6 +98,10 @@ export interface DeleteBookmarkRequest {
 export interface FetchTweetDetailRequest {
   type: "FETCH_TWEET_DETAIL";
   tweetId: string;
+}
+
+export interface FetchViewerProfileRequest {
+  type: "FETCH_VIEWER_PROFILE";
 }
 
 export interface BookmarkMutationRequest {
@@ -152,6 +155,7 @@ export type MessageRequest =
   | FetchBookmarksRequest
   | DeleteBookmarkRequest
   | FetchTweetDetailRequest
+  | FetchViewerProfileRequest
   | BookmarkMutationRequest
   | GetBookmarkEventsRequest
   | AckBookmarkEventsRequest

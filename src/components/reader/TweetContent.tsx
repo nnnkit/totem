@@ -17,6 +17,7 @@ import { TweetQuote } from "./TweetQuote";
 import { TweetArticle } from "./TweetArticle";
 import { TweetLinks } from "./TweetLinks";
 import { TweetRecommendations } from "./TweetRecommendations";
+import { TotemLoading } from "../ui/TotemLoading";
 import type { ReaderTweet } from "./types";
 import { resolveTweetBodyVisibility } from "./tweet-body-visibility";
 import type { DetailErrorKind } from "./detail-error";
@@ -370,12 +371,7 @@ export const TweetContent = memo(function TweetContent({
       </div>
 
       {detailLoading && (
-        <div className="mt-8 flex items-center gap-3 py-4 text-sm text-muted">
-          <span className="animate-spin">
-            <div className="size-4 rounded-full border-2 border-accent border-t-transparent" />
-          </span>
-          Loading details...
-        </div>
+        <TotemLoading label="Loading details..." className="mt-8 py-4" />
       )}
 
       {detailError && (

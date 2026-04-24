@@ -1,5 +1,7 @@
 # PRD: Unified Sync Gateway and Request Budgeting
 
+> ⚠️ **Historical PRD (2026-03-03).** References a `requestedMode` parameter on the sync reservation API that was removed in April 2026 — the SW orchestrator now self-selects mode from its own state. See `ARCHITECTURE.md` §6 for the current decision tree. The budgeting and queue ideas below remain relevant for future work.
+
 Last updated: 2026-03-03  
 Owner: Totem extension team  
 Status: Draft for implementation planning

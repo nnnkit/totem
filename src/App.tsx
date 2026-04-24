@@ -29,11 +29,14 @@ import { SettingsModal } from "./components/SettingsModal";
 import { Toast } from "./components/ui/Toast";
 import { Button } from "./components/ui/Button";
 import { OfflineBanner } from "./components/ui/OfflineBanner";
+import { TotemLoading } from "./components/ui/TotemLoading";
+import { resolveReaderErrorView } from "./components/reader/reader-error-view";
 import { useContinueReading } from "./hooks/useContinueReading";
+import { useReaderDetail } from "./hooks/useReaderDetail";
 import {
-  useAppMode,
   useActiveAccountId,
   useAllBookmarks,
+  useBookmarksLoaded,
   useDetailedTweetIds,
   useDisplayBookmarks,
   useIsOffline,
@@ -86,15 +89,6 @@ interface ToastState {
   message: string;
   linkUrl?: string;
   linkLabel?: string;
-}
-
-interface ExternalReaderState {
-  tweetId: string;
-  status: "loading" | "ready" | "error";
-  bookmark: Bookmark | null;
-  thread: ThreadTweet[];
-  error: string | null;
-  mutation: "idle" | "unbookmarking";
 }
 
 type AppView = "home" | "reading";
@@ -171,36 +165,51 @@ function ExternalReaderShell({
         <div className="flex flex-1 flex-col justify-center">
           {status === "loading" ? (
             <div className="rounded-2xl border border-border bg-surface-card p-8">
-              <div className="flex items-center gap-3 text-sm text-muted">
-                <span className="animate-spin">
-                  <span className="block size-4 rounded-full border-2 border-accent border-t-transparent" />
-                </span>
-                Opening this post in Totem...
-              </div>
+              <TotemLoading label="Opening this post in Totem..." />
             </div>
           ) : availability.errorKind === "offline" ? (
             <OfflineBanner onLogin={onLogin} />
           ) : (
-            <div className="rounded-2xl border border-border bg-surface-card p-8">
-              <h1 className="text-balance text-xl font-semibold text-foreground">
-                Couldn't open this post in Totem.
-              </h1>
-              <p className="mt-3 text-pretty text-sm text-muted">
-                {availability.errorKind === "auth"
-                  ? "Your X session is unavailable for tweet detail loading."
-                  : "Totem couldn't fetch the full tweet detail right now."}
-              </p>
-              <div className="mt-6 flex flex-wrap items-center gap-3">
-                <Button variant="secondary" size="sm" onClick={onRetry}>
-                  Retry
-                </Button>
-                {availability.canLogin && (
-                  <Button variant="ghost" size="sm" onClick={onLogin}>
-                    Log in
-                  </Button>
-                )}
-              </div>
-            </div>
+            (() => {
+              const kind =
+                availability.errorKind === "auth" ||
+                availability.errorKind === "rate_limited" ||
+                availability.errorKind === "not_found"
+                  ? availability.errorKind
+                  : "other";
+              const view = resolveReaderErrorView(kind, availability.canLogin);
+              const retryVariant =
+                view.primaryAction === "retry" ? "secondary" : "ghost";
+              const loginVariant =
+                view.primaryAction === "login" ? "secondary" : "ghost";
+              return (
+                <div className="rounded-2xl border border-border bg-surface-card p-8">
+                  <h1 className="text-balance text-xl font-semibold text-foreground">
+                    {view.title}
+                  </h1>
+                  <p className="mt-3 text-pretty text-sm text-muted">
+                    {view.message}
+                  </p>
+                  <div className="mt-6 flex flex-wrap items-center gap-3">
+                    {view.showLogin && (
+                      <Button variant={loginVariant} size="sm" onClick={onLogin}>
+                        Log in
+                      </Button>
+                    )}
+                    {view.showRetry && (
+                      <Button variant={retryVariant} size="sm" onClick={onRetry}>
+                        Retry
+                      </Button>
+                    )}
+                    {view.primaryAction === "view_on_x" && (
+                      <Button variant="secondary" size="sm" href={tweetUrl}>
+                        Open on X
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              );
+            })()
           )}
         </div>
       </div>
@@ -230,8 +239,20 @@ function NewTabRouteApp() {
     allUnread,
     refresh: refreshContinueReading,
   } = useContinueReading(
-    displayBookmarks,
-    `${activeAccountId || "__none__"}:${displayBookmarks.length}:${offlineMode ? "offline" : "online"}`,
+    bookmarks,
+    `${activeAccountId || "__none__"}:${bookmarks.length}:${offlineMode ? "offline" : "online"}`,
+  );
+
+  // In offline mode, hide uncached bookmarks from the Unread tab — clicking
+  // one would fail since we can't fetch detail. Continue Reading is left
+  // intact on purpose: reading-progress rows must survive cache restriction
+  // (invariant #7 in storage-invariants.test.ts).
+  const visibleUnread = useMemo(
+    () =>
+      offlineMode
+        ? allUnread.filter((bookmark) => detailedTweetIds.has(bookmark.tweetId))
+        : allUnread,
+    [offlineMode, allUnread, detailedTweetIds],
   );
 
   const restoreReadingTab = useCallback(() => {
@@ -415,7 +436,7 @@ function NewTabRouteApp() {
     ? (
       <BookmarksList
         continueReadingItems={continueReading}
-        unreadBookmarks={allUnread}
+        unreadBookmarks={visibleUnread}
         activeTab={readingTab}
         onTabChange={handleReadingTabChange}
         onOpenBookmark={openBookmarkFromReading}
@@ -475,18 +496,20 @@ function NewTabRouteApp() {
 
 function ReaderRouteApp() {
   const actions = useRuntimeActions();
-  const appMode = useAppMode();
   const allBookmarks = useAllBookmarks();
   const displayBookmarks = useDisplayBookmarks();
+  const bookmarksLoaded = useBookmarksLoaded();
   const offlineMode = useIsOffline();
+  const { settings } = useSettings();
   const readTweetId = useMemo(() => getReaderTweetId(), []);
   const returnSurface = useMemo(() => getReaderReturnSurface(), []);
   const [toast, setToast] = useState<ToastState | null>(null);
-  const [retryKey, setRetryKey] = useState(0);
   const [shuffleSeed, setShuffleSeed] = useState(0);
   const [localMutation, setLocalMutation] = useState<"idle" | "unbookmarking">("idle");
   const [localBookmarkSnapshot, setLocalBookmarkSnapshot] = useState<Bookmark | null>(null);
-  const [externalReader, setExternalReader] = useState<ExternalReaderState | null>(null);
+  const [externalMutation, setExternalMutation] = useState<"idle" | "unbookmarking">("idle");
+  const [externalUnbookmarkedTweetId, setExternalUnbookmarkedTweetId] =
+    useState<string | null>(null);
 
   const {
     localBookmark,
@@ -497,6 +520,12 @@ function ReaderRouteApp() {
     () =>
       resolveReaderRouteBookmarks(readTweetId, displayBookmarks, allBookmarks),
     [allBookmarks, displayBookmarks, readTweetId],
+  );
+
+  const fetchExternalDetail =
+    Boolean(readTweetId) && !localBookmark && !hiddenBookmark;
+  const { state: readerDetail, refetch: refetchReaderDetail } = useReaderDetail(
+    fetchExternalDetail ? readTweetId : null,
   );
 
   useEffect(() => {
@@ -511,15 +540,16 @@ function ReaderRouteApp() {
       goToNewTab(returnSurface);
       return;
     }
-    if (appMode === "initializing") {
-      return;
-    }
+    // Wait for hydrateCurrentAccount to point IDB at the account DB.
+    // Without this gate, getDb() captures the default "totem" DB and the
+    // progress write is invisible to the account-scoped reads on return.
+    if (!bookmarksLoaded) return;
     if (hiddenBookmark) {
       goToNewTab(returnSurface);
       return;
     }
     ensureReadingProgressExists(readTweetId).catch(() => {});
-  }, [appMode, hiddenBookmark, readTweetId, returnSurface]);
+  }, [bookmarksLoaded, hiddenBookmark, readTweetId, returnSurface]);
 
   useEffect(() => {
     if (localBookmark) {
@@ -528,73 +558,16 @@ function ReaderRouteApp() {
     }
   }, [localBookmark?.tweetId]); // eslint-disable-line react-hooks/exhaustive-deps -- sync snapshot when ID changes, not on every bookmark object update
 
-  useEffect(() => {
-    if (!readTweetId || appMode === "initializing") return;
-    if (localBookmark) {
-      setExternalReader(null);
-      return;
+  const externalBookmark = useMemo(() => {
+    if (readerDetail.status !== "success") return null;
+    if (externalUnbookmarkedTweetId === readerDetail.tweetId) {
+      return { ...readerDetail.data.focalTweet, bookmarked: false };
     }
-    if (hiddenBookmark) {
-      setExternalReader(null);
-      return;
-    }
+    return readerDetail.data.focalTweet;
+  }, [readerDetail, externalUnbookmarkedTweetId]);
 
-    let cancelled = false;
-
-    setExternalReader({
-      tweetId: readTweetId,
-      status: "loading",
-      bookmark: null,
-      thread: [],
-      error: null,
-      mutation: "idle",
-    });
-
-    actions.loadReaderDetail(readTweetId)
-      .then((detail) => {
-        if (cancelled) return;
-        if (!detail.focalTweet) {
-          setExternalReader({
-            tweetId: readTweetId,
-            status: "error",
-            bookmark: null,
-            thread: [],
-            error: "DETAIL_NOT_FOUND",
-            mutation: "idle",
-          });
-          return;
-        }
-
-        setExternalReader({
-          tweetId: readTweetId,
-          status: "ready",
-          bookmark: detail.focalTweet,
-          thread: detail.thread,
-          error: null,
-          mutation: "idle",
-        });
-      })
-      .catch((error) => {
-        if (cancelled) return;
-        setExternalReader({
-          tweetId: readTweetId,
-          status: "error",
-          bookmark: null,
-          thread: [],
-          error: error instanceof Error ? error.message : "DETAIL_ERROR",
-          mutation: "idle",
-        });
-      });
-
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- depends on tweetId not full bookmark object to avoid re-fetching on unrelated property changes
-  }, [actions, appMode, hiddenBookmark, localBookmark?.tweetId, readTweetId, retryKey]);
-
-  const displayBookmark = localBookmark ||
-    localBookmarkSnapshot ||
-    (externalReader?.status === "ready" ? externalReader.bookmark : null);
+  const displayBookmark =
+    localBookmark || localBookmarkSnapshot || externalBookmark;
 
   const relatedBookmarks = useMemo(
     () => pickRelatedBookmarks(displayBookmark, displayBookmarks, 3, shuffleSeed > 0),
@@ -623,9 +596,7 @@ function ReaderRouteApp() {
         bookmarked: false,
       });
     } else {
-      setExternalReader((current) => current?.status === "ready"
-        ? { ...current, mutation: "unbookmarking" }
-        : current);
+      setExternalMutation("unbookmarking");
     }
 
     let apiError: string | undefined;
@@ -647,10 +618,8 @@ function ReaderRouteApp() {
       return;
     }
 
+    setExternalMutation("idle");
     if (apiError) {
-      setExternalReader((current) => current?.status === "ready"
-        ? { ...current, mutation: "idle" }
-        : current);
       setToast({
         message: "Could not remove this bookmark right now.",
         linkUrl: tweetUrl,
@@ -658,28 +627,17 @@ function ReaderRouteApp() {
       });
       return;
     }
-
-    setExternalReader((current) => {
-      if (current?.status !== "ready" || !current.bookmark) return current;
-      return {
-        ...current,
-        mutation: "idle",
-        bookmark: {
-          ...current.bookmark,
-          bookmarked: false,
-        },
-      };
-    });
+    setExternalUnbookmarkedTweetId(tweetId);
   }, [actions, displayBookmark, localBookmark, localBookmarkSnapshot]);
+
+  const unbookmarking =
+    localMutation === "unbookmarking" || externalMutation === "unbookmarking";
 
   const bookmarkAction = !offlineMode && displayBookmark?.bookmarked
     ? {
-      label:
-        localMutation === "unbookmarking" || externalReader?.mutation === "unbookmarking"
-          ? "Removing..."
-          : "Unbookmark",
+      label: unbookmarking ? "Removing..." : "Unbookmark",
       active: true,
-      pending: localMutation === "unbookmarking" || externalReader?.mutation === "unbookmarking",
+      pending: unbookmarking,
       onClick: () => {
         void handleUnbookmark();
       },
@@ -713,14 +671,12 @@ function ReaderRouteApp() {
           bookmarkAction={bookmarkAction}
           onMarkAsRead={markReadingProgressCompleted}
           onMarkAsUnread={markReadingProgressUncompleted}
+          defaultHighlightColor={settings.defaultHighlightColor}
           loadDetail={
-            externalReader?.status === "ready" && externalReader.bookmark
+            readerDetail.status === "success"
               ? async (tweetId) => {
-                if (tweetId === externalReader.tweetId) {
-                  return {
-                    focalTweet: externalReader.bookmark,
-                    thread: externalReader.thread,
-                  };
+                if (tweetId === readerDetail.tweetId) {
+                  return readerDetail.data;
                 }
                 return actions.loadReaderDetail(tweetId);
               }
@@ -743,11 +699,11 @@ function ReaderRouteApp() {
     <>
       <ExternalReaderShell
         tweetId={readTweetId}
-        status={externalReader?.status === "error" ? "error" : "loading"}
-        error={externalReader?.error || null}
+        status={readerDetail.status === "error" ? "error" : "loading"}
+        error={readerDetail.status === "error" ? readerDetail.error : null}
         onBack={handleBack}
         onRetry={() => {
-          setRetryKey((value) => value + 1);
+          refetchReaderDetail();
         }}
         onLogin={() => {
           void actions.startLogin();

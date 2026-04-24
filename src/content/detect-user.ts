@@ -9,7 +9,10 @@
 
 import { parseTwidUserId } from "../lib/sw-pure";
 import type { BookmarkChangeType } from "../types/messages";
-import { CS_ACCOUNT_CONTEXT_ID } from "../lib/storage-keys";
+import {
+  CS_ACCOUNT_CONTEXT_ID,
+  CS_VIEWER_PROFILE,
+} from "../lib/storage-keys";
 
 const MESSAGE_SOURCE = "totem-bookmark-mutation";
 
@@ -29,8 +32,9 @@ if (currentUserId) {
   });
 } else {
   // User identity can disappear on logout; keep account context so the new tab
-  // can still restore offline cache for the last active account.
-  chrome.storage.local.remove("totem_user_id");
+  // can still restore offline cache for the last active account. Drop the
+  // cached viewer profile so stale name/avatar never paints for a logged-out user.
+  chrome.storage.local.remove(["totem_user_id", CS_VIEWER_PROFILE]);
   chrome.runtime
     .sendMessage({
       type: "SESSION_USER_MISSING" as const,
