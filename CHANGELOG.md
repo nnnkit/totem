@@ -2,6 +2,42 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.19] - 2026-04-24
+
+- fix: gate auth trio on twid cookie and hide uncached unread offline
+- feat: plumb viewer-profile fetch via UserByRestId
+- logo: loading variant (shine-breath) + TotemLoading inline wrapper
+- fix: keep activeAccountId and reader detail in sync with hydration
+- highlights: saturated hues back in dark mode, softer peaks + smoother transitions to kill the metal-glint feel
+- highlights: desaturated pastel hues in dark mode to calm the shine
+- highlights: tone down dark-mode peaks to kill the glossy-bead look
+- highlights: dark mode now uses low-alpha tinted wash, body text preserved
+- highlights: match light-mode painterly feel in dark mode with text-shadow backup
+- highlights: polish — padding-inline fade, painterly dark gradients, drop header swatch
+- highlights: phase 6 — remove unused --highlight-bg vars and dead class
+- highlights: phase 5 — default highlight color in settings, seeded into reader session
+- highlights: phase 4 — recolor from popover + header swatch
+- highlights: phase 3 — split-button picker, 4-color gradients, swipe-on animation
+- fix: keep reading-progress rows visible through auth transitions
+- highlights: phase 2 — classic gradient marker rendering
+- highlights: phase 1 — resolver + data-color attr, default 'classic'
+- fix: portal tweet button tooltip to body with viewport-aware flip
+- diag: lower TOTEM-DIAG traces from console.log to console.debug
+- sync: scope localCount=0 full-seed to manual trigger; clear retry on auth flip; await closeDb in reset ack
+- sync: dedupe blocked-reason logs and skip maybeStartAutomaticSync when retry pending
+- sync: bypass fresh_cache for auto when last completion wasn't success (skip/fail)
+- sync: force full on manual trigger when localCount=0; seed-backoff and auto-reclaim hardening
+- reset: broadcast CS_RESET_EPOCH so open tabs release IDB handles before deleteDatabase
+- fix: lift Open-in-Totem tooltip above tweet content and flip it above the button
+- fix: address review feedback on bookmark export
+- fix: address PR review — remove stray docs, reuse export pipeline, harden YAML
+- feat: add export-all bookmarks button to reading list
+- fix: include full thread in reader export with cleaner separators
+- fix: only inject open-in-totem button on main tweet of thread pages
+- fix: link exported videos to x.com instead of video.twimg.com
+- fix: double-print bug, wrapInlineCode fence, and download anchor
+- feat: add download and copy for bookmarks
+
 ## [1.1.18] - 2026-03-30
 
 - fix: keep plain URLs inline in tweet text like Twitter
