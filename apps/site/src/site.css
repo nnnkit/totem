@@ -695,3 +695,636 @@
     }
   }
 }
+
+/* ── How-it-works page (transit-style architecture map) ── */
+
+@layer components {
+  .transit-main {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+  }
+
+  .transit-bg {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background:
+      radial-gradient(ellipse 80% 50% at 20% 0%, rgb(186 230 253 / 0.55), transparent 60%),
+      radial-gradient(ellipse 60% 40% at 80% 30%, rgb(221 214 254 / 0.5), transparent 65%),
+      radial-gradient(ellipse 70% 50% at 50% 90%, rgb(186 230 253 / 0.35), transparent 60%),
+      linear-gradient(180deg, rgb(248 250 252) 0%, rgb(241 245 249) 100%);
+  }
+
+  .transit-container {
+    margin: 0 auto;
+    width: 100%;
+    max-width: 80rem;
+    padding: 4rem 1.5rem 5rem;
+  }
+
+  @media (min-width: 48rem) {
+    .transit-container {
+      padding: 5rem 2rem 6rem;
+    }
+  }
+
+  .transit-intro {
+    margin-bottom: 1.75rem;
+  }
+
+  .transit-legend {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1.25rem 1.5rem;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1.25rem;
+    border-radius: 999px;
+    background: rgb(255 255 255 / 0.6);
+    border: 1px solid rgb(255 255 255 / 0.7);
+    backdrop-filter: blur(10px);
+    width: fit-content;
+  }
+
+  .transit-legend-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgb(100 116 139);
+  }
+
+  .transit-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.3rem 0.65rem;
+    margin: -0.3rem -0.3rem;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    background: transparent;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: rgb(51 65 85);
+    cursor: pointer;
+    transition: background-color 180ms ease, border-color 180ms ease,
+      color 180ms ease;
+  }
+
+  .transit-legend-item:hover {
+    background: rgb(255 255 255 / 0.6);
+  }
+
+  .transit-legend-item.is-active {
+    background: rgb(15 23 42);
+    color: rgb(255 255 255);
+    border-color: rgb(15 23 42);
+  }
+
+  .transit-legend-item:focus-visible {
+    outline: none;
+    border-color: rgb(15 23 42 / 0.3);
+  }
+
+  .transit-legend-dot {
+    width: 0.6rem;
+    height: 0.6rem;
+    border-radius: 999px;
+  }
+
+  .transit-legend-clear {
+    margin-left: 0.25rem;
+    padding: 0.3rem 0.7rem;
+    border: 1px solid rgb(226 232 240);
+    background: rgb(255 255 255 / 0.6);
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: rgb(71 85 105);
+    cursor: pointer;
+    transition: background-color 180ms ease, color 180ms ease;
+  }
+
+  .transit-legend-clear:hover {
+    background: rgb(15 23 42);
+    color: rgb(255 255 255);
+    border-color: rgb(15 23 42);
+  }
+
+  /* Map shell — map + side panel */
+
+  .transit-shell {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+    /* Both columns share the same height — whichever has taller content
+       sets the row height; the map card centers its SVG inside that. */
+    align-items: stretch;
+  }
+
+  @media (min-width: 64rem) {
+    .transit-shell {
+      grid-template-columns: minmax(0, 1fr) 22rem;
+    }
+  }
+
+  .transit-map {
+    position: relative;
+    overflow: hidden;
+    border-radius: 0.875rem;
+    background: rgb(255 255 255 / 0.85);
+    border: 1px solid rgb(255 255 255);
+    box-shadow:
+      0 1px 0 rgb(255 255 255 / 0.6) inset,
+      0 24px 48px -24px rgb(15 23 42 / 0.18),
+      0 4px 12px -6px rgb(15 23 42 / 0.08);
+    backdrop-filter: blur(18px);
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .transit-svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    /* Smaller floor than before — the card now stretches to match the panel's
+       height, so the SVG just needs a sensible minimum. */
+    min-height: 420px;
+  }
+
+  .transit-path {
+    transition: opacity 220ms ease;
+    pointer-events: none;
+  }
+
+  .transit-station {
+    cursor: pointer;
+    outline: none;
+  }
+
+  .transit-station circle {
+    transition: stroke-width 200ms ease, transform 200ms ease;
+  }
+
+  .transit-station:hover circle:not(.transit-station-glow) {
+    stroke-width: 3.5;
+  }
+
+  .transit-station:focus-visible > circle:not(.transit-station-glow) {
+    stroke: rgb(15 23 42);
+    stroke-width: 3.5;
+  }
+
+  .transit-station-label {
+    font-family: var(--font-site-sans);
+    font-size: 11px;
+    font-weight: 600;
+    fill: rgb(30 41 59);
+    pointer-events: none;
+  }
+
+  .transit-station.is-active .transit-station-label {
+    fill: rgb(15 23 42);
+    font-weight: 700;
+  }
+
+  .transit-station-sub {
+    font-family: var(--font-site-sans);
+    font-size: 9.5px;
+    font-weight: 500;
+    fill: rgb(100 116 139);
+    pointer-events: none;
+  }
+
+  .transit-station.is-in-flow > circle:not(.transit-station-glow) {
+    stroke-width: 3.5;
+  }
+
+  .transit-station.is-dimmed {
+    opacity: 0.28;
+  }
+
+  .transit-station.is-dimmed .transit-station-label,
+  .transit-station.is-dimmed .transit-station-sub {
+    fill: rgb(148 163 184);
+  }
+
+  /* Side panel */
+
+  .transit-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    padding: 1.5rem;
+    background: rgb(255 255 255 / 0.95);
+    border: 1px solid rgb(255 255 255);
+    /* Match the map card — moderate radius (less rounded than before). */
+    border-radius: 0.875rem;
+    box-shadow:
+      0 1px 0 rgb(255 255 255 / 0.6) inset,
+      0 18px 40px -22px rgb(15 23 42 / 0.18);
+    backdrop-filter: blur(18px);
+    /* Stretch to share row height with the map card. Sticky was nice but
+       conflicts with stretch — visual height parity wins. */
+  }
+
+  .transit-panel-header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgb(226 232 240);
+  }
+
+  .transit-panel-eyebrow {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgb(100 116 139);
+  }
+
+  .transit-panel-title {
+    margin: 0;
+    font-family: var(--font-site-serif);
+    font-size: 1.45rem;
+    line-height: 1.2;
+    color: rgb(15 23 42);
+    letter-spacing: -0.01em;
+  }
+
+  .transit-panel-subtitle {
+    margin: 0;
+    font-size: 0.85rem;
+    color: rgb(100 116 139);
+  }
+
+  .transit-panel-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .transit-panel-detail {
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.65;
+    color: rgb(51 65 85);
+    text-wrap: pretty;
+  }
+
+  .transit-panel-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.85rem;
+    margin: 0;
+    padding-top: 1rem;
+    border-top: 1px solid rgb(226 232 240);
+  }
+
+  .transit-panel-grid div {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .transit-panel-grid dt {
+    margin: 0;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgb(100 116 139);
+  }
+
+  .transit-panel-grid dd {
+    margin: 0;
+    font-size: 0.85rem;
+    line-height: 1.55;
+    color: rgb(30 41 59);
+  }
+
+  .transit-panel-label {
+    margin: 0;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgb(100 116 139);
+  }
+
+  .transit-panel-files,
+  .transit-panel-keys {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+
+  .transit-panel-files li code,
+  .transit-panel-keys li code {
+    display: inline-block;
+    padding: 0.25rem 0.55rem;
+    background: rgb(15 23 42 / 0.04);
+    border: 1px solid rgb(15 23 42 / 0.06);
+    border-radius: 0.4rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.74rem;
+    line-height: 1.4;
+    color: rgb(30 41 59);
+    word-break: break-all;
+  }
+
+  .transit-panel-keys li code {
+    color: rgb(126 34 206);
+    background: rgb(245 243 255);
+    border-color: rgb(233 213 255);
+  }
+
+  .transit-panel-reads {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    font-size: 0.82rem;
+    line-height: 1.55;
+    color: rgb(51 65 85);
+  }
+
+  .transit-panel-reads li::before {
+    content: "·";
+    color: rgb(148 163 184);
+    margin-right: 0.4rem;
+  }
+
+  .transit-panel-routes {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+  }
+
+  .transit-panel-routes li {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.4rem 0.7rem;
+    background: rgb(248 250 252);
+    border: 1px solid rgb(226 232 240);
+    border-radius: 999px;
+    font-size: 0.82rem;
+    color: rgb(30 41 59);
+    width: fit-content;
+  }
+
+  .transit-panel-route-dot {
+    width: 0.55rem;
+    height: 0.55rem;
+    border-radius: 999px;
+  }
+
+  .transit-panel-neighbors {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+
+  .transit-panel-neighbor {
+    appearance: none;
+    background: transparent;
+    border: 1px solid rgb(226 232 240);
+    border-radius: 999px;
+    padding: 0.35rem 0.7rem;
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: rgb(51 65 85);
+    cursor: pointer;
+    transition: background-color 180ms ease, border-color 180ms ease,
+      color 180ms ease;
+  }
+
+  .transit-panel-neighbor:hover,
+  .transit-panel-neighbor:focus-visible {
+    outline: none;
+    background: rgb(15 23 42);
+    border-color: rgb(15 23 42);
+    color: rgb(255 255 255);
+  }
+
+  .transit-panel-neighbor span {
+    color: rgb(148 163 184);
+    margin-right: 0.3rem;
+  }
+
+  .transit-panel-neighbor:hover span,
+  .transit-panel-neighbor:focus-visible span {
+    color: rgb(255 255 255 / 0.6);
+  }
+
+  /* Flows panel */
+
+  .transit-flows {
+    margin-top: 2.5rem;
+    padding: 1.75rem;
+    background: rgb(255 255 255 / 0.85);
+    border: 1px solid rgb(255 255 255);
+    border-radius: 1.25rem;
+    box-shadow: 0 18px 40px -22px rgb(15 23 42 / 0.18);
+    backdrop-filter: blur(18px);
+  }
+
+  .transit-flows-header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .transit-flows-eyebrow {
+    margin: 0;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgb(100 116 139);
+  }
+
+  .transit-flows-title {
+    margin: 0;
+    font-family: var(--font-site-serif);
+    font-size: 1.4rem;
+    line-height: 1.25;
+    color: rgb(15 23 42);
+  }
+
+  .transit-flows-summary {
+    margin: 0;
+    font-size: 0.9rem;
+    color: rgb(71 85 105);
+    line-height: 1.55;
+    max-width: 42rem;
+  }
+
+  .transit-flows-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    padding-bottom: 1.25rem;
+    margin-bottom: 1.25rem;
+    border-bottom: 1px solid rgb(226 232 240);
+  }
+
+  .transit-flow-tab {
+    appearance: none;
+    padding: 0.5rem 0.95rem;
+    border: 1px solid rgb(226 232 240);
+    background: rgb(255 255 255);
+    border-radius: 999px;
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: rgb(51 65 85);
+    cursor: pointer;
+    transition: background-color 180ms ease, border-color 180ms ease,
+      color 180ms ease;
+  }
+
+  .transit-flow-tab:hover {
+    border-color: rgb(15 23 42 / 0.3);
+    color: rgb(15 23 42);
+  }
+
+  .transit-flow-tab.is-active {
+    background: rgb(15 23 42);
+    color: rgb(255 255 255);
+    border-color: rgb(15 23 42);
+  }
+
+  .transit-flow-steps {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.35rem;
+  }
+
+  @media (min-width: 56rem) {
+    .transit-flow-steps {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.4rem 1rem;
+    }
+  }
+
+  .transit-flow-step {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.85rem;
+    width: 100%;
+    text-align: left;
+    padding: 0.7rem 0.9rem;
+    border: 1px solid rgb(226 232 240);
+    border-radius: 0.7rem;
+    background: rgb(255 255 255);
+    cursor: pointer;
+    transition: background-color 180ms ease, border-color 180ms ease,
+      transform 180ms ease;
+  }
+
+  .transit-flow-step:hover {
+    border-color: rgb(15 23 42 / 0.25);
+  }
+
+  .transit-flow-step.is-current {
+    background: rgb(15 23 42);
+    border-color: rgb(15 23 42);
+  }
+
+  .transit-flow-step-num {
+    font-family: var(--font-site-sans);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: rgb(148 163 184);
+    align-self: start;
+    padding-top: 0.15rem;
+  }
+
+  .transit-flow-step.is-current .transit-flow-step-num {
+    color: rgb(255 255 255 / 0.6);
+  }
+
+  .transit-flow-step-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+
+  .transit-flow-step-station {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: rgb(15 23 42);
+    line-height: 1.25;
+  }
+
+  .transit-flow-step.is-current .transit-flow-step-station {
+    color: rgb(255 255 255);
+  }
+
+  .transit-flow-step-note {
+    font-size: 0.78rem;
+    line-height: 1.5;
+    color: rgb(71 85 105);
+  }
+
+  .transit-flow-step.is-current .transit-flow-step-note {
+    color: rgb(226 232 240);
+  }
+
+  .transit-flow-footer {
+    margin-top: 1rem;
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .transit-flow-exit {
+    appearance: none;
+    background: transparent;
+    border: 1px solid rgb(226 232 240);
+    border-radius: 999px;
+    padding: 0.4rem 0.95rem;
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: rgb(71 85 105);
+    cursor: pointer;
+    transition: background-color 180ms ease, color 180ms ease,
+      border-color 180ms ease;
+  }
+
+  .transit-flow-exit:hover {
+    background: rgb(15 23 42);
+    color: rgb(255 255 255);
+    border-color: rgb(15 23 42);
+  }
+
+  /* Reduced motion */
+
+  @media (prefers-reduced-motion: reduce) {
+    .transit-path,
+    .transit-station circle,
+    .transit-panel-neighbor {
+      transition: none;
+    }
+  }
+}

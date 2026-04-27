@@ -12,11 +12,15 @@ import {
 export type FeatureItem = {
   title: string;
   body: string;
-  image?: string;
-  alt?: string;
-  wide?: boolean;
-  /** Inline SVG illustration instead of image */
-  illustration?: "open-in-totem";
+  image: string;
+  alt: string;
+};
+
+export type PrivacyFeatureCard = {
+  title: string;
+  body: string;
+  bullets: readonly string[];
+  linkLabel: string;
 };
 
 export type FAQItem = {
@@ -48,6 +52,51 @@ export type PrivacyPermission = {
   access: string;
 };
 
+export type TransitRoute = {
+  id: string;
+  name: string;
+  color: string;
+  description: string;
+};
+
+export type TransitStation = {
+  id: string;
+  name: string;
+  short: string;
+  x: number;
+  y: number;
+  kind: "source" | "hub" | "store" | "ui" | "policy";
+  routes: string[];
+  neighbors: string[];
+  /** Files in the repo that implement this station. */
+  files: string[];
+  /** Storage keys (or schemas) this station is the writer for. May be empty. */
+  writes: string[];
+  /** Things this station reads. May be empty. */
+  reads: string[];
+  detail: string;
+};
+
+export type TransitSegment = {
+  route: string;
+  /** Ordered list of station ids this segment passes through. */
+  path: string[];
+  /** Optional one-line caption for what travels along this segment. */
+  label?: string;
+};
+
+export type TransitFlowStep = {
+  stationId: string;
+  note: string;
+};
+
+export type TransitFlow = {
+  id: string;
+  label: string;
+  summary: string;
+  steps: TransitFlowStep[];
+};
+
 const chromeWebStoreInstallUrl =
   "https://chromewebstore.google.com/detail/acpkgdfhoaalmnhjifhneghcgfnjkglo?utm_source=usetotem.xyz&utm_medium=referral&utm_campaign=site_install";
 const demoVideoEmbedUrl =
@@ -57,40 +106,51 @@ const hasWebStoreInstall = Boolean(chromeWebStoreInstallUrl);
 const installUrl = hasWebStoreInstall
   ? chromeWebStoreInstallUrl
   : githubReleaseUrl;
-const installButtonLabel = hasWebStoreInstall
-  ? "Install Totem"
-  : "Install Totem";
-const featureItems: FeatureItem[] = [
-  {
-    title: "Clean reader.",
-    body: "Every tweet and thread in a focused layout. No sidebar, no suggestions, no distractions.",
-    image: cleanReaderImage,
-    alt: "Totem clean reader view showing saved X bookmarks without feed distractions.",
-  },
-  {
-    title: "Pick up where you left off.",
-    body: "Unread. In progress. Done. Your queue stays organized so you don't have to.",
-    image: readingStatesImage,
-    alt: "Totem reading states showing unread, continue, and read progress.",
-  },
-  {
-    title: "Highlight. Note. Move on.",
-    body: "Annotate anything. Everything stays on your device.",
-    image: highlightsNotesImage,
-    alt: "Totem highlights and notes feature in the reader.",
-  },
-  {
-    title: "Works offline.",
-    body: "Bookmarks load once and stay cached. Plane, tunnel, wherever.",
-    image: worksOfflineImage,
-    alt: "Totem interface running with offline-ready cached reading queue.",
-  },
-];
+const installButtonLabel = "Add to Chrome — Free";
+const featureHero: FeatureItem = {
+  title: "Pick up where you left off.",
+  body: "Unread. In progress. Done. Your queue tracks reading state across every saved post — even mid-thread, even after a week away.",
+  image: readingStatesImage,
+  alt: "Totem reading list showing unread, in-progress, and finished tabs with per-post progress.",
+};
+
+const featureHighlights: FeatureItem = {
+  title: "Highlight. Note. Done.",
+  body: "Drag-select any tweet. Add a note. Saved to this device, indexed to the post.",
+  image: highlightsNotesImage,
+  alt: "Totem reader with a passage highlighted and an inline note attached.",
+};
+
+const featureClean: FeatureItem = {
+  title: "No sidebar. No feed.",
+  body: "Every saved post in a focused reader. Just the writing — no trending, no ads, no rabbit hole.",
+  image: cleanReaderImage,
+  alt: "Totem clean reader rendering a saved X thread without feed chrome.",
+};
+
+const featureOffline: FeatureItem = {
+  title: "Works on a plane.",
+  body: "Bookmarks cache locally on first sync. Read 200 saved posts with zero signal.",
+  image: worksOfflineImage,
+  alt: "Totem reading list operating in offline mode with cached bookmarks visible.",
+};
+
+const featurePrivacy: PrivacyFeatureCard = {
+  title: "No account. No tracking.",
+  body: "Totem reads from your existing X session. Notes, highlights, and reading state stay in your browser — there's no Totem server to leak them.",
+  bullets: [
+    "No password — uses the X login you already have",
+    "No backend — nothing to sync, nothing to breach",
+    "No telemetry — we can't see what you read",
+  ],
+  linkLabel: "Read the privacy policy →",
+};
 
 export const SITE_LINKS = {
   installUrl,
   demoVideoEmbedUrl,
   demoPageUrl: "/demo/",
+  howItWorksUrl: "/how-it-works/",
   privacyUrl: "/privacy/",
   supportEmail: SUPPORT_EMAIL,
   supportEmailUrl: SUPPORT_EMAIL_URL,
@@ -103,7 +163,7 @@ export const SITE_COPY = {
   header: {
     brandName: "Totem",
     brandAriaLabel: "Totem homepage",
-    installLabel: "Install Totem",
+    installLabel: "Add to Chrome",
     demoLabel: "See Demo",
     navAriaLabel: "Primary",
   },
@@ -136,7 +196,11 @@ export const SITE_COPY = {
       eyebrow: "Features",
       title: "Built for reading, not scrolling.",
       description: "Everything you need. Nothing you don't.",
-      items: featureItems,
+      hero: featureHero,
+      highlights: featureHighlights,
+      clean: featureClean,
+      offline: featureOffline,
+      privacy: featurePrivacy,
     },
     faq: {
       title: "FAQ",
@@ -148,61 +212,61 @@ export const SITE_COPY = {
         {
           question: "Does Totem need my X password?",
           answer:
-            "No. Totem uses your existing X account in the same browser profile, so just log in to X there and open it once.",
+            "No. It uses your existing X session in the same browser profile — just log in to X there and open a new tab.",
         },
         {
           question: "Does Totem upload my notes or reading history anywhere?",
           answer:
-            "No. Totem has no backend of its own, and your highlights, notes, and reading progress stay on this device.",
+            "No. There is no backend — your highlights, notes, and reading progress stay on this device.",
         },
         {
           question: "Why don’t my bookmarks appear right away?",
           answer:
-            "First sync can take a moment because Totem has to connect to your X account and build the local reading queue. Click Sync and give it a minute before trying again.",
+            "The first sync needs a moment to connect to your X account and build the local reading queue. Click Sync and give it a minute before trying again.",
         },
         {
           question:
             "Why does sync say it is already running or temporarily paused?",
           answer:
-            "Totem spaces sync attempts so it does not start duplicate work or hit X too quickly. Wait a minute, then try Sync again.",
+            "Sync attempts are spaced out to avoid duplicate work or hitting X too quickly. Wait a minute, then try Sync again.",
         },
         {
           question: "Why isn’t Totem opening on every new tab?",
           answer:
-            "Another extension, another browser profile, or a managed browser setting may be taking over your new tab page. Check that Totem is enabled in this profile and disable any other new-tab extensions.",
+            "Another extension, another browser profile, or a managed browser setting may be taking over your new tab page. Make sure the extension is enabled in this profile and disable any other new-tab extensions.",
         },
         {
           question: "Why does it work in one browser profile but not another?",
           answer:
-            "Extensions, X logins, and optional permissions are separate per browser profile. Install Totem and log in to X in the exact profile where you want to use it.",
+            "Extensions, X logins, and optional permissions are separate per browser profile. Install and log in to X in the exact profile where you want to use it.",
         },
         {
           question: "Why am I seeing “Offline mode”?",
           answer:
-            "Totem is showing bookmarks already saved on this device because you are logged out of X.",
+            "You are logged out of X, so only bookmarks already saved on this device are visible.",
         },
         {
           question:
             "What happens to my highlights, notes, and read state if I log out of X?",
           answer:
-            "Your reading state, highlights and notes will stays on the device. You can access it until you reset local data.",
+            "Your reading state, highlights, and notes stay on the device. You can access them until you reset local data.",
         },
         {
           question:
             "Why did the browser ask for permission when I turned on Quick Links?",
           answer:
-            "Quick Links uses your browser’s top sites and favicon access, so the browser asks before Totem can show that data.",
+            "Quick Links uses your browser’s top sites and favicon access, so the browser asks before that data can be shown.",
         },
         {
           question:
             "If I turn a feature off, does the browser revoke that permission automatically?",
           answer:
-            "No. Turning the feature off stops Totem from using it, but the browser keeps the permission until you remove it in extension settings.",
+            "No. Turning the feature off stops it from being used, but the browser keeps the permission until you remove it in extension settings.",
         },
         {
           question: "How do I reset Totem on this device?",
           answer:
-            "Open Settings in the new tab page, choose Reset local data, then confirm the reset. Remember you will loose all the local state like highlights, notes and reading status.",
+            "Open Settings in the new tab page, choose Reset local data, then confirm. Note that you will lose all local state like highlights, notes, and reading status.",
         },
         {
           question: "What does Reset local data delete?",
@@ -212,12 +276,12 @@ export const SITE_COPY = {
         {
           question: "Why did my highlights, notes, or read progress disappear?",
           answer:
-            "That usually means Totem was reset, you changed browser profiles, or you are looking on a different device.",
+            "That usually means local data was reset, you changed browser profiles, or you are looking on a different device.",
         },
         {
           question: "What should I do if Totem looks stuck?",
           answer:
-            "Open X once, return to Totem, and try Sync again. If it still does not recover, use Reset local data.",
+            "Open X once, come back, and try Sync again. If it still does not recover, use Reset local data.",
         },
       ] satisfies FAQItem[],
       finalCtaTitle: "Stop saving. Start reading.",
@@ -383,5 +447,385 @@ export const SITE_COPY = {
   demoPage: {
     loadingEyebrow: "Totem Demo",
     loadingText: "Loading preview...",
+  },
+  howItWorks: {
+    eyebrow: "How it works",
+    title: "How Totem works.",
+    intro:
+      "Each station is a real module in the codebase. Each line is a real path data takes. Click a station for its files and storage keys, click a line to isolate it, or pick a flow to walk through a real interaction.",
+    legendTitle: "Lines",
+    bookmarkBaseId: "service-worker",
+    routes: [
+      {
+        id: "auth",
+        name: "Auth Line",
+        color: "#ef4444",
+        description:
+          "User identity and auth headers, captured passively from your own x.com traffic.",
+      },
+      {
+        id: "sync",
+        name: "Sync Line",
+        color: "#3b82f6",
+        description:
+          "Manual / scheduled sync. Service worker is the single writer for sync state.",
+      },
+      {
+        id: "render",
+        name: "Render Line",
+        color: "#10b981",
+        description:
+          "IndexedDB hydrates the runtime store, which feeds the new-tab UI.",
+      },
+      {
+        id: "reader",
+        name: "Reader Line",
+        color: "#8b5cf6",
+        description:
+          "The reader page reads tweet details and writes highlights/notes back to IndexedDB.",
+      },
+    ] satisfies TransitRoute[],
+    stations: [
+      {
+        id: "x-session",
+        name: "x.com",
+        short: "your X session",
+        x: 110,
+        y: 260,
+        kind: "source",
+        routes: ["auth", "sync"],
+        neighbors: ["detect-user", "service-worker"],
+        files: [],
+        writes: [],
+        reads: [],
+        detail:
+          "The session you already have in this browser profile. Totem never asks for a password — it reuses the cookies, CSRF token, and headers attached to your own requests.",
+      },
+      {
+        id: "detect-user",
+        name: "detect-user",
+        short: "content script",
+        x: 280,
+        y: 180,
+        kind: "policy",
+        routes: ["auth"],
+        neighbors: ["x-session", "chrome-storage", "service-worker"],
+        files: ["src/content/detect-user.ts"],
+        writes: ["totem_user_id", "CS_ACCOUNT_CONTEXT_ID"],
+        reads: ["twid cookie on x.com"],
+        detail:
+          "Runs at document_start in an isolated world on x.com. Parses the twid cookie, scopes the local cache to that account, and relays bookmark mutation events from the page to the service worker.",
+      },
+      {
+        id: "service-worker",
+        name: "Service Worker",
+        short: "MV3 background",
+        x: 460,
+        y: 260,
+        kind: "hub",
+        routes: ["auth", "sync"],
+        neighbors: ["x-session", "detect-user", "chrome-storage", "runtime-store"],
+        files: [
+          "src/service-worker/index.ts",
+          "src/service-worker/auth.ts",
+          "src/service-worker/sync.ts",
+          "src/service-worker/api-proxy.ts",
+          "src/service-worker/query-id.ts",
+          "src/service-worker/events.ts",
+        ],
+        writes: [
+          "totem_auth_headers",
+          "totem_auth_state",
+          "totem_sync_orchestrator_state",
+          "totem_runtime_state_v2",
+          "totem_graphql_catalog",
+        ],
+        reads: ["x.com webRequest traffic", "messages from runtime"],
+        detail:
+          "The hub. webRequest captures auth headers from x.com/i/api/graphql/* traffic. sync.ts hands out a sync lease and writes orchestrator state. api-proxy.ts makes the actual GraphQL calls on the runtime's behalf. It is the single writer for every sync and runtime-snapshot key.",
+      },
+      {
+        id: "chrome-storage",
+        name: "chrome.storage",
+        short: "reactive bus",
+        x: 460,
+        y: 410,
+        kind: "store",
+        routes: ["auth", "sync"],
+        neighbors: ["service-worker", "detect-user", "runtime-store"],
+        files: ["src/lib/storage-keys.ts", "src/service-worker/storage-keys-sw.ts"],
+        writes: [],
+        reads: ["pushes from the service worker and content script"],
+        detail:
+          "Holds auth headers, the runtime snapshot, sync orchestrator state, captured bookmark events, and the GraphQL query-id catalog. The runtime never writes here — it subscribes to chrome.storage.onChanged so cross-tab updates land without re-running boot.",
+      },
+      {
+        id: "indexeddb",
+        name: "IndexedDB",
+        short: "account-scoped",
+        x: 660,
+        y: 260,
+        kind: "store",
+        routes: ["sync", "render", "reader"],
+        neighbors: ["runtime-store", "reader"],
+        files: ["src/db/index.ts"],
+        writes: [],
+        reads: ["writes from runtime-store and reader actions"],
+        detail:
+          "Per-account database (totem_acct_<id>) with four stores: bookmarks, tweet_details, reading_progress, highlights. All durable reading state lives here. The runtime opens and closes handles in response to account-context changes broadcast over chrome.storage.",
+      },
+      {
+        id: "runtime-store",
+        name: "Runtime Store",
+        short: "Zustand",
+        x: 830,
+        y: 260,
+        kind: "hub",
+        routes: ["sync", "render", "reader"],
+        neighbors: ["service-worker", "chrome-storage", "indexeddb", "new-tab", "reader"],
+        files: [
+          "src/stores/runtime-store.ts",
+          "src/stores/selectors.ts",
+          "src/stores/prefetch-controller.ts",
+          "src/runtime/RuntimeProvider.tsx",
+        ],
+        writes: ["IndexedDB stores (bookmarks, tweet_details, reading_progress, highlights)"],
+        reads: ["chrome.storage runtime snapshot", "IndexedDB on boot"],
+        detail:
+          "A single Zustand store. Holds nothing persistent — auth comes from the SW snapshot, data is hydrated from IndexedDB on boot. Components subscribe through selectors. RuntimeProvider runs the boot, heartbeat, and chrome.storage.onChanged plumbing.",
+      },
+      {
+        id: "new-tab",
+        name: "New Tab",
+        short: "newtab.html",
+        x: 990,
+        y: 170,
+        kind: "ui",
+        routes: ["render"],
+        neighbors: ["runtime-store"],
+        files: [
+          "newtab.html",
+          "src/components/NewTabHome.tsx",
+          "src/components/BookmarksList.tsx",
+        ],
+        writes: [],
+        reads: ["selectors on the runtime store"],
+        detail:
+          "The new-tab page. Renders home, search, the virtualized reading list, and the sync footer. Reads only from selectors — never directly from IndexedDB or chrome.storage.",
+      },
+      {
+        id: "reader",
+        name: "Reader",
+        short: "reader.html",
+        x: 990,
+        y: 350,
+        kind: "ui",
+        routes: ["reader"],
+        neighbors: ["runtime-store", "indexeddb"],
+        files: [
+          "reader.html",
+          "src/components/BookmarkReader.tsx",
+          "src/hooks/useHighlights.ts",
+          "src/hooks/useReadingProgress.ts",
+        ],
+        writes: [],
+        reads: ["tweet detail and highlights from IndexedDB (via runtime store)"],
+        detail:
+          "Separate page, not an overlay. Drag to highlight, type to annotate. Highlights and reading progress flow back through useHighlights/useReadingProgress, which call runtime-store actions that persist to IndexedDB.",
+      },
+    ] satisfies TransitStation[],
+    segments: [
+      // Auth Line — passive identity + header capture
+      {
+        route: "auth",
+        path: ["x-session", "detect-user", "chrome-storage"],
+        label: "twid cookie → totem_user_id",
+      },
+      {
+        route: "auth",
+        path: ["x-session", "service-worker", "chrome-storage"],
+        label: "webRequest → totem_auth_headers",
+      },
+      // Sync Line — runtime asks SW, SW calls x.com, runtime writes IDB
+      {
+        route: "sync",
+        path: ["new-tab", "runtime-store", "service-worker"],
+        label: "reserveSyncRun()",
+      },
+      {
+        route: "sync",
+        path: ["service-worker", "x-session"],
+        label: "api-proxy GraphQL fetch",
+      },
+      {
+        route: "sync",
+        path: ["service-worker", "chrome-storage"],
+        label: "totem_sync_orchestrator_state",
+      },
+      {
+        route: "sync",
+        path: ["runtime-store", "indexeddb"],
+        label: "upsertBookmarks",
+      },
+      // Render Line — IDB → store → UI
+      {
+        route: "render",
+        path: ["indexeddb", "runtime-store", "new-tab"],
+        label: "hydrate + selectors",
+      },
+      // Reader Line — UI → reader → store → IDB
+      {
+        route: "reader",
+        path: ["new-tab", "reader"],
+        label: "open in reader.html",
+      },
+      {
+        route: "reader",
+        path: ["reader", "runtime-store", "indexeddb"],
+        label: "saveHighlight / saveReadingProgress",
+      },
+    ] satisfies TransitSegment[],
+    flows: [
+      {
+        id: "first-sync",
+        label: "First sync",
+        summary:
+          "You sign into x.com, open a new tab, and Totem builds the local queue from scratch.",
+        steps: [
+          {
+            stationId: "x-session",
+            note: "You sign in to x.com in this profile.",
+          },
+          {
+            stationId: "detect-user",
+            note: "Content script reads the twid cookie and writes totem_user_id.",
+          },
+          {
+            stationId: "service-worker",
+            note: "webRequest captures auth headers; query-id discovers GraphQL operation IDs from real traffic.",
+          },
+          {
+            stationId: "chrome-storage",
+            note: "totem_auth_headers, totem_auth_state, and totem_runtime_state_v2 land here.",
+          },
+          {
+            stationId: "runtime-store",
+            note: "On new-tab boot the runtime calls reserveSyncRun(); SW returns mode=full because lastFullSyncAt is 0.",
+          },
+          {
+            stationId: "indexeddb",
+            note: "Pages of bookmarks are reconciled and persisted to the account-scoped DB.",
+          },
+          {
+            stationId: "new-tab",
+            note: "Reading list renders. Prefetch starts pulling tweet details in the background.",
+          },
+        ],
+      },
+      {
+        id: "open-tab",
+        label: "Open a new tab",
+        summary:
+          "You already have data. Opening a new tab should never block on the network.",
+        steps: [
+          {
+            stationId: "new-tab",
+            note: "newtab.html mounts. RuntimeProvider runs boot().",
+          },
+          {
+            stationId: "chrome-storage",
+            note: "checkAuth() reads the runtime snapshot pushed by the service worker.",
+          },
+          {
+            stationId: "indexeddb",
+            note: "setActiveAccountId() opens the right DB; bookmarks and detail IDs are hydrated.",
+          },
+          {
+            stationId: "runtime-store",
+            note: "Selectors derive the runtime mode (online_ready or offline_cached).",
+          },
+          {
+            stationId: "new-tab",
+            note: "List renders before any network call returns.",
+          },
+        ],
+      },
+      {
+        id: "sync-now",
+        label: "Manual sync",
+        summary:
+          "You click Sync. The SW gates concurrency, paginates X, and the runtime writes the diff.",
+        steps: [
+          {
+            stationId: "new-tab",
+            note: "actions.sync() is called from the footer button.",
+          },
+          {
+            stationId: "service-worker",
+            note: "reserveSyncRun() returns a lease + mode=incremental (lastFullSyncAt > 0).",
+          },
+          {
+            stationId: "x-session",
+            note: "api-proxy makes authenticated GraphQL calls using captured headers + query IDs.",
+          },
+          {
+            stationId: "indexeddb",
+            note: "reconcile.ts upserts new bookmarks and tombstones removed ones.",
+          },
+          {
+            stationId: "chrome-storage",
+            note: "completeSyncRun writes lastSuccessAt and a 15-min manualCooldownUntil.",
+          },
+        ],
+      },
+      {
+        id: "highlight",
+        label: "Highlight a post",
+        summary:
+          "You drag-select text in the reader. The highlight is keyed to the post and saved locally.",
+        steps: [
+          {
+            stationId: "reader",
+            note: "Selection toolbar fires; a highlight color is picked.",
+          },
+          {
+            stationId: "runtime-store",
+            note: "useHighlights → store action saveHighlight(tweetId, range, color).",
+          },
+          {
+            stationId: "indexeddb",
+            note: "highlights store gets a new row, indexed by tweetId.",
+          },
+          {
+            stationId: "reader",
+            note: "Re-render shows the highlight in place. Nothing leaves your device.",
+          },
+        ],
+      },
+      {
+        id: "offline",
+        label: "Going offline",
+        summary:
+          "Connection drops. The new tab keeps working with whatever you already cached.",
+        steps: [
+          {
+            stationId: "service-worker",
+            note: "Heartbeat / 401-403 path flips totem_auth_state to logged_out or stale.",
+          },
+          {
+            stationId: "chrome-storage",
+            note: "Runtime snapshot pushed to onChanged subscribers.",
+          },
+          {
+            stationId: "runtime-store",
+            note: "applyAuthPayload() stops sync, switches mode to offline_cached.",
+          },
+          {
+            stationId: "new-tab",
+            note: "List filters to bookmarks whose tweet detail is already in IndexedDB.",
+          },
+        ],
+      },
+    ] satisfies TransitFlow[],
   },
 } as const;

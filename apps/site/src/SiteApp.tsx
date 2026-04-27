@@ -1,4 +1,11 @@
-import { EnvelopeSimpleIcon, XLogoIcon } from "@phosphor-icons/react";
+import {
+  CheckIcon,
+  EnvelopeSimpleIcon,
+  ShieldCheckIcon,
+  XLogoIcon,
+} from "@phosphor-icons/react";
+import parseHtml, { type DOMNode } from "html-react-parser";
+import { blogPosts, blogPostsBySlug } from "./generated/blog-posts";
 import {
   useEffect,
   useRef,
@@ -12,12 +19,73 @@ import { TotemLogo } from "../../../src/components/TotemLogo";
 import {
   SITE_COPY,
   SITE_LINKS,
+  type TransitFlow,
+  type TransitRoute,
+  type TransitSegment,
+  type TransitStation,
   type FAQItem,
   type PolicySection as PolicySectionData,
   type PolicySectionItem,
   type PrivacyPermission,
   type PrivacySummaryItem,
 } from "./site-content";
+
+function ChromeIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="-0.82 0 437.46 437.46"
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+      aria-hidden="true"
+    >
+      <defs>
+        <linearGradient
+          id="chrome-logo-inner"
+          gradientUnits="userSpaceOnUse"
+          x1="216.802"
+          y1="140.297"
+          x2="216.802"
+          y2="296.195"
+        >
+          <stop offset="0" stopColor="#a2c0e6" />
+          <stop offset="1" stopColor="#406cb1" />
+        </linearGradient>
+      </defs>
+      <path
+        fill="#c6352e"
+        d="M217.341.039s128.478-5.783 196.57 123.337H206.416s-39.188-1.289-72.593 46.255c-9.634 19.916-19.91 40.473-8.349 80.937C108.773 222.309 36.823 97.04 36.823 97.04S87.578 5.176 217.341.039z"
+      />
+      <path
+        fill="#f4d911"
+        d="M407.223 327.871s-59.247 114.143-205.118 108.533c17.995-31.148 103.772-179.682 103.772-179.682s20.709-33.289-3.744-85.991c-12.431-18.305-25.09-37.486-65.919-47.713 32.836-.326 177.285.021 177.285.021s54.168 89.891-6.276 204.832z"
+      />
+      <path
+        fill="#81b354"
+        d="M28.373 328.738s-69.224-108.395 8.58-231.908c17.979 31.16 103.71 179.72 103.71 179.72s18.469 34.578 76.341 39.756c22.061-1.609 45.007-2.982 74.279-33.223-16.139 28.594-88.673 153.521-88.673 153.521S97.681 438.56 28.373 328.738z"
+      />
+      <path
+        fill="#7baa50"
+        d="M202.105 437.46l29.187-121.793s32.092-2.504 58.982-32.017c-16.693 29.365-88.169 153.81-88.169 153.81z"
+      />
+      <path
+        fill="#ffffff"
+        d="M119.59 220.093c0-53.69 43.52-97.215 97.215-97.215 53.69 0 97.214 43.524 97.214 97.215 0 53.693-43.522 97.219-97.214 97.219-53.695 0-97.215-43.525-97.215-97.219z"
+      />
+      <path
+        fill="url(#chrome-logo-inner)"
+        d="M135.86 220.093c0-44.702 36.238-80.941 80.945-80.941 44.698 0 80.94 36.239 80.94 80.941 0 44.703-36.242 80.945-80.94 80.945-44.707.001-80.945-36.244-80.945-80.945z"
+      />
+      <path
+        fill="#e7ce12"
+        d="M413.5 123.039l-120.183 35.237s-18.123-26.596-57.104-35.258c33.776-.115 177.287.021 177.287.021z"
+      />
+      <path
+        fill="#bc332c"
+        d="M123.137 246.197c-16.89-29.25-86.31-149.16-86.31-149.16l89.029 88.07s-9.149 18.82-5.68 45.7l2.961 15.39z"
+      />
+    </svg>
+  );
+}
 
 function GitHubIcon({ className }: { className?: string }) {
   return (
@@ -56,10 +124,16 @@ function useOnScreen(threshold = 0.15) {
   return { ref, visible };
 }
 
-export type SitePage = "landing" | "privacy";
+export type SitePage =
+  | "landing"
+  | "privacy"
+  | "how-it-works"
+  | "blog-index"
+  | "blog-post";
 
 interface SiteAppProps {
   page: SitePage;
+  slug?: string | null;
 }
 
 type SiteButtonVariant = "primary" | "secondary";
@@ -70,7 +144,7 @@ const siteButtonBaseClass =
   "inline-flex items-center justify-center gap-2 no-underline font-semibold transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30 focus-visible:ring-offset-2";
 
 const siteButtonVariantClasses: Record<SiteButtonVariant, string> = {
-  primary: "bg-accent text-white hover:bg-accent-700",
+  primary: "bg-neutral-900 text-white hover:bg-neutral-800",
   secondary:
     "border border-neutral-200 bg-white text-neutral-900 hover:bg-neutral-100",
 };
@@ -286,7 +360,7 @@ function SiteLayout({
   }, []);
 
   return (
-    <div className="min-h-dvh bg-white font-site-sans text-neutral-900">
+    <div className="flex min-h-dvh flex-col bg-white font-site-sans text-neutral-900">
       <header
         className={cn(
           "sticky top-0 z-50 border-b border-neutral-200 transition-colors duration-200",
@@ -315,6 +389,7 @@ function SiteLayout({
               variant="primary"
               size="pill"
             >
+              <ChromeIcon className="size-4 shrink-0" />
               {header.installLabel}
             </SiteButtonLink>
             <SiteButtonLink href={demoHref} variant="secondary" size="pill">
@@ -324,27 +399,28 @@ function SiteLayout({
         </div>
       </header>
 
-      {children}
+      <div className="flex flex-1 flex-col">{children}</div>
 
       <footer className="border-t border-neutral-200">
-        <div className="mx-auto flex w-full max-w-5xl flex-col gap-4 px-6 py-8 text-sm text-neutral-600 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-col gap-1.5">
-            <a
-              href="/"
-              className="flex items-center gap-2 no-underline"
-              aria-label={footer.brandAriaLabel}
-            >
-              <TotemLogo className="size-5" />
-              <span className="text-xs font-semibold text-neutral-700">
-                {header.brandName}
-              </span>
-            </a>
-          </div>
+        <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center justify-between gap-x-6 gap-y-2 px-6 py-3.5 text-sm text-neutral-600">
+          <a
+            href="/"
+            className="flex items-center gap-2 no-underline"
+            aria-label={footer.brandAriaLabel}
+          >
+            <TotemLogo className="size-5" />
+            <span className="text-xs font-semibold text-neutral-700">
+              {header.brandName}
+            </span>
+          </a>
 
           <nav
             className="flex items-center gap-5"
             aria-label={footer.navAriaLabel}
           >
+            <a href={SITE_LINKS.howItWorksUrl} className={siteFooterLinkClass}>
+              How it works
+            </a>
             <a href={SITE_LINKS.privacyUrl} className={siteFooterLinkClass}>
               {footer.privacyLabel}
             </a>
@@ -763,6 +839,7 @@ function LandingPage() {
                   target="_blank"
                   variant="primary"
                 >
+                  <ChromeIcon className="size-5 shrink-0" />
                   {hero.installButtonLabel}
                 </SiteButtonLink>
               </div>
@@ -908,6 +985,8 @@ function LandingPage() {
           </div>
         </SiteSection>
 
+        <RecentBlogPostsSection />
+
         <SiteRevealSection className="bg-neutral-900 py-14" as="section">
           <div className="mx-auto w-full max-w-xl px-6 text-center">
             <SiteHeading as="h2" size="section" tone="inverse" className="mb-3">
@@ -921,12 +1000,83 @@ function LandingPage() {
               target="_blank"
               variant="secondary"
             >
+              <ChromeIcon className="size-5 shrink-0" />
               {faq.finalCtaButtonLabel}
             </SiteButtonLink>
           </div>
         </SiteRevealSection>
       </main>
     </SiteLayout>
+  );
+}
+
+function RecentBlogPostsSection() {
+  const recent = blogPosts.filter((post) => !post.draft).slice(0, 3);
+  if (recent.length === 0) return null;
+
+  return (
+    <SiteRevealSection className="bg-neutral-50 py-20" as="section">
+      <div className="mx-auto w-full max-w-5xl px-6">
+        <div className="mb-10 flex items-end justify-between gap-6">
+          <div>
+            <SiteEyebrow tone="muted" className="mb-3">
+              From the blog
+            </SiteEyebrow>
+            <SiteHeading as="h2" size="section" className="max-w-2xl">
+              Notes on bookmarks, reading, and the things you save.
+            </SiteHeading>
+          </div>
+          <a
+            href="/blog/"
+            className="hidden whitespace-nowrap text-sm font-medium text-neutral-700 no-underline transition-colors hover:text-neutral-900 sm:inline-block"
+          >
+            All posts →
+          </a>
+        </div>
+
+        <ul className="grid grid-cols-1 gap-6 md:grid-cols-3">
+          {recent.map((post) => (
+            <li key={post.slug}>
+              <a
+                href={`/blog/${post.slug}`}
+                className="group flex h-full flex-col rounded-2xl border border-neutral-200 bg-white p-6 no-underline shadow-site-card transition-shadow duration-200 hover:shadow-md"
+              >
+                {post.publishedAt && (
+                  <time
+                    dateTime={post.publishedAt}
+                    className="text-xs uppercase tracking-widest text-neutral-400"
+                  >
+                    {new Date(post.publishedAt).toLocaleDateString("en-US", {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    })}
+                  </time>
+                )}
+                <h3 className="mt-3 font-serif text-xl leading-tight text-neutral-900 transition-colors group-hover:text-neutral-700">
+                  {post.title}
+                </h3>
+                <p className="mt-3 line-clamp-3 flex-1 text-sm leading-relaxed text-neutral-600 text-pretty">
+                  {post.description}
+                </p>
+                <span className="mt-5 text-xs font-medium uppercase tracking-widest text-neutral-500 transition-colors group-hover:text-neutral-900">
+                  Read →
+                </span>
+              </a>
+            </li>
+          ))}
+        </ul>
+
+        <div className="mt-10 sm:hidden">
+          <a
+            href="/blog/"
+            className="text-sm font-medium text-neutral-700 no-underline transition-colors hover:text-neutral-900"
+          >
+            All posts →
+          </a>
+        </div>
+      </div>
+    </SiteRevealSection>
   );
 }
 
@@ -1117,7 +1267,883 @@ function PolicySectionCard({ section }: { section: PolicySectionData }) {
   );
 }
 
-export function SiteApp({ page }: SiteAppProps) {
+type RouteLookup = Record<string, TransitRoute>;
+type StationLookup = Record<string, TransitStation>;
+
+function buildSegmentPath(
+  segment: TransitSegment,
+  stations: StationLookup,
+  offset: number,
+): string {
+  if (segment.path.length < 2) return "";
+  const corner = 18;
+  const points = segment.path
+    .map((id) => stations[id])
+    .filter(Boolean)
+    .map((station) => ({ x: station.x, y: station.y + offset }));
+
+  if (points.length < 2) return "";
+
+  let d = `M ${points[0].x} ${points[0].y}`;
+
+  for (let i = 1; i < points.length; i++) {
+    const prev = points[i - 1];
+    const curr = points[i];
+    const next = points[i + 1];
+
+    if (next && prev.y === curr.y && curr.y !== next.y) {
+      // Horizontal segment turning vertical at curr.
+      const dirX = curr.x > prev.x ? -1 : 1;
+      const dirY = next.y > curr.y ? 1 : -1;
+      d += ` L ${curr.x + dirX * corner} ${curr.y}`;
+      d += ` Q ${curr.x} ${curr.y} ${curr.x} ${curr.y + dirY * corner}`;
+    } else if (next && prev.x === curr.x && curr.x !== next.x) {
+      // Vertical segment turning horizontal at curr.
+      const dirY = curr.y > prev.y ? -1 : 1;
+      const dirX = next.x > curr.x ? 1 : -1;
+      d += ` L ${curr.x} ${curr.y + dirY * corner}`;
+      d += ` Q ${curr.x} ${curr.y} ${curr.x + dirX * corner} ${curr.y}`;
+    } else if (prev.x !== curr.x && prev.y !== curr.y) {
+      // Diagonal: just stop at the next station.
+      d += ` L ${curr.x} ${curr.y}`;
+    } else {
+      d += ` L ${curr.x} ${curr.y}`;
+    }
+  }
+
+  return d;
+}
+
+function StationDetailPanel({
+  station,
+  routes,
+  stations,
+  onSelect,
+}: {
+  station: TransitStation;
+  routes: RouteLookup;
+  stations: StationLookup;
+  onSelect: (id: string) => void;
+}) {
+  const stationRoutes = station.routes
+    .map((id) => routes[id])
+    .filter((route): route is TransitRoute => Boolean(route));
+  const neighbors = station.neighbors
+    .map((id) => stations[id])
+    .filter((s): s is TransitStation => Boolean(s));
+
+  return (
+    <aside className="transit-panel" aria-live="polite">
+      <header className="transit-panel-header">
+        <span className="transit-panel-eyebrow">Station</span>
+        <h3 className="transit-panel-title">{station.name}</h3>
+        <p className="transit-panel-subtitle">{station.short}</p>
+      </header>
+
+      <div className="transit-panel-section">
+        <p className="transit-panel-detail">{station.detail}</p>
+      </div>
+
+      {station.files.length > 0 ? (
+        <div className="transit-panel-section">
+          <p className="transit-panel-label">Files</p>
+          <ul className="transit-panel-files">
+            {station.files.map((file) => (
+              <li key={file}>
+                <code>{file}</code>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {station.writes.length > 0 ? (
+        <div className="transit-panel-section">
+          <p className="transit-panel-label">
+            Writes · {station.writes.length}
+          </p>
+          <ul className="transit-panel-keys">
+            {station.writes.map((key) => (
+              <li key={key}>
+                <code>{key}</code>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {station.reads.length > 0 ? (
+        <div className="transit-panel-section">
+          <p className="transit-panel-label">Reads</p>
+          <ul className="transit-panel-reads">
+            {station.reads.map((entry) => (
+              <li key={entry}>{entry}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      <div className="transit-panel-section">
+        <p className="transit-panel-label">Lines · {stationRoutes.length}</p>
+        <ul className="transit-panel-routes">
+          {stationRoutes.map((route) => (
+            <li key={route.id}>
+              <span
+                className="transit-panel-route-dot"
+                style={{ backgroundColor: route.color }}
+                aria-hidden="true"
+              />
+              <span>{route.name}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {neighbors.length > 0 ? (
+        <div className="transit-panel-section">
+          <p className="transit-panel-label">
+            Neighbors · {neighbors.length}
+          </p>
+          <ul className="transit-panel-neighbors">
+            {neighbors.map((neighbor) => (
+              <li key={neighbor.id}>
+                <button
+                  type="button"
+                  onClick={() => onSelect(neighbor.id)}
+                  className="transit-panel-neighbor"
+                >
+                  <span aria-hidden="true">→</span> {neighbor.name}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+    </aside>
+  );
+}
+
+function FlowsPanel({
+  flows,
+  stations,
+  activeFlowId,
+  activeStepIndex,
+  onSelectFlow,
+  onSelectStep,
+}: {
+  flows: readonly TransitFlow[];
+  stations: StationLookup;
+  activeFlowId: string | null;
+  activeStepIndex: number;
+  onSelectFlow: (id: string) => void;
+  onSelectStep: (index: number) => void;
+}) {
+  const activeFlow = flows.find((flow) => flow.id === activeFlowId) ?? null;
+
+  return (
+    <section className="transit-flows" aria-label="Flows">
+      <header className="transit-flows-header">
+        <p className="transit-flows-eyebrow">Flows</p>
+        <h2 className="transit-flows-title">Walk a real path through the system.</h2>
+        <p className="transit-flows-summary">
+          {activeFlow
+            ? activeFlow.summary
+            : "Pick a flow. Each step jumps the map to the station that runs that part."}
+        </p>
+      </header>
+
+      <div className="transit-flows-tabs" role="tablist">
+        {flows.map((flow) => {
+          const isActive = flow.id === activeFlowId;
+          return (
+            <button
+              key={flow.id}
+              type="button"
+              role="tab"
+              aria-selected={isActive}
+              onClick={() => onSelectFlow(flow.id)}
+              className={cn("transit-flow-tab", isActive && "is-active")}
+            >
+              {flow.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {activeFlow ? (
+        <ol className="transit-flow-steps">
+          {activeFlow.steps.map((step, index) => {
+            const station = stations[step.stationId];
+            const isCurrent = index === activeStepIndex;
+            return (
+              <li key={`${activeFlow.id}-${index}`}>
+                <button
+                  type="button"
+                  onClick={() => onSelectStep(index)}
+                  className={cn(
+                    "transit-flow-step",
+                    isCurrent && "is-current",
+                  )}
+                  aria-current={isCurrent ? "step" : undefined}
+                >
+                  <span className="transit-flow-step-num">
+                    {String(index + 1).padStart(2, "0")}
+                  </span>
+                  <span className="transit-flow-step-body">
+                    <span className="transit-flow-step-station">
+                      {station?.name ?? step.stationId}
+                    </span>
+                    <span className="transit-flow-step-note">{step.note}</span>
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ol>
+      ) : null}
+    </section>
+  );
+}
+
+function InteractiveMap({
+  stations,
+  routes,
+  segments,
+  selectedId,
+  filteredRouteId,
+  flowStationIds,
+  onSelectStation,
+}: {
+  stations: readonly TransitStation[];
+  routes: readonly TransitRoute[];
+  segments: readonly TransitSegment[];
+  selectedId: string;
+  filteredRouteId: string | null;
+  flowStationIds: Set<string>;
+  onSelectStation: (id: string) => void;
+}) {
+  const routeMap: RouteLookup = {};
+  for (const route of routes) routeMap[route.id] = route;
+
+  const stationMap: StationLookup = {};
+  for (const station of stations) stationMap[station.id] = station;
+
+  const selected = stationMap[selectedId] ?? stations[0];
+
+  const edgeOffsets = new Map<string, number>();
+  const offsetForSegment = (segment: TransitSegment) => {
+    const key = [...segment.path].sort().join("|") + "::" + segment.route;
+    const used = edgeOffsets.get(key) ?? 0;
+    edgeOffsets.set(key, used + 1);
+    return used;
+  };
+
+  const isSegmentInFlow = (segment: TransitSegment) => {
+    if (flowStationIds.size < 2) return false;
+    return segment.path.every((id) => flowStationIds.has(id));
+  };
+
+  const segmentRenders = segments.map((segment, index) => {
+    const offset = offsetForSegment(segment) * 7;
+    const route = routeMap[segment.route];
+    if (!route) return null;
+    const onSelectedRoute = selected.routes.includes(segment.route);
+    const matchesFilter =
+      filteredRouteId === null || filteredRouteId === segment.route;
+    const inFlow = isSegmentInFlow(segment);
+
+    let opacity = 0.18;
+    if (filteredRouteId !== null) {
+      opacity = matchesFilter ? 0.95 : 0.05;
+    } else if (inFlow) {
+      opacity = 0.95;
+    } else if (flowStationIds.size > 0) {
+      opacity = 0.1;
+    } else if (onSelectedRoute) {
+      opacity = 0.95;
+    }
+
+    return {
+      key: `${segment.route}-${index}`,
+      d: buildSegmentPath(segment, stationMap, offset),
+      color: route.color,
+      routeId: segment.route,
+      opacity,
+    };
+  });
+
+  return (
+    <div
+      className="transit-map"
+      role="figure"
+      aria-label="Totem architecture transit map"
+    >
+      <svg
+        viewBox="0 0 1080 480"
+        className="transit-svg"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <defs>
+          <pattern
+            id="transit-grid"
+            x="0"
+            y="0"
+            width="40"
+            height="40"
+            patternUnits="userSpaceOnUse"
+          >
+            <circle cx="1" cy="1" r="0.8" fill="rgb(148 163 184 / 0.18)" />
+          </pattern>
+        </defs>
+        <rect width="1080" height="480" fill="url(#transit-grid)" />
+
+        {segmentRenders.map((seg) => {
+          if (!seg) return null;
+          return (
+            <path
+              key={seg.key}
+              d={seg.d}
+              stroke={seg.color}
+              strokeWidth={5}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              fill="none"
+              opacity={seg.opacity}
+              className="transit-path"
+            />
+          );
+        })}
+
+        {stations.map((station) => {
+          const isActive = station.id === selected.id;
+          const isInFlow = flowStationIds.has(station.id);
+          const isDimmed =
+            (filteredRouteId !== null &&
+              !station.routes.includes(filteredRouteId)) ||
+            (flowStationIds.size > 0 && !isInFlow && !isActive);
+          const routeColor = routeMap[station.routes[0]]?.color ?? "#475569";
+          const radius = station.kind === "hub" ? 14 : 10;
+
+          return (
+            <g
+              key={station.id}
+              transform={`translate(${station.x} ${station.y})`}
+              className={cn(
+                "transit-station",
+                isActive && "is-active",
+                isInFlow && "is-in-flow",
+                isDimmed && "is-dimmed",
+              )}
+              onClick={() => onSelectStation(station.id)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  onSelectStation(station.id);
+                }
+              }}
+              aria-label={`${station.name} — ${station.short}`}
+            >
+              {isActive ? (
+                <circle
+                  r={radius + 10}
+                  fill={routeColor}
+                  opacity={0.12}
+                  className="transit-station-glow"
+                />
+              ) : null}
+              <circle
+                r={radius}
+                fill="white"
+                stroke={routeColor}
+                strokeWidth={isActive ? 4 : 2.5}
+              />
+              {station.kind === "hub" ? (
+                <circle r={radius - 5} fill={routeColor} opacity={0.85} />
+              ) : isActive ? (
+                <circle r={4} fill={routeColor} />
+              ) : null}
+
+              <text
+                y={radius + 22}
+                textAnchor="middle"
+                className="transit-station-label"
+              >
+                {station.name}
+              </text>
+              <text
+                y={radius + 38}
+                textAnchor="middle"
+                className="transit-station-sub"
+              >
+                {station.short}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+    </div>
+  );
+}
+
+const HOW_IT_WORKS_DEFAULT_FLOW_ID = "first-sync";
+
+interface HowItWorksUrlState {
+  flowId: string | null;
+  stepIndex: number;
+  stationId: string | null;
+  routeId: string | null;
+}
+
+function readHowItWorksUrl(): HowItWorksUrlState {
+  if (typeof window === "undefined") {
+    return { flowId: null, stepIndex: 0, stationId: null, routeId: null };
+  }
+  const params = new URLSearchParams(window.location.search);
+  const rawFlow = params.get("flow");
+  const rawStep = parseInt(params.get("step") ?? "", 10);
+  return {
+    flowId:
+      rawFlow === "none"
+        ? null
+        : rawFlow ?? HOW_IT_WORKS_DEFAULT_FLOW_ID,
+    stepIndex: Number.isFinite(rawStep) && rawStep > 0 ? rawStep : 0,
+    stationId: params.get("station"),
+    routeId: params.get("route"),
+  };
+}
+
+function buildHowItWorksUrl(state: HowItWorksUrlState): string {
+  const params = new URLSearchParams();
+  if (state.flowId === null) {
+    params.set("flow", "none");
+  } else if (state.flowId !== HOW_IT_WORKS_DEFAULT_FLOW_ID) {
+    params.set("flow", state.flowId);
+  }
+  if (state.flowId !== null && state.stepIndex > 0) {
+    params.set("step", String(state.stepIndex));
+  }
+  if (state.flowId === null && state.stationId) {
+    params.set("station", state.stationId);
+  }
+  if (state.routeId) {
+    params.set("route", state.routeId);
+  }
+  const path =
+    typeof window !== "undefined" ? window.location.pathname : "/how-it-works/";
+  const search = params.toString();
+  return search ? `${path}?${search}` : path;
+}
+
+function HowItWorksPage() {
+  const { howItWorks: interactive } = SITE_COPY;
+
+  const stationMap: StationLookup = {};
+  for (const station of interactive.stations) stationMap[station.id] = station;
+  const routeMap: RouteLookup = {};
+  for (const route of interactive.routes) routeMap[route.id] = route;
+
+  const flowExists = (id: string | null): id is string =>
+    id != null && interactive.flows.some((f) => f.id === id);
+  const stationExists = (id: string | null): id is string =>
+    id != null && id in stationMap;
+  const routeExists = (id: string | null): id is string =>
+    id != null && interactive.routes.some((r) => r.id === id);
+
+  const deriveStateFromUrl = (
+    url: HowItWorksUrlState,
+  ): {
+    flowId: string | null;
+    stepIndex: number;
+    stationId: string;
+    routeId: string | null;
+  } => {
+    let flowId: string | null;
+    if (url.flowId === null) {
+      flowId = null;
+    } else if (flowExists(url.flowId)) {
+      flowId = url.flowId;
+    } else {
+      flowId = HOW_IT_WORKS_DEFAULT_FLOW_ID;
+    }
+
+    const flow = flowId
+      ? interactive.flows.find((f) => f.id === flowId) ?? null
+      : null;
+    const stepIndex = flow
+      ? Math.min(Math.max(0, url.stepIndex), flow.steps.length - 1)
+      : 0;
+    const stationFromFlow = flow?.steps[stepIndex]?.stationId ?? null;
+    const stationId = flow
+      ? stationFromFlow ?? interactive.bookmarkBaseId
+      : stationExists(url.stationId)
+        ? url.stationId
+        : interactive.bookmarkBaseId;
+    const routeId = routeExists(url.routeId) ? url.routeId : null;
+
+    return { flowId, stepIndex, stationId, routeId };
+  };
+
+  const initial = deriveStateFromUrl(readHowItWorksUrl());
+
+  const [selectedId, setSelectedId] = useState<string>(initial.stationId);
+  const [filteredRouteId, setFilteredRouteId] = useState<string | null>(
+    initial.routeId,
+  );
+  const [activeFlowId, setActiveFlowId] = useState<string | null>(
+    initial.flowId,
+  );
+  const [flowStepIndex, setFlowStepIndex] = useState<number>(initial.stepIndex);
+
+  const skipNextUrlSync = useRef(true);
+
+  // State → URL (push history). Skip the first run since state was just
+  // hydrated from the URL on mount; instead, normalize the URL to canonical.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const next = buildHowItWorksUrl({
+      flowId: activeFlowId,
+      stepIndex: flowStepIndex,
+      stationId: selectedId,
+      routeId: filteredRouteId,
+    });
+    const current = window.location.pathname + window.location.search;
+    if (skipNextUrlSync.current) {
+      skipNextUrlSync.current = false;
+      if (next !== current) window.history.replaceState(null, "", next);
+      return;
+    }
+    if (next !== current) window.history.pushState(null, "", next);
+  }, [activeFlowId, flowStepIndex, selectedId, filteredRouteId]);
+
+  // Browser back/forward → restore state from URL.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handler = () => {
+      const next = deriveStateFromUrl(readHowItWorksUrl());
+      skipNextUrlSync.current = true;
+      setActiveFlowId(next.flowId);
+      setFlowStepIndex(next.stepIndex);
+      setSelectedId(next.stationId);
+      setFilteredRouteId(next.routeId);
+    };
+    window.addEventListener("popstate", handler);
+    return () => window.removeEventListener("popstate", handler);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const activeFlow =
+    interactive.flows.find((flow) => flow.id === activeFlowId) ?? null;
+
+  const flowStationIds = new Set<string>(
+    activeFlow ? activeFlow.steps.map((step) => step.stationId) : [],
+  );
+
+  const handleSelectStation = (id: string) => {
+    setSelectedId(id);
+    if (activeFlow) {
+      const idx = activeFlow.steps.findIndex(
+        (step) => step.stationId === id,
+      );
+      if (idx !== -1) setFlowStepIndex(idx);
+    }
+  };
+
+  const handleSelectFlow = (flowId: string) => {
+    const flow = interactive.flows.find((f) => f.id === flowId);
+    if (!flow) return;
+    setActiveFlowId(flowId);
+    setFlowStepIndex(0);
+    setFilteredRouteId(null);
+    setSelectedId(flow.steps[0]?.stationId ?? selectedId);
+  };
+
+  const handleSelectStep = (index: number) => {
+    if (!activeFlow) return;
+    setFlowStepIndex(index);
+    const target = activeFlow.steps[index]?.stationId;
+    if (target) setSelectedId(target);
+  };
+
+  const handleClearFlow = () => {
+    setActiveFlowId(null);
+    setFlowStepIndex(0);
+  };
+
+  const toggleRouteFilter = (routeId: string) => {
+    if (activeFlow) {
+      setActiveFlowId(null);
+      setFlowStepIndex(0);
+    }
+    setFilteredRouteId((current) => (current === routeId ? null : routeId));
+  };
+
+  const selectedStation = stationMap[selectedId] ?? interactive.stations[0];
+
+  return (
+    <SiteLayout page="how-it-works">
+      <main className="transit-main">
+        <div className="transit-bg" aria-hidden="true" />
+        <div className="transit-container">
+          <header className="transit-intro">
+            <SiteEyebrow tone="muted" className="mb-3">
+              {interactive.eyebrow}
+            </SiteEyebrow>
+            <SiteHeading as="h1" size="page" className="mb-3 max-w-2xl">
+              {interactive.title}
+            </SiteHeading>
+            <p className="max-w-2xl text-base leading-relaxed text-neutral-500">
+              {interactive.intro}
+            </p>
+          </header>
+
+          <div className="transit-legend" role="group" aria-label="Lines">
+            <span className="transit-legend-label">
+              {interactive.legendTitle}
+            </span>
+            {interactive.routes.map((route) => {
+              const isActive = filteredRouteId === route.id;
+              return (
+                <button
+                  key={route.id}
+                  type="button"
+                  onClick={() => toggleRouteFilter(route.id)}
+                  className={cn(
+                    "transit-legend-item",
+                    isActive && "is-active",
+                  )}
+                  aria-pressed={isActive}
+                  title={route.description}
+                >
+                  <span
+                    className="transit-legend-dot"
+                    style={{ backgroundColor: route.color }}
+                    aria-hidden="true"
+                  />
+                  <span>{route.name}</span>
+                </button>
+              );
+            })}
+            {filteredRouteId !== null ? (
+              <button
+                type="button"
+                onClick={() => setFilteredRouteId(null)}
+                className="transit-legend-clear"
+              >
+                Clear filter
+              </button>
+            ) : null}
+          </div>
+
+          <div className="transit-shell">
+            <InteractiveMap
+              stations={interactive.stations}
+              routes={interactive.routes}
+              segments={interactive.segments}
+              selectedId={selectedStation.id}
+              filteredRouteId={filteredRouteId}
+              flowStationIds={flowStationIds}
+              onSelectStation={handleSelectStation}
+            />
+
+            <StationDetailPanel
+              station={selectedStation}
+              routes={routeMap}
+              stations={stationMap}
+              onSelect={handleSelectStation}
+            />
+          </div>
+
+          <FlowsPanel
+            flows={interactive.flows}
+            stations={stationMap}
+            activeFlowId={activeFlowId}
+            activeStepIndex={flowStepIndex}
+            onSelectFlow={handleSelectFlow}
+            onSelectStep={handleSelectStep}
+          />
+
+          {activeFlow ? (
+            <div className="transit-flow-footer">
+              <button
+                type="button"
+                onClick={handleClearFlow}
+                className="transit-flow-exit"
+              >
+                Exit flow
+              </button>
+            </div>
+          ) : null}
+        </div>
+      </main>
+    </SiteLayout>
+  );
+}
+
+function BlogIndexPage() {
+  return (
+    <SiteLayout page="blog-index">
+      <main className="mx-auto max-w-3xl px-6 pb-16 pt-12 sm:pt-16">
+        <SiteEyebrow className="mb-3">Totem blog</SiteEyebrow>
+        <SiteHeading as="h1" size="page" className="mb-8">
+          Notes on bookmarks, reading, and the things you save.
+        </SiteHeading>
+
+        {blogPosts.length === 0 ? (
+          <p className="text-neutral-500">No posts yet.</p>
+        ) : (
+          <ul className="space-y-8 border-t border-neutral-200 pt-8">
+            {blogPosts.map((post) => (
+              <li key={post.slug}>
+                <a
+                  href={`/blog/${post.slug}`}
+                  className="group block no-underline"
+                >
+                  {post.publishedAt && (
+                    <time
+                      dateTime={post.publishedAt}
+                      className="block text-xs uppercase tracking-widest text-neutral-400"
+                    >
+                      {new Date(post.publishedAt).toLocaleDateString("en-US", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      })}
+                      {post.draft && (
+                        <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
+                          DRAFT
+                        </span>
+                      )}
+                    </time>
+                  )}
+                  <h2 className="mt-2 font-serif text-2xl leading-tight text-neutral-900 transition-colors group-hover:text-neutral-700">
+                    {post.title}
+                  </h2>
+                  <p className="mt-2 text-base leading-relaxed text-neutral-600 text-pretty">
+                    {post.description}
+                  </p>
+                </a>
+              </li>
+            ))}
+          </ul>
+        )}
+      </main>
+    </SiteLayout>
+  );
+}
+
+function retargetExternalLinks(domNode: DOMNode) {
+  if (domNode.type !== "tag" || domNode.name !== "a") return;
+  const href = domNode.attribs?.href;
+  if (!href || !/^https?:\/\//i.test(href)) return;
+  try {
+    const ownHost =
+      typeof window !== "undefined" ? window.location.host : "totem.app";
+    if (new URL(href).host === ownHost) return;
+  } catch {
+    return;
+  }
+  domNode.attribs.target = "_blank";
+  domNode.attribs.rel = "noopener noreferrer";
+}
+
+function BlogPostPage({ slug }: { slug: string | null }) {
+  const post = slug ? blogPostsBySlug[slug] : undefined;
+
+  if (!post) {
+    return (
+      <SiteLayout page="blog-post">
+        <main className="mx-auto max-w-3xl px-6 pb-16 pt-12 sm:pt-16">
+          <SiteHeading as="h1" size="page">
+            Post not found
+          </SiteHeading>
+          <p className="mt-4 text-neutral-600">
+            <a href="/blog" className={siteBodyLinkClass}>
+              ← Back to the blog
+            </a>
+          </p>
+        </main>
+      </SiteLayout>
+    );
+  }
+
+  return (
+    <SiteLayout page="blog-post">
+      <main className="mx-auto max-w-3xl px-6 pb-16 pt-12 sm:pt-16">
+        <a
+          href="/blog"
+          className="mb-8 inline-block text-sm text-neutral-500 no-underline transition-colors hover:text-neutral-900"
+        >
+          ← All posts
+        </a>
+
+        {post.publishedAt && (
+          <time
+            dateTime={post.publishedAt}
+            className="block text-xs uppercase tracking-widest text-neutral-400"
+          >
+            {new Date(post.publishedAt).toLocaleDateString("en-US", {
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            })}
+            {post.draft && (
+              <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
+                DRAFT
+              </span>
+            )}
+          </time>
+        )}
+
+        <article className="prose prose-neutral mt-4 max-w-none prose-headings:font-serif prose-h1:text-balance prose-h1:text-4xl prose-h1:leading-tight prose-h2:mt-12 prose-h2:text-2xl prose-a:text-neutral-900 prose-a:underline prose-a:underline-offset-4 hover:prose-a:text-neutral-700 prose-blockquote:border-l-2 prose-blockquote:border-neutral-300 prose-blockquote:font-normal prose-blockquote:not-italic prose-blockquote:text-neutral-700 prose-img:rounded-xl prose-table:text-sm">
+          {parseHtml(post.html, { replace: retargetExternalLinks })}
+        </article>
+
+        <BlogPostCta slug={post.slug} />
+      </main>
+    </SiteLayout>
+  );
+}
+
+function BlogPostCta({ slug }: { slug: string }) {
+  const ctaUrl = SITE_LINKS.installUrl.replace(
+    "utm_campaign=site_install",
+    `utm_campaign=blog_post_cta&utm_content=${encodeURIComponent(slug)}`,
+  );
+
+  return (
+    <aside className="mt-14 flex flex-col items-start gap-5 rounded-2xl border border-neutral-200 bg-neutral-50 p-6 sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:p-7">
+      <div className="min-w-0 flex-1">
+        <p className="text-xs uppercase tracking-widest text-neutral-500">
+          From the makers of this blog
+        </p>
+        <h3 className="mt-1.5 font-serif text-lg leading-snug text-neutral-900">
+          Read more of what you bookmark.
+        </h3>
+        <p className="mt-1 text-sm leading-relaxed text-neutral-600">
+          Totem puts your X bookmarks on every new tab. Free, local-first, no
+          login.
+        </p>
+      </div>
+      <SiteButtonLink
+        href={ctaUrl}
+        target="_blank"
+        variant="primary"
+        size="pill"
+        className="shrink-0"
+      >
+        <ChromeIcon className="size-4 shrink-0" />
+        Add to Chrome — Free
+      </SiteButtonLink>
+    </aside>
+  );
+}
+
+export function SiteApp({ page, slug }: SiteAppProps) {
   if (page === "privacy") return <PrivacyPage />;
+  if (page === "how-it-works") return <HowItWorksPage />;
+  if (page === "blog-index") return <BlogIndexPage />;
+  if (page === "blog-post") return <BlogPostPage slug={slug ?? null} />;
   return <LandingPage />;
 }

@@ -11,10 +11,21 @@ if (!root) {
 }
 
 const pageAttr = root.dataset.page;
-const page: SitePage = pageAttr === "privacy" ? "privacy" : "landing";
+const slugAttr = root.dataset.slug ?? null;
+
+const page: SitePage =
+  pageAttr === "privacy"
+    ? "privacy"
+    : pageAttr === "how-it-works"
+      ? "how-it-works"
+      : pageAttr === "blog-index"
+        ? "blog-index"
+        : pageAttr === "blog-post"
+          ? "blog-post"
+          : "landing";
 
 createRoot(root).render(
   <StrictMode>
-    <SiteApp page={page} />
+    <SiteApp page={page} slug={slugAttr} />
   </StrictMode>,
 );
