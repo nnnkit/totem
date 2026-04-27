@@ -2,8 +2,9 @@ import { copyFileSync, existsSync, mkdirSync } from "fs";
 import { dirname, resolve } from "path";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
-import { defineConfig } from "vite";
+import { defineConfig, type Plugin } from "vite";
 import { fileURLToPath } from "url";
+import { buildBlog } from "./scripts/build-blog.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -33,26 +34,76 @@ function copyExtensionSiteAssets() {
   };
 }
 
-export default defineConfig({
-  root: resolve(__dirname),
-  plugins: [react(), tailwindcss(), copyExtensionSiteAssets()],
-  publicDir: resolve(__dirname, "public"),
-  base: "/",
-  build: {
-    modulePreload: { polyfill: false },
-    outDir: resolve(__dirname, "../../dist-website"),
-    emptyOutDir: true,
-    rollupOptions: {
-      input: {
-        index: resolve(__dirname, "index.html"),
-        privacy: resolve(__dirname, "privacy/index.html"),
-        demo: resolve(__dirname, "demo/index.html"),
-      },
-      output: {
-        entryFileNames: "assets/[name].js",
-        chunkFileNames: "assets/[name].js",
-        assetFileNames: "assets/[name].[ext]",
+function blogPagesPlugin({ includeDrafts }: { includeDrafts: boolean }): Plugin {
+  return {
+    name: "totem-blog-pages",
+    configureServer(server) {
+      // Rewrite clean URLs to the actual generated index.html, before Vite's
+      // SPA fallback catches them and serves the landing page.
+      server.middlewares.use((req, _res, next) => {
+        const url = req.url ?? "";
+        const pathOnly = url.split("?")[0];
+        const query = url.slice(pathOnly.length);
+
+        // /blog → /blog/index.html ; /blog/<slug> → /blog/<slug>/index.html
+        const indexMatch = pathOnly === "/blog" || pathOnly === "/blog/";
+        const slugMatch = pathOnly.match(/^\/blog\/([^/]+)\/?$/);
+
+        if (indexMatch) {
+          req.url = "/blog/index.html" + query;
+        } else if (slugMatch) {
+          const [, slug] = slugMatch;
+          const slugIndex = resolve(__dirname, `blog/${slug}/index.html`);
+          if (existsSync(slugIndex)) {
+            req.url = `/blog/${slug}/index.html` + query;
+          }
+        }
+        next();
+      });
+
+      server.watcher.add(resolve(__dirname, "content/blog"));
+      server.watcher.on("all", (_event, path) => {
+        if (path.endsWith(".md") && path.includes("content/blog")) {
+          buildBlog({ includeDrafts });
+          server.ws.send({ type: "full-reload" });
+        }
+      });
+    },
+  };
+}
+
+export default defineConfig(({ command }) => {
+  const includeDrafts = command === "serve";
+  const { inputs: blogInputs, counts } = buildBlog({ includeDrafts });
+
+  // eslint-disable-next-line no-console
+  console.log(
+    `[totem-blog-pages] command=${command} includeDrafts=${includeDrafts} visible=${counts.visible} drafts=${counts.drafts}`,
+  );
+
+  return {
+    root: resolve(__dirname),
+    plugins: [react(), tailwindcss(), copyExtensionSiteAssets(), blogPagesPlugin({ includeDrafts })],
+    publicDir: resolve(__dirname, "public"),
+    base: "/",
+    build: {
+      modulePreload: { polyfill: false },
+      outDir: resolve(__dirname, "../../dist-website"),
+      emptyOutDir: true,
+      rollupOptions: {
+        input: {
+          index: resolve(__dirname, "index.html"),
+          privacy: resolve(__dirname, "privacy/index.html"),
+          demo: resolve(__dirname, "demo/index.html"),
+          "how-it-works": resolve(__dirname, "how-it-works/index.html"),
+          ...blogInputs,
+        },
+        output: {
+          entryFileNames: "assets/[name].js",
+          chunkFileNames: "assets/[name].js",
+          assetFileNames: "assets/[name].[ext]",
+        },
       },
     },
-  },
+  };
 });
