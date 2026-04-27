@@ -2103,7 +2103,7 @@ function BlogIndexPage() {
                       )}
                     </time>
                   )}
-                  <h2 className="mt-2 text-2xl font-bold leading-tight tracking-tight text-neutral-900 transition-colors group-hover:text-neutral-700 text-balance">
+                  <h2 className="mt-2 text-2xl font-semibold leading-tight tracking-tight text-neutral-800 transition-colors group-hover:text-neutral-600 text-balance">
                     {post.title}
                   </h2>
                   <p className="mt-2 text-base leading-relaxed text-neutral-600 text-pretty">
