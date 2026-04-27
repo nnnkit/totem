@@ -89,6 +89,40 @@ canonicalKeyword: ...
 ---
 ```
 
+### Screenshots — when, where, how to refresh
+
+Listicles get screenshots, one per pick. Thesis & explainer posts stay
+text-first (it's the Totem voice). Honorable mentions are text-only.
+
+- **Source**: capture from the tool's **public** marketing homepage or its
+  **Chrome Web Store listing**. Avoid logged-in app UIs (license grey area
+  + breaks the moment they redesign the dashboard).
+- **Capture**: use the `chrome-devtools` MCP. Resize to **1440 × 900** before
+  shooting so every image in a post is the same aspect ratio. Take a viewport
+  shot (not full-page) — we want the hero, not the whole footer.
+- **Storage**: `apps/site/public/blog/<post-slug-without-year>/<tool-slug>.png`.
+  The folder name should be the post's topic slug (`best-chrome-bookmark-managers`),
+  shared across yearly refreshes — a 2027 refresh of L1 reuses the same folder.
+- **Reference in markdown**: `![alt text describing what's shown](/blog/<folder>/<tool>.png)`.
+  Alt text describes the *content* of the screenshot, not the marketing claim
+  (e.g. `"Bookmanize on the Chrome Web Store — 3.8 stars, 7,000 users"` not
+  `"Best bookmark manager"`).
+- **Placement**: directly under the pick's H2, before the prose intro.
+
+**Refresh triggers** — re-shoot when any of these happen:
+
+- The tool's marketing page is redesigned.
+- The headline / hero copy changes meaningfully.
+- Pricing changes (also update the post body).
+- Star rating or user count on a CWS listing shifts by >25%.
+- A linked screenshot returns 404 in the build.
+- The yearly refresh of the post (e.g. "2026" → "2027" rewrite). At that
+  point, re-shoot every screenshot in the post.
+
+If a screenshot can't be captured ethically (logged-in UI only, or login wall
+blocks the marketing site), make that pick text-only rather than reaching for
+a third-party screenshot we don't have the right to use.
+
 ---
 
 ## Published
@@ -98,6 +132,8 @@ canonicalKeyword: ...
 | 2026-04-25 | Are X / Twitter Bookmarks Private? The Real Answer (2026) | [are-x-twitter-bookmarks-private](/blog/are-x-twitter-bookmarks-private) | are twitter bookmarks public | ~7,500 |
 | 2026-04-25 | Pocket Alternatives 2026 — sorted by where your reading actually comes from | [pocket-alternatives-2026](/blog/pocket-alternatives-2026) | pocket alternative | ~3,500 |
 | 2026-04-25 | The X / Twitter Bookmark Limit, Explained (and what to do when bookmarks disappear) | [twitter-x-bookmark-limit-explained](/blog/twitter-x-bookmark-limit-explained) | twitter bookmarks limit | ~1,300 |
+| 2026-04-27 | How to Export Your X / Twitter Bookmarks (Every Method, Ranked) — 2026 | [how-to-export-twitter-bookmarks](/blog/how-to-export-twitter-bookmarks) | export twitter bookmarks | ~160 |
+| 2026-04-27 | Best Chrome Bookmark Managers in 2026 — Sorted by What You Actually Save | [best-chrome-bookmark-managers-2026](/blog/best-chrome-bookmark-managers-2026) | chrome bookmark manager | ~3,500 |
 
 ---
 
@@ -110,36 +146,26 @@ _(none yet)_
 ## Ideas — researched, fit-checked, ready to draft
 
 Ordered by editorial priority (voice fit × SERP gap × intent), not raw volume.
+Split by post format: **Listicles** (ranked/segmented round-ups) and **Thesis & explainer** (single-argument or how-to with POV).
 
-### 1. "Where are my bookmarks on X — and why you keep forgetting them"
-- **Cluster vol**: ~640/mo (`how to see bookmarks on x` 260, `how to find bookmarks on x` 210, `how to check bookmarks on twitter` 170)
+### Listicles
+
+#### L2. "Best Chrome extensions for reading — save it now vs. save it for later"
+- **Cluster vol**: ~500/mo + long-tail (`chrome reading mode extension` 210, `read it later` 170, `save articles to read later` 50, `read later chrome extension` 40, `chrome reading extension` 30)
 - **Competition**: LOW
-- **SERP gap**: Top is help.x.com + thin third-party "click here, click there" walkthroughs. Nobody connects "the bookmark tab is buried four taps deep" to "that's why you never read what you saved."
-- **Voice fit**: ★★★★★ — this is *literally* the save-vs-read gap, in one post.
-- **Angle**: 30-second how-to, then pivot to the behavioral point. Soft CTA: Totem puts the tab on every new tab.
+- **SERP gap**: Big-DA listicles (Zapier, Wired, Medium "I tested 10+") dominate but **nobody splits reader-mode (read NOW) from read-later (save it).** They get conflated into one ranking, which is why every listicle feels off.
+- **Voice fit**: ★★★★ — natural Totem thesis: saving and reading are different jobs.
+- **Angle**: Two tables. **Read NOW** (Reader Mode, Reader View, Mercury Reader) for distraction-free in-page reading. **Save for later** (Totem, Raindrop, Instapaper, Readwise Reader) for stuff you'll come back to. Totem honest scope: only the second table.
+- **Caveat**: don't pretend Totem is a reader-mode tool. The split is the post.
 
-### 2. "Tweet saver — what 'save a tweet' actually does (and why you never re-read them)"
-- **Cluster vol**: ~450/mo (`tweet saver` 320, `tweet reader` 50, `twitter reader app` 40, `bookmark tweets` 30, `save tweets` 10)
-- **Competition**: LOW
-- **SERP gap**: Untested top-10, but keyword phrasing is product-shopping with no obvious winner.
-- **Voice fit**: ★★★★★ — pure behavioral hook ("85% of saved tweets are never re-read").
-- **Angle**: What "save" technically does (X server-side bookmark vs browser bookmark vs screenshots vs DM-to-self), then the honest behavioral truth. Recommend tools by intent — Totem for "I want to actually read these."
-
-### 3. "How to export your X / Twitter bookmarks (every method, ranked)"
-- **Cluster vol**: ~130/mo (`export twitter bookmarks` 50 + 8 long-tail at 10 each)
-- **Competition**: LOW
-- **SERP gap**: Chrome Web Store listing, two GitHub repos, a 2023 Medium tutorial, getdewey.co. No canonical "all 4 ways, ranked by who you are" guide.
-- **Voice fit**: ★★★★ — utility piece, but with a clear POV (most people don't actually need to export, they need to *read*).
-- **Angle**: Walk every method (Twitter data archive, prinsss/twitter-web-exporter, browser extensions, paid SaaS), tell the reader which one fits, end with: "if you wanted to export so you could finally read them, you don't need an export — you need them in front of you." Tiny volume, **highest purchase intent in the niche**.
-
-### 4. "Best X / Twitter bookmark managers in 2026 (honest comparison)"
+#### L3. "Best X / Twitter bookmark managers in 2026 (honest comparison)"
 - **Cluster vol**: long tail across `twitter bookmarks manager`, `twitter bookmarks chrome extension`, `bookmark tweets` (30), `twitter bookmarks app` (10)
 - **Competition**: LOW
 - **SERP gap**: Top 10 is Play Store, App Store, twitterbookmarks.com, Twillot, Tweetsmash, Dewey + a **badly outdated 2023 Medium listicle**. No credible 2026 comparison.
 - **Voice fit**: ★★★★ — only if we lead with "here's who each one is right for" instead of "here's our ranked top 10."
 - **Angle**: Honest table (Dewey, Twillot, Tweetsmash, xBookmarks, Totem) on price, where it lives, account required, mobile, source-of-truth. Totem positioned for "lightweight + free + new tab + no login."
 
-### 5. "The 10 best new tab Chrome extensions for productivity (2026)"
+#### L4. "The 10 best new tab Chrome extensions for productivity (2026)"
 - **Cluster vol**: ~910/mo (`new tab extension` 320, `chrome new tab extension` 260, `custom new tab` 210, `best new tab chrome extension` 70, `aesthetic new tab` 20)
 - **Competition**: LOW
 - **SERP gap**: Top 10 is Chrome Web Store listings + Dashy listicle + Momentum + a 2026 web-highlights listicle. Every one of them mixes wallpapers, todos, and dashboards into one undifferentiated soup. **Nobody segments by what the new tab is actually *for*.**
@@ -149,7 +175,37 @@ Ordered by editorial priority (voice fit × SERP gap × intent), not raw volume.
   - Group the 10 picks by intent: **Reading & saved content** (Totem, Tab for a Cause), **Focus & calm** (Momentum, Dream Afar, blank tab), **Launcher / dashboard** (Tabby, Toby, Workona), **Aesthetic** (Muzli, Unsplash). Honest sentence each.
   - Pick a winner per category, not overall — that's the differentiator vs every listicle currently ranking.
   - Totem owns the "Reading & saved content" slot; we recommend Momentum if the reader's real problem is focus, not reading.
-- **Caveat to watch**: don't drift into a wallpaper review. Every pick has to be defended on a productivity dimension.
+- **Caveat to watch**: don't drift into a wallpaper review. Every pick has to be defended on a productivity dimension. Aesthetic/minimalist new tab keywords (~160/mo cluster) fold in here as the "Calm" category — not a separate post.
+
+### Thesis & explainer
+
+#### T1. "Where are my bookmarks on X — and why you keep forgetting them"
+- **Cluster vol**: ~640/mo (`how to see bookmarks on x` 260, `how to find bookmarks on x` 210, `how to check bookmarks on twitter` 170)
+- **Competition**: LOW
+- **SERP gap**: Top is help.x.com + thin third-party "click here, click there" walkthroughs. Nobody connects "the bookmark tab is buried four taps deep" to "that's why you never read what you saved."
+- **Voice fit**: ★★★★★ — this is *literally* the save-vs-read gap, in one post.
+- **Angle**: 30-second how-to, then pivot to the behavioral point. Soft CTA: Totem puts the tab on every new tab.
+
+#### T2. "Tweet saver — what 'save a tweet' actually does (and why you never re-read them)"
+- **Cluster vol**: ~450/mo (`tweet saver` 320, `tweet reader` 50, `twitter reader app` 40, `bookmark tweets` 30, `save tweets` 10)
+- **Competition**: LOW
+- **SERP gap**: Untested top-10, but keyword phrasing is product-shopping with no obvious winner.
+- **Voice fit**: ★★★★★ — pure behavioral hook ("85% of saved tweets are never re-read").
+- **Angle**: What "save" technically does (X server-side bookmark vs browser bookmark vs screenshots vs DM-to-self), then the honest behavioral truth. Recommend tools by intent — Totem for "I want to actually read these."
+
+#### T3. "Chrome's built-in reading list — why nobody uses it"
+- **Cluster vol**: ~1,000/mo (`reading list chrome`)
+- **Competition**: LOW
+- **SERP gap**: Top is Chrome Web Store, Google Help, Reddit "Reading list tab disappeared", popsci, 9to5google. Pure tutorial coverage. No one names the actual reason — it lives behind a hover that you never trigger.
+- **Voice fit**: ★★★★★ — pure save-vs-read gap, in Chrome's own UI.
+- **Angle**: Quick tour (where it is, how to use it), then the honest point: Chrome shipped a reading list four years ago and ~no one has it pinned. The save-vs-read pattern explains why a tab tucked under a star icon dies on the vine. Soft CTA: Totem puts saved stuff on the new tab — same idea, different surface.
+
+#### T4. "What to put on your Chrome new tab page (and why it matters)"
+- **Cluster vol**: ~880/mo (`chrome new tab page`)
+- **Competition**: LOW
+- **SERP gap**: Top is Google Help, Chrome Web Store, Reddit, superuser, homenewtab.com. Every result is "here's how to change it." None of them argue *what to put there.*
+- **Voice fit**: ★★★★ — companion explainer to L4. Could share traffic / internal-link with the listicle.
+- **Angle**: ~50 opens/day means the new tab is a habit-forming surface. Three honest options — blank (focus), feed (reading), launcher (speed). Pick by what your last hour of browsing actually was. Mini-list inside the explainer; full picks live in L4.
 
 ---
 

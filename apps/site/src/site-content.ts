@@ -1,7 +1,4 @@
-import cleanReaderImage from "./feature-previews/clean-reader.jpg";
-import highlightsNotesImage from "./feature-previews/highlights-notes.jpg";
 import readingStatesImage from "./feature-previews/reading-states.jpg";
-import worksOfflineImage from "./feature-previews/works-offline.jpg";
 import {
   SUPPORT_EMAIL,
   SUPPORT_EMAIL_URL,
@@ -14,6 +11,11 @@ export type FeatureItem = {
   body: string;
   image: string;
   alt: string;
+};
+
+export type IconFeatureItem = {
+  title: string;
+  body: string;
 };
 
 export type PrivacyFeatureCard = {
@@ -114,25 +116,19 @@ const featureHero: FeatureItem = {
   alt: "Totem reading list showing unread, in-progress, and finished tabs with per-post progress.",
 };
 
-const featureHighlights: FeatureItem = {
+const featureHighlights: IconFeatureItem = {
   title: "Highlight. Note. Done.",
   body: "Drag-select any tweet. Add a note. Saved to this device, indexed to the post.",
-  image: highlightsNotesImage,
-  alt: "Totem reader with a passage highlighted and an inline note attached.",
 };
 
-const featureClean: FeatureItem = {
+const featureClean: IconFeatureItem = {
   title: "No sidebar. No feed.",
   body: "Every saved post in a focused reader. Just the writing — no trending, no ads, no rabbit hole.",
-  image: cleanReaderImage,
-  alt: "Totem clean reader rendering a saved X thread without feed chrome.",
 };
 
-const featureOffline: FeatureItem = {
+const featureOffline: IconFeatureItem = {
   title: "Works on a plane.",
   body: "Bookmarks cache locally on first sync. Read 200 saved posts with zero signal.",
-  image: worksOfflineImage,
-  alt: "Totem reading list operating in offline mode with cached bookmarks visible.",
 };
 
 const featurePrivacy: PrivacyFeatureCard = {
