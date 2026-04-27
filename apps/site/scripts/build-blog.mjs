@@ -204,6 +204,7 @@ export interface BlogPost {
   draft: boolean;
   canonicalKeyword: string | null;
   html: string;
+  sourceFile: string;
 }
 
 export const blogPosts: BlogPost[] = ${JSON.stringify(sorted, null, 2)};
