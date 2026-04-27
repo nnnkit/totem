@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.20] - 2026-04-27
+
+- fix: blogs ui
+- feat: utm-tag blog totem links, footer blog link, fix post sort
+- fix: include sourcefile in generated blogpost interface
+- feat: add how-it-works transit map and blog index/post views
+- feat: add blog build pipeline and vite blog/how-it-works inputs
+- feat: add ga4 page-view tracking and utm tag the install link
+
 ## [1.1.19] - 2026-04-24
 
 - fix: gate auth trio on twid cookie and hide uncached unread offline
