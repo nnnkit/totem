@@ -49,7 +49,7 @@ export type PrivacyPermission = {
 };
 
 const chromeWebStoreInstallUrl =
-  "https://chromewebstore.google.com/detail/acpkgdfhoaalmnhjifhneghcgfnjkglo";
+  "https://chromewebstore.google.com/detail/acpkgdfhoaalmnhjifhneghcgfnjkglo?utm_source=usetotem.xyz&utm_medium=referral&utm_campaign=site_install";
 const demoVideoEmbedUrl =
   "https://www.youtube.com/embed/75RNtgMHsPA?rel=0&modestbranding=1";
 const githubReleaseUrl = "https://github.com/nnnkit/totem/releases/latest";
