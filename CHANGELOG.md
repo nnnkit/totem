@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.21] - 2026-04-27
+
+- fix: generate blog posts before tsc in build:extension
+
 ## [1.1.20] - 2026-04-27
 
 - fix: blogs ui
