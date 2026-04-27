@@ -4,6 +4,19 @@ Optimized for Chrome Web Store search (which is keyword-literal) plus the
 keyword targets identified in the SEO research. Below are three pieces of copy
 to update in the developer dashboard.
 
+> **Verified against DataForSEO (US, Apr 2026).** Cached JSON in
+> `tmp/dataforseo/cws-keyword-volumes*.json` and `serp-tw-bookmarks-chrome-ext.json`.
+> Key learnings that shaped the copy below:
+> - "twitter bookmarks" (880/mo) > "x bookmarks" (320/mo). Lead with "Twitter".
+>   Every top CWS competitor (Export Twitter Bookmarks, Twitter Bookmarks Search
+>   by Twillot, xBookmarks) leads with "Twitter", not "X".
+> - "twitter saver" is the surprise hit: **5,400/mo, LOW competition.** Worth
+>   surfacing explicitly.
+> - "x reader" looks tempting (4,400/mo) but the SERP is 100% fanfiction
+>   ("[character] x reader" on Wattpad/Tumblr/AO3). **Do not target.**
+> - "twitter bookmark manager" / "x bookmark manager" combined are only ~50/mo.
+>   Don't over-rely on this framing — use "twitter bookmark tools" instead.
+
 ---
 
 ## 1. Extension name (max 75 chars)
@@ -12,15 +25,16 @@ to update in the developer dashboard.
 
 **Recommended**:
 ```
-Totem — X / Twitter Bookmarks on Your New Tab (Read Later)
+Totem — Twitter / X Bookmarks on New Tab, Read Later & Export
 ```
-(58 chars)
+(60 chars)
 
-Rationale: includes both "X" and "Twitter" (CWS search matches them
-separately), "bookmarks", "new tab", and "read later" — four of our highest-
-intent keyword groups in a single title. Em-dash keeps it readable.
+Rationale: leads with "Twitter" (880/mo) before "X" (320/mo) — Google demand
+and the CWS competitor pattern both favor this order. Includes "bookmarks",
+"new tab", "read later", and "export" (the #1 ranking competitor is literally
+named "Export Twitter Bookmarks" — proven verb).
 
-Alt (shorter): `Totem — X Bookmarks New Tab & Read Later` (41 chars)
+Alt (shorter): `Totem — Twitter / X Bookmarks: New Tab Reader & Export` (54 chars)
 
 ---
 
@@ -30,33 +44,36 @@ Alt (shorter): `Totem — X Bookmarks New Tab & Read Later` (41 chars)
 
 **Recommended**:
 ```
-Turn your X / Twitter bookmarks into a calm read-later queue on every new tab. Search, export, finish what you saved.
+Turn your Twitter / X bookmarks into a searchable read-later queue on every new tab. Save, search, export — finish what you saved.
 ```
-(116 chars)
+(129 chars)
 
-Hits: *X*, *Twitter*, *bookmarks*, *read-later*, *new tab*, *search*, *export*.
+Hits: *Twitter*, *X*, *bookmarks*, *searchable* (covers "bookmark search" — 880/mo),
+*read-later*, *new tab*, *save*, *export*. "Twitter" leads "X" to match search-volume
+weight.
 
 ---
 
 ## 3. Long description
 
 ```
-Totem replaces your new tab with the X (Twitter) bookmarks you actually meant
-to read.
+Totem is the Twitter / X bookmark tool that lives on your new tab — the
+tweets and threads you actually meant to read, in front of you every time
+you open Chrome.
 
 Most people save tweets and never come back. Opening X to "check bookmarks"
-ends in twenty minutes of scrolling. Totem fixes both: your bookmarks live
-on every new tab page, in a calm reading view — no feed, no algorithm, no
-distractions.
+ends in twenty minutes of scrolling. Totem fixes both: your Twitter bookmarks
+live on every new tab page, in a calm reading view — no feed, no algorithm,
+no distractions.
 
 WHAT IT DOES
-• Replaces your Chrome new tab with your X / Twitter bookmarks
-• Distraction-free reader view for tweets and threads
+• Replaces your Chrome new tab with your Twitter / X bookmarks
+• Distraction-free reader for tweets and Twitter threads
 • Search across every bookmark you've ever saved
-• Export to Markdown, CSV, or Notion
+• Export Twitter bookmarks to Markdown, CSV, or Notion
 • Works offline — bookmarks live in your browser, not on a server
 
-WHY TOTEM (vs other Twitter / X bookmark managers)
+WHY TOTEM (vs other Twitter bookmark tools)
 • Local-first. No login. No account. No server.
   Your bookmarks never leave your browser.
 • Free. Forever. No paywall, no premium tier.
@@ -74,11 +91,11 @@ WHO IT'S FOR
   their saved content
 
 PERFECT IF YOU
-• Bookmark Twitter threads to read later but never do
+• Bookmark a Twitter thread to read later but never do
 • Want a minimal, distraction-free new tab
 • Are looking for a Pocket replacement after Mozilla shut it down
 • Have ever searched for "twitter bookmarks disappeared"
-• Want to export your X bookmarks to Markdown, CSV, or Notion
+• Want to export your Twitter bookmarks to Markdown, CSV, or Notion
 
 PRIVACY
 Totem is local-first. Your bookmarks are stored in your browser's
@@ -89,11 +106,12 @@ The extension reads from x.com only when you're on x.com (to capture new
 bookmarks). It does not send any data anywhere else.
 
 KEYWORDS
-twitter bookmarks, x bookmarks, twitter bookmark manager, x bookmark
-manager, bookmark organizer, read later chrome extension, pocket
-alternative, instapaper alternative, new tab extension, custom new tab,
-minimal new tab, tweet saver, twitter reader, x reader, distraction free
-twitter, focus chrome extension, export twitter bookmarks, bookmark search
+twitter bookmarks, twitter bookmark, x bookmarks, twitter saver, tweet
+saver, bookmark manager, twitter bookmark manager, twitter reader, twitter
+thread reader, tweet reader, bookmark organizer, bookmark search, read
+later chrome extension, pocket alternative, instapaper alternative, new
+tab extension, new tab chrome extension, custom new tab, minimal new tab,
+focus chrome extension, distraction free twitter, export twitter bookmarks
 
 FREE & OPEN
 Totem is free to install and use. No premium tier, no upsell.
@@ -109,7 +127,7 @@ In `public/manifest.json`, change line 5 from:
 ```
 to:
 ```
-"description": "Turn your X / Twitter bookmarks into a calm read-later queue on every new tab. Search, export, finish what you saved.",
+"description": "Turn your Twitter / X bookmarks into a searchable read-later queue on every new tab. Save, search, export — finish what you saved.",
 ```
 
 The manifest description is what shows under the extension name in the
@@ -123,10 +141,10 @@ short description for consistency.
 If you control the promotional tile and screenshots in the CWS listing,
 each screenshot caption should reinforce one keyword group:
 
-1. **Hero shot**: "Your X bookmarks on every new tab"
-2. **Reader view**: "Read tweets and threads without the feed"
+1. **Hero shot**: "Your Twitter / X bookmarks on every new tab"
+2. **Reader view**: "Read tweets and Twitter threads without the feed"
 3. **Search**: "Search every bookmark you've ever saved"
-4. **Export**: "Export to Markdown, CSV, or Notion"
+4. **Export**: "Export Twitter bookmarks to Markdown, CSV, or Notion"
 5. **Privacy**: "Local-first. No login. No server. No tracking."
 6. **Pocket angle** (if there's room): "A calm read-later home for tweets"
 
