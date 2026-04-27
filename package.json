@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "pnpm build:extension",
-    "build:extension": "tsc && vite build",
+    "build:extension": "node apps/site/scripts/build-blog.mjs && tsc && vite build",
     "build:website": "pnpm --filter @totem/site build",
     "build:all": "pnpm build:extension && pnpm build:website",
     "preview": "vite preview",
