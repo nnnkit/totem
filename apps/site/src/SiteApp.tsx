@@ -1,8 +1,12 @@
 import {
+  AirplaneTiltIcon,
+  ArticleIcon,
   CheckIcon,
   EnvelopeSimpleIcon,
+  HighlighterCircleIcon,
   ShieldCheckIcon,
   XLogoIcon,
+  type Icon,
 } from "@phosphor-icons/react";
 import parseHtml, { type DOMNode } from "html-react-parser";
 import { blogPosts, blogPostsBySlug } from "./generated/blog-posts";
@@ -24,8 +28,11 @@ import {
   type TransitSegment,
   type TransitStation,
   type FAQItem,
+  type FeatureItem,
+  type IconFeatureItem,
   type PolicySection as PolicySectionData,
   type PolicySectionItem,
+  type PrivacyFeatureCard,
   type PrivacyPermission,
   type PrivacySummaryItem,
 } from "./site-content";
@@ -421,6 +428,9 @@ function SiteLayout({
             <a href={SITE_LINKS.howItWorksUrl} className={siteFooterLinkClass}>
               How it works
             </a>
+            <a href="/blog/" className={siteFooterLinkClass}>
+              Blog
+            </a>
             <a href={SITE_LINKS.privacyUrl} className={siteFooterLinkClass}>
               {footer.privacyLabel}
             </a>
@@ -670,48 +680,6 @@ function DemoBrowser() {
 }
 
 /** Stylized tweet action bar showing the "Open in Totem" button. */
-function OpenInTotemIllustration() {
-  return (
-    <div className="flex items-center justify-center rounded-xl border border-neutral-200 bg-neutral-50 py-10 sm:py-14">
-      <div className="w-full max-w-md px-6">
-        {/* Fake tweet */}
-        <div className="mb-4 flex items-start gap-3">
-          <div className="size-10 flex-shrink-0 rounded-full bg-neutral-300" />
-          <div className="min-w-0 flex-1">
-            <div className="mb-1 flex items-center gap-2">
-              <div className="h-3.5 w-24 rounded bg-neutral-300" />
-              <div className="h-3 w-16 rounded bg-neutral-200" />
-            </div>
-            <div className="space-y-1.5">
-              <div className="h-3 w-full rounded bg-neutral-200" />
-              <div className="h-3 w-full rounded bg-neutral-200" />
-              <div className="h-3 w-3/4 rounded bg-neutral-200" />
-            </div>
-          </div>
-        </div>
-        {/* Action bar */}
-        <div className="flex items-center justify-between border-t border-neutral-200 pt-3">
-          {/* Reply */}
-          <svg className="size-[18px] text-neutral-300" viewBox="0 0 256 256" fill="currentColor"><path d="M128,24A104,104,0,0,0,36.18,176.88L24.83,210.93a16,16,0,0,0,20.24,20.24l34.05-11.35A104,104,0,1,0,128,24Z" /></svg>
-          {/* Retweet */}
-          <svg className="size-[18px] text-neutral-300" viewBox="0 0 256 256" fill="currentColor"><path d="M224,48V152a8,8,0,0,1-13.66,5.66L188,135.31l-42.34,42.35a8,8,0,0,1-11.32,0L96,139.31,69.66,165.66a8,8,0,0,1-11.32-11.32l32-32a8,8,0,0,1,11.32,0L140,160.69,176.69,124l-22.35-22.34A8,8,0,0,1,160,88h56A8,8,0,0,1,224,48Z" /></svg>
-          {/* Heart */}
-          <svg className="size-[18px] text-neutral-300" viewBox="0 0 256 256" fill="currentColor"><path d="M178,40c-20.65,0-38.73,8.88-50,23.89C116.73,48.88,98.65,40,78,40a62.07,62.07,0,0,0-62,62c0,70,103.79,126.66,108.21,129a8,8,0,0,0,7.58,0C136.21,228.66,240,172,240,102A62.07,62.07,0,0,0,178,40Z" /></svg>
-          {/* Bookmark */}
-          <svg className="size-[18px] text-neutral-300" viewBox="0 0 256 256" fill="currentColor"><path d="M200,32H56A8,8,0,0,0,48,40V224a8,8,0,0,0,12.65,6.51L128,193.83l67.35,36.68A8,8,0,0,0,208,224V40A8,8,0,0,0,200,32Z" /></svg>
-          {/* Totem button — the only colored element */}
-          <div className="group relative flex items-center">
-            <TotemLogo className="size-[22px] transition-transform duration-200 group-hover:-translate-y-px" />
-            <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-neutral-900 px-2 py-1 text-[10px] font-medium text-white opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-              Open in Totem
-            </span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 /** Fade-up on scroll into view. */
 function SiteReveal({
   children,
@@ -804,6 +772,140 @@ function FAQDisclosure({ item }: { item: FAQItem }) {
         </div>
       </div>
     </details>
+  );
+}
+
+function FeatureHeroTile({ feature }: { feature: FeatureItem }) {
+  return (
+    <SiteCard
+      as="article"
+      className="site-feature-card flex flex-col overflow-hidden p-4 md:p-6"
+    >
+      <img
+        src={feature.image}
+        alt={feature.alt}
+        className="mb-5 aspect-video w-full rounded-xl border border-neutral-200 object-cover"
+        loading="lazy"
+      />
+      <SiteHeading as="h3" size="card" className="mb-2">
+        {feature.title}
+      </SiteHeading>
+      <p className="max-w-xl text-sm leading-relaxed text-neutral-600">
+        {feature.body}
+      </p>
+    </SiteCard>
+  );
+}
+
+type AccentColor = "amber" | "slate" | "sky" | "emerald";
+
+const ACCENT_CLASSES: Record<AccentColor, { panel: string; icon: string }> = {
+  amber: {
+    panel: "border-amber-200/70 bg-amber-50",
+    icon: "text-amber-600",
+  },
+  slate: {
+    panel: "border-neutral-200 bg-neutral-50",
+    icon: "text-neutral-700",
+  },
+  sky: {
+    panel: "border-sky-200/70 bg-sky-50",
+    icon: "text-sky-600",
+  },
+  emerald: {
+    panel: "border-emerald-200/70 bg-emerald-50",
+    icon: "text-emerald-600",
+  },
+};
+
+function IconFeatureTile({
+  feature,
+  icon: IconCmp,
+  accent,
+}: {
+  feature: IconFeatureItem;
+  icon: Icon;
+  accent: AccentColor;
+}) {
+  const a = ACCENT_CLASSES[accent];
+  return (
+    <SiteCard
+      as="article"
+      className="site-feature-card flex flex-col p-5 md:p-6"
+    >
+      <div
+        className={cn(
+          "mb-5 inline-flex size-12 items-center justify-center rounded-xl border",
+          a.panel,
+        )}
+      >
+        <IconCmp
+          aria-hidden="true"
+          weight="duotone"
+          className={cn("size-6", a.icon)}
+        />
+      </div>
+      <SiteHeading as="h3" size="card" className="mb-2">
+        {feature.title}
+      </SiteHeading>
+      <p className="text-sm leading-relaxed text-neutral-600">{feature.body}</p>
+    </SiteCard>
+  );
+}
+
+function PrivacyFeatureTile({
+  feature,
+  href,
+}: {
+  feature: PrivacyFeatureCard;
+  href: string;
+}) {
+  const a = ACCENT_CLASSES.emerald;
+  return (
+    <SiteCard
+      as="article"
+      className="site-feature-card flex flex-col p-5 md:p-6"
+    >
+      <div
+        className={cn(
+          "mb-5 inline-flex size-12 items-center justify-center rounded-xl border",
+          a.panel,
+        )}
+      >
+        <ShieldCheckIcon
+          aria-hidden="true"
+          weight="duotone"
+          className={cn("size-6", a.icon)}
+        />
+      </div>
+      <SiteHeading as="h3" size="card" className="mb-2">
+        {feature.title}
+      </SiteHeading>
+      <p className="mb-4 text-sm leading-relaxed text-neutral-600">
+        {feature.body}
+      </p>
+      <ul className="mb-5 space-y-1.5">
+        {feature.bullets.map((bullet) => (
+          <li
+            key={bullet}
+            className="flex items-start gap-2 text-sm text-neutral-700"
+          >
+            <CheckIcon
+              aria-hidden="true"
+              weight="bold"
+              className="mt-0.5 size-4 shrink-0 text-emerald-600"
+            />
+            <span>{bullet}</span>
+          </li>
+        ))}
+      </ul>
+      <SiteBodyLink
+        href={href}
+        className="mt-auto self-start text-sm font-medium text-neutral-900 hover:text-neutral-700"
+      >
+        {feature.linkLabel}
+      </SiteBodyLink>
+    </SiteCard>
   );
 }
 
@@ -920,45 +1022,29 @@ function LandingPage() {
             </div>
           </SiteReveal>
 
-          <SiteRevealStagger className="grid gap-5 md:grid-cols-2">
-            {features.items.map((feature) => (
-              <SiteCard
-                as="article"
-                key={feature.title}
-                className={cn(
-                  feature.wide && "md:col-span-2",
-                  "site-feature-card p-4",
-                )}
-              >
-                {feature.illustration === "open-in-totem" ? (
-                  <div className="mb-4">
-                    <OpenInTotemIllustration />
-                  </div>
-                ) : feature.image ? (
-                  <img
-                    src={feature.image}
-                    alt={feature.alt}
-                    className="mb-4 aspect-video w-full rounded-xl border border-neutral-200 object-cover"
-                    loading="lazy"
-                  />
-                ) : null}
-                <SiteHeading
-                  as="h3"
-                  size="card"
-                  className={cn("mb-2", feature.wide && "text-center")}
-                >
-                  {feature.title}
-                </SiteHeading>
-                <p
-                  className={cn(
-                    "text-sm leading-relaxed text-neutral-600",
-                    feature.wide && "mx-auto max-w-3xl text-center",
-                  )}
-                >
-                  {feature.body}
-                </p>
-              </SiteCard>
-            ))}
+          <SiteRevealStagger className="grid gap-5">
+            <FeatureHeroTile feature={features.hero} />
+            <div className="grid gap-5 md:grid-cols-2">
+              <IconFeatureTile
+                feature={features.highlights}
+                icon={HighlighterCircleIcon}
+                accent="amber"
+              />
+              <IconFeatureTile
+                feature={features.clean}
+                icon={ArticleIcon}
+                accent="slate"
+              />
+              <IconFeatureTile
+                feature={features.offline}
+                icon={AirplaneTiltIcon}
+                accent="sky"
+              />
+              <PrivacyFeatureTile
+                feature={features.privacy}
+                href={SITE_LINKS.privacyUrl}
+              />
+            </div>
           </SiteRevealStagger>
         </SiteSection>
 
@@ -2017,7 +2103,7 @@ function BlogIndexPage() {
                       )}
                     </time>
                   )}
-                  <h2 className="mt-2 font-serif text-2xl leading-tight text-neutral-900 transition-colors group-hover:text-neutral-700">
+                  <h2 className="mt-2 text-2xl font-bold leading-tight tracking-tight text-neutral-900 transition-colors group-hover:text-neutral-700 text-balance">
                     {post.title}
                   </h2>
                   <p className="mt-2 text-base leading-relaxed text-neutral-600 text-pretty">
@@ -2033,19 +2119,37 @@ function BlogIndexPage() {
   );
 }
 
-function retargetExternalLinks(domNode: DOMNode) {
-  if (domNode.type !== "tag" || domNode.name !== "a") return;
-  const href = domNode.attribs?.href;
-  if (!href || !/^https?:\/\//i.test(href)) return;
-  try {
+const TOTEM_HOSTS = new Set(["usetotem.xyz", "www.usetotem.xyz"]);
+
+function makeBlogLinkTransformer(slug: string) {
+  return function transformBlogLink(domNode: DOMNode) {
+    if (domNode.type !== "tag" || domNode.name !== "a") return;
+    const href = domNode.attribs?.href;
+    if (!href || !/^https?:\/\//i.test(href)) return;
+
+    let url: URL;
+    try {
+      url = new URL(href);
+    } catch {
+      return;
+    }
+
+    if (TOTEM_HOSTS.has(url.hostname)) {
+      url.searchParams.set("utm_source", "blog");
+      url.searchParams.set("utm_medium", "referral");
+      url.searchParams.set("utm_campaign", "blog_post");
+      url.searchParams.set("utm_content", slug);
+      domNode.attribs.href = url.toString();
+      return;
+    }
+
     const ownHost =
       typeof window !== "undefined" ? window.location.host : "totem.app";
-    if (new URL(href).host === ownHost) return;
-  } catch {
-    return;
-  }
-  domNode.attribs.target = "_blank";
-  domNode.attribs.rel = "noopener noreferrer";
+    if (url.host === ownHost) return;
+
+    domNode.attribs.target = "_blank";
+    domNode.attribs.rel = "noopener noreferrer";
+  };
 }
 
 function BlogPostPage({ slug }: { slug: string | null }) {
@@ -2097,7 +2201,9 @@ function BlogPostPage({ slug }: { slug: string | null }) {
         )}
 
         <article className="prose prose-neutral mt-4 max-w-none prose-headings:font-serif prose-h1:text-balance prose-h1:text-4xl prose-h1:leading-tight prose-h2:mt-12 prose-h2:text-2xl prose-a:text-neutral-900 prose-a:underline prose-a:underline-offset-4 hover:prose-a:text-neutral-700 prose-blockquote:border-l-2 prose-blockquote:border-neutral-300 prose-blockquote:font-normal prose-blockquote:not-italic prose-blockquote:text-neutral-700 prose-img:rounded-xl prose-table:text-sm">
-          {parseHtml(post.html, { replace: retargetExternalLinks })}
+          {parseHtml(post.html, {
+            replace: makeBlogLinkTransformer(post.slug),
+          })}
         </article>
 
         <BlogPostCta slug={post.slug} />

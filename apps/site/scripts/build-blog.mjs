@@ -56,7 +56,9 @@ function readPosts() {
         slug,
         title,
         description,
-        publishedAt: publishedAt ? String(publishedAt) : null,
+        publishedAt: publishedAt
+          ? new Date(publishedAt).toISOString().slice(0, 10)
+          : null,
         draft,
         canonicalKeyword,
         html,
