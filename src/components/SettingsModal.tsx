@@ -1,5 +1,6 @@
 import { useState } from "react";
 import {
+  CheckIcon,
   MonitorIcon,
   MoonIcon,
   SunIcon,
@@ -7,6 +8,7 @@ import {
 } from "@phosphor-icons/react";
 import { ToggleGroup } from "@base-ui/react/toggle-group";
 import { Toggle } from "@base-ui/react/toggle";
+import { Checkbox } from "@base-ui/react/checkbox";
 import type { UserSettings } from "../types";
 import type { ThemePreference } from "../hooks/useTheme";
 import { resolveHighlightColor } from "../lib/highlight-colors";
@@ -25,8 +27,14 @@ interface Props {
   onUpdateSettings: (patch: Partial<UserSettings>) => void;
   themePreference: ThemePreference;
   onThemePreferenceChange: (value: ThemePreference) => void;
-  onResetLocalData: () => void;
+  onResetAppState: () => void;
+  onDeleteAllData: () => void;
 }
+
+const RESET_STATE_TOOLTIP =
+  "Drops cached UI state, sync flags, recent searches, and the local bookmark cache (re-syncs from X on next load). Fixes most stuck-UI symptoms.";
+const RESET_CONTENT_TOOLTIP =
+  "Permanently deletes everything you've created on this device: highlights, notes, reading progress, and saved searches. This can't be undone.";
 
 const toggleBase =
   "flex items-center justify-center h-7 text-sm font-medium rounded-[5px] transition-[color,box-shadow] text-muted hover:text-foreground data-[pressed]:bg-surface-card data-[pressed]:text-accent data-[pressed]:shadow-sm cursor-default";
@@ -43,19 +51,34 @@ export function SettingsModal({
   onUpdateSettings,
   themePreference,
   onThemePreferenceChange,
-  onResetLocalData,
+  onResetAppState,
+  onDeleteAllData,
 }: Props) {
   const [confirmingReset, setConfirmingReset] = useState(false);
+  const [resetAppState, setResetAppState] = useState(true);
+  const [resetContent, setResetContent] = useState(false);
+
+  const canReset = resetAppState || resetContent;
+
+  const closeConfirm = () => {
+    setConfirmingReset(false);
+    setResetAppState(true);
+    setResetContent(false);
+  };
 
   const handleClose = () => {
-    setConfirmingReset(false);
+    closeConfirm();
     onClose();
   };
 
-  const handleResetLocalData = () => {
-    if (isResetting) return;
-    setConfirmingReset(false);
-    onResetLocalData();
+  const handleConfirmReset = () => {
+    if (isResetting || !canReset) return;
+    closeConfirm();
+    if (resetContent) {
+      onDeleteAllData();
+    } else {
+      onResetAppState();
+    }
   };
 
   return (
@@ -133,9 +156,6 @@ export function SettingsModal({
             </section>
 
             <section className="py-4 first:pt-0 last:pb-0">
-              <h3 className="text-sm font-semibold text-muted mb-1.5">
-                Reading
-              </h3>
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between min-h-10 gap-4">
                   <div className="flex flex-col gap-0.5">
@@ -153,14 +173,6 @@ export function SettingsModal({
                     optionLabel={(c) => `Default color ${c}`}
                   />
                 </div>
-              </div>
-            </section>
-
-            <section className="py-4 first:pt-0 last:pb-0">
-              <h3 className="text-sm font-semibold text-muted mb-1.5">
-                Twitter
-              </h3>
-              <div className="space-y-1.5">
                 <label className="flex items-center justify-between gap-4 min-h-10">
                   <div className="flex flex-col gap-0.5">
                     <span
@@ -272,46 +284,143 @@ export function SettingsModal({
                   />
                 </div>
               </div>
-              <div className="mt-3">
-                {confirmingReset ? (
+            </section>
+
+            <section className="py-4 first:pt-0 last:pb-0">
+              {confirmingReset ? (
+                <div className="space-y-3">
+                  <p className="text-xs text-muted/80 leading-snug">
+                    Choose what to reset. App state alone is enough to fix
+                    most stuck-UI issues.
+                  </p>
                   <div className="space-y-2">
-                    <p className="text-xxs leading-4 text-muted/75">
-                      Deletes all highlights, notes, and reading status on this
-                      device. This can&apos;t be undone.
-                    </p>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="secondary"
-                        onClick={() => setConfirmingReset(false)}
-                        disabled={isResetting}
-                        className="flex-1"
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        onClick={handleResetLocalData}
-                        disabled={isResetting}
-                        className="flex-1 border border-red-500/30"
-                      >
-                        {isResetting ? "Resetting..." : "Confirm reset"}
-                      </Button>
-                    </div>
+                    <ResetCheckbox
+                      id="reset-app-state"
+                      label="App state"
+                      description="Cached UI, sync flags, bookmark cache."
+                      tooltip={RESET_STATE_TOOLTIP}
+                      checked={resetAppState}
+                      onCheckedChange={setResetAppState}
+                      disabled={isResetting}
+                    />
+                    <ResetCheckbox
+                      id="reset-content"
+                      label="Personal content"
+                      description="Highlights, notes, reading status, saved searches."
+                      tooltip={RESET_CONTENT_TOOLTIP}
+                      checked={resetContent}
+                      onCheckedChange={setResetContent}
+                      disabled={isResetting}
+                      destructive
+                    />
                   </div>
-                ) : (
-                  <Button
-                    variant="secondary"
-                    onClick={() => setConfirmingReset(true)}
-                    disabled={isResetting}
-                    className="w-full"
-                  >
-                    {isResetting ? "Resetting..." : "Reset local data"}
-                  </Button>
-                )}
-              </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="secondary"
+                      onClick={closeConfirm}
+                      disabled={isResetting}
+                      className="flex-1"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      variant={resetContent ? "destructive" : "primary"}
+                      onClick={handleConfirmReset}
+                      disabled={isResetting || !canReset}
+                      className={cn(
+                        "flex-1",
+                        resetContent && "border border-red-500/30",
+                      )}
+                    >
+                      {isResetting
+                        ? resetContent
+                          ? "Deleting..."
+                          : "Resetting..."
+                        : resetContent
+                          ? "Confirm delete"
+                          : "Reset"}
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <Button
+                  variant="secondary"
+                  onClick={() => setConfirmingReset(true)}
+                  disabled={isResetting}
+                  className="w-full"
+                >
+                  {isResetting ? "Resetting..." : "Reset data"}
+                </Button>
+              )}
             </section>
           </div>
         </div>
     </Modal>
+  );
+}
+
+interface ResetCheckboxProps {
+  id: string;
+  label: string;
+  description: string;
+  tooltip: string;
+  checked: boolean;
+  onCheckedChange: (checked: boolean) => void;
+  disabled?: boolean;
+  destructive?: boolean;
+}
+
+function ResetCheckbox({
+  id,
+  label,
+  description,
+  tooltip,
+  checked,
+  onCheckedChange,
+  disabled,
+  destructive,
+}: ResetCheckboxProps) {
+  return (
+    <label
+      htmlFor={id}
+      className={cn(
+        "flex items-start gap-3 rounded border border-border/60 bg-surface/40 p-3 cursor-pointer transition-colors",
+        "hover:bg-surface/60",
+        disabled && "opacity-60 cursor-default",
+        destructive && checked && "border-red-500/40 bg-red-500/5",
+      )}
+      title={tooltip}
+    >
+      <Checkbox.Root
+        id={id}
+        checked={checked}
+        onCheckedChange={onCheckedChange}
+        disabled={disabled}
+        className={cn(
+          "mt-0.5 flex size-4 shrink-0 items-center justify-center rounded border transition-colors",
+          "border-border bg-surface-card",
+          "data-[checked]:bg-accent data-[checked]:border-accent",
+          destructive &&
+            "data-[checked]:bg-red-500 data-[checked]:border-red-500",
+        )}
+      >
+        <Checkbox.Indicator className="text-white">
+          <CheckIcon weight="bold" className="size-3" />
+        </Checkbox.Indicator>
+      </Checkbox.Root>
+      <div className="flex flex-col gap-0.5 min-w-0">
+        <span
+          className={cn(
+            "text-sm leading-tight",
+            destructive ? "text-foreground" : "text-foreground/90",
+          )}
+        >
+          {label}
+        </span>
+        <span className="text-xxs text-muted/70 leading-snug">
+          {description}
+        </span>
+      </div>
+    </label>
   );
 }

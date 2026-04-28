@@ -331,22 +331,35 @@ function NewTabRouteApp() {
     return getReaderUrl(bookmark.tweetId, undefined, "reading");
   }, []);
 
-  const handleResetLocalData = useCallback(async () => {
-    if (isResetting) return;
-    setIsResetting(true);
-    actions.prepareForReset();
-    try {
-      await resetLocalData();
-    } catch {
-    } finally {
-      refreshContinueReading();
-      restoreReadingTab();
-      setView("home");
-      setSettingsOpen(false);
-      setIsResetting(false);
-      window.location.reload();
-    }
-  }, [actions, isResetting, refreshContinueReading, restoreReadingTab]);
+  const runReset = useCallback(
+    async (keepUserContent: boolean) => {
+      if (isResetting) return;
+      setIsResetting(true);
+      actions.prepareForReset();
+      try {
+        await resetLocalData({ keepUserContent });
+      } catch {
+      } finally {
+        refreshContinueReading();
+        restoreReadingTab();
+        setView("home");
+        setSettingsOpen(false);
+        setIsResetting(false);
+        window.location.reload();
+      }
+    },
+    [actions, isResetting, refreshContinueReading, restoreReadingTab],
+  );
+
+  const handleResetAppState = useCallback(
+    () => runReset(true),
+    [runReset],
+  );
+
+  const handleDeleteAllData = useCallback(
+    () => runReset(false),
+    [runReset],
+  );
 
   useEffect(() => {
     actions.setReaderActive(false);
@@ -480,7 +493,8 @@ function NewTabRouteApp() {
         onUpdateSettings={updateSettings}
         themePreference={themePreference}
         onThemePreferenceChange={setThemePreference}
-        onResetLocalData={handleResetLocalData}
+        onResetAppState={handleResetAppState}
+        onDeleteAllData={handleDeleteAllData}
       />
       {toast && (
         <Toast

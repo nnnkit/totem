@@ -1,4 +1,4 @@
-import { closeDb } from "../db";
+import { closeDb, clearTransientStores } from "../db";
 import {
   IDB_ACCOUNT_DATABASE_PREFIX,
   IDB_DATABASE_NAME,
@@ -120,7 +120,18 @@ function deleteDatabaseWithTimeout(dbName: string): Promise<boolean> {
   });
 }
 
-export async function resetLocalData(): Promise<void> {
+export interface ResetOptions {
+  // When true, preserve user-generated content (highlights, reading
+  // progress, saved searches) and the cross-device settings stored in
+  // chrome.storage.sync. Wipes only caches, flags, sync metadata, and
+  // the bookmarks cache (which re-syncs from upstream). Used for the
+  // "Reset app" path that fixes stuck UI without losing data.
+  keepUserContent?: boolean;
+}
+
+export async function resetLocalData(options: ResetOptions = {}): Promise<void> {
+  const { keepUserContent = false } = options;
+
   // Broadcast first: every open page's RuntimeProvider and the SW watch
   // CS_RESET_EPOCH and drop their IDB handles on change. Without this,
   // indexedDB.deleteDatabase() below gets blocked by live connections and
@@ -149,20 +160,31 @@ export async function resetLocalData(): Promise<void> {
     // exists and be discarded.
   }
 
-  closeDb();
+  if (keepUserContent) {
+    // Clear the bookmarks/details/search-index stores in the active DB
+    // without touching the precious stores. The DB stays open; other
+    // tabs can keep their handles.
+    try {
+      await clearTransientStores();
+    } catch (error) {
+      console.warn("[Totem] reset: clearTransientStores failed", error);
+    }
+  } else {
+    closeDb();
 
-  // Let other extension pages' onChanged listeners finish dropping their
-  // handles before the delete lands.
-  await new Promise<void>((resolve) => setTimeout(resolve, RESET_BROADCAST_DRAIN_MS));
+    // Let other extension pages' onChanged listeners finish dropping their
+    // handles before the delete lands.
+    await new Promise<void>((resolve) => setTimeout(resolve, RESET_BROADCAST_DRAIN_MS));
 
-  const accountDbNames = await getAccountDatabaseNames();
-  const allDbNames = Array.from(new Set([...IDB_DATABASE_NAMES, ...accountDbNames]));
-  const deleteResults = await Promise.all(
-    allDbNames.map((dbName) => deleteDatabaseWithTimeout(dbName)),
-  );
-  const stillPresent = allDbNames.filter((_, i) => !deleteResults[i]);
-  if (stillPresent.length > 0) {
-    console.warn("[Totem] reset: deleteDatabase did not complete for", stillPresent);
+    const accountDbNames = await getAccountDatabaseNames();
+    const allDbNames = Array.from(new Set([...IDB_DATABASE_NAMES, ...accountDbNames]));
+    const deleteResults = await Promise.all(
+      allDbNames.map((dbName) => deleteDatabaseWithTimeout(dbName)),
+    );
+    const stillPresent = allDbNames.filter((_, i) => !deleteResults[i]);
+    if (stillPresent.length > 0) {
+      console.warn("[Totem] reset: deleteDatabase did not complete for", stillPresent);
+    }
   }
 
   for (const key of LOCAL_STORAGE_RESET_KEYS) {
@@ -173,7 +195,12 @@ export async function resetLocalData(): Promise<void> {
     await Promise.race([
       Promise.all([
         chrome.storage.local.remove(CHROME_LOCAL_RESET_KEYS_WITH_LEGACY),
-        chrome.storage.sync.remove(CHROME_SYNC_RESET_KEYS),
+        // chrome.storage.sync propagates across devices — only wipe it
+        // on a full reset so a local "Reset app" can't blow away the
+        // user's theme/settings on every device they're signed into.
+        keepUserContent
+          ? Promise.resolve()
+          : chrome.storage.sync.remove(CHROME_SYNC_RESET_KEYS),
       ]),
       new Promise<void>((resolve) => setTimeout(resolve, 3000)),
     ]);
