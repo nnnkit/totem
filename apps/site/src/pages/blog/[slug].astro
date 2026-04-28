@@ -1,0 +1,105 @@
+---
+import { getCollection, render } from "astro:content";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import BlogPostCta from "../../components/BlogPostCta.astro";
+
+export async function getStaticPaths() {
+  const posts = await getCollection("blog", ({ data }) => !data.draft);
+  return posts.map((post) => ({
+    params: { slug: post.data.slug ?? post.id },
+    props: { post },
+  }));
+}
+
+const { post } = Astro.props;
+const { Content } = await render(post);
+
+const slug = post.data.slug ?? post.id;
+const url = `https://usetotem.xyz/blog/${slug}`;
+const description = post.data.description;
+const ogImage = "https://usetotem.xyz/icons/icon-128.png";
+
+function formatDate(value: unknown): string | null {
+  if (!value) return null;
+  const date = value instanceof Date ? value : new Date(String(value));
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}
+
+function isoDate(value: unknown): string | null {
+  if (!value) return null;
+  const date = value instanceof Date ? value : new Date(String(value));
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toISOString().slice(0, 10);
+}
+
+const dateLabel = formatDate(post.data.publishedAt);
+const dateIso = isoDate(post.data.publishedAt);
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  headline: post.data.title,
+  description,
+  datePublished: dateIso,
+  url,
+  author: { "@type": "Organization", name: "Totem" },
+  publisher: {
+    "@type": "Organization",
+    name: "Totem",
+    logo: { "@type": "ImageObject", url: ogImage },
+  },
+};
+---
+
+<BaseLayout
+  page="blog-post"
+  title={`${post.data.title} — Totem`}
+  description={description}
+  canonical={url}
+  og={{
+    type: "article",
+    title: post.data.title,
+    image: ogImage,
+  }}
+  twitter={{
+    title: post.data.title,
+    image: ogImage,
+  }}
+>
+  <Fragment slot="head">
+    <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+  </Fragment>
+
+  <main class="mx-auto max-w-3xl px-6 pb-16 pt-12 sm:pt-16">
+    <a
+      href="/blog"
+      class="mb-8 inline-block text-sm text-neutral-500 no-underline transition-colors hover:text-neutral-900"
+    >
+      ← All posts
+    </a>
+
+    {
+      dateLabel && dateIso && (
+        <time
+          datetime={dateIso}
+          class="block text-xs uppercase tracking-widest text-neutral-400"
+        >
+          {dateLabel}
+        </time>
+      )
+    }
+
+    <article
+      class="prose prose-neutral mt-4 max-w-none prose-headings:font-serif prose-h1:text-balance prose-h1:text-4xl prose-h1:leading-tight prose-h2:mt-12 prose-h2:text-2xl prose-a:text-neutral-900 prose-a:underline prose-a:underline-offset-4 hover:prose-a:text-neutral-700 prose-blockquote:border-l-2 prose-blockquote:border-neutral-300 prose-blockquote:font-normal prose-blockquote:not-italic prose-blockquote:text-neutral-700 prose-img:rounded-xl prose-table:text-sm"
+    >
+      <Content />
+    </article>
+
+    <BlogPostCta slug={slug} />
+  </main>
+</BaseLayout>

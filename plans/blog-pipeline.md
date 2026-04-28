@@ -68,11 +68,12 @@ Idea  →  /dataforseo research  →  Fit check  →  Draft  →  Publish  →  
    same idea in three months.
 4. **Draft** in `plans/blog-drafts/NN-slug.md`. Outline first, then prose.
    Move the entry to **In progress**.
-5. **Publish**: copy the markdown to `apps/site/content/blog/<slug>.md` with
+5. **Publish**: copy the markdown to `apps/site/src/content/blog/<slug>.md` with
    frontmatter (`title`, `slug`, `description`, `publishedAt`, `draft: false`,
-   `canonicalKeyword`). Run `pnpm dev` (or build) — `build-blog.mjs` auto-
-   converts md → HTML, generates the per-post page, updates the listing, and
-   regenerates `src/generated/blog-posts.ts`. **No manual HTML step.**
+   `canonicalKeyword`). Run `pnpm --filter @totem/site dev` (or build) —
+   Astro's content collection renders md → static HTML, the per-post page and
+   listing are generated automatically, and external `<a>` get UTM/`ref`
+   decoration via `apps/site/src/lib/rehype-blog-links.mjs`. **No manual HTML step.**
 6. **Track**: move the entry to **Published** with the live URL and date.
    Add the canonical keyword + monthly volume so we can revisit performance.
 

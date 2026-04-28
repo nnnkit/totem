@@ -1,10 +1,11 @@
-import readingStatesImage from "./feature-previews/reading-states.jpg";
 import {
   SUPPORT_EMAIL,
   SUPPORT_EMAIL_URL,
   SUPPORT_X_HANDLE,
   SUPPORT_X_URL,
-} from "../../../src/lib/constants/support";
+} from "../../../../src/lib/constants/support";
+
+const readingStatesImage = "/feature-previews/reading-states.jpg";
 
 export type FeatureItem = {
   title: string;

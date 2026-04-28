@@ -1,0 +1,18 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { PrivacyPage } from "../react/SiteApp";
+---
+
+<BaseLayout
+  page="privacy"
+  title="Totem — Privacy Policy"
+  description="Plain-English privacy policy for Totem. Explains X access, local browser storage, optional Chrome permissions, and what stays on your device."
+  canonical="https://usetotem.xyz/privacy"
+  og={{
+    type: "website",
+    image: "https://usetotem.xyz/icons/icon-128.png",
+  }}
+  twitter={{}}
+>
+  <PrivacyPage client:load />
+</BaseLayout>

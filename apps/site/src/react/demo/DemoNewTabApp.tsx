@@ -1,16 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { BookmarkReader } from "../../../../src/components/BookmarkReader";
-import { BookmarksList } from "../../../../src/components/BookmarksList";
-import { NewTabHome } from "../../../../src/components/NewTabHome";
-import { SettingsModal } from "../../../../src/components/SettingsModal";
-import { Toast } from "../../../../src/components/ui/Toast";
-import { useContinueReading } from "../../../../src/hooks/useContinueReading";
-import { useTheme } from "../../../../src/hooks/useTheme";
-import { pickRelatedBookmarks } from "../../../../src/lib/related";
-import { LS_READING_TAB } from "../../../../src/lib/storage-keys";
-import type { ReadingTab } from "../../../../src/lib/reading-list";
-import type { FooterState, SyncButtonState } from "../../../../src/stores/selectors";
-import type { ThemePreference } from "../../../../src/types";
+import { BookmarkReader } from "../../../../../src/components/BookmarkReader";
+import { BookmarksList } from "../../../../../src/components/BookmarksList";
+import { NewTabHome } from "../../../../../src/components/NewTabHome";
+import { SettingsModal } from "../../../../../src/components/SettingsModal";
+import { Toast } from "../../../../../src/components/ui/Toast";
+import { useContinueReading } from "../../../../../src/hooks/useContinueReading";
+import { useTheme } from "../../../../../src/hooks/useTheme";
+import { pickRelatedBookmarks } from "../../../../../src/lib/related";
+import { LS_READING_TAB } from "../../../../../src/lib/storage-keys";
+import type { ReadingTab } from "../../../../../src/lib/reading-list";
+import type { FooterState, SyncButtonState } from "../../../../../src/stores/selectors";
+import type { ThemePreference } from "../../../../../src/types";
 import type {
   Bookmark,
   ReadingProgress,
@@ -18,7 +18,7 @@ import type {
   ThreadTweet,
   TotemSeedPayload,
   UserSettings,
-} from "../../../../src/types";
+} from "../../../../../src/types";
 import {
   clearAllLocalData,
   ensureReadingProgressExists,
@@ -26,7 +26,7 @@ import {
   markReadingProgressUncompleted,
   upsertTweetDetailCache,
   upsertReadingProgress,
-} from "../../../../src/db";
+} from "../../../../../src/db";
 import {
   DEFAULT_DEMO_SETTINGS,
   DEMO_FALLBACK_PAYLOAD,
@@ -631,7 +631,8 @@ export function DemoNewTabApp() {
         onUpdateSettings={updateSettings}
         themePreference={themePreference}
         onThemePreferenceChange={setThemePreference}
-        onResetLocalData={resetDemo}
+        onResetAppState={resetDemo}
+        onDeleteAllData={resetDemo}
       />
       {toast && (
         <Toast

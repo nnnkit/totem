@@ -1,0 +1,57 @@
+---
+import { getCollection } from "astro:content";
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { LandingPage } from "../react/SiteApp";
+
+const posts = (await getCollection("blog", ({ data }) => !data.draft)).sort(
+  (a, b) => {
+    const aDate = a.data.publishedAt ? String(a.data.publishedAt) : "";
+    const bDate = b.data.publishedAt ? String(b.data.publishedAt) : "";
+    return bDate.localeCompare(aDate);
+  },
+);
+
+const recentPosts = posts.slice(0, 3).map((post) => {
+  const date = post.data.publishedAt
+    ? new Date(String(post.data.publishedAt))
+    : null;
+  return {
+    slug: post.data.slug ?? post.id,
+    title: post.data.title,
+    description: post.data.description,
+    publishedAt:
+      date && !Number.isNaN(date.getTime())
+        ? date.toISOString().slice(0, 10)
+        : null,
+  };
+});
+---
+
+<BaseLayout
+  page="landing"
+  title="Totem — Twitter / X Bookmarks on Your New Tab"
+  description="Turn your Twitter / X bookmarks into a searchable read-later queue on every new tab. Save, search, export — local-first, no login."
+  canonical="https://usetotem.xyz/"
+  og={{
+    type: "website",
+    image: "https://usetotem.xyz/icons/icon-128.png",
+  }}
+  twitter={{
+    image: "https://usetotem.xyz/icons/icon-128.png",
+  }}
+>
+  <Fragment slot="head">
+    <script type="application/ld+json" set:html={JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      name: "Totem",
+      description:
+        "Turn your Twitter / X bookmarks into a searchable read-later queue on every new tab. Save, search, export — local-first, no login or server.",
+      applicationCategory: "BrowserApplication",
+      operatingSystem: "Google Chrome",
+      offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+      url: "https://usetotem.xyz",
+    })} />
+  </Fragment>
+  <LandingPage client:load recentPosts={recentPosts} />
+</BaseLayout>

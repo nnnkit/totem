@@ -7,7 +7,7 @@ import type {
   TotemSeedPayload,
   TweetDetailCache,
   UserSettings,
-} from "../../../../src/types";
+} from "../../../../../src/types";
 
 export type DemoDetailEntry = TweetDetailCache;
 export type DemoPayload = TotemSeedPayload;

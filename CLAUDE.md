@@ -9,7 +9,7 @@ All blog work is managed in [`plans/blog-pipeline.md`](plans/blog-pipeline.md). 
 It contains:
 - **Voice** — the editorial personality every post must match ("Notes on bookmarks, reading, and the things you save"). Behavioral, honest about scope, specific, terse. No generic listicles without a thesis.
 - **Topic filter** — 4 ✅ / 4 ❌ checks to run an idea through before spending `/dataforseo` API budget on research.
-- **Workflow** — Idea → `/dataforseo` research (cache JSON in `tmp/dataforseo/`) → fit check → draft in `plans/blog-drafts/NN-slug.md` → publish to `apps/site/content/blog/<slug>.md` with frontmatter → `build-blog.mjs` auto-converts md → HTML on next dev/build (no manual HTML step) → move entry to **Published** table.
+- **Workflow** — Idea → `/dataforseo` research (cache JSON in `tmp/dataforseo/`) → fit check → draft in `plans/blog-drafts/NN-slug.md` → publish to `apps/site/src/content/blog/<slug>.md` with frontmatter → Astro renders md → static HTML at build (UTM/`ref` decoration via `apps/site/src/lib/rehype-blog-links.mjs`) → move entry to **Published** table.
 - **Frontmatter template** for new posts.
 - **Ideas / In progress / Published / Killed** sections.
 

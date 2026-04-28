@@ -1,0 +1,23 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { HowItWorksPage } from "../react/SiteApp";
+---
+
+<BaseLayout
+  page="how-it-works"
+  title="Totem — How it works"
+  description="An interactive map of the Totem Chrome extension. Click a station to see the files and storage keys behind each part, or pick a flow to walk through a real interaction."
+  canonical="https://usetotem.xyz/how-it-works/"
+  og={{
+    type: "article",
+    description:
+      "An interactive map of how Totem moves data — from your X session, through the service worker, into local storage, out to the new tab.",
+    image: "https://usetotem.xyz/icons/icon-128.png",
+  }}
+  twitter={{
+    description: "An interactive map of how Totem moves data inside your browser.",
+    image: "https://usetotem.xyz/icons/icon-128.png",
+  }}
+>
+  <HowItWorksPage client:load />
+</BaseLayout>

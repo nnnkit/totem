@@ -1,0 +1,128 @@
+---
+import "../styles/global.css";
+import SiteHeader from "../components/SiteHeader.astro";
+import SiteFooter from "../components/SiteFooter.astro";
+import Favicon from "../components/Favicon.astro";
+
+export type SitePageKey = "landing" | "privacy" | "how-it-works" | "blog-index" | "blog-post";
+
+type OGType = "website" | "article";
+
+interface Props {
+  title: string;
+  description: string;
+  canonical: string;
+  og?: { type?: OGType; title?: string; description?: string; image?: string } | null;
+  twitter?: { title?: string; description?: string; image?: string } | null;
+  spaceGrotesk?: boolean;
+  embedGuardGa?: boolean;
+  showChrome?: boolean;
+  page?: SitePageKey;
+  bodyClass?: string;
+}
+
+const {
+  title,
+  description,
+  canonical,
+  og = null,
+  twitter = null,
+  spaceGrotesk = true,
+  embedGuardGa = false,
+  showChrome = true,
+  page,
+  bodyClass,
+} = Astro.props;
+
+const fontHref = spaceGrotesk
+  ? "https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,700;1,400;1,700&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+  : "https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,700;1,400;1,700&display=swap";
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    {
+      embedGuardGa ? (
+        <script is:inline set:html={`(function () {
+  var isEmbed = new URLSearchParams(location.search).has('embed');
+  var isFramed = window.top !== window.self;
+  if (isEmbed || isFramed) return;
+  var s = document.createElement('script');
+  s.async = true;
+  s.src = 'https://www.googletagmanager.com/gtag/js?id=G-VBKV6TVM6W';
+  document.head.appendChild(s);
+  window.dataLayer = window.dataLayer || [];
+  window.gtag = function () { window.dataLayer.push(arguments); };
+  window.gtag('js', new Date());
+  window.gtag('config', 'G-VBKV6TVM6W');
+})();`} />
+      ) : (
+        <>
+          <script
+            is:inline
+            async
+            src="https://www.googletagmanager.com/gtag/js?id=G-VBKV6TVM6W"
+          />
+          <script is:inline set:html={`window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-VBKV6TVM6W');`} />
+        </>
+      )
+    }
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href={fontHref} rel="stylesheet" />
+
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <Favicon />
+
+    {
+      og && (
+        <>
+          <meta property="og:type" content={og.type ?? "website"} />
+          <meta property="og:url" content={canonical} />
+          <meta property="og:title" content={og.title ?? title} />
+          <meta property="og:description" content={og.description ?? description} />
+          {og.image && <meta property="og:image" content={og.image} />}
+          <meta property="og:site_name" content="Totem" />
+        </>
+      )
+    }
+
+    {
+      twitter && (
+        <>
+          <meta name="twitter:card" content="summary" />
+          <meta name="twitter:title" content={twitter.title ?? title} />
+          <meta name="twitter:description" content={twitter.description ?? description} />
+          {twitter.image && <meta name="twitter:image" content={twitter.image} />}
+        </>
+      )
+    }
+
+    <slot name="head" />
+  </head>
+  <body class={bodyClass}>
+    {
+      showChrome ? (
+        <div class="flex min-h-dvh flex-col bg-white font-sans text-neutral-900">
+          <SiteHeader page={page} />
+          <div class="flex flex-1 flex-col">
+            <slot />
+          </div>
+          <SiteFooter />
+        </div>
+      ) : (
+        <slot />
+      )
+    }
+  </body>
+</html>

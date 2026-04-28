@@ -1,0 +1,17 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { DemoNewTabApp } from "../react/demo/DemoNewTabApp";
+---
+
+<BaseLayout
+  title="Totem — Interactive Demo"
+  description="Try the Totem reading experience right in your browser. Interactive demo with the same shell as the extension."
+  canonical="https://usetotem.xyz/demo/"
+  spaceGrotesk={false}
+  embedGuardGa={true}
+  showChrome={false}
+>
+  <div id="root">
+    <DemoNewTabApp client:only="react" />
+  </div>
+</BaseLayout>

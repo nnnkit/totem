@@ -1,0 +1,90 @@
+---
+import { getCollection } from "astro:content";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+
+const posts = (await getCollection("blog", ({ data }) => !data.draft)).sort(
+  (a, b) => {
+    const aDate = a.data.publishedAt ? String(a.data.publishedAt) : "";
+    const bDate = b.data.publishedAt ? String(b.data.publishedAt) : "";
+    return bDate.localeCompare(aDate);
+  },
+);
+
+function formatDate(value: unknown): string | null {
+  if (!value) return null;
+  const date = value instanceof Date ? value : new Date(String(value));
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}
+
+function isoDate(value: unknown): string | null {
+  if (!value) return null;
+  const date = value instanceof Date ? value : new Date(String(value));
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toISOString().slice(0, 10);
+}
+---
+
+<BaseLayout
+  page="blog-index"
+  title="Totem — Blog"
+  description="Notes on Twitter/X bookmarks, read-later workflows, and the small details that make reading what you saved actually possible."
+  canonical="https://usetotem.xyz/blog/"
+  og={{
+    type: "website",
+    image: "https://usetotem.xyz/icons/icon-128.png",
+  }}
+  twitter={{
+    image: "https://usetotem.xyz/icons/icon-128.png",
+  }}
+>
+  <main class="mx-auto max-w-3xl px-6 pb-16 pt-12 sm:pt-16">
+    <p class="text-xs font-semibold uppercase tracking-widest text-neutral-400 mb-3">
+      Totem blog
+    </p>
+    <h1 class="font-serif tracking-tight text-balance text-4xl leading-tight text-neutral-900 mb-8">
+      Notes on bookmarks, reading, and the things you save.
+    </h1>
+
+    {
+      posts.length === 0 ? (
+        <p class="text-neutral-500">No posts yet.</p>
+      ) : (
+        <ul class="space-y-8 border-t border-neutral-200 pt-8">
+          {posts.map((post) => {
+            const slug = post.data.slug ?? post.id;
+            const dateLabel = formatDate(post.data.publishedAt);
+            const dateIso = isoDate(post.data.publishedAt);
+            return (
+              <li>
+                <a
+                  href={`/blog/${slug}`}
+                  class="group block no-underline"
+                >
+                  {dateLabel && dateIso && (
+                    <time
+                      datetime={dateIso}
+                      class="block text-xs uppercase tracking-widest text-neutral-400"
+                    >
+                      {dateLabel}
+                    </time>
+                  )}
+                  <h2 class="mt-2 text-2xl font-semibold leading-tight tracking-tight text-neutral-800 transition-colors group-hover:text-neutral-600 text-balance">
+                    {post.data.title}
+                  </h2>
+                  <p class="mt-2 text-base leading-relaxed text-neutral-600 text-pretty">
+                    {post.data.description}
+                  </p>
+                </a>
+              </li>
+            );
+          })}
+        </ul>
+      )
+    }
+  </main>
+</BaseLayout>

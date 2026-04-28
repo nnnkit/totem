@@ -2,14 +2,10 @@ import {
   AirplaneTiltIcon,
   ArticleIcon,
   CheckIcon,
-  EnvelopeSimpleIcon,
   HighlighterCircleIcon,
   ShieldCheckIcon,
-  XLogoIcon,
   type Icon,
 } from "@phosphor-icons/react";
-import parseHtml, { type DOMNode } from "html-react-parser";
-import { blogPosts, blogPostsBySlug } from "./generated/blog-posts";
 import {
   useEffect,
   useRef,
@@ -18,8 +14,8 @@ import {
   type ElementType,
   type ReactNode,
 } from "react";
-import { cn } from "../../../src/lib/cn";
-import { TotemLogo } from "../../../src/components/TotemLogo";
+import { cn } from "../../../../src/lib/cn";
+import { TotemLogo } from "../../../../src/components/TotemLogo";
 import {
   SITE_COPY,
   SITE_LINKS,
@@ -94,19 +90,6 @@ function ChromeIcon({ className }: { className?: string }) {
   );
 }
 
-function GitHubIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 16 16"
-      fill="currentColor"
-      className={className}
-      aria-hidden="true"
-    >
-      <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" />
-    </svg>
-  );
-}
-
 /** Scroll-triggered visibility hook. Fires once, then disconnects. */
 function useOnScreen(threshold = 0.15) {
   const ref = useRef<HTMLDivElement>(null);
@@ -131,17 +114,7 @@ function useOnScreen(threshold = 0.15) {
   return { ref, visible };
 }
 
-export type SitePage =
-  | "landing"
-  | "privacy"
-  | "how-it-works"
-  | "blog-index"
-  | "blog-post";
-
-interface SiteAppProps {
-  page: SitePage;
-  slug?: string | null;
-}
+export type SitePage = "landing" | "privacy" | "how-it-works";
 
 type SiteButtonVariant = "primary" | "secondary";
 type SiteButtonSize = "default" | "pill";
@@ -170,9 +143,6 @@ const siteHeadingClasses: Record<SiteHeadingSize, string> = {
 
 const siteBodyLinkClass =
   "font-medium text-neutral-900 underline underline-offset-4 transition-colors duration-200 hover:text-neutral-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30 focus-visible:ring-offset-2";
-
-const siteFooterLinkClass =
-  "rounded-sm text-xs text-neutral-600 no-underline transition-colors duration-200 hover:text-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30";
 
 function SiteButtonLink({
   variant = "primary",
@@ -328,154 +298,10 @@ function SiteCard({
   );
 }
 
-function SiteLayout({
-  page,
-  children,
-}: {
-  page: SitePage;
-  children: ReactNode;
-}) {
-  const [scrolled, setScrolled] = useState(false);
-  const demoHref = page === "landing" ? "#demo" : "/#demo";
-  const { footer, header } = SITE_COPY;
-
-  useEffect(() => {
-    let rafId = 0;
-    let ticking = false;
-
-    const updateScrollState = () => {
-      ticking = false;
-      setScrolled((current) => {
-        const next = window.scrollY > 20;
-        return current === next ? current : next;
-      });
-    };
-
-    const handleScroll = () => {
-      if (ticking) return;
-      ticking = true;
-      rafId = window.requestAnimationFrame(updateScrollState);
-    };
-
-    handleScroll();
-    window.addEventListener("scroll", handleScroll, { passive: true });
-
-    return () => {
-      window.removeEventListener("scroll", handleScroll);
-      if (rafId) window.cancelAnimationFrame(rafId);
-    };
-  }, []);
-
-  return (
-    <div className="flex min-h-dvh flex-col bg-white font-site-sans text-neutral-900">
-      <header
-        className={cn(
-          "sticky top-0 z-50 border-b border-neutral-200 transition-colors duration-200",
-          scrolled ? "bg-white/90 backdrop-blur-md" : "bg-white",
-        )}
-      >
-        <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-4 px-6 py-2.5">
-          <a
-            href="/"
-            className="flex items-center gap-2.5 no-underline"
-            aria-label={header.brandAriaLabel}
-          >
-            <TotemLogo className="size-7" />
-            <span className="text-sm font-bold text-neutral-900">
-              {header.brandName}
-            </span>
-          </a>
-
-          <nav
-            className="flex items-center gap-2"
-            aria-label={header.navAriaLabel}
-          >
-            <SiteButtonLink
-              href={SITE_LINKS.installUrl}
-              target="_blank"
-              variant="primary"
-              size="pill"
-            >
-              <ChromeIcon className="size-4 shrink-0" />
-              {header.installLabel}
-            </SiteButtonLink>
-            <SiteButtonLink href={demoHref} variant="secondary" size="pill">
-              {header.demoLabel}
-            </SiteButtonLink>
-          </nav>
-        </div>
-      </header>
-
-      <div className="flex flex-1 flex-col">{children}</div>
-
-      <footer className="border-t border-neutral-200">
-        <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center justify-between gap-x-6 gap-y-2 px-6 py-3.5 text-sm text-neutral-600">
-          <a
-            href="/"
-            className="flex items-center gap-2 no-underline"
-            aria-label={footer.brandAriaLabel}
-          >
-            <TotemLogo className="size-5" />
-            <span className="text-xs font-semibold text-neutral-700">
-              {header.brandName}
-            </span>
-          </a>
-
-          <nav
-            className="flex items-center gap-5"
-            aria-label={footer.navAriaLabel}
-          >
-            <a href={SITE_LINKS.howItWorksUrl} className={siteFooterLinkClass}>
-              How it works
-            </a>
-            <a href="/blog/" className={siteFooterLinkClass}>
-              Blog
-            </a>
-            <a href={SITE_LINKS.privacyUrl} className={siteFooterLinkClass}>
-              {footer.privacyLabel}
-            </a>
-            <a
-              href={SITE_LINKS.supportEmailUrl}
-              className={cn(
-                siteFooterLinkClass,
-                "inline-flex items-center justify-center",
-              )}
-              aria-label="Email support"
-              title="Email support"
-            >
-              <EnvelopeSimpleIcon className="size-3.5" />
-            </a>
-            <a
-              href={SITE_LINKS.supportXUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={cn(
-                siteFooterLinkClass,
-                "inline-flex items-center justify-center",
-              )}
-              aria-label={`Open ${SITE_LINKS.supportXHandle} on X`}
-              title={SITE_LINKS.supportXHandle}
-            >
-              <XLogoIcon className="size-3.5" />
-            </a>
-            <a
-              href={SITE_LINKS.githubRepoUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={cn(
-                siteFooterLinkClass,
-                "inline-flex items-center gap-1.5",
-              )}
-            >
-              <GitHubIcon className="size-3.5" />
-            </a>
-          </nav>
-
-          <p className="text-xs text-neutral-500">{footer.copyright}</p>
-        </div>
-      </footer>
-    </div>
-  );
+// SiteLayout: chrome (header + footer) lives in Astro now (BaseLayout.astro).
+// This component is a no-op wrapper to keep page sources unchanged.
+function SiteLayout({ children }: { page: SitePage; children: ReactNode }) {
+  return <>{children}</>;
 }
 
 function DemoBrowser() {
@@ -484,6 +310,24 @@ function DemoBrowser() {
   const [frameReady, setFrameReady] = useState(false);
   const [tabTitle, setTabTitle] = useState<string>(browser.defaultTabTitle);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  // Astro hydrates this component after the iframe may have already loaded
+  // from cache, so a React `onLoad` prop can miss the event. Attach a native
+  // listener and also poll readyState to cover the already-loaded case.
+  useEffect(() => {
+    if (!opened) return;
+    const iframe = iframeRef.current;
+    if (!iframe) return;
+
+    if (iframe.contentDocument?.readyState === "complete") {
+      setFrameReady(true);
+      return;
+    }
+
+    const handleLoad = () => setFrameReady(true);
+    iframe.addEventListener("load", handleLoad);
+    return () => iframe.removeEventListener("load", handleLoad);
+  }, [opened]);
 
   useEffect(() => {
     if (!opened) {
@@ -666,7 +510,6 @@ function DemoBrowser() {
             ref={iframeRef}
             title={browser.frameTitle}
             src="/demo/?embed=1"
-            onLoad={() => setFrameReady(true)}
             className={cn(
               "site-browser-frame",
               frameReady ? "opacity-100" : "opacity-0",
@@ -909,7 +752,14 @@ function PrivacyFeatureTile({
   );
 }
 
-function LandingPage() {
+export type BlogSummary = {
+  slug: string;
+  title: string;
+  description: string;
+  publishedAt: string | null;
+};
+
+function LandingPage({ recentPosts }: { recentPosts: BlogSummary[] }) {
   const { faq, features, hero, demo } = SITE_COPY.landing;
 
   return (
@@ -1071,7 +921,7 @@ function LandingPage() {
           </div>
         </SiteSection>
 
-        <RecentBlogPostsSection />
+        <RecentBlogPostsSection posts={recentPosts} />
 
         <SiteRevealSection className="bg-neutral-900 py-14" as="section">
           <div className="mx-auto w-full max-w-xl px-6 text-center">
@@ -1096,8 +946,8 @@ function LandingPage() {
   );
 }
 
-function RecentBlogPostsSection() {
-  const recent = blogPosts.filter((post) => !post.draft).slice(0, 3);
+function RecentBlogPostsSection({ posts }: { posts: BlogSummary[] }) {
+  const recent = posts.slice(0, 3);
   if (recent.length === 0) return null;
 
   return (
@@ -2067,189 +1917,4 @@ function HowItWorksPage() {
   );
 }
 
-function BlogIndexPage() {
-  return (
-    <SiteLayout page="blog-index">
-      <main className="mx-auto max-w-3xl px-6 pb-16 pt-12 sm:pt-16">
-        <SiteEyebrow className="mb-3">Totem blog</SiteEyebrow>
-        <SiteHeading as="h1" size="page" className="mb-8">
-          Notes on bookmarks, reading, and the things you save.
-        </SiteHeading>
-
-        {blogPosts.length === 0 ? (
-          <p className="text-neutral-500">No posts yet.</p>
-        ) : (
-          <ul className="space-y-8 border-t border-neutral-200 pt-8">
-            {blogPosts.map((post) => (
-              <li key={post.slug}>
-                <a
-                  href={`/blog/${post.slug}`}
-                  className="group block no-underline"
-                >
-                  {post.publishedAt && (
-                    <time
-                      dateTime={post.publishedAt}
-                      className="block text-xs uppercase tracking-widest text-neutral-400"
-                    >
-                      {new Date(post.publishedAt).toLocaleDateString("en-US", {
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                      })}
-                      {post.draft && (
-                        <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
-                          DRAFT
-                        </span>
-                      )}
-                    </time>
-                  )}
-                  <h2 className="mt-2 text-2xl font-semibold leading-tight tracking-tight text-neutral-800 transition-colors group-hover:text-neutral-600 text-balance">
-                    {post.title}
-                  </h2>
-                  <p className="mt-2 text-base leading-relaxed text-neutral-600 text-pretty">
-                    {post.description}
-                  </p>
-                </a>
-              </li>
-            ))}
-          </ul>
-        )}
-      </main>
-    </SiteLayout>
-  );
-}
-
-const TOTEM_HOSTS = new Set(["usetotem.xyz", "www.usetotem.xyz"]);
-
-function makeBlogLinkTransformer(slug: string) {
-  return function transformBlogLink(domNode: DOMNode) {
-    if (domNode.type !== "tag" || domNode.name !== "a") return;
-    const href = domNode.attribs?.href;
-    if (!href || !/^https?:\/\//i.test(href)) return;
-
-    let url: URL;
-    try {
-      url = new URL(href);
-    } catch {
-      return;
-    }
-
-    if (TOTEM_HOSTS.has(url.hostname)) {
-      url.searchParams.set("utm_source", "blog");
-      url.searchParams.set("utm_medium", "referral");
-      url.searchParams.set("utm_campaign", "blog_post");
-      url.searchParams.set("utm_content", slug);
-      domNode.attribs.href = url.toString();
-      return;
-    }
-
-    const ownHost =
-      typeof window !== "undefined" ? window.location.host : "totem.app";
-    if (url.host === ownHost) return;
-
-    domNode.attribs.target = "_blank";
-    domNode.attribs.rel = "noopener noreferrer";
-  };
-}
-
-function BlogPostPage({ slug }: { slug: string | null }) {
-  const post = slug ? blogPostsBySlug[slug] : undefined;
-
-  if (!post) {
-    return (
-      <SiteLayout page="blog-post">
-        <main className="mx-auto max-w-3xl px-6 pb-16 pt-12 sm:pt-16">
-          <SiteHeading as="h1" size="page">
-            Post not found
-          </SiteHeading>
-          <p className="mt-4 text-neutral-600">
-            <a href="/blog" className={siteBodyLinkClass}>
-              ← Back to the blog
-            </a>
-          </p>
-        </main>
-      </SiteLayout>
-    );
-  }
-
-  return (
-    <SiteLayout page="blog-post">
-      <main className="mx-auto max-w-3xl px-6 pb-16 pt-12 sm:pt-16">
-        <a
-          href="/blog"
-          className="mb-8 inline-block text-sm text-neutral-500 no-underline transition-colors hover:text-neutral-900"
-        >
-          ← All posts
-        </a>
-
-        {post.publishedAt && (
-          <time
-            dateTime={post.publishedAt}
-            className="block text-xs uppercase tracking-widest text-neutral-400"
-          >
-            {new Date(post.publishedAt).toLocaleDateString("en-US", {
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-            })}
-            {post.draft && (
-              <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
-                DRAFT
-              </span>
-            )}
-          </time>
-        )}
-
-        <article className="prose prose-neutral mt-4 max-w-none prose-headings:font-serif prose-h1:text-balance prose-h1:text-4xl prose-h1:leading-tight prose-h2:mt-12 prose-h2:text-2xl prose-a:text-neutral-900 prose-a:underline prose-a:underline-offset-4 hover:prose-a:text-neutral-700 prose-blockquote:border-l-2 prose-blockquote:border-neutral-300 prose-blockquote:font-normal prose-blockquote:not-italic prose-blockquote:text-neutral-700 prose-img:rounded-xl prose-table:text-sm">
-          {parseHtml(post.html, {
-            replace: makeBlogLinkTransformer(post.slug),
-          })}
-        </article>
-
-        <BlogPostCta slug={post.slug} />
-      </main>
-    </SiteLayout>
-  );
-}
-
-function BlogPostCta({ slug }: { slug: string }) {
-  const ctaUrl = SITE_LINKS.installUrl.replace(
-    "utm_campaign=site_install",
-    `utm_campaign=blog_post_cta&utm_content=${encodeURIComponent(slug)}`,
-  );
-
-  return (
-    <aside className="mt-14 flex flex-col items-start gap-5 rounded-2xl border border-neutral-200 bg-neutral-50 p-6 sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:p-7">
-      <div className="min-w-0 flex-1">
-        <p className="text-xs uppercase tracking-widest text-neutral-500">
-          From the makers of this blog
-        </p>
-        <h3 className="mt-1.5 font-serif text-lg leading-snug text-neutral-900">
-          Read more of what you bookmark.
-        </h3>
-        <p className="mt-1 text-sm leading-relaxed text-neutral-600">
-          Totem puts your X bookmarks on every new tab. Free, local-first, no
-          login.
-        </p>
-      </div>
-      <SiteButtonLink
-        href={ctaUrl}
-        target="_blank"
-        variant="primary"
-        size="pill"
-        className="shrink-0"
-      >
-        <ChromeIcon className="size-4 shrink-0" />
-        Add to Chrome — Free
-      </SiteButtonLink>
-    </aside>
-  );
-}
-
-export function SiteApp({ page, slug }: SiteAppProps) {
-  if (page === "privacy") return <PrivacyPage />;
-  if (page === "how-it-works") return <HowItWorksPage />;
-  if (page === "blog-index") return <BlogIndexPage />;
-  if (page === "blog-post") return <BlogPostPage slug={slug ?? null} />;
-  return <LandingPage />;
-}
+export { LandingPage, PrivacyPage, HowItWorksPage };

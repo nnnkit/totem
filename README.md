@@ -8,7 +8,7 @@ A Chrome extension that replaces your new tab with a calm reading queue built fr
 .                   # Root workspace — the Chrome extension
   src/              # Extension source (React + Vite)
   apps/
-    site/           # Marketing website + interactive demo (@totem/site)
+    site/           # Marketing website + interactive demo (@totem/site, Astro)
     extension/      # Extension packaging (manifest, icons)
   scripts/          # Build, release, and packaging scripts
 ```
@@ -20,7 +20,7 @@ Two pnpm workspaces:
 | `.` | `totem` | Chrome extension (new tab page) |
 | `apps/site` | `@totem/site` | Public website with live demo |
 
-The website imports extension components directly via relative paths (`../../../../src/...`) so both targets share one rendering layer.
+The website (Astro) renders blog posts statically and uses React islands for interactive surfaces (the demo, etc.). Interactive components import from the extension's `src/` via relative paths so both targets share one rendering layer.
 
 ## Getting started
 
@@ -39,7 +39,7 @@ pnpm --filter @totem/site dev   # Website dev server
 
 ```sh
 pnpm build:extension   # tsc + vite build for the extension
-pnpm build:website     # Vite build for the website
+pnpm build:website     # Astro build for the website
 pnpm build:all         # Both
 ```
 
