@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.23] - 2026-04-28
+
+- Maintenance release.
+
 ## [1.1.22] - 2026-04-28
 
 - feat: split reset into "reset app state" and "delete all data"
