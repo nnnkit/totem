@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Totem — Twitter / X Bookmarks on New Tab, Read Later & Export",
+  "name": "Totem — Read, Search & Export Twitter Bookmarks",
   "version": "1.1.22",
   "description": "Turn your Twitter / X bookmarks into a searchable read-later queue on every new tab. Save, search, export — finish what you saved.",
   "icons": {
@@ -51,7 +51,7 @@
     "service_worker": "service-worker.js"
   },
   "action": {
-    "default_title": "Totem — Twitter / X Bookmarks",
+    "default_title": "Totem",
     "default_icon": {
       "16": "icons/icon-16.png",
       "48": "icons/icon-48.png"
