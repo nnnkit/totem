@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.22] - 2026-04-28
+
+- feat: split reset into "reset app state" and "delete all data"
+- feat: overhaul bookmark search with bm25 engine, saved searches, and ranking signals
+
 ## [1.1.21] - 2026-04-27
 
 - fix: generate blog posts before tsc in build:extension
