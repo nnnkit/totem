@@ -1,18 +1,28 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Autocomplete } from "@base-ui/react/autocomplete";
 import { Tabs } from "@base-ui/react/tabs";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import {
   ArrowLeftIcon,
   ArrowsDownUpIcon,
+  ClockIcon,
   MagnifyingGlassIcon,
   PushPinIcon,
+  SparkleIcon,
+  XIcon,
 } from "@phosphor-icons/react";
 import type { Bookmark } from "../types";
 import type { ContinueReadingItem } from "../hooks/useContinueReading";
 import { useBookmarkSearch } from "../hooks/useBookmarkSearch";
-import { pickTitle, inferKindBadge } from "../lib/bookmark-utils";
+import { pickTitle, pickSearchSnippet, inferKindBadge } from "../lib/bookmark-utils";
 import { cn } from "../lib/cn";
+import { Highlighted } from "./Highlighted";
+import {
+  pushRecentSearch,
+  readRecentSearches,
+  removeRecentSearch,
+} from "../lib/recent-searches";
 import { NEW_BADGE_CUTOFF_MS } from "../lib/constants";
 import {
   getPinnedTweetIds,
@@ -40,7 +50,6 @@ import {
 } from "../stores/selectors";
 import { Badge } from "./ui/Badge";
 import { Button } from "./ui/Button";
-import { Input } from "./ui/Input";
 import { OfflineBanner } from "./ui/OfflineBanner";
 import { Select, type SelectOption } from "./ui/Select";
 import { Toast } from "./ui/Toast";
@@ -70,6 +79,16 @@ const SORT_OPTIONS: SelectOption[] = [
   { value: "recent", label: "Recent" },
   { value: "oldest", label: "Oldest" },
   { value: "annotated", label: "Annotated" },
+];
+
+const SUGGESTED_OPERATORS: ReadonlyArray<{ label: string; insert: string }> = [
+  { label: "from:", insert: "from:" },
+  { label: "has:image", insert: "has:image " },
+  { label: "has:link", insert: "has:link " },
+  { label: "has:video", insert: "has:video " },
+  { label: "filter:thread", insert: "filter:thread " },
+  { label: "since:7d", insert: "within:7d " },
+  { label: "min_faves:1000", insert: "min_faves:1000 " },
 ];
 
 const ITEM_HEIGHT = 64;
@@ -121,6 +140,15 @@ export function BookmarksList({
   );
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [showUnpinButtons, setShowUnpinButtons] = useState(false);
+  /**
+   * When searching, results span all read states by default. The user can
+   * narrow with the tab strip; that narrowing lives in `searchScope` so it
+   * doesn't disturb `activeTab` (which restores the user's prior tab when
+   * the query clears).
+   */
+  const [searchScope, setSearchScope] = useState<
+    "all" | "unread" | "continue" | "read"
+  >("all");
   const searchInputRef = useRef<HTMLInputElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const pinnedCardRefs = useRef<Map<number, HTMLAnchorElement>>(new Map());
@@ -160,7 +188,7 @@ export function BookmarksList({
     return merged;
   }, [continueReadingItems, unreadBookmarks]);
 
-  const { query, setQuery, results, isSearching } =
+  const { query, setQuery, results, queryTerms, isSearching, didYouMean } =
     useBookmarkSearch(allBookmarks);
 
   const matchingIds = useMemo(() => {
@@ -169,12 +197,57 @@ export function BookmarksList({
   }, [isSearching, results]);
 
   useHotkeys(
-    "/",
+    "/, mod+k",
     () => {
       searchInputRef.current?.focus();
+      searchInputRef.current?.select();
     },
-    { preventDefault: true },
+    { preventDefault: true, enableOnFormTags: ["input"] },
   );
+
+  const [isMac, setIsMac] = useState(false);
+  useEffect(() => {
+    if (typeof navigator === "undefined") return;
+    setIsMac(/Mac|iPhone|iPad|iPod/.test(navigator.platform));
+  }, []);
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const showSearchHint = !isSearchFocused && query.length === 0;
+  const showSuggestions = isSearchFocused && query.length === 0;
+
+  const [recents, setRecents] = useState<string[]>(() => readRecentSearches());
+  // Refresh the recent list each time the suggestion popup opens so a query
+  // committed in this session shows up without a remount.
+  useEffect(() => {
+    if (showSuggestions) setRecents(readRecentSearches());
+  }, [showSuggestions]);
+
+  const handleRemoveRecent = useCallback((q: string) => {
+    setRecents(removeRecentSearch(q));
+  }, []);
+
+  const insertSuggestion = useCallback(
+    (insert: string) => {
+      setQuery(insert);
+      requestAnimationFrame(() => {
+        const el = searchInputRef.current;
+        if (!el) return;
+        el.focus();
+        el.setSelectionRange(insert.length, insert.length);
+      });
+    },
+    [setQuery],
+  );
+
+  // Persist queries to recent-searches once they've stabilized through the
+  // debounce and produced results. We only commit non-trivial queries with
+  // at least one matching result so noise / unfinished typing doesn't leak in.
+  useEffect(() => {
+    const trimmed = query.trim();
+    if (trimmed.length < 2) return;
+    if (results.length === 0) return;
+    const id = setTimeout(() => pushRecentSearch(trimmed), 1500);
+    return () => clearTimeout(id);
+  }, [query, results.length]);
 
   const { inProgress, completed } = useMemo(() => {
     const nextInProgress: ContinueReadingItem[] = [];
@@ -312,7 +385,66 @@ export function BookmarksList({
 
   const activeSort = sortPreferences[activeTab];
 
+  // Map tweetId → progress so search results across all tabs can show their
+  // current read state in the row subtitle.
+  const progressByTweetId = useMemo(() => {
+    const m = new Map<string, ContinueReadingItem["progress"]>();
+    for (const item of continueReadingItems) {
+      m.set(item.bookmark.tweetId, item.progress);
+    }
+    return m;
+  }, [continueReadingItems]);
+
+  // Reset search scope to "all" whenever the user exits search mode so the
+  // next query starts from a global view.
+  useEffect(() => {
+    if (!isSearching) setSearchScope("all");
+  }, [isSearching]);
+
+  // Match counts per state for the tab strip in search mode.
+  const searchMatchCounts = useMemo(() => {
+    if (!isSearching) {
+      return { all: 0, unread: 0, continue: 0, read: 0 };
+    }
+    const counts = { all: results.length, unread: 0, continue: 0, read: 0 };
+    for (const b of results) {
+      const p = progressByTweetId.get(b.tweetId);
+      if (!p) counts.unread += 1;
+      else if (p.completed) counts.read += 1;
+      else counts.continue += 1;
+    }
+    return counts;
+  }, [isSearching, results, progressByTweetId]);
+
   const bookmarkRows: BookmarkRow[] = useMemo(() => {
+    // Global search: ignore the active tab, render all matches in rank order
+    // and label each row with its current read state. `searchScope` lets
+    // the user narrow without leaving search mode.
+    if (isSearching) {
+      const filtered = results.filter((bookmark) => {
+        if (searchScope === "all") return true;
+        const p = progressByTweetId.get(bookmark.tweetId);
+        if (searchScope === "unread") return !p;
+        if (searchScope === "read") return p?.completed === true;
+        return p != null && p.completed === false; // "continue"
+      });
+      return filtered.map((bookmark) => {
+        const progress = progressByTweetId.get(bookmark.tweetId);
+        if (!progress) {
+          return { bookmark, subtitle: "Unread" };
+        }
+        if (progress.completed) {
+          return {
+            bookmark,
+            subtitle: `Read · finished ${timeAgo(progress.lastReadAt)}`,
+          };
+        }
+        return {
+          bookmark,
+          subtitle: `Reading · last read ${timeAgo(progress.lastReadAt)}`,
+        };
+      });
+    }
     if (activeTab === "continue") {
       return sortedInProgress.map(({ bookmark, progress }) => ({
         bookmark,
@@ -326,7 +458,16 @@ export function BookmarksList({
       }));
     }
     return sortedUnread.map((bookmark) => ({ bookmark }));
-  }, [activeTab, sortedUnread, sortedInProgress, sortedCompleted]);
+  }, [
+    isSearching,
+    searchScope,
+    results,
+    progressByTweetId,
+    activeTab,
+    sortedUnread,
+    sortedInProgress,
+    sortedCompleted,
+  ]);
 
   const pinnedBookmarks = useMemo(() => {
     if (pinnedIds.size === 0) return [];
@@ -343,13 +484,16 @@ export function BookmarksList({
   }, [bookmarkRows, pinnedIds, pinnedOrder]);
 
   const pinnedCount = pinnedBookmarks.length;
-  const visiblePinnedCount = activeTab === "unread" ? pinnedCount : 0;
+  // Pinned grid is only meaningful on the Unread tab outside of search.
+  const visiblePinnedCount =
+    !isSearching && activeTab === "unread" ? pinnedCount : 0;
 
   const unpinnedRows = useMemo(
-    () => activeTab === "unread"
-      ? bookmarkRows.filter((r) => !pinnedIds.has(r.bookmark.tweetId))
-      : bookmarkRows,
-    [activeTab, bookmarkRows, pinnedIds],
+    () =>
+      !isSearching && activeTab === "unread"
+        ? bookmarkRows.filter((r) => !pinnedIds.has(r.bookmark.tweetId))
+        : bookmarkRows,
+    [isSearching, activeTab, bookmarkRows, pinnedIds],
   );
 
   const visibleBookmarks = useMemo(() => {
@@ -565,32 +709,136 @@ export function BookmarksList({
             <ArrowLeftIcon className="size-5" />
           </Button>
           <span className="text-lg font-semibold text-foreground">Reading</span>
-          <div className="relative ml-auto mr-1 w-40 shrink-0 transition-transform duration-150 ease-out focus-within:-translate-y-px sm:w-52 md:w-60">
-            <MagnifyingGlassIcon className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted/65" />
-            <Input
-              ref={searchInputRef}
-              type="text"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Escape") {
-                  setQuery("");
-                  searchInputRef.current?.blur();
-                }
-              }}
-              aria-label="Filter bookmarks"
-              placeholder="Search bookmarks..."
-              className="h-8 border-border/70 bg-surface/45 pl-8 pr-2 text-xs-plus placeholder:text-muted/50 transition-[border-color,background-color] duration-150 ease-out focus:border-foreground/20 focus:bg-surface/55"
-            />
-          </div>
+          <Autocomplete.Root
+            mode="none"
+            value={query}
+            onValueChange={(value) => setQuery(value)}
+            open={showSuggestions}
+            onOpenChange={(nextOpen) => {
+              if (!nextOpen) searchInputRef.current?.blur();
+            }}
+            openOnInputClick
+          >
+            <div className="relative ml-auto mr-1 w-40 shrink-0 transition-transform duration-150 ease-out focus-within:-translate-y-px sm:w-52 md:w-60">
+              <MagnifyingGlassIcon className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted/65" />
+              <Autocomplete.Input
+                ref={searchInputRef}
+                onFocus={() => setIsSearchFocused(true)}
+                onBlur={() => setIsSearchFocused(false)}
+                onKeyDown={(event) => {
+                  if (event.key === "Escape") {
+                    setQuery("");
+                    searchInputRef.current?.blur();
+                  }
+                }}
+                aria-label="Filter bookmarks"
+                placeholder="Search bookmarks..."
+                className={cn(
+                  "h-8 w-full rounded border border-border/70 bg-surface/45 pl-8 text-xs-plus text-foreground placeholder:text-muted/50 transition-[border-color,background-color] duration-150 ease-out focus:border-foreground/20 focus:bg-surface/55 focus:outline-none",
+                  showSearchHint ? "pr-12" : "pr-2",
+                )}
+              />
+              {showSearchHint && (
+                <kbd
+                  aria-hidden="true"
+                  className="pointer-events-none absolute right-1.5 top-1/2 flex -translate-y-1/2 select-none items-center gap-0.5 rounded border border-border/60 bg-surface-card/80 px-1 py-px font-sans text-[10px] font-medium text-muted/70 shadow-[inset_0_-1px_0_0] shadow-border/40"
+                >
+                  {isMac ? <span className="text-xs leading-none">⌘</span> : <span>Ctrl</span>}
+                  <span>K</span>
+                </kbd>
+              )}
+            </div>
+            <Autocomplete.Portal>
+              <Autocomplete.Positioner sideOffset={4} align="end" className="z-30">
+                <Autocomplete.Popup className="w-72 overflow-hidden rounded-md border border-border/70 bg-surface-card shadow-xl outline-none">
+                  <Autocomplete.List>
+                    {recents.length > 0 && (
+                      <Autocomplete.Group className="px-3 pt-2.5 pb-1.5">
+                        <Autocomplete.GroupLabel className="block text-2xs font-medium uppercase tracking-extra-wide text-muted/50">
+                          Recent
+                        </Autocomplete.GroupLabel>
+                        <div className="mt-1.5 flex flex-col">
+                          {recents.map((q) => (
+                            <Autocomplete.Item
+                              key={q}
+                              value={q}
+                              onClick={() => insertSuggestion(q)}
+                              className="group/recent flex cursor-pointer items-center gap-2 rounded py-1 pl-1 pr-1 text-xs text-muted outline-none transition-colors data-highlighted:bg-foreground/5 data-highlighted:text-foreground"
+                            >
+                              <ClockIcon className="size-3.5 shrink-0 text-muted/55" />
+                              <span className="min-w-0 flex-1 truncate text-left">{q}</span>
+                              <button
+                                type="button"
+                                onMouseDown={(e) => e.preventDefault()}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRemoveRecent(q);
+                                }}
+                                className="flex size-5 shrink-0 items-center justify-center rounded text-muted/40 transition-colors hover:bg-foreground/5 hover:text-foreground"
+                                aria-label={`Forget search ${q}`}
+                                title="Forget"
+                              >
+                                <XIcon className="size-3" />
+                              </button>
+                            </Autocomplete.Item>
+                          ))}
+                        </div>
+                      </Autocomplete.Group>
+                    )}
+                    {recents.length > 0 && (
+                      <div className="border-t border-border/40" />
+                    )}
+                    <Autocomplete.Group className="px-3 pt-2 pb-2.5">
+                      <Autocomplete.GroupLabel className="block text-2xs font-medium uppercase tracking-extra-wide text-muted/50">
+                        Try
+                      </Autocomplete.GroupLabel>
+                      <div className="mt-1.5 flex flex-wrap gap-1">
+                        {SUGGESTED_OPERATORS.map((op) => (
+                          <Autocomplete.Item
+                            key={op.label}
+                            value={op.insert}
+                            onClick={() => insertSuggestion(op.insert)}
+                            className="inline-flex cursor-pointer items-center gap-1 rounded border border-border/60 bg-surface/40 px-1.5 py-0.5 text-2xs text-muted/80 outline-none transition-colors data-highlighted:border-foreground/20 data-highlighted:bg-surface/60 data-highlighted:text-foreground"
+                          >
+                            <SparkleIcon className="size-2.5" />
+                            <span>{op.label}</span>
+                          </Autocomplete.Item>
+                        ))}
+                      </div>
+                    </Autocomplete.Group>
+                  </Autocomplete.List>
+                </Autocomplete.Popup>
+              </Autocomplete.Positioner>
+            </Autocomplete.Portal>
+          </Autocomplete.Root>
         </div>
 
         <Tabs.Root
-          value={activeTab}
-          onValueChange={(value) => onTabChange(value as ReadingTab)}
+          value={isSearching ? searchScope : activeTab}
+          onValueChange={(value) => {
+            if (isSearching) {
+              setSearchScope(value as "all" | "unread" | "continue" | "read");
+            } else {
+              onTabChange(value as ReadingTab);
+            }
+          }}
           className={cn("mx-auto px-6", containerWidthClass)}
         >
           <Tabs.List className="relative flex">
+            {isSearching && (
+              <Tabs.Tab
+                value="all"
+                className={cn(
+                  "px-4 py-2.5 text-sm font-medium transition-colors outline-none select-none",
+                  "text-muted hover:text-foreground data-active:text-foreground",
+                )}
+              >
+                All
+                <span className="ml-1.5 inline-flex items-center justify-center rounded px-1.5 text-xs tabular-nums bg-muted/10 text-muted">
+                  {searchMatchCounts.all}
+                </span>
+              </Tabs.Tab>
+            )}
             <Tabs.Tab
               value="unread"
               className={cn(
@@ -599,9 +847,11 @@ export function BookmarksList({
               )}
             >
               Unread
-              {sortedUnread.length > 0 && (
+              {(isSearching
+                ? searchMatchCounts.unread
+                : sortedUnread.length) > 0 && (
                 <span className="ml-1.5 inline-flex items-center justify-center rounded px-1.5 text-xs tabular-nums bg-muted/10 text-muted">
-                  {sortedUnread.length}
+                  {isSearching ? searchMatchCounts.unread : sortedUnread.length}
                 </span>
               )}
             </Tabs.Tab>
@@ -613,9 +863,13 @@ export function BookmarksList({
               )}
             >
               Reading
-              {sortedInProgress.length > 0 && (
+              {(isSearching
+                ? searchMatchCounts.continue
+                : sortedInProgress.length) > 0 && (
                 <span className="ml-1.5 inline-flex items-center justify-center rounded px-1.5 text-xs tabular-nums bg-accent-surface text-accent">
-                  {sortedInProgress.length}
+                  {isSearching
+                    ? searchMatchCounts.continue
+                    : sortedInProgress.length}
                 </span>
               )}
             </Tabs.Tab>
@@ -627,9 +881,13 @@ export function BookmarksList({
               )}
             >
               Read
-              {sortedCompleted.length > 0 && (
+              {(isSearching
+                ? searchMatchCounts.read
+                : sortedCompleted.length) > 0 && (
                 <span className="ml-1.5 inline-flex items-center justify-center rounded px-1.5 text-xs tabular-nums bg-success/10 text-success">
-                  {sortedCompleted.length}
+                  {isSearching
+                    ? searchMatchCounts.read
+                    : sortedCompleted.length}
                 </span>
               )}
             </Tabs.Tab>
@@ -640,7 +898,23 @@ export function BookmarksList({
 
       <div ref={scrollContainerRef} className="flex-1 overflow-y-auto">
         <main className={cn(containerWidthClass, "mx-auto px-6 pb-16 pt-4")}>
-          {hasItems && (
+          {isSearching && didYouMean && (
+            <div className="mb-3 rounded border border-border/50 bg-surface/40 px-3 py-2 text-xs text-muted/80">
+              Did you mean{" "}
+              <button
+                type="button"
+                onClick={() => {
+                  setQuery(didYouMean);
+                  searchInputRef.current?.focus();
+                }}
+                className="font-medium text-foreground underline decoration-foreground/30 underline-offset-2 hover:decoration-foreground/60"
+              >
+                {didYouMean}
+              </button>
+              ?
+            </div>
+          )}
+          {hasItems && !isSearching && (
             <div className="mb-4 flex justify-end">
               <Select
                 value={activeSort}
@@ -657,14 +931,14 @@ export function BookmarksList({
             </div>
           )}
 
-          {activeTab === "unread" && pinnedCount > 0 && (
+          {!isSearching && activeTab === "unread" && pinnedCount > 0 && (
             <div className="mb-2">
               <span className="text-2xs font-medium uppercase tracking-extra-wide text-muted/40">
                 Pinned
               </span>
             </div>
           )}
-          {activeTab === "unread" && pinnedCount > 0 && (
+          {!isSearching && activeTab === "unread" && pinnedCount > 0 && (
             <div className="mb-4 grid grid-cols-3 gap-3">
               {pinnedBookmarks.map((row, idx) => {
                 const { bookmark } = row;
@@ -712,12 +986,19 @@ export function BookmarksList({
                         className="truncate text-xs text-muted/70 transition-colors hover:text-foreground"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        @{bookmark.author.screenName}
+                        <Highlighted
+                          as="span"
+                          text={`@${bookmark.author.screenName}`}
+                          terms={queryTerms}
+                        />
                       </a>
                     </div>
-                    <p className="line-clamp-2 text-xs leading-relaxed text-foreground">
-                      {pickTitle(bookmark)}
-                    </p>
+                    <Highlighted
+                      as="p"
+                      text={pickTitle(bookmark)}
+                      terms={queryTerms}
+                      className="line-clamp-2 text-xs leading-relaxed text-foreground"
+                    />
                     {hasAnnotations && (
                       <p className="truncate text-2xs text-muted/40">
                         {(counts?.highlights ?? 0) > 0 && (
@@ -758,7 +1039,7 @@ export function BookmarksList({
               })}
             </div>
           )}
-          {activeTab === "unread" && pinnedCount > 0 && unpinnedRows.length > 0 && (
+          {!isSearching && activeTab === "unread" && pinnedCount > 0 && unpinnedRows.length > 0 && (
             <div className="mb-4 border-t border-dashed border-border/50" />
           )}
 
@@ -795,7 +1076,7 @@ export function BookmarksList({
                       className={cn(
                         "group/row flex w-full items-center gap-3 py-3 px-3 text-left no-underline transition-colors duration-150",
                         virtualItem.index % 2 === 0
-                          ? "bg-surface-alt hover:bg-surface-hover"
+                          ? "bg-surface-alt hover:bg-surface-alt-hover"
                           : "hover:bg-surface-hover",
                         isFocused && "ring-1 ring-accent/20",
                       )}
@@ -816,7 +1097,11 @@ export function BookmarksList({
                       />
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium text-foreground leading-snug">
-                          {pickTitle(bookmark)}
+                          <Highlighted
+                            as="span"
+                            text={pickTitle(bookmark)}
+                            terms={queryTerms}
+                          />
                           {newBookmarkIds.has(bookmark.tweetId) && (
                             <Badge
                               variant="accent"
@@ -826,6 +1111,16 @@ export function BookmarksList({
                             </Badge>
                           )}
                         </p>
+                        {isSearching && (
+                          <Highlighted
+                            as="p"
+                            text={pickSearchSnippet(bookmark)}
+                            terms={queryTerms}
+                            windowTokens={20}
+                            hideOnNoMatch
+                            className="mt-0.5 line-clamp-1 text-xs text-muted/55"
+                          />
+                        )}
                         <p className="mt-1 truncate text-xs text-muted/50">
                           <a
                             href={`https://x.com/${bookmark.author.screenName}`}
@@ -834,7 +1129,11 @@ export function BookmarksList({
                             className="transition-colors hover:text-foreground"
                             onClick={(e) => e.stopPropagation()}
                           >
-                            @{bookmark.author.screenName}
+                            <Highlighted
+                              as="span"
+                              text={`@${bookmark.author.screenName}`}
+                              terms={queryTerms}
+                            />
                           </a>
                           {row.subtitle ? (
                             <span className="text-muted/40">

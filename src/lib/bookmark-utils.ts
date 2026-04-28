@@ -24,6 +24,24 @@ export function pickExcerpt(bookmark: Bookmark): string {
   return compactPreview(toSingleLine(bookmark.text), PICK_EXCERPT_MAX);
 }
 
+/**
+ * Body text suitable for a search-snippet line that complements the title row.
+ *
+ * - Articles: full plainText (title shows article.title separately).
+ * - Tweets: the remainder of the body past the visible-title region. If the
+ *   tweet is short enough to fit entirely in the title, returns "".
+ *
+ * The highlighter picks the best window inside this string, so callers don't
+ * need to truncate themselves.
+ */
+export function pickSearchSnippet(bookmark: Bookmark): string {
+  const articleText = bookmark.article?.plainText?.trim();
+  if (articleText) return articleText;
+  const text = toSingleLine(bookmark.text ?? "");
+  if (text.length <= PICK_TITLE_MAX) return "";
+  return text;
+}
+
 export function inferKindBadge(bookmark: Bookmark): string {
   if (bookmark.tweetKind === "article") return "Article";
   if (bookmark.tweetKind === "thread" || bookmark.isThread) return "Thread";

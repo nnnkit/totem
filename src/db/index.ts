@@ -4,6 +4,7 @@ import type {
   TweetDetailCache,
   ReadingProgress,
   Highlight,
+  SavedSearch,
 } from "../types";
 import { sanitizeBookmark } from "../lib/sanitize";
 import { emitReaderActivity } from "../lib/reader-activity";
@@ -15,6 +16,9 @@ import {
   STORE_TWEET_DETAILS as DETAIL_STORE_NAME,
   STORE_READING_PROGRESS as PROGRESS_STORE_NAME,
   STORE_HIGHLIGHTS as HIGHLIGHTS_STORE_NAME,
+  STORE_SAVED_SEARCHES as SAVED_SEARCHES_STORE_NAME,
+  STORE_SEARCH_INDEX as SEARCH_INDEX_STORE_NAME,
+  SEARCH_INDEX_KEY,
 } from "../lib/constants";
 import { LEGACY_IDB_DATABASE_NAME } from "../lib/storage-keys";
 
@@ -50,6 +54,18 @@ interface XBookmarksDbSchema extends DBSchema {
       tweetId: string;
       createdAt: number;
     };
+  };
+  saved_searches: {
+    key: string;
+    value: SavedSearch;
+    indexes: {
+      sortOrder: number;
+      createdAt: number;
+    };
+  };
+  search_index: {
+    key: string;
+    value: { id: string; json: string; savedAt: number };
   };
 }
 
@@ -139,6 +155,27 @@ function createDb(dbName: string) {
         highlightsStore.createIndex("createdAt", "createdAt", {
           unique: false,
         });
+      }
+
+      const savedSearchesStore = db.objectStoreNames.contains(
+        SAVED_SEARCHES_STORE_NAME,
+      )
+        ? tx.objectStore(SAVED_SEARCHES_STORE_NAME)
+        : db.createObjectStore(SAVED_SEARCHES_STORE_NAME, { keyPath: "id" });
+
+      if (!savedSearchesStore.indexNames.contains("sortOrder")) {
+        savedSearchesStore.createIndex("sortOrder", "sortOrder", {
+          unique: false,
+        });
+      }
+      if (!savedSearchesStore.indexNames.contains("createdAt")) {
+        savedSearchesStore.createIndex("createdAt", "createdAt", {
+          unique: false,
+        });
+      }
+
+      if (!db.objectStoreNames.contains(SEARCH_INDEX_STORE_NAME)) {
+        db.createObjectStore(SEARCH_INDEX_STORE_NAME, { keyPath: "id" });
       }
     },
     blocked() {
@@ -327,6 +364,21 @@ export async function clearAllLocalData(): Promise<void> {
   await tx.done;
 }
 
+// Clears caches and the bookmarks store (which re-syncs from upstream),
+// but preserves user-generated content: highlights, reading progress,
+// and saved searches. Used by the "Reset app" path.
+export async function clearTransientStores(): Promise<void> {
+  const db = await getDb();
+  const tx = db.transaction(
+    [STORE_NAME, DETAIL_STORE_NAME, SEARCH_INDEX_STORE_NAME],
+    "readwrite",
+  );
+  tx.objectStore(STORE_NAME).clear();
+  tx.objectStore(DETAIL_STORE_NAME).clear();
+  tx.objectStore(SEARCH_INDEX_STORE_NAME).clear();
+  await tx.done;
+}
+
 export interface DeleteBookmarksOptions {
   purgeHighlights?: boolean;
 }
@@ -398,6 +450,9 @@ export async function upsertReadingProgress(
   emitReaderActivity();
 }
 
+// Don't double-count fast successive opens within a single reading session.
+const REOPEN_DEBOUNCE_MS = 5 * 60 * 1000;
+
 export async function ensureReadingProgressExists(
   tweetId: string,
 ): Promise<void> {
@@ -406,7 +461,14 @@ export async function ensureReadingProgressExists(
   const existing = await db.get(PROGRESS_STORE_NAME, tweetId);
   const now = Date.now();
   if (existing) {
-    await db.put(PROGRESS_STORE_NAME, { ...existing, lastReadAt: now });
+    const previousReadAt = existing.lastReadAt ?? 0;
+    const isFreshSession = now - previousReadAt >= REOPEN_DEBOUNCE_MS;
+    const reopenCount = (existing.reopenCount ?? 0) + (isFreshSession ? 1 : 0);
+    await db.put(PROGRESS_STORE_NAME, {
+      ...existing,
+      lastReadAt: now,
+      reopenCount,
+    });
   } else {
     await db.put(PROGRESS_STORE_NAME, {
       tweetId,
@@ -415,6 +477,7 @@ export async function ensureReadingProgressExists(
       scrollY: 0,
       scrollHeight: 0,
       completed: false,
+      reopenCount: 1,
     });
   }
   emitReaderActivity();
@@ -549,6 +612,63 @@ export async function getHighlightCountsByTweetIds(
     }
   }
   return result;
+}
+
+/**
+ * Build a lightweight per-bookmark signals map for ranking — last-read
+ * timestamp and reopen count. Used by the search engine's `boostDocument`.
+ */
+export async function getBookmarkSignals(): Promise<
+  Map<string, { lastReadAt?: number; reopenCount?: number }>
+> {
+  const out = new Map<string, { lastReadAt?: number; reopenCount?: number }>();
+  try {
+    const all = await getAllReadingProgress();
+    for (const row of all) {
+      out.set(row.tweetId, {
+        lastReadAt: row.lastReadAt,
+        reopenCount: row.reopenCount ?? 0,
+      });
+    }
+  } catch {
+    // ignore — empty signals just disable the click signal.
+  }
+  return out;
+}
+
+// ─── Search index persistence ────────────────────────────────────────────
+
+/** Load the serialized MiniSearch index, or null if none exists / is stale. */
+export async function loadSearchIndexJson(): Promise<string | null> {
+  try {
+    const db = await getDb();
+    const row = await db.get(SEARCH_INDEX_STORE_NAME, SEARCH_INDEX_KEY);
+    return row?.json ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export async function saveSearchIndexJson(json: string): Promise<void> {
+  try {
+    const db = await getDb();
+    await db.put(SEARCH_INDEX_STORE_NAME, {
+      id: SEARCH_INDEX_KEY,
+      json,
+      savedAt: Date.now(),
+    });
+  } catch {
+    // Persistence is a cache, never authoritative — silent on failure.
+  }
+}
+
+export async function clearSearchIndexJson(): Promise<void> {
+  try {
+    const db = await getDb();
+    await db.delete(SEARCH_INDEX_STORE_NAME, SEARCH_INDEX_KEY);
+  } catch {
+    // ignore
+  }
 }
 
 export async function cleanupOldTweetDetails(

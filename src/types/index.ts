@@ -195,6 +195,11 @@ export interface ReadingProgress {
   scrollY: number;
   scrollHeight: number;
   completed: boolean;
+  /**
+   * Number of times the user has opened this bookmark in the reader.
+   * Defaults to 0 for legacy rows; increments on `ensureReadingProgressExists`.
+   */
+  reopenCount?: number;
 }
 
 export interface Highlight {
@@ -215,6 +220,14 @@ export interface SelectionRange {
   startOffset: number;
   endOffset: number;
   selectedText: string;
+}
+
+export interface SavedSearch {
+  id: string;
+  name: string;
+  query: string;
+  createdAt: number;
+  sortOrder: number;
 }
 
 export type BackgroundMode = "gradient" | "images";
