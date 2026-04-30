@@ -24,6 +24,7 @@ import {
   type TransitSegment,
   type TransitStation,
   type FAQItem,
+  type FAQGroup,
   type FeatureItem,
   type IconFeatureItem,
   type PolicySection as PolicySectionData,
@@ -591,30 +592,53 @@ function SiteRevealSection({
 
 function FAQDisclosure({ item }: { item: FAQItem }) {
   return (
-    <details className="rounded-xl border border-neutral-200 bg-white transition-colors duration-200 open:border-neutral-300">
-      <summary className="site-summary-reset flex min-h-11 cursor-pointer items-start gap-3 px-4 py-3.5">
+    <details className="site-faq-item group border-b border-neutral-200 last:border-b-0">
+      <summary className="site-summary-reset flex min-h-11 cursor-pointer items-start gap-4 py-4">
         <div className="min-w-0 flex-1">
-          <h4 className="m-0 text-base leading-snug tracking-tight text-neutral-900">
+          <h4 className="m-0 text-base leading-snug tracking-tight text-neutral-900 transition-colors duration-150 ease group-hover:text-neutral-700">
             {item.question}
           </h4>
         </div>
         <span
           aria-hidden="true"
-          className="site-faq-icon pt-0.5 text-lg leading-none text-neutral-300"
+          className="site-faq-icon mt-0.5 text-neutral-400"
         >
-          +
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 14 14"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+          >
+            <path d="M3 5l4 4 4-4" />
+          </svg>
         </span>
       </summary>
       <div className="site-faq-content">
         <div className="site-faq-content-inner">
-          <div className="border-t border-neutral-200 px-4 py-3.5">
-            <p className="m-0 text-sm leading-relaxed text-neutral-600">
-              {item.answer}
-            </p>
-          </div>
+          <p className="m-0 max-w-2xl pb-4 pr-8 text-sm leading-relaxed text-neutral-600">
+            {item.answer}
+          </p>
         </div>
       </div>
     </details>
+  );
+}
+
+function FAQGroupBlock({ group }: { group: FAQGroup }) {
+  return (
+    <section>
+      <SiteEyebrow tone="muted" className="mb-2">
+        {group.name}
+      </SiteEyebrow>
+      <div className="border-t border-neutral-200">
+        {group.items.map((item) => (
+          <FAQDisclosure key={item.question} item={item} />
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -913,9 +937,9 @@ function LandingPage({ recentPosts }: { recentPosts: BlogSummary[] }) {
               </p>
             </SiteReveal>
 
-            <SiteRevealStagger className="space-y-3">
-              {faq.items.map((item) => (
-                <FAQDisclosure key={item.question} item={item} />
+            <SiteRevealStagger className="space-y-10">
+              {faq.groups.map((group) => (
+                <FAQGroupBlock key={group.name} group={group} />
               ))}
             </SiteRevealStagger>
           </div>

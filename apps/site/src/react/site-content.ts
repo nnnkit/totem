@@ -31,6 +31,11 @@ export type FAQItem = {
   answer: string;
 };
 
+export type FAQGroup = {
+  name: string;
+  items: readonly FAQItem[];
+};
+
 export type PolicySectionItem =
   | string
   | {
@@ -205,82 +210,105 @@ export const SITE_COPY = {
         "Totem does not ask for your X password and does not run its own backend. Your notes and reading state stay local on this device. For the full breakdown of permissions and storage, read the ",
       introLinkLabel: "privacy page",
       introAfter: ".",
-      items: [
+      groups: [
         {
-          question: "Does Totem need my X password?",
-          answer:
-            "No. It uses your existing X session in the same browser profile — just log in to X there and open a new tab.",
+          name: "Privacy",
+          items: [
+            {
+              question: "Does Totem need my X password?",
+              answer:
+                "No. It uses your existing X session in the same browser profile — just log in to X there and open a new tab.",
+            },
+            {
+              question:
+                "Does Totem upload my notes or reading history anywhere?",
+              answer:
+                "No. There is no backend — your highlights, notes, and reading progress stay on this device.",
+            },
+            {
+              question:
+                "What happens to my highlights, notes, and read state if I log out of X?",
+              answer:
+                "Your reading state, highlights, and notes stay on the device. You can access them until you reset local data.",
+            },
+          ],
         },
         {
-          question: "Does Totem upload my notes or reading history anywhere?",
-          answer:
-            "No. There is no backend — your highlights, notes, and reading progress stay on this device.",
+          name: "Sync",
+          items: [
+            {
+              question: "Why don’t my bookmarks appear right away?",
+              answer:
+                "The first sync needs a moment to connect to your X account and build the local reading queue. Click Sync and give it a minute before trying again.",
+            },
+            {
+              question:
+                "Why does sync say it is already running or temporarily paused?",
+              answer:
+                "Sync attempts are spaced out to avoid duplicate work or hitting X too quickly. Wait a minute, then try Sync again.",
+            },
+            {
+              question: "Why am I seeing “Offline mode”?",
+              answer:
+                "You are logged out of X, so only bookmarks already saved on this device are visible.",
+            },
+          ],
         },
         {
-          question: "Why don’t my bookmarks appear right away?",
-          answer:
-            "The first sync needs a moment to connect to your X account and build the local reading queue. Click Sync and give it a minute before trying again.",
+          name: "Setup",
+          items: [
+            {
+              question: "Why isn’t Totem opening on every new tab?",
+              answer:
+                "Another extension, another browser profile, or a managed browser setting may be taking over your new tab page. Make sure the extension is enabled in this profile and disable any other new-tab extensions.",
+            },
+            {
+              question:
+                "Why does it work in one browser profile but not another?",
+              answer:
+                "Extensions, X logins, and optional permissions are separate per browser profile. Install and log in to X in the exact profile where you want to use it.",
+            },
+            {
+              question:
+                "Why did the browser ask for permission when I turned on Quick Links?",
+              answer:
+                "Quick Links uses your browser’s top sites and favicon access, so the browser asks before that data can be shown.",
+            },
+            {
+              question:
+                "If I turn a feature off, does the browser revoke that permission automatically?",
+              answer:
+                "No. Turning the feature off stops it from being used, but the browser keeps the permission until you remove it in extension settings.",
+            },
+          ],
         },
         {
-          question:
-            "Why does sync say it is already running or temporarily paused?",
-          answer:
-            "Sync attempts are spaced out to avoid duplicate work or hitting X too quickly. Wait a minute, then try Sync again.",
+          name: "Local data",
+          items: [
+            {
+              question: "How do I reset Totem on this device?",
+              answer:
+                "Open Settings in the new tab page, choose Reset local data, then confirm. Note that you will lose all local state like highlights, notes, and reading status.",
+            },
+            {
+              question: "What does Reset local data delete?",
+              answer:
+                "It clears the local bookmarks cache, highlights, notes, reading progress, and all other saved state on that device.",
+            },
+            {
+              question:
+                "Why did my highlights, notes, or read progress disappear?",
+              answer:
+                "That usually means local data was reset, you changed browser profiles, or you are looking on a different device.",
+            },
+            {
+              question: "What should I do if Totem looks stuck?",
+              answer:
+                "Open X once, come back, and try Sync again. If it still does not recover, use Reset local data.",
+            },
+          ],
         },
-        {
-          question: "Why isn’t Totem opening on every new tab?",
-          answer:
-            "Another extension, another browser profile, or a managed browser setting may be taking over your new tab page. Make sure the extension is enabled in this profile and disable any other new-tab extensions.",
-        },
-        {
-          question: "Why does it work in one browser profile but not another?",
-          answer:
-            "Extensions, X logins, and optional permissions are separate per browser profile. Install and log in to X in the exact profile where you want to use it.",
-        },
-        {
-          question: "Why am I seeing “Offline mode”?",
-          answer:
-            "You are logged out of X, so only bookmarks already saved on this device are visible.",
-        },
-        {
-          question:
-            "What happens to my highlights, notes, and read state if I log out of X?",
-          answer:
-            "Your reading state, highlights, and notes stay on the device. You can access them until you reset local data.",
-        },
-        {
-          question:
-            "Why did the browser ask for permission when I turned on Quick Links?",
-          answer:
-            "Quick Links uses your browser’s top sites and favicon access, so the browser asks before that data can be shown.",
-        },
-        {
-          question:
-            "If I turn a feature off, does the browser revoke that permission automatically?",
-          answer:
-            "No. Turning the feature off stops it from being used, but the browser keeps the permission until you remove it in extension settings.",
-        },
-        {
-          question: "How do I reset Totem on this device?",
-          answer:
-            "Open Settings in the new tab page, choose Reset local data, then confirm. Note that you will lose all local state like highlights, notes, and reading status.",
-        },
-        {
-          question: "What does Reset local data delete?",
-          answer:
-            "It clears the local bookmarks cache, highlights, notes, reading progress, and all other saved state on that device.",
-        },
-        {
-          question: "Why did my highlights, notes, or read progress disappear?",
-          answer:
-            "That usually means local data was reset, you changed browser profiles, or you are looking on a different device.",
-        },
-        {
-          question: "What should I do if Totem looks stuck?",
-          answer:
-            "Open X once, come back, and try Sync again. If it still does not recover, use Reset local data.",
-        },
-      ] satisfies FAQItem[],
+      ] satisfies FAQGroup[],
       finalCtaTitle: "Stop saving. Start reading.",
       finalCtaDescription:
         "You already saved them. Now actually read them.",
