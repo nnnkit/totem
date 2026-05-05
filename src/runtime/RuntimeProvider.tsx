@@ -70,7 +70,8 @@ export function RuntimeProvider({ children }: PropsWithChildren) {
 
       // Reset broadcast: drop our IDB handle so the resetting tab's
       // deleteDatabase() isn't blocked by this page's live connection.
-      if (changes[CS_RESET_EPOCH]) {
+      if (typeof changes[CS_RESET_EPOCH]?.newValue === "number") {
+        actions.prepareForReset();
         closeDb();
       }
 

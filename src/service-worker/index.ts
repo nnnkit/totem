@@ -12,6 +12,7 @@ import {
   markAuthLoggedOut,
   recordWeakAuthNegativeSignal,
   setAuthState,
+  getSessionSnapshot,
   authHandlers,
 } from "./auth";
 import { captureGraphqlEndpoint, discoverAllMissingQueryIds, queryIdHandlers } from "./query-id";
@@ -151,6 +152,36 @@ function isExtensionInitiated(
 
 function isAuthProtectedOperation(url: string): boolean {
   return AUTH_PROTECTED_OPERATIONS.has(extractGraphqlOperationName(url));
+}
+
+export async function handleTwidCookieChange(
+  changeInfo: chrome.cookies.CookieChangeInfo,
+  storage: typeof chrome.storage.local = chrome.storage.local,
+): Promise<void> {
+  const cookie = changeInfo.cookie;
+  if (cookie.name !== "twid") return;
+  const normalizedDomain = cookie.domain.replace(/^\./, "");
+  if (normalizedDomain !== "x.com") return;
+
+  const userId = parseTwidUserId(cookie.value);
+  if (!changeInfo.removed) {
+    if (!userId) return;
+    await storage.set({
+      totem_user_id: userId,
+      [CS_ACCOUNT_CONTEXT_ID]: userId,
+    });
+    return;
+  }
+
+  // Chrome reports cookie updates as an overwrite removal followed by an
+  // explicit insert, so overwrite is not a logout signal.
+  if (changeInfo.cause === "overwrite") return;
+
+  await markAuthLoggedOut(
+    `cookie_twid_${changeInfo.cause}`,
+    true,
+    storage,
+  );
 }
 
 function decodeBodyBytes(bytes: ArrayBuffer | undefined): string {
@@ -381,19 +412,7 @@ chrome.webRequest.onCompleted.addListener(
 
 if (typeof chrome.cookies?.onChanged?.addListener === "function") {
   chrome.cookies.onChanged.addListener((changeInfo) => {
-    const cookie = changeInfo.cookie;
-    if (cookie.name !== "twid") return;
-    const normalizedDomain = cookie.domain.replace(/^\./, "");
-    if (normalizedDomain !== "x.com") return;
-
-    const userId = changeInfo.removed ? null : parseTwidUserId(cookie.value);
-    if (userId) return;
-
-    markAuthLoggedOut(
-      `cookie_twid_${changeInfo.cause}`,
-      true,
-      chrome.storage.local,
-    ).catch(() => {});
+    handleTwidCookieChange(changeInfo, chrome.storage.local).catch(() => {});
   });
 }
 
@@ -463,7 +482,7 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
 // IDB. Drop our cached DB handle so the delete isn't blocked.
 chrome.storage.onChanged.addListener((changes, areaName) => {
   if (areaName !== "local") return;
-  if (!changes[CS_RESET_EPOCH]) return;
+  if (typeof changes[CS_RESET_EPOCH]?.newValue !== "number") return;
   closeDb();
 });
 
@@ -475,24 +494,20 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
 readOpenInTotemSetting().then((enabled) => syncOpenInTotemScript(enabled));
 
 // On startup, normalize auth state and proactively discover query IDs.
-chrome.storage.local.get(
-  ["totem_auth_headers", "totem_auth_state"],
-  (stored: Record<string, unknown>) => {
-    const authHeaders = stored.totem_auth_headers as Record<string, string> | undefined;
-    const hasAuthHeader = Boolean(authHeaders?.authorization);
-    const state = normalizeAuthState(stored.totem_auth_state, hasAuthHeader);
-
-    if (hasAuthHeader) {
+getSessionSnapshot(chrome.storage.local)
+  .then((snapshot) => {
+    const state = normalizeAuthState(snapshot.authState, snapshot.hasAuthHeader);
+    if (snapshot.hasAuthHeader) {
       if (state !== "authenticated" && state !== "stale") {
         setAuthState("stale", "startup_has_auth", {}, chrome.storage.local).catch(() => {});
       }
       discoverAllMissingQueryIds().catch(() => {});
       return;
     }
-    if (state !== "logged_out") {
+    if (snapshot.sessionState === "logged_out" && state !== "logged_out") {
       setAuthState("logged_out", "startup_no_auth", { clearAuth: false }, chrome.storage.local).catch(() => {});
     }
-  },
-);
+  })
+  .catch(() => {});
 
 } // end hasChromeRuntime guard

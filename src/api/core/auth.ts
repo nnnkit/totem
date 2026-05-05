@@ -53,8 +53,25 @@ export async function setAccountContext(accountId: string): Promise<string> {
   return response.accountContextId;
 }
 
-export async function startAuthCapture(): Promise<{ tabId?: number }> {
-  return chrome.runtime.sendMessage({ type: "START_AUTH_CAPTURE" });
+interface StartAuthCaptureOptions {
+  interactive?: boolean;
+  force?: boolean;
+}
+
+export async function startAuthCapture(
+  options: StartAuthCaptureOptions = {},
+): Promise<{
+  tabId?: number;
+  started?: boolean;
+  inProgress?: boolean;
+  authReady?: boolean;
+  reason?: string;
+}> {
+  return chrome.runtime.sendMessage({
+    type: "START_AUTH_CAPTURE",
+    interactive: options.interactive === true,
+    force: options.force === true,
+  });
 }
 
 export async function closeAuthTab(): Promise<void> {

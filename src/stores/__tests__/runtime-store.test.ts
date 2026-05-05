@@ -10,6 +10,7 @@ import type { RuntimeState } from "../runtime-store";
 const mocks = vi.hoisted(() => ({
   getRuntimeSnapshot: vi.fn<() => Promise<RuntimeSnapshot>>(),
   checkAuth: vi.fn(),
+  startAuthCapture: vi.fn(),
   deleteBookmark: vi.fn(),
   fetchBookmarkPage: vi.fn(),
   getBookmarkEvents: vi.fn(),
@@ -30,6 +31,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("../../api/core/auth", () => ({
   checkAuth: mocks.checkAuth,
   getRuntimeSnapshot: mocks.getRuntimeSnapshot,
+  startAuthCapture: mocks.startAuthCapture,
 }));
 
 vi.mock("../../api/core/bookmarks", () => ({
@@ -173,6 +175,12 @@ beforeEach(() => {
       detailApi: "unknown",
     },
   });
+  mocks.startAuthCapture.mockResolvedValue({
+    started: false,
+    inProgress: false,
+    authReady: false,
+    reason: "not_started",
+  });
   mocks.deleteBookmark.mockResolvedValue(undefined);
   mocks.fetchBookmarkPage.mockResolvedValue({ bookmarks: [], cursor: null, stopOnEmptyResponse: true });
   mocks.getBookmarkEvents.mockResolvedValue([]);
@@ -302,6 +310,22 @@ describe("runtime-store boot", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it("starts silent auth capture when X has a live session but headers are missing", async () => {
+    mocks.getRuntimeSnapshot.mockResolvedValue(
+      runtimeSnapshot({
+        sessionState: "unknown",
+        authPhase: "connecting",
+        accountContextId: "acct-1",
+      }),
+    );
+
+    const store = createRuntimeStore();
+    await store.getState().actions.boot();
+
+    expect(store.getState().authPhase).toBe("connecting");
+    expect(mocks.startAuthCapture).toHaveBeenCalledWith({ interactive: false });
   });
 
   it("clears in-memory bookmarks and detail ids during reset prep", () => {
@@ -486,6 +510,10 @@ describe("runtime-store auth flows", () => {
     await store.getState().actions.startLogin();
 
     const state = store.getState();
+    expect(mocks.startAuthCapture).toHaveBeenCalledWith({
+      interactive: true,
+      force: true,
+    });
     expect(state.authPhase).toBe("ready");
     expect(state.sessionState).toBe("logged_in");
   });
@@ -595,6 +623,10 @@ describe("runtime-store auth flows", () => {
     );
 
     await store.getState().actions.startLogin();
+    expect(mocks.startAuthCapture).toHaveBeenCalledWith({
+      interactive: true,
+      force: true,
+    });
     expect(store.getState().authPhase).toBe("ready");
     expect(store.getState().sessionState).toBe("logged_in");
   });
@@ -763,6 +795,28 @@ describe("runtime-store applyRuntimeSnapshot", () => {
       }),
     );
     expect(store.getState().authPhase).toBe("need_login");
+  });
+
+  it("releases an in-flight lease when reset prep runs in any tab", async () => {
+    const store = createRuntimeStore();
+    primeReadyState(store);
+
+    await startHangingSync(store);
+    expect(store.getState().syncStatus).toBe("syncing");
+
+    mocks.completeSyncRun.mockClear();
+    store.getState().actions.prepareForReset();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(mocks.completeSyncRun).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: "skipped",
+        leaseId: "lease-race",
+      }),
+    );
+    expect(store.getState().bookmarks).toEqual([]);
+    expect(store.getState().syncStatus).toBe("idle");
   });
 
   it("does NOT release the lease when the push keeps the session ready (capability-only upgrade)", async () => {

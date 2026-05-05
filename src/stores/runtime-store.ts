@@ -2,6 +2,7 @@ import { create } from "zustand";
 import {
   checkAuth,
   getRuntimeSnapshot,
+  startAuthCapture,
 } from "../api/core/auth";
 import {
   ackBookmarkEvents,
@@ -196,7 +197,7 @@ function normalizeAuthPayloadFromSnapshot(snapshot: RuntimeSnapshot): AuthPayloa
   const detailApi = snapshot.capability?.detailApi ?? "unknown";
 
   return {
-    hasUser: snapshot.sessionState === "logged_in" && Boolean(snapshot.accountContextId),
+    hasUser: snapshot.sessionState !== "logged_out" && Boolean(snapshot.accountContextId),
     hasAuth: snapshot.sessionState === "logged_in",
     authState:
       snapshot.sessionState === "logged_out"
@@ -205,7 +206,7 @@ function normalizeAuthPayloadFromSnapshot(snapshot: RuntimeSnapshot): AuthPayloa
           ? "authenticated"
           : "stale",
     sessionState: snapshot.sessionState,
-    userId: snapshot.sessionState === "logged_in" ? snapshot.accountContextId : null,
+    userId: snapshot.sessionState !== "logged_out" ? snapshot.accountContextId : null,
     accountContextId: snapshot.accountContextId,
     bookmarksApi,
     detailApi,
@@ -598,6 +599,16 @@ export function createRuntimeStore() {
       }
     };
 
+    const maybeStartAuthCaptureForPayload = (
+      payload: AuthPayload,
+      interactive: boolean,
+    ) => {
+      if (payload.sessionState === "logged_in" || payload.hasAuth || !payload.hasUser) {
+        return;
+      }
+      void startAuthCapture({ interactive }).catch(() => {});
+    };
+
     const applyAuthPayload = async (
       payload: AuthPayload,
       options: {
@@ -692,6 +703,10 @@ export function createRuntimeStore() {
             ? "none"
             : state.syncJobKind,
       });
+
+      if (phase === "connecting") {
+        maybeStartAuthCaptureForPayload(payload, false);
+      }
 
       if (needsHydration) {
         await hydrateCurrentAccount(nextBootGeneration, options.allowAutoSync);
@@ -1085,6 +1100,7 @@ export function createRuntimeStore() {
           sessionState: "unknown",
           authRetryDelayMs: AUTH_QUICK_CHECK_MS,
         });
+        void startAuthCapture({ interactive: true, force: true }).catch(() => {});
         await runAuthCheck();
       },
 
@@ -1172,6 +1188,7 @@ export function createRuntimeStore() {
       prepareForReset: () => {
         prefetchController.stop();
         stopSync();
+        void releaseActiveLease("skipped");
         clearScheduledAutoRetry();
         authRequestId += 1;
         setRuntimeState((state) => ({

@@ -162,8 +162,7 @@ export async function resetLocalData(options: ResetOptions = {}): Promise<void> 
 
   if (keepUserContent) {
     // Clear the bookmarks/details/search-index stores in the active DB
-    // without touching the precious stores. The DB stays open; other
-    // tabs can keep their handles.
+    // without touching the precious stores.
     try {
       await clearTransientStores();
     } catch (error) {

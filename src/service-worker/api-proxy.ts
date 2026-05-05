@@ -10,7 +10,11 @@
 import type { MessageRequest } from "../types/messages";
 import type { HandlerMap } from "./index";
 import { withQueryId, forceRediscoverQueryId } from "./query-id";
-import { markAuthAuthenticated, markAuthLoggedOut } from "./auth";
+import {
+  ensureAuthCapture,
+  markAuthAuthenticated,
+  markAuthLoggedOut,
+} from "./auth";
 import { CS_VIEWER_PROFILE } from "../lib/storage-keys";
 
 // ── Constants ───────────────────────────────────────────────────
@@ -63,10 +67,6 @@ const DETAIL_FEATURE_OVERRIDES: Record<string, boolean> = {
   responsive_web_grok_community_note_auto_translation_is_enabled: false,
 };
 
-// ── Reauth concurrency guard ────────────────────────────────────
-
-let pendingReauth: Promise<boolean> | null = null;
-
 // ── Auth helpers ────────────────────────────────────────────────
 
 async function buildHeaders(
@@ -97,63 +97,15 @@ async function buildHeaders(
   return headers;
 }
 
-/**
- * Opens a background tab to x.com to refresh auth headers.
- * Deduplicates concurrent calls — only one tab is opened at a time.
- */
 async function reAuthSilently(
   storage: typeof chrome.storage.local,
   tabs: typeof chrome.tabs,
 ): Promise<boolean> {
-  if (pendingReauth) return pendingReauth;
-
-  const attempt = new Promise<boolean>((resolve) => {
-    let tabId: number | null = null;
-    let resolved = false;
-
-    const cleanup = () => {
-      if (tabId) {
-        tabs.remove(tabId).catch(() => {});
-        tabId = null;
-      }
-      storage.onChanged.removeListener(onChange);
-    };
-
-    const onChange = (changes: Record<string, { newValue?: unknown }>) => {
-      const authHeaders = changes.totem_auth_headers?.newValue;
-      const hasAuth = Boolean(
-        authHeaders &&
-          typeof authHeaders === "object" &&
-          (authHeaders as Record<string, string>).authorization,
-      );
-      if (hasAuth && !resolved) {
-        resolved = true;
-        cleanup();
-        resolve(true);
-      }
-    };
-
-    storage.onChanged.addListener(onChange);
-
-    tabs.create(
-      { url: "https://x.com/i/bookmarks", active: false },
-      (tab: chrome.tabs.Tab) => {
-        tabId = tab.id ?? null;
-      },
-    );
-
-    setTimeout(() => {
-      if (!resolved) {
-        resolved = true;
-        cleanup();
-        resolve(false);
-      }
-    }, 15000);
-  });
-
-  pendingReauth = attempt;
-  attempt.finally(() => { pendingReauth = null; });
-  return attempt;
+  const result = await ensureAuthCapture(
+    { storage, tabs },
+    { interactive: false, reason: "api_auth_retry" },
+  );
+  return result.ok;
 }
 
 function parseFeatureSet(raw: unknown): Record<string, boolean> {

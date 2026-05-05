@@ -41,6 +41,9 @@ import {
 
 const AUTH_WEAK_NEGATIVE_WINDOW_MS = 10_000;
 const AUTH_WEAK_NEGATIVE_THRESHOLD = 2;
+const AUTH_CAPTURE_TIMEOUT_MS = 15_000;
+const AUTH_CAPTURE_SILENT_COOLDOWN_MS = 5_000;
+const X_AUTH_CAPTURE_URL = "https://x.com/i/bookmarks";
 
 const CACHE_SUMMARY_KEYS = [
   CS_LAST_SYNC,
@@ -55,8 +58,10 @@ const AUTH_DIAGNOSTICS_STORAGE_KEY = "totem_auth_diagnostics";
 let authWeakNegativeHits: number[] = [];
 let authTabId: number | null = null;
 let authTabCleanup: (() => void) | null = null;
+let authCapturePromise: Promise<AuthCaptureResult> | null = null;
+let authCaptureCancel: ((reason: string) => void) | null = null;
+let authCaptureLastCompletedAt = 0;
 
-/** Idempotent — safe to call multiple times or from concurrent event handlers. */
 function runAuthTabCleanup() {
   if (authTabCleanup) {
     authTabCleanup();
@@ -88,16 +93,57 @@ export function getAuthDiagnosticLog(): readonly AuthDiagnosticEntry[] {
 
 export interface AuthDeps {
   storage: typeof chrome.storage.local;
+  storageChanges?: typeof chrome.storage.onChanged;
   tabs: typeof chrome.tabs;
+  cookies?: typeof chrome.cookies;
+}
+
+interface AuthCaptureOptions {
+  interactive?: boolean;
+  force?: boolean;
+  reason?: string;
+  timeoutMs?: number;
+}
+
+interface AuthCaptureStartResult {
+  authReady: boolean;
+  inProgress: boolean;
+  started: boolean;
+  tabId: number | null;
+  reason: string;
+  liveUserId: string | null;
+}
+
+interface AuthCaptureResult {
+  ok: boolean;
+  started: boolean;
+  tabId: number | null;
+  reason: string;
+  liveUserId: string | null;
 }
 
 function defaultDeps(): AuthDeps {
   const g = globalThis as Record<string, unknown>;
+  const chromeApi = g.chrome as
+    | {
+        storage?: {
+          local?: typeof chrome.storage.local;
+          onChanged?: typeof chrome.storage.onChanged;
+        };
+        tabs?: typeof chrome.tabs;
+        cookies?: typeof chrome.cookies;
+      }
+    | undefined;
   return {
-    storage: (g.chrome as { storage: { local: typeof chrome.storage.local } })
-      ?.storage?.local,
-    tabs: (g.chrome as { tabs: typeof chrome.tabs })?.tabs,
+    storage: chromeApi?.storage?.local as typeof chrome.storage.local,
+    storageChanges: chromeApi?.storage?.onChanged,
+    tabs: chromeApi?.tabs as typeof chrome.tabs,
+    cookies: chromeApi?.cookies,
   };
+}
+
+function defaultCookies(): typeof chrome.cookies | undefined {
+  return defaultDeps().cookies;
 }
 
 async function setAuthState(
@@ -167,8 +213,47 @@ async function recordWeakAuthNegativeSignal(
 
 // ── Session snapshot ────────────────────────────────────────────
 
+function authHeaderTwidUserId(authHeaders: unknown): string | null {
+  if (!authHeaders || typeof authHeaders !== "object") return null;
+  const headers = authHeaders as Record<string, string>;
+  return parseTwidUserId(
+    getCookieHeaderValue(
+      typeof headers.cookie === "string" ? headers.cookie : "",
+      "twid",
+    ),
+  );
+}
+
+function usableAuthHeaderUserId(
+  authHeaders: unknown,
+  liveUserId: string | null | undefined,
+  allowAnyCapturedUser: boolean = false,
+): string | null {
+  if (!authHeaders || typeof authHeaders !== "object") return null;
+  const headers = authHeaders as Record<string, string>;
+  if (!headers.authorization) return null;
+
+  const headerUserId = authHeaderTwidUserId(headers);
+  if (!headerUserId) return null;
+  if (allowAnyCapturedUser || liveUserId === undefined) return headerUserId;
+  return liveUserId && headerUserId === liveUserId ? headerUserId : null;
+}
+
+async function readLiveTwidUserId(
+  cookies: typeof chrome.cookies | undefined = defaultCookies(),
+): Promise<string | null | undefined> {
+  if (!cookies || typeof cookies.get !== "function") return undefined;
+  try {
+    const cookie = await cookies.get({ url: "https://x.com/", name: "twid" });
+    return parseTwidUserId(cookie?.value ?? "");
+  } catch {
+    return undefined;
+  }
+}
+
 export async function getSessionSnapshot(
   storage: typeof chrome.storage.local,
+  cookies: typeof chrome.cookies | undefined = defaultCookies(),
 ): Promise<SessionSnapshot> {
   const stored = await storage.get([
     "totem_user_id",
@@ -185,27 +270,36 @@ export async function getSessionSnapshot(
   const authHeaders = stored.totem_auth_headers as
     | Record<string, string>
     | undefined;
-  // A stored authorization JWT is only a valid session signal when the cookie
-  // still identifies a user via twid. Without this, post-logout x.com traffic
-  // that briefly carries the old JWT but an empty twid could re-arm the trio
-  // and mask the logged_out state.
-  const storedCookieHeader =
-    typeof authHeaders?.cookie === "string" ? authHeaders.cookie : "";
-  const storedTwidUserId = parseTwidUserId(
-    getCookieHeaderValue(storedCookieHeader, "twid"),
-  );
-  const hasAuthHeader = Boolean(
-    authHeaders?.authorization && storedTwidUserId,
-  );
+  const liveTwidUserId = await readLiveTwidUserId(cookies);
+  const storedTwidUserId = authHeaderTwidUserId(authHeaders);
+  const storedAuthMismatch =
+    Boolean(authHeaders?.authorization) &&
+    liveTwidUserId !== undefined &&
+    (!liveTwidUserId || storedTwidUserId !== liveTwidUserId);
 
-  if (!userId && storedTwidUserId) {
-    userId = storedTwidUserId;
+  if (storedAuthMismatch) {
+    await markAuthLoggedOut("live_twid_mismatch", true, storage);
+  }
+
+  const hasAuthHeader = Boolean(
+    !storedAuthMismatch &&
+      usableAuthHeaderUserId(authHeaders, liveTwidUserId),
+  );
+  const effectiveUserId =
+    liveTwidUserId === undefined
+      ? userId || storedTwidUserId
+      : liveTwidUserId;
+
+  if (effectiveUserId) {
+    userId = effectiveUserId;
     storage
       .set({
-        totem_user_id: storedTwidUserId,
-        [CS_ACCOUNT_CONTEXT_ID]: storedTwidUserId,
+        totem_user_id: effectiveUserId,
+        [CS_ACCOUNT_CONTEXT_ID]: effectiveUserId,
       })
       .catch(() => {});
+  } else if (liveTwidUserId === null && userId) {
+    userId = null;
   }
 
   const storedAccountContextId =
@@ -218,17 +312,26 @@ export async function getSessionSnapshot(
     storage.set({ [CS_ACCOUNT_CONTEXT_ID]: userId }).catch(() => {});
   }
 
-  const authState = normalizeAuthState(stored.totem_auth_state, hasAuthHeader);
-  // A valid auth header is a stronger signal than a stale "logged_out" state.
-  // When the user logs back in, fresh headers arrive before markAuthAuthenticated
-  // updates totem_auth_state — without this check the extension stays stuck in
-  // need_login until a second storage change propagates.
-  const sessionState =
-    authState === "logged_out" && !hasAuthHeader
-      ? ("logged_out" as const)
-      : hasAuthHeader || authState === "authenticated"
-        ? ("logged_in" as const)
-        : ("unknown" as const);
+  const normalizedAuthState = normalizeAuthState(
+    storedAuthMismatch ? "logged_out" : stored.totem_auth_state,
+    hasAuthHeader,
+  );
+  const authState =
+    hasAuthHeader && normalizedAuthState === "logged_out"
+      ? ("stale" as const)
+      : liveTwidUserId && !hasAuthHeader
+        ? ("stale" as const)
+        : normalizedAuthState;
+  let sessionState: SessionSnapshot["sessionState"];
+  if (hasAuthHeader || authState === "authenticated") {
+    sessionState = "logged_in";
+  } else if (liveTwidUserId) {
+    sessionState = "unknown";
+  } else if (authState === "logged_out") {
+    sessionState = "logged_out";
+  } else {
+    sessionState = "unknown";
+  }
 
   logDiagnostic(
     "snapshot_build",
@@ -295,9 +398,10 @@ async function buildRuntimeSnapshot(
   stateOverride: SyncOrchestratorStateReadonly | null = null,
   accountContextOverride: string | null = null,
   storage: typeof chrome.storage.local,
+  cookies: typeof chrome.cookies | undefined = defaultCookies(),
 ) {
   const now = Date.now();
-  const sessionSnapshot = await getSessionSnapshot(storage);
+  const sessionSnapshot = await getSessionSnapshot(storage, cookies);
   const requestedAccountContextId = normalizeSyncAccountId(
     accountContextOverride,
   );
@@ -413,14 +517,262 @@ async function persistDiagnostics(
   }
 }
 
+function resolveAuthDeps(deps?: Partial<AuthDeps>): AuthDeps {
+  const defaults = defaultDeps();
+  return {
+    storage: deps?.storage ?? defaults.storage,
+    storageChanges: deps?.storageChanges ?? defaults.storageChanges,
+    tabs: deps?.tabs ?? defaults.tabs,
+    cookies: deps?.cookies ?? defaults.cookies,
+  };
+}
+
+function captureHeadersMatch(
+  authHeaders: unknown,
+  liveUserId: string | null | undefined,
+  interactive: boolean,
+): string | null {
+  return usableAuthHeaderUserId(
+    authHeaders,
+    liveUserId,
+    interactive || liveUserId === null,
+  );
+}
+
+export async function startAuthCaptureSession(
+  deps?: Partial<AuthDeps>,
+  options: AuthCaptureOptions = {},
+): Promise<AuthCaptureStartResult> {
+  const { storage, storageChanges, tabs, cookies } = resolveAuthDeps(deps);
+  const onStorageChanged =
+    storageChanges ??
+    (storage as typeof chrome.storage.local & {
+      onChanged?: typeof chrome.storage.onChanged;
+    }).onChanged;
+  const interactive = options.interactive === true;
+  const force = options.force === true;
+  const liveUserId = await readLiveTwidUserId(cookies);
+  const stored = await storage.get(["totem_auth_headers"]);
+
+  if (
+    !force &&
+    usableAuthHeaderUserId(stored.totem_auth_headers, liveUserId)
+  ) {
+    return {
+      authReady: true,
+      inProgress: false,
+      started: false,
+      tabId: null,
+      reason: "auth_present",
+      liveUserId: liveUserId ?? null,
+    };
+  }
+
+  if (!interactive && liveUserId === null) {
+    return {
+      authReady: false,
+      inProgress: false,
+      started: false,
+      tabId: null,
+      reason: "no_live_twid",
+      liveUserId: null,
+    };
+  }
+
+  if (force && authCapturePromise) {
+    authCaptureCancel?.("replaced");
+  }
+
+  if (authCapturePromise) {
+    return {
+      authReady: false,
+      inProgress: true,
+      started: false,
+      tabId: authTabId,
+      reason: "capture_in_progress",
+      liveUserId: liveUserId ?? null,
+    };
+  }
+
+  const now = Date.now();
+  if (
+    !force &&
+    !interactive &&
+    authCaptureLastCompletedAt > 0 &&
+    now - authCaptureLastCompletedAt < AUTH_CAPTURE_SILENT_COOLDOWN_MS
+  ) {
+    return {
+      authReady: false,
+      inProgress: false,
+      started: false,
+      tabId: null,
+      reason: "silent_capture_cooldown",
+      liveUserId: liveUserId ?? null,
+    };
+  }
+
+  const tab = await tabs.create({
+    url: X_AUTH_CAPTURE_URL,
+    active: interactive && !liveUserId,
+  });
+  authTabId = tab.id ?? null;
+  const safeTabId = authTabId;
+  const timeoutMs = options.timeoutMs ?? AUTH_CAPTURE_TIMEOUT_MS;
+
+  authCapturePromise = new Promise<AuthCaptureResult>((resolve) => {
+    let settled = false;
+    let timeout: ReturnType<typeof setTimeout> | null = null;
+
+    const cleanup = (closeTab: boolean) => {
+      if (timeout !== null) clearTimeout(timeout);
+      onStorageChanged?.removeListener(onChange);
+      tabs.onRemoved.removeListener(onRemoved);
+      authTabCleanup = null;
+      authCaptureCancel = null;
+
+      const tabToClose = authTabId;
+      authTabId = null;
+      if (closeTab && tabToClose !== null) {
+        tabs.remove(tabToClose).catch(() => {});
+      }
+    };
+
+    const settle = (result: AuthCaptureResult, closeTab: boolean) => {
+      if (settled) return;
+      settled = true;
+      cleanup(closeTab);
+      authCaptureLastCompletedAt = Date.now();
+      authCapturePromise = null;
+      resolve(result);
+    };
+
+    const onChange = (changes: Record<string, { newValue?: unknown }>) => {
+      const authHeaders = changes.totem_auth_headers?.newValue;
+      const capturedUserId = captureHeadersMatch(
+        authHeaders,
+        liveUserId,
+        interactive,
+      );
+      if (!capturedUserId) return;
+
+      logDiagnostic("capture", "ok", "auth_headers_captured");
+      markAuthAuthenticated("auth_capture_success", storage).catch(() => {});
+      persistDiagnostics(storage).catch(() => {});
+      settle(
+        {
+          ok: true,
+          started: true,
+          tabId: safeTabId,
+          reason: "auth_headers_captured",
+          liveUserId: capturedUserId,
+        },
+        true,
+      );
+    };
+
+    const onRemoved = (removedTabId: number) => {
+      if (removedTabId !== safeTabId) return;
+      settle(
+        {
+          ok: false,
+          started: true,
+          tabId: safeTabId,
+          reason: "tab_closed",
+          liveUserId: liveUserId ?? null,
+        },
+        false,
+      );
+    };
+
+    onStorageChanged?.addListener(onChange);
+    tabs.onRemoved.addListener(onRemoved);
+    authTabCleanup = () => cleanup(false);
+    authCaptureCancel = (reason: string) => {
+      settle(
+        {
+          ok: false,
+          started: true,
+          tabId: safeTabId,
+          reason,
+          liveUserId: liveUserId ?? null,
+        },
+        true,
+      );
+    };
+
+    timeout = setTimeout(() => {
+      settle(
+        {
+          ok: false,
+          started: true,
+          tabId: safeTabId,
+          reason: "capture_timeout",
+          liveUserId: liveUserId ?? null,
+        },
+        true,
+      );
+    }, timeoutMs);
+  });
+
+  logDiagnostic(
+    "capture",
+    "ok",
+    options.reason
+      ? `auth_capture_started:${options.reason}`
+      : "auth_capture_started",
+  );
+
+  return {
+    authReady: false,
+    inProgress: true,
+    started: true,
+    tabId: authTabId,
+    reason: "capture_started",
+    liveUserId: liveUserId ?? null,
+  };
+}
+
+export async function ensureAuthCapture(
+  deps?: Partial<AuthDeps>,
+  options: AuthCaptureOptions = {},
+): Promise<AuthCaptureResult> {
+  const start = await startAuthCaptureSession(deps, options);
+  if (start.authReady) {
+    return {
+      ok: true,
+      started: false,
+      tabId: start.tabId,
+      reason: start.reason,
+      liveUserId: start.liveUserId,
+    };
+  }
+  if (!start.inProgress && !start.started) {
+    return {
+      ok: false,
+      started: false,
+      tabId: start.tabId,
+      reason: start.reason,
+      liveUserId: start.liveUserId,
+    };
+  }
+  return authCapturePromise ??
+    {
+      ok: false,
+      started: start.started,
+      tabId: start.tabId,
+      reason: start.reason,
+      liveUserId: start.liveUserId,
+    };
+}
+
 // ── Handler map ─────────────────────────────────────────────────
 
 export function createAuthHandlers(deps?: AuthDeps): HandlerMap {
-  const { storage, tabs } = deps || defaultDeps();
+  const { storage, storageChanges, tabs, cookies } = deps || defaultDeps();
 
   return {
     CHECK_AUTH: async () => {
-      const snapshot = await getSessionSnapshot(storage);
+      const snapshot = await getSessionSnapshot(storage, cookies);
       const responseUserId =
         snapshot.sessionState === "logged_out" ? null : snapshot.userId;
       const hasUser =
@@ -458,6 +810,7 @@ export function createAuthHandlers(deps?: AuthDeps): HandlerMap {
         null,
         requestedAccountId,
         storage,
+        cookies,
       );
       if (!requestedAccountId) {
         await persistRuntimeStateV2(
@@ -487,6 +840,7 @@ export function createAuthHandlers(deps?: AuthDeps): HandlerMap {
           null,
           accountContextId,
           storage,
+          cookies,
         );
       } catch {
         snapshot = null;
@@ -528,81 +882,31 @@ export function createAuthHandlers(deps?: AuthDeps): HandlerMap {
       return { ok: true };
     },
 
-    START_AUTH_CAPTURE: async () => {
-      // Clean up any prior auth tab + listeners
-      runAuthTabCleanup();
-      if (authTabId) {
-        try {
-          await tabs.remove(authTabId);
-        } catch {
-          // tab may already be closed
-        }
-        authTabId = null;
-      }
-
-      logDiagnostic("capture", "ok", "auth_capture_started");
-
-      const tab = await tabs.create({
-        url: "https://x.com/i/bookmarks",
-        active: false,
-      });
-      authTabId = tab.id ?? null;
-      const safeTabId = authTabId;
-
-      const onChange = (
-        changes: Record<string, { newValue?: unknown }>,
-      ) => {
-        const authHeaders = changes.totem_auth_headers?.newValue;
-        const hasAuth = Boolean(
-          authHeaders &&
-            typeof authHeaders === "object" &&
-            (authHeaders as Record<string, string>).authorization,
-        );
-        if (hasAuth) {
-          logDiagnostic("capture", "ok", "auth_headers_captured");
-          persistDiagnostics(storage);
-          runAuthTabCleanup();
-          if (authTabId) {
-            const tabToClose = authTabId;
-            authTabId = null;
-            tabs.remove(tabToClose).catch(() => {});
-          }
-        }
+    START_AUTH_CAPTURE: async (message: MessageRequest) => {
+      const msg = message as MessageRequest & {
+        interactive?: boolean;
+        force?: boolean;
       };
-
-      const onRemoved = (removedTabId: number) => {
-        if (removedTabId === safeTabId) {
-          authTabId = null;
-          runAuthTabCleanup();
-        }
-      };
-
-      storage.onChanged.addListener(onChange);
-      tabs.onRemoved.addListener(onRemoved);
-
-      authTabCleanup = () => {
-        storage.onChanged.removeListener(onChange);
-        tabs.onRemoved.removeListener(onRemoved);
-      };
-
-      return { tabId: tab.id ?? null };
+      const result = await startAuthCaptureSession(
+        { storage, storageChanges, tabs, cookies },
+        {
+          interactive: msg.interactive === true,
+          force: msg.force === true,
+          reason: msg.interactive ? "auth_capture_interactive" : "auth_capture_silent",
+        },
+      );
+      await persistDiagnostics(storage);
+      return result;
     },
 
     CLOSE_AUTH_TAB: async () => {
+      authCaptureCancel?.("cancelled");
       runAuthTabCleanup();
-      if (authTabId) {
-        try {
-          await tabs.remove(authTabId);
-        } catch {
-          // tab may already be closed
-        }
-        authTabId = null;
-      }
       return { ok: true };
     },
 
     REAUTH_STATUS: async () => {
-      return { inProgress: false };
+      return { inProgress: Boolean(authCapturePromise), tabId: authTabId };
     },
   };
 }
@@ -625,6 +929,9 @@ export {
 export function _resetForTesting(): void {
   authWeakNegativeHits = [];
   authTabId = null;
+  authCapturePromise = null;
+  authCaptureCancel = null;
+  authCaptureLastCompletedAt = 0;
   runAuthTabCleanup();
   diagnosticLog.length = 0;
 }

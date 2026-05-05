@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createFakeChrome } from "../../test-utils/fake-chrome";
 import {
   _resetForTesting,
@@ -8,7 +8,11 @@ import {
   deriveAuthPhaseFromSession,
   type AuthDeps,
 } from "../auth";
-import { createMessageRouter, mergeHandlerMaps } from "../index";
+import {
+  createMessageRouter,
+  handleTwidCookieChange,
+  mergeHandlerMaps,
+} from "../index";
 
 // ── Helpers ─────────────────────────────────────────────────────
 
@@ -27,6 +31,52 @@ function setupRouter(fakeChrome: ReturnType<typeof createFakeChrome>) {
   const router = createMessageRouter(mergeHandlerMaps(handlers));
   fakeChrome.runtime.onMessage.addListener(router);
   return { deps, handlers };
+}
+
+function makeTwidCookieChange(
+  overrides: Partial<chrome.cookies.CookieChangeInfo>,
+): chrome.cookies.CookieChangeInfo {
+  const { cookie: cookieOverrides, ...rest } = overrides;
+  const cookie: chrome.cookies.Cookie = {
+    domain: ".x.com",
+    name: "twid",
+    storeId: "0",
+    value: "u%3D777",
+    session: true,
+    hostOnly: false,
+    path: "/",
+    httpOnly: true,
+    secure: true,
+    sameSite: "unspecified",
+    ...cookieOverrides,
+  };
+
+  return {
+    removed: false,
+    cause: "explicit",
+    cookie,
+    ...rest,
+  };
+}
+
+function makeCookies(twidValue: string | null): typeof chrome.cookies {
+  return {
+    get: async () =>
+      twidValue
+        ? ({
+            domain: ".x.com",
+            name: "twid",
+            storeId: "0",
+            value: twidValue,
+            session: true,
+            hostOnly: false,
+            path: "/",
+            httpOnly: true,
+            secure: true,
+            sameSite: "unspecified",
+          } as chrome.cookies.Cookie)
+        : null,
+  } as unknown as typeof chrome.cookies;
 }
 
 // ── Tests ───────────────────────────────────────────────────────
@@ -100,6 +150,75 @@ describe("auth module", () => {
       const snapshot = await getSessionSnapshot(storage);
       expect(snapshot.sessionState).toBe("logged_out");
       expect(snapshot.authState).toBe("logged_out");
+    });
+
+    it("returns connecting when X has a live twid but auth headers have not been captured yet", async () => {
+      const storage = fakeChrome.storage
+        .local as unknown as typeof chrome.storage.local;
+
+      const snapshot = await getSessionSnapshot(
+        storage,
+        makeCookies("u%3D555"),
+      );
+
+      expect(snapshot.sessionState).toBe("unknown");
+      expect(snapshot.authState).toBe("stale");
+      expect(snapshot.userId).toBe("555");
+      expect(snapshot.accountContextId).toBe("555");
+      expect(snapshot.hasAuthHeader).toBe(false);
+    });
+
+    it("invalidates preserved auth headers when the live twid cookie is gone", async () => {
+      const storage = fakeChrome.storage
+        .local as unknown as typeof chrome.storage.local;
+      await storage.set({
+        totem_user_id: "12345",
+        totem_account_context_id: "12345",
+        totem_auth_headers: {
+          authorization: "Bearer old",
+          "x-csrf-token": "csrf",
+          cookie: "twid=u%3D12345; ct0=csrf",
+        },
+        totem_auth_state: "authenticated",
+      });
+
+      const snapshot = await getSessionSnapshot(storage, makeCookies(null));
+      const stored = await storage.get([
+        "totem_auth_headers",
+        "totem_auth_state",
+        "totem_auth_state_reason",
+      ]);
+
+      expect(snapshot.sessionState).toBe("logged_out");
+      expect(snapshot.hasAuthHeader).toBe(false);
+      expect(stored.totem_auth_headers).toBeUndefined();
+      expect(stored.totem_auth_state).toBe("logged_out");
+      expect(stored.totem_auth_state_reason).toBe("live_twid_mismatch");
+    });
+
+    it("invalidates preserved auth headers when the live twid belongs to a different account", async () => {
+      const storage = fakeChrome.storage
+        .local as unknown as typeof chrome.storage.local;
+      await storage.set({
+        totem_user_id: "12345",
+        totem_account_context_id: "12345",
+        totem_auth_headers: {
+          authorization: "Bearer old",
+          "x-csrf-token": "csrf",
+          cookie: "twid=u%3D12345; ct0=csrf",
+        },
+        totem_auth_state: "authenticated",
+      });
+
+      const snapshot = await getSessionSnapshot(
+        storage,
+        makeCookies("u%3D99999"),
+      );
+
+      expect(snapshot.sessionState).toBe("unknown");
+      expect(snapshot.userId).toBe("99999");
+      expect(snapshot.accountContextId).toBe("99999");
+      expect(snapshot.hasAuthHeader).toBe(false);
     });
   });
 
@@ -178,6 +297,68 @@ describe("auth module", () => {
 
       const log = getAuthDiagnosticLog();
       expect(log.some((e) => e.stage === "frontend_receipt")).toBe(true);
+    });
+  });
+
+  describe("twid cookie changes", () => {
+    it("keeps auth when Chrome reports a twid overwrite during cookie refresh", async () => {
+      const storage = fakeChrome.storage
+        .local as unknown as typeof chrome.storage.local;
+      await storage.set({
+        totem_user_id: "777",
+        totem_account_context_id: "777",
+        totem_auth_headers: {
+          authorization: "Bearer real_token",
+          "x-csrf-token": "real_csrf",
+          cookie: "twid=u%3D777; ct0=real_csrf",
+        },
+        totem_auth_state: "authenticated",
+        totem_auth_state_reason: "headers_trio",
+      });
+
+      await handleTwidCookieChange(
+        makeTwidCookieChange({ removed: true, cause: "overwrite" }),
+        storage,
+      );
+
+      const stored = await storage.get([
+        "totem_auth_headers",
+        "totem_auth_state",
+        "totem_auth_state_reason",
+      ]);
+      expect(stored.totem_auth_state).toBe("authenticated");
+      expect(stored.totem_auth_state_reason).toBe("headers_trio");
+      expect(stored.totem_auth_headers).toBeDefined();
+    });
+
+    it("logs out when the twid cookie is explicitly removed", async () => {
+      const storage = fakeChrome.storage
+        .local as unknown as typeof chrome.storage.local;
+      await storage.set({
+        totem_user_id: "777",
+        totem_account_context_id: "777",
+        totem_auth_headers: {
+          authorization: "Bearer real_token",
+          "x-csrf-token": "real_csrf",
+          cookie: "twid=u%3D777; ct0=real_csrf",
+        },
+        totem_auth_state: "authenticated",
+        totem_auth_state_reason: "headers_trio",
+      });
+
+      await handleTwidCookieChange(
+        makeTwidCookieChange({ removed: true, cause: "explicit" }),
+        storage,
+      );
+
+      const stored = await storage.get([
+        "totem_auth_headers",
+        "totem_auth_state",
+        "totem_auth_state_reason",
+      ]);
+      expect(stored.totem_auth_state).toBe("logged_out");
+      expect(stored.totem_auth_state_reason).toBe("cookie_twid_explicit");
+      expect(stored.totem_auth_headers).toBeUndefined();
     });
   });
 
@@ -394,9 +575,11 @@ describe("auth module", () => {
       setupRouter(fakeChrome);
       const response = (await fakeChrome.runtime.sendMessage({
         type: "START_AUTH_CAPTURE",
-      })) as { tabId: number | null };
+      })) as { tabId: number | null; started: boolean; inProgress: boolean };
 
       expect(response.tabId).toBeGreaterThan(0);
+      expect(response.started).toBe(true);
+      expect(response.inProgress).toBe(true);
     });
 
     it("logs diagnostic entry for capture start", async () => {
@@ -412,6 +595,26 @@ describe("auth module", () => {
             e.reason?.includes("auth_capture_started"),
         ),
       ).toBe(true);
+    });
+
+    it("closes the auth tab after captured headers arrive", async () => {
+      setupRouter(fakeChrome);
+      const removeSpy = vi.spyOn(fakeChrome.tabs, "remove");
+
+      const response = (await fakeChrome.runtime.sendMessage({
+        type: "START_AUTH_CAPTURE",
+      })) as { tabId: number | null };
+
+      await fakeChrome.storage.local.set({
+        totem_auth_headers: {
+          authorization: "Bearer token",
+          "x-csrf-token": "csrf",
+          cookie: "twid=u%3D42; ct0=csrf",
+        },
+      });
+      await Promise.resolve();
+
+      expect(removeSpy).toHaveBeenCalledWith(response.tabId);
     });
   });
 

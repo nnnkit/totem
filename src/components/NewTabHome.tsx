@@ -227,7 +227,6 @@ export function NewTabHome({
       onLogin();
       return;
     }
-    window.open("https://x.com/i/bookmarks", "_blank", "noopener,noreferrer");
     void actions.startLogin();
   }, [actions, onLogin]);
   const handleLoginHint = useCallback(() => {

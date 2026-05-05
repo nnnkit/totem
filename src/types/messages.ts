@@ -51,6 +51,8 @@ export interface SetAccountContextRequest {
 
 export interface StartAuthCaptureRequest {
   type: "START_AUTH_CAPTURE";
+  interactive?: boolean;
+  force?: boolean;
 }
 
 export interface CloseAuthTabRequest {
