@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.24] - 2026-05-05
+
+- fix: harden auth capture startup
+- fix: auth flow
+- feat: group FAQs by category and refine disclosure animation
+
 ## [1.1.23] - 2026-04-28
 
 - Maintenance release.
