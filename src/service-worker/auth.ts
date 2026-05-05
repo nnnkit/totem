@@ -323,7 +323,7 @@ export async function getSessionSnapshot(
         ? ("stale" as const)
         : normalizedAuthState;
   let sessionState: SessionSnapshot["sessionState"];
-  if (hasAuthHeader || authState === "authenticated") {
+  if (hasAuthHeader) {
     sessionState = "logged_in";
   } else if (liveTwidUserId) {
     sessionState = "unknown";
@@ -611,15 +611,41 @@ export async function startAuthCaptureSession(
     };
   }
 
-  const tab = await tabs.create({
-    url: X_AUTH_CAPTURE_URL,
-    active: interactive && !liveUserId,
+  let resolveCapture: (result: AuthCaptureResult) => void = () => {};
+  authCapturePromise = new Promise<AuthCaptureResult>((resolve) => {
+    resolveCapture = resolve;
   });
+
+  let tab: chrome.tabs.Tab;
+  try {
+    tab = await tabs.create({
+      url: X_AUTH_CAPTURE_URL,
+      active: interactive && !liveUserId,
+    });
+  } catch {
+    authCapturePromise = null;
+    authCaptureLastCompletedAt = Date.now();
+    resolveCapture({
+      ok: false,
+      started: false,
+      tabId: null,
+      reason: "tab_create_failed",
+      liveUserId: liveUserId ?? null,
+    });
+    return {
+      authReady: false,
+      inProgress: false,
+      started: false,
+      tabId: null,
+      reason: "tab_create_failed",
+      liveUserId: liveUserId ?? null,
+    };
+  }
   authTabId = tab.id ?? null;
   const safeTabId = authTabId;
   const timeoutMs = options.timeoutMs ?? AUTH_CAPTURE_TIMEOUT_MS;
 
-  authCapturePromise = new Promise<AuthCaptureResult>((resolve) => {
+  {
     let settled = false;
     let timeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -643,7 +669,7 @@ export async function startAuthCaptureSession(
       cleanup(closeTab);
       authCaptureLastCompletedAt = Date.now();
       authCapturePromise = null;
-      resolve(result);
+      resolveCapture(result);
     };
 
     const onChange = (changes: Record<string, { newValue?: unknown }>) => {
@@ -712,7 +738,7 @@ export async function startAuthCaptureSession(
         true,
       );
     }, timeoutMs);
-  });
+  }
 
   logDiagnostic(
     "capture",

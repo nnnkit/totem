@@ -6,6 +6,7 @@ import {
   getAuthDiagnosticLog,
   getSessionSnapshot,
   deriveAuthPhaseFromSession,
+  startAuthCaptureSession,
   type AuthDeps,
 } from "../auth";
 import {
@@ -150,6 +151,19 @@ describe("auth module", () => {
       const snapshot = await getSessionSnapshot(storage);
       expect(snapshot.sessionState).toBe("logged_out");
       expect(snapshot.authState).toBe("logged_out");
+    });
+
+    it("does not report ready when auth state is authenticated but headers are missing", async () => {
+      const storage = fakeChrome.storage
+        .local as unknown as typeof chrome.storage.local;
+      await storage.set({
+        totem_auth_state: "authenticated",
+      });
+
+      const snapshot = await getSessionSnapshot(storage, makeCookies(null));
+
+      expect(snapshot.sessionState).not.toBe("logged_in");
+      expect(snapshot.hasAuthHeader).toBe(false);
     });
 
     it("returns connecting when X has a live twid but auth headers have not been captured yet", async () => {
@@ -615,6 +629,30 @@ describe("auth module", () => {
       await Promise.resolve();
 
       expect(removeSpy).toHaveBeenCalledWith(response.tabId);
+    });
+
+    it("deduplicates concurrent capture starts before tab creation resolves", async () => {
+      const deps = makeDeps(fakeChrome);
+      let resolveCreate!: (tab: { id: number; url?: string }) => void;
+      const createPromise = new Promise<{ id: number; url?: string }>((resolve) => {
+        resolveCreate = resolve;
+      });
+      const createSpy = vi
+        .spyOn(fakeChrome.tabs, "create")
+        .mockReturnValue(createPromise);
+
+      const first = startAuthCaptureSession(deps, { interactive: true });
+      await Promise.resolve();
+      const second = await startAuthCaptureSession(deps, { interactive: true });
+
+      expect(createSpy).toHaveBeenCalledTimes(1);
+      expect(second.started).toBe(false);
+      expect(second.inProgress).toBe(true);
+
+      resolveCreate({ id: 42, url: "https://x.com/i/bookmarks" });
+      const firstResult = await first;
+      expect(firstResult.started).toBe(true);
+      expect(firstResult.tabId).toBe(42);
     });
   });
 

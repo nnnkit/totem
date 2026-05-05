@@ -504,7 +504,11 @@ getSessionSnapshot(chrome.storage.local)
       discoverAllMissingQueryIds().catch(() => {});
       return;
     }
-    if (snapshot.sessionState === "logged_out" && state !== "logged_out") {
+    if (snapshot.userId && state === "authenticated") {
+      setAuthState("stale", "startup_missing_auth_headers", { clearAuth: false }, chrome.storage.local).catch(() => {});
+      return;
+    }
+    if (!snapshot.userId && state !== "logged_out") {
       setAuthState("logged_out", "startup_no_auth", { clearAuth: false }, chrome.storage.local).catch(() => {});
     }
   })
