@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   CheckIcon,
   ExportIcon,
@@ -33,6 +33,7 @@ interface Props {
   onDeleteAllData: () => void;
   onExport: () => void;
   onImport: () => void;
+  scrollToStorage?: boolean;
 }
 
 const RESET_STATE_TOOLTIP =
@@ -59,7 +60,18 @@ export function SettingsModal({
   onDeleteAllData,
   onExport,
   onImport,
+  scrollToStorage,
 }: Props) {
+  const storageSectionRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    if (open && scrollToStorage) {
+      const frame = requestAnimationFrame(() => {
+        storageSectionRef.current?.scrollIntoView({ behavior: "smooth" });
+      });
+      return () => cancelAnimationFrame(frame);
+    }
+  }, [open, scrollToStorage]);
   const [confirmingReset, setConfirmingReset] = useState(false);
   const [resetAppState, setResetAppState] = useState(true);
   const [resetContent, setResetContent] = useState(false);
@@ -292,7 +304,7 @@ export function SettingsModal({
               </div>
             </section>
 
-            <section className="py-4 first:pt-0 last:pb-0">
+            <section ref={storageSectionRef} className="py-4 first:pt-0 last:pb-0">
               <h3 className="text-sm font-semibold text-muted mb-1.5">
                 Storage
               </h3>

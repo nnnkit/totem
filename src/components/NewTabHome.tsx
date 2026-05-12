@@ -62,6 +62,8 @@ interface Props {
   onOpenBookmark: (bookmark: Bookmark) => void;
   getBookmarkHref: (bookmark: Bookmark) => string;
   onOpenSettings: () => void;
+  onOpenSettingsToStorage: () => void;
+  onOpenImport: () => void;
   recommendationSource: RecommendationSource;
   onOpenReading: () => void;
   isResetting?: boolean;
@@ -93,6 +95,8 @@ export function NewTabHome({
   onOpenBookmark,
   getBookmarkHref,
   onOpenSettings,
+  onOpenSettingsToStorage,
+  onOpenImport,
   recommendationSource,
   onOpenReading,
   isResetting,
@@ -413,22 +417,34 @@ export function NewTabHome({
       case "empty_can_sync":
       default:
         return (
-          <article className={cardCentered}>
-            <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
-              Your reading list is quiet
+          <>
+            <article className={cardCentered}>
+              <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
+                Your reading list is quiet
+              </p>
+              <p className="mt-4 text-pretty text-base text-home-empty">
+                No bookmarks yet. Bookmark posts on X, then sync to start reading.
+              </p>
+              <Button
+                type="button"
+                onClick={onSync}
+                disabled={syncButton.disabled}
+                className="mt-6 border-0 bg-home-accent text-white hover:opacity-90"
+              >
+                Sync bookmarks
+              </Button>
+            </article>
+            <p className="text-center text-xs text-on-bg-ghost">
+              Already have a Totem export?{" "}
+              <button
+                type="button"
+                onClick={onOpenImport}
+                className="underline hover:text-on-bg-muted"
+              >
+                Import &rarr;
+              </button>
             </p>
-            <p className="mt-4 text-pretty text-base text-home-empty">
-              No bookmarks yet. Bookmark posts on X, then sync to start reading.
-            </p>
-            <Button
-              type="button"
-              onClick={onSync}
-              disabled={syncButton.disabled}
-              className="mt-6 border-0 bg-home-accent text-white hover:opacity-90"
-            >
-              Sync bookmarks
-            </Button>
-          </article>
+          </>
         );
     }
   };
@@ -598,6 +614,22 @@ export function NewTabHome({
         </main>
 
         <footer className="mx-auto w-full max-w-lg space-y-6 pb-6">
+          {bookmarks.length > 0 && (
+            <p className="text-center text-xs text-on-bg-ghost">
+              {bookmarks.length.toLocaleString("en-US")} bookmark{bookmarks.length !== 1 ? "s" : ""}
+              {detailedTweetIds.size > 0 && (
+                <> &middot; {detailedTweetIds.size.toLocaleString("en-US")} with full thread context</>
+              )}
+              {" "}&middot;{" "}
+              <button
+                type="button"
+                onClick={onOpenSettingsToStorage}
+                className="underline hover:text-on-bg-muted"
+              >
+                Export &rarr;
+              </button>
+            </p>
+          )}
           {renderFooterCard()}
 
           <div

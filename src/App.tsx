@@ -233,6 +233,7 @@ function NewTabRouteApp() {
     getNewTabView() === "reading" ? "reading" : "home"
   );
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [scrollToStorage, setScrollToStorage] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [readingTab, setReadingTab] = useState<ReadingTab>(() => readStoredReadingTab());
@@ -480,6 +481,11 @@ function NewTabRouteApp() {
         getBookmarkHref={getHomeBookmarkHref}
         recommendationSource={settings.recommendationSource}
         onOpenSettings={() => setSettingsOpen(true)}
+        onOpenSettingsToStorage={() => {
+          setScrollToStorage(true);
+          setSettingsOpen(true);
+        }}
+        onOpenImport={() => setImportOpen(true)}
         onOpenReading={() => {
           restoreReadingTab();
           setView("reading");
@@ -494,7 +500,11 @@ function NewTabRouteApp() {
       <SettingsModal
         open={settingsOpen}
         isResetting={isResetting}
-        onClose={() => setSettingsOpen(false)}
+        onClose={() => {
+          setSettingsOpen(false);
+          setScrollToStorage(false);
+        }}
+        scrollToStorage={scrollToStorage}
         settings={settings}
         onUpdateSettings={updateSettings}
         themePreference={themePreference}
