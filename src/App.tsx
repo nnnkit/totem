@@ -27,6 +27,7 @@ import { BookmarkReader } from "./components/BookmarkReader";
 import { BookmarksList } from "./components/BookmarksList";
 import { SettingsModal } from "./components/SettingsModal";
 import { ExportModal } from "./components/ExportModal";
+import { ImportModal } from "./components/ImportModal";
 import { Toast } from "./components/ui/Toast";
 import { Button } from "./components/ui/Button";
 import { OfflineBanner } from "./components/ui/OfflineBanner";
@@ -233,6 +234,7 @@ function NewTabRouteApp() {
   );
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [readingTab, setReadingTab] = useState<ReadingTab>(() => readStoredReadingTab());
   const [toast, setToast] = useState<ToastState | null>(null);
   const [isResetting, setIsResetting] = useState(false);
@@ -500,6 +502,7 @@ function NewTabRouteApp() {
         onResetAppState={handleResetAppState}
         onDeleteAllData={handleDeleteAllData}
         onExport={() => setExportOpen(true)}
+        onImport={() => setImportOpen(true)}
       />
       <ExportModal
         open={exportOpen}
@@ -511,6 +514,12 @@ function NewTabRouteApp() {
             ? { userId: viewerProfile.userId, handle: viewerProfile.screenName }
             : null
         }
+      />
+      <ImportModal
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        activeAccountUserId={viewerProfile?.userId ?? null}
+        onSyncAfterImport={handleSync}
       />
       {toast && (
         <Toast

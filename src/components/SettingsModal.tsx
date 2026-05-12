@@ -5,6 +5,7 @@ import {
   MonitorIcon,
   MoonIcon,
   SunIcon,
+  UploadSimpleIcon,
   XIcon,
 } from "@phosphor-icons/react";
 import { ToggleGroup } from "@base-ui/react/toggle-group";
@@ -31,6 +32,7 @@ interface Props {
   onResetAppState: () => void;
   onDeleteAllData: () => void;
   onExport: () => void;
+  onImport: () => void;
 }
 
 const RESET_STATE_TOOLTIP =
@@ -56,6 +58,7 @@ export function SettingsModal({
   onResetAppState,
   onDeleteAllData,
   onExport,
+  onImport,
 }: Props) {
   const [confirmingReset, setConfirmingReset] = useState(false);
   const [resetAppState, setResetAppState] = useState(true);
@@ -313,6 +316,27 @@ export function SettingsModal({
                   >
                     <ExportIcon className="size-3.5" />
                     Export
+                  </Button>
+                </div>
+                <div className="flex items-center justify-between min-h-10 gap-4">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-sm text-foreground/80">
+                      Import a Totem export
+                    </span>
+                    <span className="text-xxs text-muted/60 leading-snug">
+                      Restore bookmarks from a previously exported ZIP
+                    </span>
+                  </div>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => {
+                      handleClose();
+                      onImport();
+                    }}
+                  >
+                    <UploadSimpleIcon className="size-3.5" />
+                    Import
                   </Button>
                 </div>
               </div>
