@@ -196,7 +196,7 @@ CSV and Markdown are for your convenience. The importer ignores them.
 
 ## Schema docs
 
-Full field-by-field documentation: totem.app/export-format/v1
+Full field-by-field documentation: https://usetotem.xyz/export-format/v1
 
 ## Privacy
 
