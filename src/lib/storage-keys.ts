@@ -39,6 +39,7 @@ export const CS_VIEWER_PROFILE = "totem_viewer_profile";
 export const CS_AUTH_STATE = "totem_auth_state";
 export const CS_SYNC_AUTO_ENABLED = "totem_sync_auto_enabled";
 export const CS_RUNTIME_AUDIT = "totem_runtime_audit";
+export const CS_HYDRATION_SNAPSHOT = "totem_hydration_snapshot";
 
 // ─── SW-owned keys — deliberately NOT exported here ──────────────────────
 // (see ARCHITECTURE.md §16 Invariant #1).

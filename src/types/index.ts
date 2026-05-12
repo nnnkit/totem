@@ -178,6 +178,8 @@ export interface TweetDetailCache {
   fetchedAt: number;
   focalTweet: Bookmark | null;
   thread: ThreadTweet[];
+  detailsStatus?: "ok" | "unavailable";
+  unavailableReason?: "deleted" | "protected" | "parse_failed" | "unknown";
 }
 
 export interface SyncRequestResult {

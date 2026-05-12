@@ -671,6 +671,37 @@ export async function clearSearchIndexJson(): Promise<void> {
   }
 }
 
+export async function findNextBookmarkNeedingHydration(): Promise<string | null> {
+  const detailedIds = await getDetailedTweetIds();
+  const db = await getDb();
+  const tx = db.transaction(STORE_NAME, "readonly");
+  let cursor = await tx.store.openCursor();
+  while (cursor) {
+    if (!detailedIds.has(cursor.value.tweetId)) {
+      return cursor.value.tweetId;
+    }
+    cursor = await cursor.continue();
+  }
+  await tx.done;
+  return null;
+}
+
+export async function countBookmarksNeedingHydration(): Promise<number> {
+  const detailedIds = await getDetailedTweetIds();
+  const db = await getDb();
+  const tx = db.transaction(STORE_NAME, "readonly");
+  let count = 0;
+  let cursor = await tx.store.openCursor();
+  while (cursor) {
+    if (!detailedIds.has(cursor.value.tweetId)) {
+      count++;
+    }
+    cursor = await cursor.continue();
+  }
+  await tx.done;
+  return count;
+}
+
 export async function getAllTweetDetails(): Promise<TweetDetailCache[]> {
   const db = await getDb();
   return db.getAll(DETAIL_STORE_NAME);
