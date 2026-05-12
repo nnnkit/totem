@@ -486,6 +486,7 @@ function NewTabRouteApp() {
           setSettingsOpen(true);
         }}
         onOpenImport={() => setImportOpen(true)}
+        onOpenExport={() => setExportOpen(true)}
         onOpenReading={() => {
           restoreReadingTab();
           setView("reading");
@@ -524,6 +525,7 @@ function NewTabRouteApp() {
             ? { userId: viewerProfile.userId, handle: viewerProfile.screenName }
             : null
         }
+        onLogin={() => { void actions.startLogin(); }}
       />
       <ImportModal
         open={importOpen}

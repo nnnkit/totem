@@ -169,6 +169,7 @@ export function createHydrationStore(deps: HydrationDeps = defaultDeps()) {
     HydrationState & {
       start: () => void;
       stop: () => void;
+      reset: () => void;
       dispose: () => void;
       _runLoop: () => Promise<void>;
     }
@@ -196,6 +197,15 @@ export function createHydrationStore(deps: HydrationDeps = defaultDeps()) {
       set({ status: "idle", pauseUntil: 0 });
       release(deps.holderId, deps.lockStorage).catch(() => {});
       writeSnapshotFromState(get());
+    },
+
+    reset: () => {
+      get().stop();
+      set({ ...INITIAL_STATE });
+      deps.writeSnapshot({
+        ...INITIAL_STATE,
+        updatedAt: Date.now(),
+      }).catch(() => {});
     },
 
     dispose: () => {

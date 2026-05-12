@@ -45,6 +45,10 @@ import {
   type FooterState,
   type SyncButtonState,
 } from "../stores/selectors";
+import {
+  useHydrationStore,
+  type HydrationStatus,
+} from "../stores/hydration-store";
 
 import { CLOCK_UPDATE_MS } from "../lib/constants";
 
@@ -64,6 +68,7 @@ interface Props {
   onOpenSettings: () => void;
   onOpenSettingsToStorage: () => void;
   onOpenImport: () => void;
+  onOpenExport: () => void;
   recommendationSource: RecommendationSource;
   onOpenReading: () => void;
   isResetting?: boolean;
@@ -97,6 +102,7 @@ export function NewTabHome({
   onOpenSettings,
   onOpenSettingsToStorage,
   onOpenImport,
+  onOpenExport,
   recommendationSource,
   onOpenReading,
   isResetting,
@@ -157,6 +163,11 @@ export function NewTabHome({
     const index = Math.floor(mountSeed * pool.length);
     return pool[index];
   }, [items, unreadItems, mountSeed, recommendationSource]);
+  const hydrationStatus = useHydrationStore((s) => s.status);
+  const hydrationTotal = useHydrationStore((s) => s.total);
+  const hydrationProcessed = useHydrationStore((s) => s.processed);
+  const hydrationPauseUntil = useHydrationStore((s) => s.pauseUntil);
+
   const runtimeFooterState = useFooterState(Boolean(currentItem), isResetting);
   const syncButton = syncButtonStateOverride ?? runtimeSyncButton;
   const offlineMode = offlineModeOverride ?? runtimeOfflineMode;
@@ -630,6 +641,14 @@ export function NewTabHome({
               </button>
             </p>
           )}
+          <HydrationFooterLine
+            status={hydrationStatus}
+            total={hydrationTotal}
+            processed={hydrationProcessed}
+            pauseUntil={hydrationPauseUntil}
+            onOpenExport={onOpenExport}
+            onLogin={handleLoginButton}
+          />
           {renderFooterCard()}
 
           <div
@@ -740,5 +759,84 @@ export function NewTabHome({
         </div>
       </div>
     </div>
+  );
+}
+
+function formatFooterDuration(ms: number): string {
+  const totalMinutes = Math.ceil(ms / 60_000);
+  if (totalMinutes < 60) return `${totalMinutes}m`;
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (minutes === 0) return `${hours}h`;
+  return `${hours}h ${minutes}m`;
+}
+
+function HydrationFooterLine({
+  status,
+  total,
+  processed,
+  pauseUntil,
+  onOpenExport,
+  onLogin,
+}: {
+  status: HydrationStatus;
+  total: number;
+  processed: number;
+  pauseUntil: number;
+  onOpenExport: () => void;
+  onLogin: () => void;
+}) {
+  if (status === "idle") return null;
+
+  const progressDone = processed;
+  const progressTotal = total + processed;
+
+  if (status === "done") {
+    return (
+      <p className="text-center text-xs text-on-bg-ghost">
+        Full export ready &middot;{" "}
+        <button
+          type="button"
+          onClick={onOpenExport}
+          className="underline hover:text-on-bg-muted"
+        >
+          Download &rarr;
+        </button>
+      </p>
+    );
+  }
+
+  if (status === "paused-auth") {
+    return (
+      <p className="text-center text-xs text-on-bg-ghost">
+        Full export paused: {" "}
+        <button
+          type="button"
+          onClick={onLogin}
+          className="underline hover:text-on-bg-muted"
+        >
+          sign in to X &rarr;
+        </button>
+      </p>
+    );
+  }
+
+  if (status === "paused-storage") {
+    return (
+      <p className="text-center text-xs text-on-bg-ghost">
+        Full export paused: out of storage
+      </p>
+    );
+  }
+
+  const resumeMs = pauseUntil > Date.now() ? pauseUntil - Date.now() : 0;
+
+  return (
+    <p className="text-center text-xs text-on-bg-ghost tabular-nums">
+      Preparing full export: {progressDone.toLocaleString("en-US")} / {progressTotal.toLocaleString("en-US")}
+      {status === "paused-429" && resumeMs > 0 && (
+        <> &middot; resumes in {formatFooterDuration(resumeMs)}</>
+      )}
+    </p>
   );
 }
