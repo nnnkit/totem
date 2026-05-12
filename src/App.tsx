@@ -26,6 +26,7 @@ import { NewTabHome } from "./components/NewTabHome";
 import { BookmarkReader } from "./components/BookmarkReader";
 import { BookmarksList } from "./components/BookmarksList";
 import { SettingsModal } from "./components/SettingsModal";
+import { ExportModal } from "./components/ExportModal";
 import { Toast } from "./components/ui/Toast";
 import { Button } from "./components/ui/Button";
 import { OfflineBanner } from "./components/ui/OfflineBanner";
@@ -33,6 +34,7 @@ import { TotemLoading } from "./components/ui/TotemLoading";
 import { resolveReaderErrorView } from "./components/reader/reader-error-view";
 import { useContinueReading } from "./hooks/useContinueReading";
 import { useReaderDetail } from "./hooks/useReaderDetail";
+import { useViewerProfile } from "./hooks/useViewerProfile";
 import {
   useActiveAccountId,
   useAllBookmarks,
@@ -230,9 +232,11 @@ function NewTabRouteApp() {
     getNewTabView() === "reading" ? "reading" : "home"
   );
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
   const [readingTab, setReadingTab] = useState<ReadingTab>(() => readStoredReadingTab());
   const [toast, setToast] = useState<ToastState | null>(null);
   const [isResetting, setIsResetting] = useState(false);
+  const viewerProfile = useViewerProfile();
 
   const {
     continueReading,
@@ -495,6 +499,18 @@ function NewTabRouteApp() {
         onThemePreferenceChange={setThemePreference}
         onResetAppState={handleResetAppState}
         onDeleteAllData={handleDeleteAllData}
+        onExport={() => setExportOpen(true)}
+      />
+      <ExportModal
+        open={exportOpen}
+        onClose={() => setExportOpen(false)}
+        bookmarkCount={bookmarks.length}
+        detailCount={detailedTweetIds.size}
+        account={
+          viewerProfile
+            ? { userId: viewerProfile.userId, handle: viewerProfile.screenName }
+            : null
+        }
       />
       {toast && (
         <Toast

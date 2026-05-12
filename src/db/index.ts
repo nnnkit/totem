@@ -671,6 +671,16 @@ export async function clearSearchIndexJson(): Promise<void> {
   }
 }
 
+export async function getAllTweetDetails(): Promise<TweetDetailCache[]> {
+  const db = await getDb();
+  return db.getAll(DETAIL_STORE_NAME);
+}
+
+export async function getAllHighlights(): Promise<Highlight[]> {
+  const db = await getDb();
+  return db.getAll(HIGHLIGHTS_STORE_NAME);
+}
+
 export async function cleanupOldTweetDetails(
   maxAgeMs: number,
 ): Promise<number> {

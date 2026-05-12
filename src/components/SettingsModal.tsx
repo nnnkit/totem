@@ -1,6 +1,7 @@
 import { useState } from "react";
 import {
   CheckIcon,
+  ExportIcon,
   MonitorIcon,
   MoonIcon,
   SunIcon,
@@ -29,6 +30,7 @@ interface Props {
   onThemePreferenceChange: (value: ThemePreference) => void;
   onResetAppState: () => void;
   onDeleteAllData: () => void;
+  onExport: () => void;
 }
 
 const RESET_STATE_TOOLTIP =
@@ -53,6 +55,7 @@ export function SettingsModal({
   onThemePreferenceChange,
   onResetAppState,
   onDeleteAllData,
+  onExport,
 }: Props) {
   const [confirmingReset, setConfirmingReset] = useState(false);
   const [resetAppState, setResetAppState] = useState(true);
@@ -282,6 +285,35 @@ export function SettingsModal({
                     className="w-[7.5rem] shrink-0 border-border/70 bg-surface/45 hover:bg-surface/55"
                     popupClassName="w-[7.5rem]"
                   />
+                </div>
+              </div>
+            </section>
+
+            <section className="py-4 first:pt-0 last:pb-0">
+              <h3 className="text-sm font-semibold text-muted mb-1.5">
+                Storage
+              </h3>
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between min-h-10 gap-4">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-sm text-foreground/80">
+                      Export your data
+                    </span>
+                    <span className="text-xxs text-muted/60 leading-snug">
+                      Download your bookmarks as CSV, Markdown, and JSONL
+                    </span>
+                  </div>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => {
+                      handleClose();
+                      onExport();
+                    }}
+                  >
+                    <ExportIcon className="size-3.5" />
+                    Export
+                  </Button>
                 </div>
               </div>
             </section>
