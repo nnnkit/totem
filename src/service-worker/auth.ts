@@ -19,8 +19,12 @@ import type {
   SessionSnapshot,
 } from "../types/auth";
 import {
-  parseTwidUserId,
-  getCookieHeaderValue,
+  authHeaderTwidUserId,
+  parseCapturedAuthHeaders,
+  readLiveTwidUserId,
+  usableAuthHeaderUserId,
+} from "@make/x-twitter-extension-core/auth";
+import {
   normalizeAuthState,
   normalizeSyncAccountId,
   getSyncBlockedReason,
@@ -213,44 +217,6 @@ async function recordWeakAuthNegativeSignal(
 
 // ── Session snapshot ────────────────────────────────────────────
 
-function authHeaderTwidUserId(authHeaders: unknown): string | null {
-  if (!authHeaders || typeof authHeaders !== "object") return null;
-  const headers = authHeaders as Record<string, string>;
-  return parseTwidUserId(
-    getCookieHeaderValue(
-      typeof headers.cookie === "string" ? headers.cookie : "",
-      "twid",
-    ),
-  );
-}
-
-function usableAuthHeaderUserId(
-  authHeaders: unknown,
-  liveUserId: string | null | undefined,
-  allowAnyCapturedUser: boolean = false,
-): string | null {
-  if (!authHeaders || typeof authHeaders !== "object") return null;
-  const headers = authHeaders as Record<string, string>;
-  if (!headers.authorization) return null;
-
-  const headerUserId = authHeaderTwidUserId(headers);
-  if (!headerUserId) return null;
-  if (allowAnyCapturedUser || liveUserId === undefined) return headerUserId;
-  return liveUserId && headerUserId === liveUserId ? headerUserId : null;
-}
-
-async function readLiveTwidUserId(
-  cookies: typeof chrome.cookies | undefined = defaultCookies(),
-): Promise<string | null | undefined> {
-  if (!cookies || typeof cookies.get !== "function") return undefined;
-  try {
-    const cookie = await cookies.get({ url: "https://x.com/", name: "twid" });
-    return parseTwidUserId(cookie?.value ?? "");
-  } catch {
-    return undefined;
-  }
-}
-
 export async function getSessionSnapshot(
   storage: typeof chrome.storage.local,
   cookies: typeof chrome.cookies | undefined = defaultCookies(),
@@ -274,6 +240,7 @@ export async function getSessionSnapshot(
   const storedTwidUserId = authHeaderTwidUserId(authHeaders);
   const storedAuthMismatch =
     Boolean(authHeaders?.authorization) &&
+    Boolean(storedTwidUserId) &&
     liveTwidUserId !== undefined &&
     (!liveTwidUserId || storedTwidUserId !== liveTwidUserId);
 
@@ -883,10 +850,9 @@ export function createAuthHandlers(deps?: AuthDeps): HandlerMap {
     SESSION_USER_MISSING: async () => {
       await storage.remove("totem_user_id");
       const stored = await storage.get(["totem_auth_headers"]);
-      const hasAuthHeader = Boolean(
-        (stored.totem_auth_headers as Record<string, string> | undefined)
-          ?.authorization,
-      );
+      const hasAuthHeader = parseCapturedAuthHeaders(
+        stored.totem_auth_headers,
+      ).ok;
 
       logDiagnostic(
         "capture",

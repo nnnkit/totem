@@ -14,6 +14,10 @@
 import type { MessageRequest } from "../types/messages";
 import type { HandlerMap } from "./index";
 import {
+  isQueryIdStaleError,
+  QueryIdStaleError,
+} from "@make/x-twitter-extension-core/query-id";
+import {
   extractQueryIdForOperation,
   isQueryIdStale,
   parseGraphqlEndpoint,
@@ -36,6 +40,7 @@ const QUERY_ID_OPS = [
 ] as const;
 
 export type QueryIdOperationName = (typeof QUERY_ID_OPS)[number];
+export { QueryIdStaleError };
 
 // ── Diagnostics ─────────────────────────────────────────────────
 
@@ -258,6 +263,49 @@ function lookupCatalog(
     }
   }
   return best ? best.queryId : null;
+}
+
+async function persistResolvedQueryId(
+  operationName: string,
+  queryId: string,
+  storage: typeof chrome.storage.local,
+  staleQueryId?: string,
+): Promise<void> {
+  if (!queryId) return;
+
+  const catalog = await loadGraphqlCatalog(storage);
+  if (staleQueryId) {
+    for (const [key, entry] of Object.entries(catalog.endpoints)) {
+      if (entry.operation === operationName && entry.queryId === staleQueryId) {
+        delete catalog.endpoints[key];
+      }
+    }
+  }
+
+  const now = Date.now();
+  const key = `${operationName}:${queryId}`;
+  const existing = catalog.endpoints[key];
+  catalog.endpoints[key] = {
+    key,
+    operation: operationName,
+    queryId,
+    path: existing?.path ?? `/i/api/graphql/${queryId}/${operationName}`,
+    firstSeen: existing?.firstSeen ?? now,
+    lastSeen: now,
+    seenCount: existing?.seenCount ?? 1,
+    methods: existing?.methods ?? [],
+    sampleUrl:
+      existing?.sampleUrl ??
+      `https://x.com/i/api/graphql/${queryId}/${operationName}`,
+    sampleVariables: existing?.sampleVariables ?? null,
+    sampleFeatures: existing?.sampleFeatures ?? null,
+    sampleFieldToggles: existing?.sampleFieldToggles ?? null,
+  };
+  catalog.updatedAt = now;
+  enforceCatalogLimit(catalog);
+  catalogDirty = true;
+  queryIdCacheSet(operationName, { id: queryId, ts: now });
+  await flushGraphqlCatalog(storage);
 }
 
 // ── Bundle scraping (hardened) ──────────────────────────────────
@@ -487,6 +535,7 @@ export async function resolveQueryId(
 export async function forceRediscoverQueryId(
   operationName: string,
   deps: ResolveDeps = defaultDeps(),
+  staleQueryId?: string,
 ): Promise<string | null> {
   queryIdMemCache.delete(operationName);
 
@@ -497,7 +546,12 @@ export async function forceRediscoverQueryId(
     );
     if (freshId) {
       logDiagnostic(operationName, "force", "hit", "bundles");
-      queryIdCacheSet(operationName, { id: freshId, ts: Date.now() });
+      await persistResolvedQueryId(
+        operationName,
+        freshId,
+        deps.storage,
+        staleQueryId,
+      );
       return freshId;
     }
   } catch {
@@ -509,6 +563,12 @@ export async function forceRediscoverQueryId(
       const tabDiscovered = await discoverQueryIdViaTab(deps.tabs);
       if (tabDiscovered) {
         logDiagnostic(operationName, "force", "hit", "tab");
+        await persistResolvedQueryId(
+          operationName,
+          tabDiscovered,
+          deps.storage,
+          staleQueryId,
+        );
         return tabDiscovered;
       }
     } catch {
@@ -551,11 +611,25 @@ export async function withQueryId<T>(
     throw new NoQueryIdError(operationName);
   }
 
-  const result = await fn(queryId);
+  let result: T;
+  try {
+    result = await fn(queryId);
+  } catch (err) {
+    if (isQueryIdStaleError(err)) {
+      const freshId = await forceRediscoverQueryId(
+        operationName,
+        deps,
+        err.staleQueryId || queryId,
+      );
+      if (!freshId || freshId === queryId) throw err;
+      return fn(freshId);
+    }
+    throw err;
+  }
 
   // Check if the response indicates a stale query ID
   if (result && typeof result === "object" && isQueryIdStale(result)) {
-    const freshId = await forceRediscoverQueryId(operationName, deps);
+    const freshId = await forceRediscoverQueryId(operationName, deps, queryId);
     if (!freshId) {
       throw new NoQueryIdError(operationName);
     }
@@ -623,7 +697,7 @@ export async function discoverAllMissingQueryIds(
         for (const opName of remaining) {
           const qid = extractQueryIdForOperation(text, opName);
           if (qid) {
-            queryIdCacheSet(opName, { id: qid, ts: Date.now() });
+            await persistResolvedQueryId(opName, qid, deps.storage);
             remaining.delete(opName);
           }
         }
@@ -647,9 +721,11 @@ export function createQueryIdHandlers(
       const now = Date.now();
       const ids = msg.ids;
       if (ids && typeof ids === "object") {
+        const activeDeps = deps ?? defaultDeps();
         for (const [op, id] of Object.entries(ids)) {
           if (typeof id === "string" && id) {
             queryIdCacheSet(op, { id, ts: now });
+            await persistResolvedQueryId(op, id, activeDeps.storage);
           }
         }
       }

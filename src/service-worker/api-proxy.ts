@@ -9,7 +9,12 @@
 
 import type { MessageRequest } from "../types/messages";
 import type { HandlerMap } from "./index";
-import { withQueryId, forceRediscoverQueryId } from "./query-id";
+import { parseCapturedAuthHeaders } from "@make/x-twitter-extension-core/auth";
+import {
+  AuthExpiredError,
+  RateLimitError,
+} from "@make/x-twitter-extension-core/query-id";
+import { QueryIdStaleError, withQueryId } from "./query-id";
 import {
   ensureAuthCapture,
   markAuthAuthenticated,
@@ -73,13 +78,14 @@ async function buildHeaders(
   storage: typeof chrome.storage.local,
 ): Promise<Record<string, string>> {
   const stored = await storage.get(["totem_auth_headers"]);
-  const auth = stored.totem_auth_headers as Record<string, string> | undefined;
-  if (!auth?.authorization) throw new Error("NO_AUTH");
+  const parsedAuth = parseCapturedAuthHeaders(stored.totem_auth_headers);
+  if (!parsedAuth.ok) throw new Error("NO_AUTH");
+  const auth = parsedAuth.headers;
 
   const headers: Record<string, string> = {
     accept: "*/*",
-    authorization: auth["authorization"],
-    "x-csrf-token": auth["x-csrf-token"],
+    authorization: parsedAuth.authorization,
+    "x-csrf-token": parsedAuth.csrfToken,
     "x-twitter-active-user": auth["x-twitter-active-user"] || "yes",
     "x-twitter-auth-type": auth["x-twitter-auth-type"] || "OAuth2Session",
     "x-twitter-client-language":
@@ -156,10 +162,7 @@ export function createApiProxyHandlers(deps: ApiProxyDeps = {}): HandlerMap {
 
     return withQueryId("Bookmarks", async (queryId) => {
       const stored = await storage.get(["totem_auth_headers", "totem_features"]);
-      if (
-        !(stored.totem_auth_headers as Record<string, string> | undefined)
-          ?.authorization
-      ) {
+      if (!parseCapturedAuthHeaders(stored.totem_auth_headers).ok) {
         throw new Error("NO_AUTH");
       }
 
@@ -197,16 +200,13 @@ export function createApiProxyHandlers(deps: ApiProxyDeps = {}): HandlerMap {
           true,
           storage,
         );
-        throw new Error("AUTH_EXPIRED");
+        throw new AuthExpiredError();
       }
 
       if (!response.ok) {
-        if (response.status === 429) throw new Error("RATE_LIMITED");
+        if (response.status === 429) throw new RateLimitError();
         if (response.status === 400) {
-          const freshId = await forceRediscoverQueryId("Bookmarks");
-          if (freshId && freshId !== queryId) {
-            throw new Error("QUERY_ID_STALE");
-          }
+          throw new QueryIdStaleError("Bookmarks", queryId);
         }
         const body = await response.text().catch(() => "");
         throw new Error(
@@ -230,10 +230,7 @@ export function createApiProxyHandlers(deps: ApiProxyDeps = {}): HandlerMap {
 
     return withQueryId("DeleteBookmark", async (queryId) => {
       const stored = await storage.get(["totem_auth_headers"]);
-      if (
-        !(stored.totem_auth_headers as Record<string, string> | undefined)
-          ?.authorization
-      ) {
+      if (!parseCapturedAuthHeaders(stored.totem_auth_headers).ok) {
         throw new Error("NO_AUTH");
       }
 
@@ -261,15 +258,12 @@ export function createApiProxyHandlers(deps: ApiProxyDeps = {}): HandlerMap {
           true,
           storage,
         );
-        throw new Error("AUTH_EXPIRED");
+        throw new AuthExpiredError();
       }
 
       if (!response.ok) {
         if (response.status === 400) {
-          const freshId = await forceRediscoverQueryId("DeleteBookmark");
-          if (freshId && freshId !== queryId) {
-            throw new Error("QUERY_ID_STALE");
-          }
+          throw new QueryIdStaleError("DeleteBookmark", queryId);
         }
         const body = await response.text().catch(() => "");
         throw new Error(
@@ -296,10 +290,7 @@ export function createApiProxyHandlers(deps: ApiProxyDeps = {}): HandlerMap {
         "totem_auth_headers",
         "totem_features",
       ]);
-      if (
-        !(stored.totem_auth_headers as Record<string, string> | undefined)
-          ?.authorization
-      ) {
+      if (!parseCapturedAuthHeaders(stored.totem_auth_headers).ok) {
         throw new Error("NO_AUTH");
       }
 
@@ -353,15 +344,12 @@ export function createApiProxyHandlers(deps: ApiProxyDeps = {}): HandlerMap {
           true,
           storage,
         );
-        throw new Error("AUTH_EXPIRED");
+        throw new AuthExpiredError();
       }
 
       if (!response.ok) {
         if (response.status === 400) {
-          const freshId = await forceRediscoverQueryId("TweetDetail");
-          if (freshId && freshId !== queryId) {
-            throw new Error("QUERY_ID_STALE");
-          }
+          throw new QueryIdStaleError("TweetDetail", queryId);
         }
         const body = await response.text().catch(() => "");
         throw new Error(
@@ -387,10 +375,7 @@ export function createApiProxyHandlers(deps: ApiProxyDeps = {}): HandlerMap {
         typeof stored.totem_user_id === "string" ? stored.totem_user_id : "";
       if (!userId) throw new Error("NO_USER_ID");
 
-      if (
-        !(stored.totem_auth_headers as Record<string, string> | undefined)
-          ?.authorization
-      ) {
+      if (!parseCapturedAuthHeaders(stored.totem_auth_headers).ok) {
         throw new Error("NO_AUTH");
       }
 
@@ -419,10 +404,7 @@ export function createApiProxyHandlers(deps: ApiProxyDeps = {}): HandlerMap {
 
       if (!response.ok) {
         if (response.status === 400) {
-          const freshId = await forceRediscoverQueryId("UserByRestId");
-          if (freshId && freshId !== queryId) {
-            throw new Error("QUERY_ID_STALE");
-          }
+          throw new QueryIdStaleError("UserByRestId", queryId);
         }
         const body = await response.text().catch(() => "");
         throw new Error(

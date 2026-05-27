@@ -27,6 +27,7 @@
   },
   "dependencies": {
     "@base-ui/react": "^1.2.0",
+    "@make/x-twitter-extension-core": "file:../x-twitter-extension-core",
     "@phosphor-icons/react": "^2.1.10",
     "@tanstack/react-virtual": "^3.13.23",
     "client-zip": "^2.5.0",

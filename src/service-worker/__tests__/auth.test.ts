@@ -131,7 +131,7 @@ describe("auth module", () => {
         totem_auth_headers: {
           authorization: "Bearer token",
           "x-csrf-token": "csrf",
-          cookie: "twid=u%3D9999; ct0=token",
+          cookie: "twid=u%3D9999; ct0=csrf",
         },
         totem_auth_state: "stale",
       });
@@ -388,7 +388,7 @@ describe("auth module", () => {
         totem_auth_headers: {
           authorization: "Bearer token",
           "x-csrf-token": "csrf",
-          cookie: "twid=u%3D100",
+          cookie: "twid=u%3D100; ct0=csrf",
         },
         totem_auth_state: "authenticated",
       });
@@ -421,7 +421,7 @@ describe("auth module", () => {
         totem_auth_headers: {
           authorization: "Bearer t",
           "x-csrf-token": "c",
-          cookie: "twid=u%3D200",
+          cookie: "twid=u%3D200; ct0=c",
         },
       });
 
@@ -498,7 +498,7 @@ describe("auth module", () => {
         totem_auth_headers: {
           authorization: "Bearer token",
           "x-csrf-token": "csrf",
-          cookie: "twid=u%3D42",
+          cookie: "twid=u%3D42; ct0=csrf",
         },
         totem_auth_state: "authenticated",
       });
