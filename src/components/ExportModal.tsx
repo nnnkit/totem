@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { ExportIcon, XIcon } from "@phosphor-icons/react";
+import { ExportIcon } from "@phosphor-icons/react";
 import { Modal } from "./ui/Modal";
 import { Button } from "./ui/Button";
 import {
@@ -8,10 +8,13 @@ import {
   type QuickExportResult,
 } from "../lib/export/quick-export";
 import {
+  estimateHydrationDurationMs,
   useHydrationStore,
   type HydrationStatus,
 } from "../stores/hydration-store";
 import { getHydrationStore } from "../stores/hydration-store";
+import { getHydrationProgress } from "../lib/hydration/progress";
+import { isFullExportReadyForCurrentLibrary } from "../lib/export/full-export-ready-dismissal";
 
 interface Props {
   open: boolean;
@@ -48,9 +51,6 @@ export function ExportModal({
   const hydrationPauseUntil = useHydrationStore((s) => s.pauseUntil);
   const hydrationStartedAt = useHydrationStore((s) => s.startedAt);
 
-  const hydrationCoverage = bookmarkCount > 0 ? detailCount / bookmarkCount : 1;
-  const quickRecommended = hydrationCoverage >= 0.9;
-
   const handleClose = () => {
     if (quickState.phase === "exporting") return;
     setQuickState({ phase: "idle" });
@@ -79,14 +79,6 @@ export function ExportModal({
     getHydrationStore().getState().start();
   }, []);
 
-  const handleCancelFullExport = useCallback(() => {
-    getHydrationStore().getState().stop();
-  }, []);
-
-  const handleResetFullExport = useCallback(() => {
-    getHydrationStore().getState().reset();
-  }, []);
-
   const handleStart = () => {
     if (mode === "quick") {
       handleQuickExport();
@@ -95,93 +87,78 @@ export function ExportModal({
     }
   };
 
-  const countSummary = `${bookmarkCount.toLocaleString("en-US")} bookmark${bookmarkCount !== 1 ? "s" : ""}`;
+  const countSummary = formatBookmarkCount(bookmarkCount);
   const detailSummary =
     detailCount > 0
-      ? `${detailCount.toLocaleString("en-US")} with full thread context`
+      ? `${detailCount.toLocaleString("en-US")} with full content`
       : "";
 
   const isFullExportActive = hydrationStatus !== "idle" && hydrationStatus !== "done";
-  const isFullExportDone = hydrationStatus === "done";
+  const isFullExportDone =
+    hydrationStatus === "done" &&
+    isFullExportReadyForCurrentLibrary({
+      bookmarkCount,
+      readyCount: detailCount,
+    });
+  const estimatedHydrationTotal = Math.max(0, bookmarkCount - detailCount);
 
   return (
     <Modal
       open={open}
       onClose={handleClose}
       className="bg-black/50"
-      ariaLabelledBy="export-title"
+      title="Export your library"
+      titleId="export-title"
+      closeDisabled={quickState.phase === "exporting"}
     >
-      <div className="max-w-md mx-auto mt-[10vh] max-h-[80vh] flex flex-col rounded border border-border bg-surface-card shadow-xl">
-        <div className="flex shrink-0 items-center justify-between px-6 pt-5 pb-3">
-          <h2
-            id="export-title"
-            className="text-lg font-semibold text-foreground"
-          >
-            Export your library
-          </h2>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleClose}
-            disabled={quickState.phase === "exporting"}
-            className="-mr-2"
-            aria-label="Close"
-            title="Close"
-          >
-            <XIcon className="size-5" />
-          </Button>
-        </div>
-
-        <div className="px-6 pb-6">
-          {quickState.phase === "done" ? (
-            <DoneView result={quickState.result} onClose={handleClose} />
-          ) : quickState.phase === "error" ? (
-            <ErrorView
-              message={quickState.message}
-              onRetry={handleQuickExport}
-              onClose={handleClose}
-            />
-          ) : isFullExportActive ? (
-            <FullExportRunningView
-              status={hydrationStatus}
-              total={hydrationTotal}
-              processed={hydrationProcessed}
-              unavailable={hydrationUnavailable}
-              pauseUntil={hydrationPauseUntil}
-              startedAt={hydrationStartedAt}
-              account={account}
-              onCancel={handleCancelFullExport}
-              onReset={handleResetFullExport}
-              onDownloadNow={handleQuickExport}
-              onLogin={onLogin}
-              quickExporting={quickState.phase === "exporting"}
-            />
-          ) : isFullExportDone ? (
-            <FullExportReadyView
-              bookmarkCount={bookmarkCount}
-              detailCount={detailCount}
-              unavailable={hydrationUnavailable}
-              onDownload={handleQuickExport}
-              onClose={handleClose}
-              downloading={quickState.phase === "exporting"}
-            />
-          ) : (
-            <IdleView
-              countSummary={countSummary}
-              detailSummary={detailSummary}
-              bookmarkCount={bookmarkCount}
-              detailCount={detailCount}
-              mode={mode}
-              onModeChange={setMode}
-              quickRecommended={quickRecommended}
-              exporting={quickState.phase === "exporting"}
-              canExport={bookmarkCount > 0 && account !== null}
-              onStart={handleStart}
-              onCancel={handleClose}
-            />
-          )}
-        </div>
-      </div>
+      {quickState.phase === "done" ? (
+        <DoneView result={quickState.result} onClose={handleClose} />
+      ) : quickState.phase === "error" ? (
+        <ErrorView
+          message={quickState.message}
+          onRetry={handleQuickExport}
+          onClose={handleClose}
+        />
+      ) : isFullExportActive ? (
+        <FullExportRunningView
+          status={hydrationStatus}
+          total={hydrationTotal}
+          processed={hydrationProcessed}
+          readyCount={detailCount}
+          bookmarkCount={bookmarkCount}
+          unavailable={hydrationUnavailable}
+          estimatedTotal={estimatedHydrationTotal}
+          pauseUntil={hydrationPauseUntil}
+          startedAt={hydrationStartedAt}
+          account={account}
+          onHide={handleClose}
+          onDownloadNow={handleQuickExport}
+          onLogin={onLogin}
+          quickExporting={quickState.phase === "exporting"}
+        />
+      ) : isFullExportDone ? (
+        <FullExportReadyView
+          bookmarkCount={bookmarkCount}
+          detailCount={detailCount}
+          unavailable={hydrationUnavailable}
+          onDownload={handleQuickExport}
+          onClose={handleClose}
+          downloading={quickState.phase === "exporting"}
+        />
+      ) : (
+        <IdleView
+          countSummary={countSummary}
+          detailSummary={detailSummary}
+          bookmarkCount={bookmarkCount}
+          detailCount={detailCount}
+          mode={mode}
+          onModeChange={setMode}
+          exporting={quickState.phase === "exporting"}
+          canExport={bookmarkCount > 0 && account !== null}
+          onStart={handleStart}
+          onCancel={handleClose}
+        />
+      )}
     </Modal>
   );
 }
@@ -193,7 +170,6 @@ function IdleView({
   detailCount,
   mode,
   onModeChange,
-  quickRecommended,
   exporting,
   canExport,
   onStart,
@@ -205,14 +181,14 @@ function IdleView({
   detailCount: number;
   mode: ExportMode;
   onModeChange: (mode: ExportMode) => void;
-  quickRecommended: boolean;
   exporting: boolean;
   canExport: boolean;
   onStart: () => void;
   onCancel: () => void;
 }) {
-  const needingHydration = bookmarkCount - detailCount;
-  const estimateMinutes = Math.max(1, Math.ceil(needingHydration * 3 / 60));
+  const needingHydration = Math.max(0, bookmarkCount - detailCount);
+  const estimateMs = estimateHydrationDurationMs(needingHydration);
+  const primaryLabel = mode === "quick" ? "Download ZIP" : "Start full export";
 
   return (
     <>
@@ -240,17 +216,18 @@ function IdleView({
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium text-foreground">
-                Quick export
+                {needingHydration > 0 ? "Basic export" : "Quick export"}
               </span>
-              {quickRecommended && (
-                <span className="text-xxs font-medium text-accent bg-accent-surface rounded px-1.5 py-0.5">
-                  Recommended
-                </span>
-              )}
             </div>
             <p className="text-xs text-muted mt-1 leading-snug">
-              {countSummary}{detailSummary && `, ${detailSummary}`}.
-              Ready in seconds.
+              {needingHydration > 0 ? (
+                <>
+                  All {countSummary} include tweet summaries.{" "}
+                  {detailCount.toLocaleString("en-US")} also include full content.
+                </>
+              ) : (
+                <>Every bookmark already includes full content.</>
+              )}
             </p>
           </div>
           <div className="flex items-center ml-3">
@@ -282,15 +259,17 @@ function IdleView({
               <span className="text-sm font-medium text-foreground">
                 Full export
               </span>
-              {!quickRecommended && (
-                <span className="text-xxs font-medium text-accent bg-accent-surface rounded px-1.5 py-0.5">
-                  Recommended
-                </span>
-              )}
             </div>
             <p className="text-xs text-muted mt-1 leading-snug">
-              Fetch context for the remaining {needingHydration.toLocaleString("en-US")} bookmarks first.
-              {needingHydration > 0 && <> Takes about {estimateMinutes} minutes.</>}
+              {needingHydration > 0 ? (
+                <>
+                  {needingHydration.toLocaleString("en-US")} more bookmarks get full
+                  content: tweets, threads, and articles where available. About{" "}
+                  {formatDurationCompact(estimateMs)}.
+                </>
+              ) : (
+                <>Full content is already ready for every bookmark.</>
+              )}
             </p>
           </div>
           <div className="flex items-center ml-3">
@@ -304,8 +283,7 @@ function IdleView({
       </div>
 
       <p className="text-xxs text-muted/60 leading-snug mb-4">
-        Exports CSV, Markdown, and JSONL in a single ZIP file. The ZIP can
-        be re-imported into Totem on any Chrome install.
+        ZIP exports can be imported back into Totem and include CSV and Markdown.
       </p>
 
       <div className="flex gap-2 justify-end">
@@ -317,8 +295,8 @@ function IdleView({
           onClick={onStart}
           disabled={!canExport || exporting}
         >
-          <ExportIcon className="size-4" />
-          {exporting ? "Exporting…" : "Start"}
+          {mode === "quick" && <ExportIcon className="size-4" />}
+          {exporting ? "Exporting…" : primaryLabel}
         </Button>
       </div>
     </>
@@ -334,6 +312,10 @@ function formatDurationCompact(ms: number): string {
   return `${hours}h ${minutes}m`;
 }
 
+function formatBookmarkCount(count: number): string {
+  return `${count.toLocaleString("en-US")} bookmark${count !== 1 ? "s" : ""}`;
+}
+
 function formatElapsed(startedAt: number): string {
   const elapsed = Date.now() - startedAt;
   if (elapsed < 0) return "";
@@ -344,12 +326,14 @@ function FullExportRunningView({
   status,
   total,
   processed,
+  readyCount,
+  bookmarkCount,
   unavailable,
+  estimatedTotal,
   pauseUntil,
   startedAt,
   account,
-  onCancel,
-  onReset,
+  onHide,
   onDownloadNow,
   onLogin,
   quickExporting,
@@ -357,19 +341,24 @@ function FullExportRunningView({
   status: HydrationStatus;
   total: number;
   processed: number;
+  readyCount: number;
+  bookmarkCount: number;
   unavailable: number;
+  estimatedTotal: number;
   pauseUntil: number;
   startedAt: number;
   account: ExportAccountInfo | null;
-  onCancel: () => void;
-  onReset: () => void;
+  onHide: () => void;
   onDownloadNow: () => void;
   onLogin?: () => void;
   quickExporting: boolean;
 }) {
-  const progressDone = processed;
-  const progressTotal = total + processed;
-  const pct = progressTotal > 0 ? Math.round((progressDone / progressTotal) * 100) : 0;
+  const progress = getHydrationProgress({
+    bookmarkCount,
+    readyCount,
+    queueTotal: Math.max(total, estimatedTotal),
+    processed,
+  });
 
   if (status === "paused-auth") {
     return (
@@ -378,16 +367,16 @@ function FullExportRunningView({
           Full export paused
         </p>
         <p className="text-xs text-muted leading-snug mb-4">
-          Sign in to X again to continue fetching thread context.
+          Sign in to X again to continue fetching threads.
         </p>
-        <ProgressBar pct={pct} />
+        <ProgressBar pct={progress.pct} />
         <p className="text-xs text-muted mt-2 mb-4">
-          {progressDone.toLocaleString("en-US")} of {progressTotal.toLocaleString("en-US")}
-          {" "}{pct}%
+          {progress.done.toLocaleString("en-US")} of {progress.total.toLocaleString("en-US")}
+          {" "}{progress.pct}%
         </p>
         <div className="flex gap-2 justify-end">
-          <Button variant="secondary" onClick={onCancel}>
-            Cancel
+          <Button variant="secondary" onClick={onHide}>
+            Hide
           </Button>
           <Button variant="primary" onClick={onLogin}>
             Sign in &rarr;
@@ -406,21 +395,21 @@ function FullExportRunningView({
         <p className="text-xs text-muted leading-snug mb-4">
           Out of storage. Free up space to continue.
         </p>
-        <ProgressBar pct={pct} />
+        <ProgressBar pct={progress.pct} />
         <p className="text-xs text-muted mt-2 mb-4">
-          {progressDone.toLocaleString("en-US")} of {progressTotal.toLocaleString("en-US")}
-          {" "}{pct}%
+          {progress.done.toLocaleString("en-US")} of {progress.total.toLocaleString("en-US")}
+          {" "}{progress.pct}%
         </p>
         <div className="flex gap-2 justify-end">
-          <Button variant="secondary" onClick={onCancel}>
-            Cancel
+          <Button variant="secondary" onClick={onHide}>
+            Hide
           </Button>
           <Button
             variant="primary"
             onClick={onDownloadNow}
             disabled={quickExporting || !account}
           >
-            {quickExporting ? "Downloading…" : "Download what’s ready now →"}
+            {quickExporting ? "Downloading…" : "Download partial ZIP"}
           </Button>
         </div>
       </>
@@ -434,12 +423,16 @@ function FullExportRunningView({
       <p className="text-sm font-medium text-foreground mb-3">
         Preparing full export
       </p>
+      <p className="text-xs text-muted leading-snug mb-3">
+        Totem is fetching missing full content in the background. You can download a
+        partial ZIP now without stopping the full export.
+      </p>
 
       <p className="text-sm tabular-nums text-foreground mb-2">
-        {progressDone.toLocaleString("en-US")} of {progressTotal.toLocaleString("en-US")}
-        {" "}{pct}%
+        {progress.done.toLocaleString("en-US")} of {progress.total.toLocaleString("en-US")}
+        {" "}{progress.pct}%
       </p>
-      <ProgressBar pct={pct} />
+      <ProgressBar pct={progress.pct} />
 
       <div className="mt-3 space-y-1 mb-4">
         {status === "paused-429" && resumeMs > 0 && (
@@ -457,26 +450,17 @@ function FullExportRunningView({
         )}
       </div>
 
-      <div className="flex items-center justify-between">
-        <button
-          type="button"
-          onClick={onReset}
-          className="text-xxs text-muted/60 underline hover:text-muted"
+      <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        <Button variant="secondary" onClick={onHide}>
+          Hide
+        </Button>
+        <Button
+          variant="primary"
+          onClick={onDownloadNow}
+          disabled={quickExporting || !account}
         >
-          Clear progress and start over
-        </button>
-        <div className="flex gap-2">
-          <Button variant="secondary" onClick={onCancel}>
-            Cancel
-          </Button>
-          <Button
-            variant="primary"
-            onClick={onDownloadNow}
-            disabled={quickExporting || !account}
-          >
-            {quickExporting ? "Downloading…" : "Download what’s ready now →"}
-          </Button>
-        </div>
+          {quickExporting ? "Downloading…" : "Download partial ZIP"}
+        </Button>
       </div>
     </>
   );
@@ -509,7 +493,7 @@ function FullExportReadyView({
       </div>
       <p className="text-xs text-muted leading-snug mb-1">
         {bookmarkCount.toLocaleString("en-US")} bookmarks &middot;{" "}
-        {detailCount.toLocaleString("en-US")} with full thread context
+        {detailCount.toLocaleString("en-US")} with full content
       </p>
       {unavailable > 0 && (
         <p className="text-xs text-muted/60 leading-snug mb-4">
@@ -523,7 +507,7 @@ function FullExportReadyView({
         </Button>
         <Button variant="primary" onClick={onDownload} disabled={downloading}>
           <ExportIcon className="size-4" />
-          {downloading ? "Downloading…" : "Download ZIP →"}
+          {downloading ? "Downloading…" : "Download full ZIP →"}
         </Button>
       </div>
     </>
@@ -561,7 +545,7 @@ function DoneView({
       <p className="text-xs text-muted leading-snug mb-4">
         {result.bookmarkCount.toLocaleString("en-US")} bookmarks
         {result.detailCount > 0
-          ? ` · ${result.detailCount.toLocaleString("en-US")} details`
+          ? ` · ${result.detailCount.toLocaleString("en-US")} with full content`
           : ""}
         {result.highlightCount > 0
           ? ` · ${result.highlightCount.toLocaleString("en-US")} highlights`

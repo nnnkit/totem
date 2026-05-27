@@ -5,8 +5,6 @@ import {
   MonitorIcon,
   MoonIcon,
   SunIcon,
-  UploadSimpleIcon,
-  XIcon,
 } from "@phosphor-icons/react";
 import { ToggleGroup } from "@base-ui/react/toggle-group";
 import { Toggle } from "@base-ui/react/toggle";
@@ -32,7 +30,6 @@ interface Props {
   onResetAppState: () => void;
   onDeleteAllData: () => void;
   onExport: () => void;
-  onImport: () => void;
   scrollToStorage?: boolean;
 }
 
@@ -59,7 +56,6 @@ export function SettingsModal({
   onResetAppState,
   onDeleteAllData,
   onExport,
-  onImport,
   scrollToStorage,
 }: Props) {
   const storageSectionRef = useRef<HTMLElement>(null);
@@ -104,31 +100,11 @@ export function SettingsModal({
       open={open}
       onClose={handleClose}
       className="bg-black/50"
-      ariaLabelledBy="settings-title"
+      title="Settings"
+      titleId="settings-title"
+      closeLabel="Close settings"
+      bodyClassName="overflow-y-auto px-6 pb-6 divide-y divide-border"
     >
-        <div
-          className="max-w-md mx-auto mt-[10vh] max-h-[80vh] flex flex-col rounded border border-border bg-surface-card shadow-xl"
-        >
-          <div className="flex shrink-0 items-center justify-between px-6 pt-5 pb-3">
-            <h2
-              id="settings-title"
-              className="text-lg font-semibold text-foreground text-balance"
-            >
-              Settings
-            </h2>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleClose}
-              className="-mr-2"
-              aria-label="Close settings"
-              title="Close"
-            >
-              <XIcon className="size-5" />
-            </Button>
-          </div>
-
-          <div className="overflow-y-auto px-6 pb-6 divide-y divide-border">
             <section className="py-4 first:pt-0 last:pb-0">
               <h3 className="text-sm font-semibold text-muted mb-1.5">
                 Appearance
@@ -330,27 +306,6 @@ export function SettingsModal({
                     Export
                   </Button>
                 </div>
-                <div className="flex items-center justify-between min-h-10 gap-4">
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-sm text-foreground/80">
-                      Import a Totem export
-                    </span>
-                    <span className="text-xxs text-muted/60 leading-snug">
-                      Restore bookmarks from a previously exported ZIP
-                    </span>
-                  </div>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => {
-                      handleClose();
-                      onImport();
-                    }}
-                  >
-                    <UploadSimpleIcon className="size-3.5" />
-                    Import
-                  </Button>
-                </div>
               </div>
             </section>
 
@@ -421,8 +376,6 @@ export function SettingsModal({
                 </Button>
               )}
             </section>
-          </div>
-        </div>
     </Modal>
   );
 }

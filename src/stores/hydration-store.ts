@@ -42,16 +42,28 @@ export interface HydrationState {
   startedAt: number;
 }
 
-const BASE_DELAY_MIN = 1500;
-const BASE_DELAY_MAX = 3500;
-const LONG_PAUSE_MIN = 10_000;
-const LONG_PAUSE_MAX = 30_000;
-const LONG_PAUSE_INTERVAL_MIN = 20;
-const LONG_PAUSE_INTERVAL_MAX = 40;
-const RATE_LIMIT_PAUSE_MS = 15 * 60 * 1000;
+const BASE_DELAY_MIN = 8000;
+const BASE_DELAY_MAX = 12_000;
+const LONG_PAUSE_MIN = 45_000;
+const LONG_PAUSE_MAX = 90_000;
+const LONG_PAUSE_INTERVAL_MIN = 15;
+const LONG_PAUSE_INTERVAL_MAX = 25;
+const RATE_LIMIT_PAUSE_MS = 30 * 60 * 1000;
 const STORAGE_QUOTA_THRESHOLD = 0.95;
 const STORAGE_CHECK_INTERVAL = 10;
-const SNAPSHOT_WRITE_INTERVAL = 5;
+const SNAPSHOT_WRITE_INTERVAL = 1;
+const HOLDER_ID_SESSION_KEY = "totem_hydration_holder_id";
+
+let defaultAuthReady = false;
+const defaultAuthListeners = new Set<(ready: boolean) => void>();
+
+export function setHydrationAuthReady(ready: boolean): void {
+  if (defaultAuthReady === ready) return;
+  defaultAuthReady = ready;
+  for (const listener of defaultAuthListeners) {
+    listener(ready);
+  }
+}
 
 export function jitteredDelay(): number {
   return BASE_DELAY_MIN + Math.random() * (BASE_DELAY_MAX - BASE_DELAY_MIN);
@@ -69,15 +81,56 @@ export function longPauseDelay(): number {
   return LONG_PAUSE_MIN + Math.random() * (LONG_PAUSE_MAX - LONG_PAUSE_MIN);
 }
 
+export function estimateHydrationDurationMs(itemCount: number): number {
+  if (!Number.isFinite(itemCount) || itemCount <= 0) return 0;
+  const averageBaseDelay = (BASE_DELAY_MIN + BASE_DELAY_MAX) / 2;
+  const averageLongPause = (LONG_PAUSE_MIN + LONG_PAUSE_MAX) / 2;
+  const averageLongPauseInterval =
+    (LONG_PAUSE_INTERVAL_MIN + LONG_PAUSE_INTERVAL_MAX) / 2;
+  const estimatedItemMs = averageBaseDelay + averageLongPause / averageLongPauseInterval;
+  return Math.ceil(itemCount) * estimatedItemMs;
+}
+
 export function classifyError(code: string): {
   status: HydrationStatus;
   unavailableReason?: "deleted" | "protected" | "parse_failed" | "unknown";
+  retryable?: true;
 } {
-  if (code === "RATE_LIMITED") return { status: "paused-429" };
-  if (code === "AUTH_EXPIRED" || code === "NO_AUTH") return { status: "paused-auth" };
-  if (code === "DETAIL_NOT_FOUND") return { status: "running", unavailableReason: "deleted" };
+  if (code === "RATE_LIMITED" || code.startsWith("DETAIL_ERROR_429")) {
+    return { status: "paused-429" };
+  }
+  if (
+    code === "AUTH_EXPIRED" ||
+    code === "NO_AUTH" ||
+    code.startsWith("DETAIL_ERROR_401")
+  ) {
+    return { status: "paused-auth" };
+  }
+  if (code === "DETAIL_NOT_FOUND" || code.startsWith("DETAIL_ERROR_404")) {
+    return { status: "running", unavailableReason: "deleted" };
+  }
   if (code.startsWith("DETAIL_ERROR_403")) return { status: "running", unavailableReason: "protected" };
-  return { status: "running", unavailableReason: "unknown" };
+  return { status: "running", retryable: true };
+}
+
+function createHolderId(): string {
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function getDefaultHolderId(): string {
+  try {
+    const existing = sessionStorage.getItem(HOLDER_ID_SESSION_KEY);
+    if (existing) return existing;
+    const next = createHolderId();
+    sessionStorage.setItem(HOLDER_ID_SESSION_KEY, next);
+    return next;
+  } catch {
+    return createHolderId();
+  }
+}
+
+function isRestorableStatus(status: HydrationStatus): boolean {
+  return status !== "idle";
 }
 
 export interface HydrationDeps {
@@ -99,7 +152,7 @@ export interface HydrationDeps {
 }
 
 function defaultDeps(): HydrationDeps {
-  const holderId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const holderId = getDefaultHolderId();
   return {
     holderId,
     lockStorage: {
@@ -114,6 +167,9 @@ function defaultDeps(): HydrationDeps {
       }>,
     cacheDetail: async (tweetId, data) => {
       const detail = parseTweetDetailPayload(data, tweetId);
+      if (!detail.focalTweet && detail.thread.length === 0) {
+        throw new Error("DETAIL_PARSE_EMPTY");
+      }
       await upsertTweetDetailCache({
         tweetId,
         fetchedAt: Date.now(),
@@ -145,8 +201,13 @@ function defaultDeps(): HydrationDeps {
       const est = await navigator.storage.estimate();
       return { usage: est.usage ?? 0, quota: est.quota ?? Infinity };
     },
-    getAuthReady: () => false,
-    subscribeAuth: () => () => {},
+    getAuthReady: () => defaultAuthReady,
+    subscribeAuth: (cb) => {
+      defaultAuthListeners.add(cb);
+      return () => {
+        defaultAuthListeners.delete(cb);
+      };
+    },
   };
 }
 
@@ -163,7 +224,9 @@ export function createHydrationStore(deps: HydrationDeps = defaultDeps()) {
   let loopRunning = false;
   let loopAbort: AbortController | null = null;
   let pollTimerId: ReturnType<typeof setTimeout> | null = null;
+  let resumeTimerId: ReturnType<typeof setTimeout> | null = null;
   let unsubAuth: (() => void) | null = null;
+  let disposed = false;
 
   const store = createStore<
     HydrationState & {
@@ -179,14 +242,16 @@ export function createHydrationStore(deps: HydrationDeps = defaultDeps()) {
     start: () => {
       if (loopRunning) return;
       const state = get();
-      if (state.status === "done") return;
+      const restartDone = state.status === "done";
 
       loopAbort = new AbortController();
       set({
         status: "running",
-        startedAt: state.startedAt || Date.now(),
+        startedAt: restartDone || !state.startedAt ? Date.now() : state.startedAt,
         pauseUntil: 0,
+        ...(restartDone ? { total: 0, processed: 0, unavailable: 0 } : {}),
       });
+      writeSnapshotFromState(get());
       get()._runLoop();
     },
 
@@ -194,6 +259,7 @@ export function createHydrationStore(deps: HydrationDeps = defaultDeps()) {
       loopAbort?.abort();
       loopAbort = null;
       loopRunning = false;
+      clearTimers();
       set({ status: "idle", pauseUntil: 0 });
       release(deps.holderId, deps.lockStorage).catch(() => {});
       writeSnapshotFromState(get());
@@ -201,6 +267,10 @@ export function createHydrationStore(deps: HydrationDeps = defaultDeps()) {
 
     reset: () => {
       get().stop();
+      if (resumeTimerId !== null) {
+        clearTimeout(resumeTimerId);
+        resumeTimerId = null;
+      }
       set({ ...INITIAL_STATE });
       deps.writeSnapshot({
         ...INITIAL_STATE,
@@ -209,11 +279,8 @@ export function createHydrationStore(deps: HydrationDeps = defaultDeps()) {
     },
 
     dispose: () => {
+      disposed = true;
       get().stop();
-      if (pollTimerId !== null) {
-        clearTimeout(pollTimerId);
-        pollTimerId = null;
-      }
       unsubAuth?.();
       unsubAuth = null;
     },
@@ -227,7 +294,7 @@ export function createHydrationStore(deps: HydrationDeps = defaultDeps()) {
         const acquired = await tryAcquire(deps.holderId, deps.lockStorage);
         if (!acquired) {
           loopRunning = false;
-          set({ status: "idle" });
+          writeSnapshotFromState(get());
           startLockPolling();
           return;
         }
@@ -311,7 +378,7 @@ export function createHydrationStore(deps: HydrationDeps = defaultDeps()) {
               set((s) => ({ processed: s.processed + 1 }));
             }
           } catch {
-            // Transport error — skip this tweet, retry on next loop iteration
+            // Retryable fetch/cache failure; leave the bookmark unhydrated.
           }
 
           tickCount++;
@@ -358,6 +425,7 @@ export function createHydrationStore(deps: HydrationDeps = defaultDeps()) {
     if (pollTimerId !== null) return;
     pollTimerId = setTimeout(async () => {
       pollTimerId = null;
+      if (disposed || store.getState().status === "idle") return;
       const lock = await readLock(deps.lockStorage).catch(() => null);
       if (!lock || Date.now() - lock.lastTickAt >= 60_000) {
         store.getState().start();
@@ -367,14 +435,71 @@ export function createHydrationStore(deps: HydrationDeps = defaultDeps()) {
     }, 5000);
   }
 
+  function scheduleResume(delayMs: number) {
+    if (resumeTimerId !== null) {
+      clearTimeout(resumeTimerId);
+    }
+    resumeTimerId = setTimeout(() => {
+      resumeTimerId = null;
+      if (disposed || store.getState().status === "idle") return;
+      store.getState().start();
+    }, Math.max(0, delayMs));
+  }
+
+  function clearTimers() {
+    if (pollTimerId !== null) {
+      clearTimeout(pollTimerId);
+      pollTimerId = null;
+    }
+    if (resumeTimerId !== null) {
+      clearTimeout(resumeTimerId);
+      resumeTimerId = null;
+    }
+  }
+
+  async function restoreSnapshot() {
+    const snapshot = await deps.readSnapshot().catch(() => null);
+    if (disposed || !snapshot || !isRestorableStatus(snapshot.status)) return;
+
+    store.setState({
+      status: snapshot.status,
+      total: Math.max(0, snapshot.total),
+      processed: 0,
+      unavailable: Math.max(0, snapshot.unavailable),
+      pauseUntil: Math.max(0, snapshot.pauseUntil),
+      startedAt: Math.max(0, snapshot.startedAt),
+    });
+
+    if (snapshot.status === "running") {
+      if (deps.getAuthReady()) {
+        store.getState().start();
+      }
+      return;
+    }
+
+    if (snapshot.status === "paused-auth") {
+      if (deps.getAuthReady()) {
+        store.getState().start();
+      }
+      return;
+    }
+
+    if (snapshot.status === "paused-429") {
+      scheduleResume(snapshot.pauseUntil - Date.now());
+    }
+  }
+
   unsubAuth = deps.subscribeAuth((ready) => {
     const state = store.getState();
-    if (ready && state.status === "paused-auth") {
+    if (ready && (state.status === "paused-auth" || state.status === "running")) {
       state.start();
     } else if (!ready && state.status === "running") {
       store.setState({ status: "paused-auth" });
+      writeSnapshotFromState(store.getState());
     }
   });
+
+  restoreSnapshot().catch(() => {});
 
   return store;
 }

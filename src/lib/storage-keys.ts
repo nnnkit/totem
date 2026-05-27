@@ -11,6 +11,7 @@ export const LS_BOOT_SYNC_POLICY = "totem_boot_sync_policy";
 export const LS_PINNED_TWEETS = "totem_pinned_tweets";
 export const LS_READER_ACTIVITY = "totem_reader_activity";
 export const LS_RECENT_SEARCHES = "totem_recent_searches";
+export const LS_FULL_EXPORT_READY_DISMISSED = "totem_full_export_ready_dismissed";
 
 export const LOCAL_STORAGE_KEYS = [
   LS_READING_TAB,
@@ -22,6 +23,7 @@ export const LOCAL_STORAGE_KEYS = [
   LS_PINNED_TWEETS,
   LS_READER_ACTIVITY,
   LS_RECENT_SEARCHES,
+  LS_FULL_EXPORT_READY_DISMISSED,
   "totem_has_bookmarks", // legacy — kept for reset cleanup
 ] as const;
 

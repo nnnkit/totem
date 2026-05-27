@@ -7,6 +7,7 @@ import {
   InfoIcon,
   LinkBreakIcon,
   MagnifyingGlassIcon,
+  XIcon,
   XLogoIcon,
 } from "@phosphor-icons/react";
 import { TotemLogo } from "./TotemLogo";
@@ -46,9 +47,17 @@ import {
   type SyncButtonState,
 } from "../stores/selectors";
 import {
+  getHydrationStore,
   useHydrationStore,
   type HydrationStatus,
 } from "../stores/hydration-store";
+import { getHydrationProgress } from "../lib/hydration/progress";
+import {
+  getFullExportReadyDismissalSignature,
+  isFullExportReadyForCurrentLibrary,
+  readFullExportReadyDismissal,
+  writeFullExportReadyDismissal,
+} from "../lib/export/full-export-ready-dismissal";
 
 import { CLOCK_UPDATE_MS } from "../lib/constants";
 
@@ -251,6 +260,9 @@ export function NewTabHome({
     }
     void actions.startLogin();
   }, [actions, onLogin]);
+  const handleCancelHydration = useCallback(() => {
+    getHydrationStore().getState().stop();
+  }, []);
 
   const renderFooterCard = () => {
     switch (footerState) {
@@ -625,30 +637,6 @@ export function NewTabHome({
         </main>
 
         <footer className="mx-auto w-full max-w-lg space-y-6 pb-6">
-          {bookmarks.length > 0 && (
-            <p className="text-center text-xs text-on-bg-ghost">
-              {bookmarks.length.toLocaleString("en-US")} bookmark{bookmarks.length !== 1 ? "s" : ""}
-              {detailedTweetIds.size > 0 && (
-                <> &middot; {detailedTweetIds.size.toLocaleString("en-US")} with full thread context</>
-              )}
-              {" "}&middot;{" "}
-              <button
-                type="button"
-                onClick={onOpenSettingsToStorage}
-                className="underline hover:text-on-bg-muted"
-              >
-                Export &rarr;
-              </button>
-            </p>
-          )}
-          <HydrationFooterLine
-            status={hydrationStatus}
-            total={hydrationTotal}
-            processed={hydrationProcessed}
-            pauseUntil={hydrationPauseUntil}
-            onOpenExport={onOpenExport}
-            onLogin={handleLoginButton}
-          />
           {renderFooterCard()}
 
           <div
@@ -679,6 +667,28 @@ export function NewTabHome({
               </kbd>
             </Button>
           </div>
+
+          {bookmarks.length > 0 && (
+            <p className="mx-auto flex w-fit max-w-full flex-wrap items-center justify-center gap-x-1.5 gap-y-1 rounded-full border border-overlay-edge bg-overlay px-3 py-1.5 text-center text-xxs text-on-bg-ghost opacity-75 shadow-glass backdrop-blur-sm">
+              <span>
+                {bookmarks.length.toLocaleString("en-US")} bookmark{bookmarks.length !== 1 ? "s" : ""}
+              </span>
+              {detailedTweetIds.size > 0 && (
+                <>
+                  <span aria-hidden="true">&middot;</span>
+                  <span>{detailedTweetIds.size.toLocaleString("en-US")} with full thread context</span>
+                </>
+              )}
+              <span aria-hidden="true">&middot;</span>
+              <button
+                type="button"
+                onClick={onOpenSettingsToStorage}
+                className="underline transition-colors hover:text-on-bg-muted"
+              >
+                Export data &rarr;
+              </button>
+            </p>
+          )}
 
           <p
             className={cn(
@@ -714,7 +724,18 @@ export function NewTabHome({
           </p>
         )}
 
-        <div className="fixed right-5 bottom-5 z-20 sm:right-6 sm:bottom-6">
+        <div className="fixed right-5 bottom-5 z-20 flex items-center gap-2 sm:right-6 sm:bottom-6">
+          <HydrationFloatingStatus
+            status={hydrationStatus}
+            total={hydrationTotal}
+            processed={hydrationProcessed}
+            bookmarkCount={bookmarks.length}
+            readyCount={detailedTweetIds.size}
+            pauseUntil={hydrationPauseUntil}
+            onOpenExport={onOpenExport}
+            onCancel={handleCancelHydration}
+            onLogin={handleLoginButton}
+          />
           <Popover.Root>
             <Popover.Trigger
               type="button"
@@ -771,72 +792,161 @@ function formatFooterDuration(ms: number): string {
   return `${hours}h ${minutes}m`;
 }
 
-function HydrationFooterLine({
+function HydrationFloatingStatus({
   status,
   total,
   processed,
+  bookmarkCount,
+  readyCount,
   pauseUntil,
   onOpenExport,
+  onCancel,
   onLogin,
 }: {
   status: HydrationStatus;
   total: number;
   processed: number;
+  bookmarkCount: number;
+  readyCount: number;
   pauseUntil: number;
   onOpenExport: () => void;
+  onCancel: () => void;
   onLogin: () => void;
 }) {
+  const [dismissedReadySignature, setDismissedReadySignature] = useState(
+    readFullExportReadyDismissal,
+  );
+
   if (status === "idle") return null;
 
-  const progressDone = processed;
-  const progressTotal = total + processed;
+  const progress = getHydrationProgress({
+    bookmarkCount,
+    readyCount,
+    queueTotal: total,
+    processed,
+  });
 
   if (status === "done") {
+    if (!isFullExportReadyForCurrentLibrary({ bookmarkCount, readyCount })) {
+      return null;
+    }
+
+    const readySignature = getFullExportReadyDismissalSignature({
+      bookmarkCount,
+      readyCount,
+    });
+    if (dismissedReadySignature === readySignature) return null;
+
+    const handleDismissReady = () => {
+      writeFullExportReadyDismissal(readySignature);
+      setDismissedReadySignature(readySignature);
+    };
+
     return (
-      <p className="text-center text-xs text-on-bg-ghost">
-        Full export ready &middot;{" "}
+      <div className="flex min-h-11 items-center gap-2 rounded border border-overlay-edge bg-overlay px-3 py-2 text-xs text-on-bg shadow-glass backdrop-blur-md">
+        <span className="tabular-nums">Full export ready</span>
         <button
           type="button"
           onClick={onOpenExport}
-          className="underline hover:text-on-bg-muted"
+          className="font-medium text-accent hover:text-accent/80"
         >
-          Download &rarr;
+          Download
         </button>
-      </p>
+        <button
+          type="button"
+          onClick={handleDismissReady}
+          className="-mr-1 flex size-7 items-center justify-center rounded text-on-bg-ghost transition-colors hover:bg-white/10 hover:text-on-bg"
+          aria-label="Hide full export ready"
+          title="Hide full export ready"
+        >
+          <XIcon className="size-4" />
+        </button>
+      </div>
     );
   }
 
   if (status === "paused-auth") {
     return (
-      <p className="text-center text-xs text-on-bg-ghost">
-        Full export paused: {" "}
+      <div className="flex min-h-11 items-center gap-2 rounded border border-overlay-edge bg-overlay px-3 py-2 text-xs text-on-bg shadow-glass backdrop-blur-md">
+        <span>Full export paused</span>
         <button
           type="button"
           onClick={onLogin}
-          className="underline hover:text-on-bg-muted"
+          className="font-medium text-accent hover:text-accent/80"
         >
-          sign in to X &rarr;
+          Sign in
         </button>
-      </p>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="-mr-1 flex size-7 items-center justify-center rounded text-on-bg-ghost transition-colors hover:bg-white/10 hover:text-on-bg"
+          aria-label="Cancel full export"
+          title="Cancel full export"
+        >
+          <XIcon className="size-4" />
+        </button>
+      </div>
     );
   }
 
   if (status === "paused-storage") {
     return (
-      <p className="text-center text-xs text-on-bg-ghost">
-        Full export paused: out of storage
-      </p>
+      <div className="flex min-h-11 items-center gap-2 rounded border border-overlay-edge bg-overlay px-3 py-2 text-xs text-on-bg shadow-glass backdrop-blur-md">
+        <button
+          type="button"
+          onClick={onOpenExport}
+          className="text-left hover:text-on-bg-muted"
+        >
+          Full export paused: out of storage
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="-mr-1 flex size-7 items-center justify-center rounded text-on-bg-ghost transition-colors hover:bg-white/10 hover:text-on-bg"
+          aria-label="Cancel full export"
+          title="Cancel full export"
+        >
+          <XIcon className="size-4" />
+        </button>
+      </div>
     );
   }
 
   const resumeMs = pauseUntil > Date.now() ? pauseUntil - Date.now() : 0;
+  const statusText = status === "paused-429" && resumeMs > 0
+    ? `Resumes in ${formatFooterDuration(resumeMs)}`
+    : "Preparing export";
 
   return (
-    <p className="text-center text-xs text-on-bg-ghost tabular-nums">
-      Preparing full export: {progressDone.toLocaleString("en-US")} / {progressTotal.toLocaleString("en-US")}
-      {status === "paused-429" && resumeMs > 0 && (
-        <> &middot; resumes in {formatFooterDuration(resumeMs)}</>
-      )}
-    </p>
+    <div className="flex min-h-11 items-center gap-3 rounded border border-overlay-edge bg-overlay px-3 py-2 text-xs text-on-bg shadow-glass backdrop-blur-md">
+      <button
+        type="button"
+        onClick={onOpenExport}
+        className="min-w-0 text-left"
+        title="Open export progress"
+      >
+        <span className="block max-w-36 truncate text-on-bg-ghost">
+          {statusText}
+        </span>
+        <span className="block tabular-nums">
+          {progress.done.toLocaleString("en-US")} / {progress.total.toLocaleString("en-US")}
+        </span>
+      </button>
+      <div className="h-1 w-16 overflow-hidden rounded-full bg-white/10">
+        <div
+          className="h-full rounded-full bg-accent transition-[width] duration-300 ease-out"
+          style={{ width: `${Math.min(100, Math.max(0, progress.pct))}%` }}
+        />
+      </div>
+      <button
+        type="button"
+        onClick={onCancel}
+        className="-mr-1 flex size-7 items-center justify-center rounded text-on-bg-ghost transition-colors hover:bg-white/10 hover:text-on-bg"
+        aria-label="Cancel full export"
+        title="Cancel full export"
+      >
+        <XIcon className="size-4" />
+      </button>
+    </div>
   );
 }

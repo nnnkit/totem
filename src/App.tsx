@@ -39,6 +39,7 @@ import { useViewerProfile } from "./hooks/useViewerProfile";
 import {
   useActiveAccountId,
   useAllBookmarks,
+  useAuthPhase,
   useBookmarksLoaded,
   useDetailedTweetIds,
   useDisplayBookmarks,
@@ -46,6 +47,7 @@ import {
   useReaderAvailabilityState,
   useRuntimeActions,
 } from "./stores/selectors";
+import { setHydrationAuthReady } from "./stores/hydration-store";
 import type { Bookmark, SyncBlockedReason, ThreadTweet } from "./types";
 
 interface DemoExportPayload {
@@ -226,6 +228,7 @@ function NewTabRouteApp() {
   const displayBookmarks = useDisplayBookmarks();
   const detailedTweetIds = useDetailedTweetIds();
   const activeAccountId = useActiveAccountId();
+  const authPhase = useAuthPhase();
   const offlineMode = useIsOffline();
   const { themePreference, setThemePreference } = useTheme();
   const { settings, updateSettings } = useSettings();
@@ -373,6 +376,11 @@ function NewTabRouteApp() {
   }, [actions]);
 
   useEffect(() => {
+    setHydrationAuthReady(authPhase === "ready");
+    return () => setHydrationAuthReady(false);
+  }, [authPhase]);
+
+  useEffect(() => {
     const target = getNewTabUrl(undefined, view === "reading" ? "reading" : undefined);
     window.history.replaceState({}, "", target);
   }, [view]);
@@ -513,7 +521,6 @@ function NewTabRouteApp() {
         onResetAppState={handleResetAppState}
         onDeleteAllData={handleDeleteAllData}
         onExport={() => setExportOpen(true)}
-        onImport={() => setImportOpen(true)}
       />
       <ExportModal
         open={exportOpen}
