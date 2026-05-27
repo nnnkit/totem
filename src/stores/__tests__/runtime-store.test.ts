@@ -7,26 +7,36 @@ import {
 import type { Bookmark, RuntimeSnapshot } from "../../types";
 import type { RuntimeState } from "../runtime-store";
 
-const mocks = vi.hoisted(() => ({
-  getRuntimeSnapshot: vi.fn<() => Promise<RuntimeSnapshot>>(),
-  checkAuth: vi.fn(),
-  startAuthCapture: vi.fn(),
-  deleteBookmark: vi.fn(),
-  fetchBookmarkPage: vi.fn(),
-  getBookmarkEvents: vi.fn(),
-  queueBookmarkMutation: vi.fn(),
-  ackBookmarkEvents: vi.fn(),
-  fetchTweetDetail: vi.fn(),
-  reserveSyncRun: vi.fn(),
-  completeSyncRun: vi.fn(),
-  cleanupOldTweetDetails: vi.fn(),
-  deleteBookmarksByTweetIds: vi.fn(),
-  getAllBookmarks: vi.fn<() => Promise<Bookmark[]>>(),
-  getCompletedTweetIds: vi.fn(),
-  getDetailedTweetIds: vi.fn<() => Promise<Set<string>>>(),
-  setActiveAccountId: vi.fn(),
-  upsertBookmarks: vi.fn(),
-}));
+const mocks = vi.hoisted(() => {
+  const detailCacheListeners = new Set<(tweetId: string) => void>();
+  return {
+    getRuntimeSnapshot: vi.fn<() => Promise<RuntimeSnapshot>>(),
+    checkAuth: vi.fn(),
+    startAuthCapture: vi.fn(),
+    deleteBookmark: vi.fn(),
+    fetchBookmarkPage: vi.fn(),
+    getBookmarkEvents: vi.fn(),
+    queueBookmarkMutation: vi.fn(),
+    ackBookmarkEvents: vi.fn(),
+    fetchTweetDetail: vi.fn(),
+    reserveSyncRun: vi.fn(),
+    completeSyncRun: vi.fn(),
+    cleanupOldTweetDetails: vi.fn(),
+    deleteBookmarksByTweetIds: vi.fn(),
+    getAllBookmarks: vi.fn<() => Promise<Bookmark[]>>(),
+    getCompletedTweetIds: vi.fn(),
+    getDetailedTweetIds: vi.fn<() => Promise<Set<string>>>(),
+    setActiveAccountId: vi.fn(),
+    subscribeTweetDetailCache: vi.fn((listener: (tweetId: string) => void) => {
+      detailCacheListeners.add(listener);
+      return () => {
+        detailCacheListeners.delete(listener);
+      };
+    }),
+    upsertBookmarks: vi.fn(),
+    detailCacheListeners,
+  };
+});
 
 vi.mock("../../api/core/auth", () => ({
   checkAuth: mocks.checkAuth,
@@ -58,6 +68,7 @@ vi.mock("../../db", () => ({
   getCompletedTweetIds: mocks.getCompletedTweetIds,
   getDetailedTweetIds: mocks.getDetailedTweetIds,
   setActiveAccountId: mocks.setActiveAccountId,
+  subscribeTweetDetailCache: mocks.subscribeTweetDetailCache,
   upsertBookmarks: mocks.upsertBookmarks,
 }));
 
@@ -199,6 +210,8 @@ beforeEach(() => {
   mocks.getCompletedTweetIds.mockResolvedValue(new Set<string>());
   mocks.getDetailedTweetIds.mockResolvedValue(new Set<string>());
   mocks.setActiveAccountId.mockImplementation(() => "totem_acct_acct-1");
+  mocks.subscribeTweetDetailCache.mockClear();
+  mocks.detailCacheListeners.clear();
   mocks.upsertBookmarks.mockResolvedValue(undefined);
 });
 
@@ -340,6 +353,24 @@ describe("runtime-store boot", () => {
     const state = store.getState();
     expect(state.bookmarks).toEqual([]);
     expect(state.detailedTweetIds).toEqual(new Set());
+  });
+
+  it("tracks detail cache writes from export hydration", () => {
+    const store = createRuntimeStore();
+    store.setState({
+      detailedTweetIds: new Set(["tweet-1"]),
+    });
+
+    for (const listener of mocks.detailCacheListeners) {
+      listener("tweet-2");
+    }
+
+    expect(store.getState().detailedTweetIds).toEqual(
+      new Set(["tweet-1", "tweet-2"]),
+    );
+
+    store.getState().actions.dispose();
+    expect(mocks.detailCacheListeners.size).toBe(0);
   });
 });
 

@@ -22,6 +22,7 @@ import {
   getAllBookmarks,
   getDetailedTweetIds,
   setActiveAccountId,
+  subscribeTweetDetailCache,
   upsertBookmarks,
 } from "../db";
 import { FetchQueue } from "../lib/fetch-queue";
@@ -375,6 +376,7 @@ export function createRuntimeStore() {
   let processingBookmarkEvents = false;
   let authRequestId = 0;
   let cleanupStarted = false;
+  let unsubscribeDetailCache: (() => void) | null = null;
   // Scheduled auto-retry for when an auto-sync was blocked by auto_backoff.
   // The SW returns retryAfterMs telling us when the window clears; we set
   // a single timer to fire another auto-sync then. Without this, a blocked
@@ -1066,6 +1068,8 @@ export function createRuntimeStore() {
       },
 
       dispose: () => {
+        unsubscribeDetailCache?.();
+        unsubscribeDetailCache = null;
         prefetchController.stop();
         stopSync();
         clearScheduledAutoRetry();
@@ -1262,6 +1266,11 @@ export function createRuntimeStore() {
         return detail;
       },
     };
+
+    unsubscribeDetailCache = subscribeTweetDetailCache((tweetId) => {
+      get().actions.detailCached(tweetId);
+      prefetchController.reconcile();
+    });
 
     return createInitialState(actions);
   });

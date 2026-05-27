@@ -73,6 +73,7 @@ const dbPromises = new Map<string, Promise<IDBPDatabase<XBookmarksDbSchema>>>();
 const migrationPromises = new Map<string, Promise<void>>();
 let activeAccountId: string | null = null;
 let activeDbName = DB_NAME;
+const detailCacheListeners = new Set<(tweetId: string) => void>();
 
 const ACCOUNT_ID_SANITIZE_RE = /[^A-Za-z0-9_-]/g;
 
@@ -430,6 +431,21 @@ export async function upsertTweetDetailCache(
 ): Promise<void> {
   const db = await getDb();
   await db.put(DETAIL_STORE_NAME, detail);
+  for (const listener of detailCacheListeners) {
+    try {
+      listener(detail.tweetId);
+    } catch {
+    }
+  }
+}
+
+export function subscribeTweetDetailCache(
+  listener: (tweetId: string) => void,
+): () => void {
+  detailCacheListeners.add(listener);
+  return () => {
+    detailCacheListeners.delete(listener);
+  };
 }
 
 export async function getTweetDetailCache(
