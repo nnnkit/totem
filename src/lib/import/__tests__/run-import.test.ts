@@ -165,7 +165,10 @@ describe("parseZip", () => {
   it("refuses a ZIP with empty shards", () => {
     const manifest = {
       totem: { export_version: 1, schema_version: 8 },
+      account: { id_hash: "sha256:abc", handle_redacted: "@t***st" },
+      counts: { bookmarks: 0, details: 0, highlights: 0, reading_progress: 0 },
       shards: { bookmarks: [], details: [], highlights: [], reading_progress: [] },
+      checksums: {},
     };
     const zip = zipSync({
       "manifest.json": strToU8(JSON.stringify(manifest)),
@@ -173,6 +176,20 @@ describe("parseZip", () => {
     const result = parseZip(zip);
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.reason).toBe("empty_zip");
+  });
+
+  it("refuses a manifest missing required import fields", () => {
+    const manifest = {
+      totem: { export_version: 1, schema_version: 8 },
+      shards: { bookmarks: ["data/bookmarks-2023.jsonl"] },
+    };
+    const zip = zipSync({
+      "manifest.json": strToU8(JSON.stringify(manifest)),
+      "data/bookmarks-2023.jsonl": strToU8("{}\n"),
+    });
+    const result = parseZip(zip);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.reason).toBe("not_totem_export");
   });
 
   it("parses a valid ZIP", async () => {
@@ -187,6 +204,16 @@ describe("parseZip", () => {
 });
 
 describe("validateImport", () => {
+  it("refuses future export_version values", async () => {
+    const zip = await buildValidZip([makeBookmark("b1", "t1")]);
+    const parsed = parseZip(zip);
+    if (!parsed.ok) throw new Error("parse failed");
+    parsed.manifest.totem.export_version = 2;
+    const result = await validateImport(parsed, "user123");
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.reason).toBe("schema_too_new");
+  });
+
   it("refuses schema_version > DB_VERSION", async () => {
     const zip = await buildValidZip([makeBookmark("b1", "t1")], {
       schemaVersion: 999,
@@ -212,6 +239,26 @@ describe("validateImport", () => {
     const parsed = parseZip(zip);
     if (!parsed.ok) throw new Error("parse failed");
     parsed.manifest.checksums["data/bookmarks-2023.jsonl"] = "sha256:0000";
+    const result = await validateImport(parsed, "user123");
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.reason).toBe("checksum_mismatch");
+  });
+
+  it("requires every referenced shard to have a checksum", async () => {
+    const zip = await buildValidZip([makeBookmark("b1", "t1")]);
+    const parsed = parseZip(zip);
+    if (!parsed.ok) throw new Error("parse failed");
+    delete parsed.manifest.checksums["data/bookmarks-2023.jsonl"];
+    const result = await validateImport(parsed, "user123");
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.reason).toBe("checksum_mismatch");
+  });
+
+  it("requires every referenced shard file to be present", async () => {
+    const zip = await buildValidZip([makeBookmark("b1", "t1")]);
+    const parsed = parseZip(zip);
+    if (!parsed.ok) throw new Error("parse failed");
+    delete parsed.files["data/bookmarks-2023.jsonl"];
     const result = await validateImport(parsed, "user123");
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.reason).toBe("checksum_mismatch");

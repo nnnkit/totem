@@ -1,6 +1,5 @@
 import { useState, useRef, useCallback } from "react";
 import {
-  XIcon,
   UploadSimpleIcon,
   WarningCircleIcon,
   ArrowsClockwiseIcon,
@@ -43,8 +42,8 @@ const REFUSED_MESSAGES: Record<RefusedReason, { title: string; description: stri
     action: "Try another file",
   },
   schema_too_new: {
-    title: "Schema too new",
-    description: "This export was created with a newer version of Totem. Update Totem to import it.",
+    title: "Update Totem first",
+    description: "This export was created with a newer Totem export format or data schema.",
     action: "Update Totem",
   },
   checksum_mismatch: {
@@ -172,76 +171,54 @@ export function ImportModal({
       open={open}
       onClose={handleClose}
       className="bg-black/50"
-      ariaLabelledBy="import-title"
+      title="Import a Totem export"
+      titleId="import-title"
+      closeDisabled={state.phase === "importing"}
     >
-      <div className="max-w-md mx-auto mt-[10vh] max-h-[80vh] flex flex-col rounded border border-border bg-surface-card shadow-xl">
-        <div className="flex shrink-0 items-center justify-between px-6 pt-5 pb-3">
-          <h2
-            id="import-title"
-            className="text-lg font-semibold text-foreground"
-          >
-            Import a Totem export
-          </h2>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleClose}
-            disabled={state.phase === "importing"}
-            className="-mr-2"
-            aria-label="Close"
-            title="Close"
-          >
-            <XIcon className="size-5" />
-          </Button>
-        </div>
-
-        <div className="px-6 pb-6">
-          {state.phase === "empty" && (
-            <EmptyView
-              dropZoneRef={dropZoneRef}
-              fileInputRef={fileInputRef}
-              dragOver={dragOver}
-              onDrop={handleDrop}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onCancel={handleClose}
-            />
-          )}
-          {state.phase === "parsing" && <ParsingView />}
-          {state.phase === "valid" && (
-            <ValidView
-              manifest={state.manifest}
-              accountMatch={state.accountMatch}
-              onImport={handleStartImport}
-              onCancel={handleClose}
-            />
-          )}
-          {state.phase === "refused" && (
-            <RefusedView
-              reason={state.reason}
-              onReset={handleReset}
-              onClose={handleClose}
-            />
-          )}
-          {state.phase === "importing" && (
-            <ImportingView progress={state.progress} />
-          )}
-          {state.phase === "done" && (
-            <DoneView
-              result={state.result}
-              onClose={handleClose}
-              onSync={onSyncAfterImport}
-            />
-          )}
-          {state.phase === "error" && (
-            <ErrorView
-              message={state.message}
-              onReset={handleReset}
-              onClose={handleClose}
-            />
-          )}
-        </div>
-      </div>
+      {state.phase === "empty" && (
+        <EmptyView
+          dropZoneRef={dropZoneRef}
+          fileInputRef={fileInputRef}
+          dragOver={dragOver}
+          onDrop={handleDrop}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onCancel={handleClose}
+        />
+      )}
+      {state.phase === "parsing" && <ParsingView />}
+      {state.phase === "valid" && (
+        <ValidView
+          manifest={state.manifest}
+          accountMatch={state.accountMatch}
+          onImport={handleStartImport}
+          onCancel={handleClose}
+        />
+      )}
+      {state.phase === "refused" && (
+        <RefusedView
+          reason={state.reason}
+          onReset={handleReset}
+          onClose={handleClose}
+        />
+      )}
+      {state.phase === "importing" && (
+        <ImportingView progress={state.progress} />
+      )}
+      {state.phase === "done" && (
+        <DoneView
+          result={state.result}
+          onClose={handleClose}
+          onSync={onSyncAfterImport}
+        />
+      )}
+      {state.phase === "error" && (
+        <ErrorView
+          message={state.message}
+          onReset={handleReset}
+          onClose={handleClose}
+        />
+      )}
 
       <input
         ref={fileInputRef}

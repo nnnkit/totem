@@ -62,6 +62,8 @@ export type ValidatedImport =
   | { ok: true; manifest: ImportManifest; files: Record<string, Uint8Array>; accountMatch: boolean }
   | { ok: false; reason: RefusedReason };
 
+const SUPPORTED_EXPORT_VERSION = 1;
+
 async function sha256hex(data: Uint8Array): Promise<string> {
   const buf = new ArrayBuffer(data.byteLength);
   new Uint8Array(buf).set(data);
@@ -69,6 +71,55 @@ async function sha256hex(data: Uint8Array): Promise<string> {
   return Array.from(new Uint8Array(hash))
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === "string");
+}
+
+function isCountMap(value: unknown): value is ImportManifest["counts"] {
+  if (!isRecord(value)) return false;
+  return (
+    typeof value.bookmarks === "number" &&
+    typeof value.details === "number" &&
+    typeof value.highlights === "number" &&
+    typeof value.reading_progress === "number"
+  );
+}
+
+function isShardMap(value: unknown): value is ImportManifest["shards"] {
+  if (!isRecord(value)) return false;
+  return (
+    isStringArray(value.bookmarks) &&
+    isStringArray(value.details) &&
+    isStringArray(value.highlights) &&
+    isStringArray(value.reading_progress)
+  );
+}
+
+function isChecksumMap(value: unknown): value is Record<string, string> {
+  return isRecord(value) && Object.values(value).every((item) => typeof item === "string");
+}
+
+function isImportManifest(value: unknown): value is ImportManifest {
+  if (!isRecord(value)) return false;
+  const totem = value.totem;
+  const account = value.account;
+  return (
+    isRecord(totem) &&
+    typeof totem.export_version === "number" &&
+    typeof totem.schema_version === "number" &&
+    isRecord(account) &&
+    typeof account.id_hash === "string" &&
+    typeof account.handle_redacted === "string" &&
+    isCountMap(value.counts) &&
+    isShardMap(value.shards) &&
+    isChecksumMap(value.checksums)
+  );
 }
 
 export function parseZip(file: Uint8Array): ParsedZip {
@@ -84,18 +135,14 @@ export function parseZip(file: Uint8Array): ParsedZip {
     return { ok: false, reason: "not_totem_export" };
   }
 
-  let manifest: ImportManifest;
+  let manifest: unknown;
   try {
     manifest = JSON.parse(new TextDecoder().decode(manifestBytes));
   } catch {
     return { ok: false, reason: "not_totem_export" };
   }
 
-  if (
-    !manifest.totem ||
-    typeof manifest.totem.export_version !== "number" ||
-    typeof manifest.totem.schema_version !== "number"
-  ) {
+  if (!isImportManifest(manifest)) {
     return { ok: false, reason: "not_totem_export" };
   }
 
@@ -119,6 +166,14 @@ export async function validateImport(
 ): Promise<ValidatedImport> {
   const { manifest, files } = parsed;
 
+  if (manifest.totem.export_version > SUPPORTED_EXPORT_VERSION) {
+    return { ok: false, reason: "schema_too_new" };
+  }
+
+  if (manifest.totem.export_version !== SUPPORTED_EXPORT_VERSION) {
+    return { ok: false, reason: "not_totem_export" };
+  }
+
   if (manifest.totem.schema_version > DB_VERSION) {
     return { ok: false, reason: "schema_too_new" };
   }
@@ -135,7 +190,9 @@ export async function validateImport(
   ];
   for (const shard of allShards) {
     const expected = manifest.checksums?.[shard];
-    if (!expected) continue;
+    if (!expected) {
+      return { ok: false, reason: "checksum_mismatch" };
+    }
     const data = files[shard];
     if (!data) {
       return { ok: false, reason: "checksum_mismatch" };
