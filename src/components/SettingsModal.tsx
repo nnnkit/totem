@@ -284,7 +284,7 @@ export function SettingsModal({
               <h3 className="text-sm font-semibold text-muted mb-1.5">
                 Storage
               </h3>
-              <div className="space-y-1.5">
+              <div className="space-y-4">
                 <div className="flex items-center justify-between min-h-10 gap-4">
                   <div className="flex flex-col gap-0.5">
                     <span className="text-sm text-foreground/80">
@@ -306,75 +306,73 @@ export function SettingsModal({
                     Export
                   </Button>
                 </div>
-              </div>
-            </section>
 
-            <section className="py-4 first:pt-0 last:pb-0">
-              {confirmingReset ? (
-                <div className="space-y-3">
-                  <p className="text-xs text-muted/80 leading-snug">
-                    Choose what to reset. App state alone is enough to fix
-                    most stuck-UI issues.
-                  </p>
-                  <div className="space-y-2">
-                    <ResetCheckbox
-                      id="reset-app-state"
-                      label="App state"
-                      description="Cached UI, sync flags, bookmark cache."
-                      tooltip={RESET_STATE_TOOLTIP}
-                      checked={resetAppState}
-                      onCheckedChange={setResetAppState}
-                      disabled={isResetting}
-                    />
-                    <ResetCheckbox
-                      id="reset-content"
-                      label="Personal content"
-                      description="Highlights, notes, reading status, saved searches."
-                      tooltip={RESET_CONTENT_TOOLTIP}
-                      checked={resetContent}
-                      onCheckedChange={setResetContent}
-                      disabled={isResetting}
-                      destructive
-                    />
+                {confirmingReset ? (
+                  <div className="space-y-3">
+                    <p className="text-xs text-muted/80 leading-snug">
+                      Choose what to reset. App state alone is enough to fix
+                      most stuck-UI issues.
+                    </p>
+                    <div className="space-y-2">
+                      <ResetCheckbox
+                        id="reset-app-state"
+                        label="App state"
+                        description="Cached UI, sync flags, bookmark cache."
+                        tooltip={RESET_STATE_TOOLTIP}
+                        checked={resetAppState}
+                        onCheckedChange={setResetAppState}
+                        disabled={isResetting}
+                      />
+                      <ResetCheckbox
+                        id="reset-content"
+                        label="Personal content"
+                        description="Highlights, notes, reading status, saved searches."
+                        tooltip={RESET_CONTENT_TOOLTIP}
+                        checked={resetContent}
+                        onCheckedChange={setResetContent}
+                        disabled={isResetting}
+                        destructive
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="secondary"
+                        onClick={closeConfirm}
+                        disabled={isResetting}
+                        className="flex-1"
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        variant={resetContent ? "destructive" : "primary"}
+                        onClick={handleConfirmReset}
+                        disabled={isResetting || !canReset}
+                        className={cn(
+                          "flex-1",
+                          resetContent && "border border-red-500/30",
+                        )}
+                      >
+                        {isResetting
+                          ? resetContent
+                            ? "Deleting..."
+                            : "Resetting..."
+                          : resetContent
+                            ? "Confirm delete"
+                            : "Reset"}
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="secondary"
-                      onClick={closeConfirm}
-                      disabled={isResetting}
-                      className="flex-1"
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      variant={resetContent ? "destructive" : "primary"}
-                      onClick={handleConfirmReset}
-                      disabled={isResetting || !canReset}
-                      className={cn(
-                        "flex-1",
-                        resetContent && "border border-red-500/30",
-                      )}
-                    >
-                      {isResetting
-                        ? resetContent
-                          ? "Deleting..."
-                          : "Resetting..."
-                        : resetContent
-                          ? "Confirm delete"
-                          : "Reset"}
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <Button
-                  variant="secondary"
-                  onClick={() => setConfirmingReset(true)}
-                  disabled={isResetting}
-                  className="w-full"
-                >
-                  {isResetting ? "Resetting..." : "Reset data"}
-                </Button>
-              )}
+                ) : (
+                  <Button
+                    variant="secondary"
+                    onClick={() => setConfirmingReset(true)}
+                    disabled={isResetting}
+                    className="w-full"
+                  >
+                    {isResetting ? "Resetting..." : "Reset data"}
+                  </Button>
+                )}
+              </div>
             </section>
     </Modal>
   );
