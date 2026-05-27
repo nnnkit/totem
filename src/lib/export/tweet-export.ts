@@ -42,17 +42,46 @@ function exportTweetKind(tweet: TweetExportNode): TweetKind {
   return "tweet";
 }
 
-function appendMediaMarkdown(body: string, media: Media[], watchOnXUrl: string): string {
+function markdownImageAlt(value: string): string {
+  return value
+    .replace(/[\r\n]+/g, " ")
+    .replace(/\\/g, "\\\\")
+    .replace(/]/g, "\\]")
+    .trim();
+}
+
+function attachedImageAlt(media: Media, authorHandle: string): string {
+  const alt = media.altText?.trim();
+  if (alt) return alt;
+  return `Image attached to @${authorHandle}'s post`;
+}
+
+function attachedVideoAlt(media: Media, authorHandle: string): string {
+  const alt = media.altText?.trim();
+  if (alt) return alt;
+  return `Video preview from @${authorHandle}'s post`;
+}
+
+function appendMediaMarkdown(
+  body: string,
+  media: Media[],
+  watchOnXUrl: string,
+  authorHandle: string,
+): string {
   const parts: string[] = [];
   const trimmed = body.trim();
   if (trimmed) parts.push(trimmed);
 
   for (const m of media) {
     if (m.type === "photo") {
-      parts.push(`![](${m.url})`);
+      const alt = markdownImageAlt(attachedImageAlt(m, authorHandle));
+      parts.push(`![${alt}](${m.url})`);
     }
     if (m.type === "video" || m.type === "animated_gif") {
-      if (m.url) parts.push(`![](${m.url})`);
+      if (m.url) {
+        const alt = markdownImageAlt(attachedVideoAlt(m, authorHandle));
+        parts.push(`![${alt}](${m.url})`);
+      }
       parts.push(`[Watch on X](${watchOnXUrl})`);
     }
   }
@@ -102,12 +131,12 @@ function tweetNodeToPlainExport(tweet: TweetExportNode): string {
     core = appendQuotedTweetExport(core, tweet.quotedTweet);
   }
 
-  return appendMediaMarkdown(core, tweet.media, tweetStatusUrl(tweet)).trim();
-}
-
-function firstPhotoUrl(media: Media[]): string | undefined {
-  const photo = media.find((m) => m.type === "photo");
-  return photo?.url;
+  return appendMediaMarkdown(
+    core,
+    tweet.media,
+    tweetStatusUrl(tweet),
+    tweet.author.screenName,
+  ).trim();
 }
 
 function deriveExportTitle(bookmark: Bookmark): string | undefined {
@@ -167,10 +196,8 @@ export function resolveReaderExportArticle(
     options?.includeThreadInExport ?? false,
   );
   const title = deriveExportTitle(bookmark);
-  const coverImageUrl = firstPhotoUrl(bookmark.media);
   return {
     plainText,
     ...(title ? { title } : {}),
-    ...(coverImageUrl ? { coverImageUrl } : {}),
   };
 }

@@ -57,9 +57,11 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
 
       <pre><code>totem-export-YYYY-MM-DD.zip
 ├── manifest.json
-├── README.md
+├── readme.md
 ├── bookmarks.csv
-├── bookmarks.md
+├── bookmarks/
+│   ├── 01-bookmark-title.md
+│   └── 02-another-bookmark-title.md
 └── data/
     ├── bookmarks-2024.jsonl
     ├── bookmarks-2025.jsonl
@@ -73,9 +75,9 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
         </thead>
         <tbody>
           <tr><td><code>manifest.json</code></td><td>Export metadata, version info, SHA-256 checksums</td></tr>
-          <tr><td><code>README.md</code></td><td>Plain-English guide (~30 lines)</td></tr>
+          <tr><td><code>readme.md</code></td><td>Index of every exported bookmark and plain-English guide</td></tr>
           <tr><td><code>bookmarks.csv</code></td><td>Spreadsheet-friendly view (RFC 4180, UTF-8 + BOM)</td></tr>
-          <tr><td><code>bookmarks.md</code></td><td>Human-readable Markdown (one heading per bookmark)</td></tr>
+          <tr><td><code>bookmarks/*.md</code></td><td>Human-readable Markdown, one file per bookmark</td></tr>
           <tr><td><code>data/*.jsonl</code></td><td>Canonical data &mdash; the <strong>only</strong> source the importer reads</td></tr>
         </tbody>
       </table>
@@ -119,7 +121,11 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
   },
   "derived": {
     "csv": "bookmarks.csv",
-    "markdown": "bookmarks.md"
+    "markdown_index": "readme.md",
+    "markdown_files": [
+      "bookmarks/01-first-bookmark.md",
+      "bookmarks/02-second-bookmark.md"
+    ]
   },
   "checksums": {
     "data/bookmarks-2024.jsonl": "sha256:ab12…",
@@ -128,7 +134,9 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
     "data/highlights.jsonl": "sha256:78ab…",
     "data/reading-progress.jsonl": "sha256:cd90…",
     "bookmarks.csv": "sha256:11aa…",
-    "bookmarks.md": "sha256:22bb…"
+    "readme.md": "sha256:22bb…",
+    "bookmarks/01-first-bookmark.md": "sha256:33cc…",
+    "bookmarks/02-second-bookmark.md": "sha256:44dd…"
   }
 }`}</code></pre>
 
@@ -151,7 +159,8 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
           <tr><td><code>counts.*</code></td><td><code>number</code></td><td>Row counts per store: <code>bookmarks</code>, <code>details</code>, <code>highlights</code>, <code>reading_progress</code>.</td></tr>
           <tr><td><code>shards.*</code></td><td><code>string[]</code></td><td>Paths to JSONL files for each store. Bookmarks are year-sharded (<code>data/bookmarks-YYYY.jsonl</code>).</td></tr>
           <tr><td><code>derived.csv</code></td><td><code>string</code></td><td>Path to the CSV file. Always <code>"bookmarks.csv"</code>.</td></tr>
-          <tr><td><code>derived.markdown</code></td><td><code>string</code></td><td>Path to the Markdown file. Always <code>"bookmarks.md"</code>.</td></tr>
+          <tr><td><code>derived.markdown_index</code></td><td><code>string</code></td><td>Path to the Markdown index. Always <code>"readme.md"</code>.</td></tr>
+          <tr><td><code>derived.markdown_files</code></td><td><code>string[]</code></td><td>Paths to per-bookmark Markdown files under <code>bookmarks/</code>.</td></tr>
           <tr><td><code>checksums.*</code></td><td><code>string</code></td><td>SHA-256 hex digest prefixed <code>sha256:</code> for each data and derived file. Verified on import.</td></tr>
         </tbody>
       </table>
@@ -430,8 +439,9 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
       <h2 id="markdown">Markdown format</h2>
 
       <p>
-        <code>bookmarks.md</code> is a plain Markdown file readable in any editor. One <code>##</code> heading
-        per bookmark, ordered by <code>bookmarkedAt</code> descending (newest first).
+        <code>readme.md</code> is a Markdown index linking to one file per bookmark under
+        <code>bookmarks/</code>. Bookmark files are ordered by <code>bookmarkedAt</code> descending
+        (newest first), with zero-padded numeric prefixes to keep filenames sortable.
       </p>
 
       <h3>Structure</h3>
@@ -440,23 +450,29 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
 
 Generated 2026-05-12 from @yourhandle.
 
+## Bookmarks
+
+- [First bookmark](bookmarks/0001-first-bookmark.md) · [Open on X](https://x.com/…)
+- [Second bookmark](bookmarks/0002-second-bookmark.md) · [Open on X](https://x.com/…)
+
 ---
 
-## @author — "first 60 chars of text…"
+# First bookmark
+
+By Author Name (@author)
 
 > tweet body, threads inline if hydrated
 
-Saved 2026-05-10 · 4 photos · Thread · [Open on X](https://x.com/…)
+Exported 2026-05-12 · [Open on X](https://x.com/…)
 
 ---`}</code></pre>
 
       <h3>Formatting rules</h3>
       <ul>
-        <li>Header line uses a localized bookmark count (e.g. <code>3,000</code>).</li>
-        <li>Per-bookmark title: first line of tweet text, truncated at 60 characters with ellipsis. Falls back to <code>(No text)</code>.</li>
-        <li>Tweet body is blockquoted (each line prefixed with <code>&gt; </code>).</li>
-        <li>Metadata line: saved date, media summary (e.g. <code>4 photos</code>, <code>1 video</code>), <code>Thread</code> label if applicable, link to X.</li>
-        <li>Bookmarks are separated by <code>---</code> horizontal rules.</li>
+        <li><code>readme.md</code> uses a localized bookmark count (e.g. <code>3,000</code>) and links to every bookmark file.</li>
+        <li>Per-bookmark filenames use a zero-padded ordinal and a slug generated from the article title or first line of tweet text.</li>
+        <li>Bookmark Markdown is rendered with the same structure as Totem's reader Copy Markdown export.</li>
+        <li>Image Markdown includes source alt text when available and a descriptive fallback when X did not provide alt text.</li>
       </ul>
 
       <!-- ─── RE-IMPORT ──────────────────────────────────────────── -->

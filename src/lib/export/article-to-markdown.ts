@@ -64,6 +64,18 @@ function stripMarkdownEntityCode(markdown: string): string {
     .replace(/\n?```$/, "");
 }
 
+function markdownImageAlt(value: string): string {
+  return value
+    .replace(/[\r\n]+/g, " ")
+    .replace(/\\/g, "\\\\")
+    .replace(/]/g, "\\]")
+    .trim();
+}
+
+function markdownImage(url: string, alt: string): string {
+  return `![${markdownImageAlt(alt)}](${url})`;
+}
+
 function formatBlockquoteMarkdown(content: string): string {
   const lines = content.split("\n");
   return lines.map((line) => `> ${line}`).join("\n");
@@ -110,7 +122,7 @@ function blocksToMarkdown(
           if (typeof videoUrl === "string" && videoUrl) {
             const parts: string[] = [];
             if (typeof imageUrl === "string" && imageUrl) {
-              parts.push(`![](${imageUrl})`);
+              parts.push(markdownImage(imageUrl, "Video preview"));
             }
             if (watchOnXUrl) {
               parts.push(`[Watch on X](${watchOnXUrl})`);
@@ -121,7 +133,14 @@ function blocksToMarkdown(
             break;
           }
           if (typeof imageUrl === "string" && imageUrl) {
-            out.push(`![](${imageUrl})`);
+            const alt =
+              String(
+                entity.data?.altText ||
+                  entity.data?.imageAlt ||
+                  entity.data?.alt ||
+                  "",
+              ).trim() || "Media attachment";
+            out.push(markdownImage(imageUrl, alt));
             break;
           }
         }
@@ -245,7 +264,12 @@ export function articleToMarkdown(
     ? `# ${article.title.trim()}\n\n`
     : "";
 
-  const coverPart = coverImageUrl ? `![](${coverImageUrl})\n\n` : "";
+  const coverAlt = article.title?.trim()
+    ? `Cover image for ${article.title.trim()}`
+    : "Cover image";
+  const coverPart = coverImageUrl
+    ? `${markdownImage(coverImageUrl, coverAlt)}\n\n`
+    : "";
 
   if (hasBlocks) {
     const body = blocksToMarkdown(
@@ -255,13 +279,13 @@ export function articleToMarkdown(
       meta?.postUrl,
     );
     const combined = `${metaBlock}${titlePart}${coverPart}${body}`.trimEnd();
-  return combined ? combined + "\n" : "";
+    return combined ? combined + "\n" : "";
   }
 
   if (headings.length === 0) {
     const body = richTextArticleMarkdown(plainText);
     const combined = `${metaBlock}${titlePart}${coverPart}${body}`.trimEnd();
-  return combined ? combined + "\n" : "";
+    return combined ? combined + "\n" : "";
   }
 
   const body = buildHeadingChunksMarkdown(

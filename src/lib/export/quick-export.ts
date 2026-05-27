@@ -1,15 +1,17 @@
 import { makeZip } from "client-zip";
-import type { Bookmark } from "../../types";
-import { buildSyntheticExportPlainText } from "./tweet-export";
+import type { Bookmark, TweetDetailCache } from "../../types";
+import { getArticleMarkdownString } from "./article-download";
+import { slugifyArticleBasename } from "./article-filename";
+import { resolveReaderExportArticle } from "./tweet-export";
 import {
   getAllBookmarks,
   getAllTweetDetails,
   getAllHighlights,
   getAllReadingProgress,
-  getDetailedTweetIds,
 } from "../../db";
 import { DB_VERSION } from "../constants/db";
 import { stripCardUrlsFromTweetText } from "../tweet-text";
+import { sortIndexToTimestamp } from "../time";
 
 const APP_VERSION = "1.1.24";
 
@@ -45,6 +47,16 @@ function yearFromMs(ms: number): string {
   return new Date(ms).getUTCFullYear().toString();
 }
 
+function bookmarkSavedAtMs(bookmark: Bookmark): number {
+  try {
+    const savedAt = sortIndexToTimestamp(bookmark.sortIndex);
+    if (Number.isFinite(savedAt)) return savedAt;
+  } catch {
+    // Fall back to tweet creation time for legacy or malformed sort indexes.
+  }
+  return bookmark.createdAt;
+}
+
 function redactHandle(handle: string): string {
   if (handle.length <= 4) return `@${handle[0]}***`;
   return `@${handle[0]}***${handle.slice(-4)}`;
@@ -70,8 +82,6 @@ function quotedTweetUrl(bookmark: Bookmark): string {
   return `https://x.com/${qt.author.screenName}/status/${qt.tweetId}`;
 }
 
-// ── CSV ──────────────────────────────────────────────────────────────
-
 const CSV_COLUMNS = [
   "tweet_id",
   "tweet_url",
@@ -90,11 +100,12 @@ const BOM = "﻿";
 
 function buildCsv(
   bookmarks: Bookmark[],
-  detailedIds: Set<string>,
+  fullThreadIds: Set<string>,
 ): string {
   const lines: string[] = [BOM + csvRow([...CSV_COLUMNS])];
   for (const b of bookmarks) {
     const text = stripCardUrlsFromTweetText(b.text, b.urls).trim();
+    const savedAt = bookmarkSavedAtMs(b);
     lines.push(
       csvRow([
         b.tweetId,
@@ -103,93 +114,159 @@ function buildCsv(
         b.author.name,
         text,
         isoFromMs(b.createdAt),
-        isoFromMs(b.createdAt),
+        isoFromMs(savedAt),
         mediaUrlsJoined(b),
         quotedTweetUrl(b),
         String(b.isThread),
-        String(detailedIds.has(b.tweetId)),
+        String(fullThreadIds.has(b.tweetId)),
       ]),
     );
   }
   return lines.join("");
 }
 
-// ── Markdown ─────────────────────────────────────────────────────────
-
-function truncateTitle(text: string, max = 60): string {
+function truncateTitle(text: string, max = 90): string {
   const first = text.split("\n")[0].trim();
   if (!first) return "(No text)";
   return first.length <= max ? first : `${first.slice(0, max - 1)}…`;
 }
 
-function mediaSummary(bookmark: Bookmark): string {
-  const photos = bookmark.media.filter((m) => m.type === "photo").length;
-  const videos = bookmark.media.filter(
-    (m) => m.type === "video" || m.type === "animated_gif",
-  ).length;
-  const parts: string[] = [];
-  if (photos) parts.push(`${photos} photo${photos > 1 ? "s" : ""}`);
-  if (videos) parts.push(`${videos} video${videos > 1 ? "s" : ""}`);
-  return parts.join(" · ");
+function readmeLinkText(text: string): string {
+  return text.replace(/\\/g, "\\\\").replace(/]/g, "\\]");
 }
 
-function buildMarkdown(
-  bookmarks: Bookmark[],
-  handle: string,
+interface BookmarkMarkdownFile {
+  path: string;
+  title: string;
+  sourceUrl: string;
+  bytes: Uint8Array;
+}
+
+function bookmarkMarkdownTitle(bookmark: Bookmark): string {
+  return (
+    bookmark.article?.title?.trim() ||
+    truncateTitle(stripCardUrlsFromTweetText(bookmark.text, bookmark.urls))
+  );
+}
+
+function makeBookmarkMarkdownPath(
+  bookmark: Bookmark,
+  title: string,
+  index: number,
+  ordinalWidth: number,
+  usedPaths: Set<string>,
 ): string {
-  const count = bookmarks.length.toLocaleString("en-US");
-  const today = dateFromMs(Date.now());
-  const lines: string[] = [
-    `# Totem export — ${count} bookmarks\n`,
-    `\nGenerated ${today} from @${handle}.\n`,
-    `\n---\n`,
-  ];
-
-  for (const b of bookmarks) {
-    const body = buildSyntheticExportPlainText(b, []);
-    const title = truncateTitle(
-      stripCardUrlsFromTweetText(b.text, b.urls),
-    );
-    const quoted = body
-      .split("\n")
-      .map((line) => `> ${line}`)
-      .join("\n");
-    const meta: string[] = [`Saved ${dateFromMs(b.createdAt)}`];
-    const media = mediaSummary(b);
-    if (media) meta.push(media);
-    if (b.isThread) meta.push("Thread");
-
-    lines.push(
-      `\n## @${b.author.screenName} — "${title}"\n`,
-      `\n${quoted}\n`,
-      `\n${meta.join(" · ")} · [Open on X](${tweetUrl(b)})\n`,
-      `\n---\n`,
-    );
+  const titleSlug = slugifyArticleBasename({
+    title,
+    plainText: stripCardUrlsFromTweetText(bookmark.text, bookmark.urls),
+  });
+  const ordinal = String(index + 1).padStart(ordinalWidth, "0");
+  const base = `${ordinal}-${titleSlug}`;
+  let path = `bookmarks/${base}.md`;
+  if (!usedPaths.has(path)) {
+    usedPaths.add(path);
+    return path;
   }
 
-  return lines.join("");
+  path = `bookmarks/${base}-${bookmark.tweetId}.md`;
+  let suffix = 2;
+  while (usedPaths.has(path)) {
+    path = `bookmarks/${base}-${bookmark.tweetId}-${suffix}.md`;
+    suffix++;
+  }
+  usedPaths.add(path);
+  return path;
 }
 
-// ── README ───────────────────────────────────────────────────────────
+function buildBookmarkMarkdownFiles(
+  bookmarks: Bookmark[],
+  details: TweetDetailCache[],
+  encoder: TextEncoder,
+  exportedAtLabel: string,
+): BookmarkMarkdownFile[] {
+  const detailsByTweetId = new Map(
+    details.map((detail) => [detail.tweetId, detail]),
+  );
+  const usedPaths = new Set<string>();
+  const ordinalWidth = Math.max(2, String(bookmarks.length).length);
 
-function buildReadme(handle: string): string {
-  return `# Totem export
+  return bookmarks.map((bookmark, index) => {
+    const detail = detailsByTweetId.get(bookmark.tweetId);
+    const exportBookmark = detail?.focalTweet
+      ? {
+          ...detail.focalTweet,
+          sortIndex: bookmark.sortIndex,
+          bookmarked: bookmark.bookmarked,
+        }
+      : bookmark;
+    const article = resolveReaderExportArticle(
+      exportBookmark,
+      detail?.thread ?? [],
+      { includeThreadInExport: true },
+    );
+    const sourceUrl = tweetUrl(exportBookmark);
+    const body = getArticleMarkdownString(article, {
+      authorProfileImageUrl: exportBookmark.author.profileImageUrl,
+      metadata: {
+        postUrl: sourceUrl,
+        exportedAtLabel,
+        authorName: exportBookmark.author.name,
+        authorHandle: exportBookmark.author.screenName,
+      },
+    });
+    const title = article.title?.trim() || bookmarkMarkdownTitle(exportBookmark);
+    const path = makeBookmarkMarkdownPath(
+      exportBookmark,
+      title,
+      index,
+      ordinalWidth,
+      usedPaths,
+    );
 
-This ZIP was exported from Totem by @${handle}.
+    return {
+      path,
+      title,
+      sourceUrl,
+      bytes: encoder.encode(body),
+    };
+  });
+}
+
+function buildReadme(
+  handle: string,
+  bookmarkFiles: BookmarkMarkdownFile[],
+): string {
+  const count = bookmarkFiles.length.toLocaleString("en-US");
+  const today = dateFromMs(Date.now());
+  const links = bookmarkFiles
+    .map(
+      (file) =>
+        `- [${readmeLinkText(file.title)}](${file.path}) · [Open on X](${file.sourceUrl})`,
+    )
+    .join("\n");
+
+  return `# Totem export — ${count} bookmarks
+
+Generated ${today} from @${handle}.
 
 ## What's inside
 
 | File | Purpose |
 |------|---------|
 | bookmarks.csv | Opens in Excel, Sheets, Notion — one row per bookmark |
-| bookmarks.md | Human-readable — one heading per bookmark |
+| readme.md | Index of every exported bookmark |
+| bookmarks/*.md | One Markdown file per bookmark, rendered like the reader's Copy Markdown export |
 | data/*.jsonl | Canonical data — used for re-import into Totem |
 | manifest.json | Export metadata, checksums, counts |
+
+## Bookmarks
+
+${links || "No bookmarks exported."}
 
 ## How to re-import
 
 1. Open Totem on any Chrome install
-2. Go to Settings → Storage → Import
+2. Use the Import link shown when your library is empty
 3. Drop this entire ZIP file — the importer reads \`data/*.jsonl\` only
 
 CSV and Markdown are for your convenience. The importer ignores them.
@@ -204,8 +281,6 @@ This file contains your X bookmark data. Treat it like your X account data.
 `;
 }
 
-// ── Main pipeline ────────────────────────────────────────────────────
-
 export interface ExportAccountInfo {
   userId: string;
   handle: string;
@@ -218,34 +293,67 @@ export interface QuickExportResult {
   readingProgressCount: number;
 }
 
+function hasSaveFilePicker(): boolean {
+  return typeof window !== "undefined" && typeof window.showSaveFilePicker === "function";
+}
+
+async function openWritable(
+  suggestedName: string,
+): Promise<{ kind: "fsa"; dest: FileSystemWritableFileStream } | { kind: "blob" }> {
+  if (hasSaveFilePicker()) {
+    const fileHandle = await window.showSaveFilePicker({
+      suggestedName,
+      types: [
+        {
+          description: "ZIP archive",
+          accept: { "application/zip": [".zip"] },
+        },
+      ],
+    });
+    const dest = await fileHandle.createWritable();
+    return { kind: "fsa", dest };
+  }
+  return { kind: "blob" };
+}
+
+function downloadBlob(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
+function fullThreadIdsFromDetails(details: TweetDetailCache[]): Set<string> {
+  return new Set(
+    details
+      .filter((detail) => detail.detailsStatus !== "unavailable")
+      .map((detail) => detail.tweetId),
+  );
+}
+
 export async function runQuickExport(
   account: ExportAccountInfo,
 ): Promise<QuickExportResult> {
   const today = dateFromMs(Date.now());
-  const fileHandle = await window.showSaveFilePicker({
-    suggestedName: `totem-export-${today}.zip`,
-    types: [
-      {
-        description: "ZIP archive",
-        accept: { "application/zip": [".zip"] },
-      },
-    ],
-  });
-  const dest = await fileHandle.createWritable();
+  const filename = `totem-export-${today}.zip`;
+  const target = await openWritable(filename);
 
   try {
     const bookmarks = await getAllBookmarks();
     const details = await getAllTweetDetails();
     const highlights = await getAllHighlights();
     const readingProgress = await getAllReadingProgress();
-    const detailedIds = await getDetailedTweetIds();
+    const fullThreadIds = fullThreadIdsFromDetails(details);
 
     const encoder = new TextEncoder();
 
-    // Year-sharded bookmark JSONL
     const bookmarksByYear = new Map<string, Bookmark[]>();
     for (const b of bookmarks) {
-      const year = yearFromMs(b.createdAt);
+      const year = yearFromMs(bookmarkSavedAtMs(b));
       let arr = bookmarksByYear.get(year);
       if (!arr) {
         arr = [];
@@ -274,21 +382,29 @@ export async function runQuickExport(
       encodeJsonl(readingProgress),
     );
 
-    const csvContent = buildCsv(bookmarks, detailedIds);
+    const csvContent = buildCsv(bookmarks, fullThreadIds);
     const csvBytes = encoder.encode(csvContent);
 
-    const mdContent = buildMarkdown(bookmarks, account.handle);
-    const mdBytes = encoder.encode(mdContent);
+    const bookmarkMarkdownFiles = buildBookmarkMarkdownFiles(
+      bookmarks,
+      details,
+      encoder,
+      new Date().toLocaleString(),
+    );
 
-    // SHA256 checksums
     const checksums: Record<string, string> = {};
     for (const [name, data] of dataFiles) {
       checksums[name] = `sha256:${await sha256hex(data)}`;
     }
     checksums["bookmarks.csv"] = `sha256:${await sha256hex(csvBytes)}`;
-    checksums["bookmarks.md"] = `sha256:${await sha256hex(mdBytes)}`;
+    for (const file of bookmarkMarkdownFiles) {
+      checksums[file.path] = `sha256:${await sha256hex(file.bytes)}`;
+    }
+    const readmeBytes = encoder.encode(
+      buildReadme(account.handle, bookmarkMarkdownFiles),
+    );
+    checksums["readme.md"] = `sha256:${await sha256hex(readmeBytes)}`;
 
-    // Manifest
     const accountIdHash = `sha256:${await sha256hex(encoder.encode(account.userId))}`;
     const shardNames = Array.from(bookmarksByYear.keys())
       .sort()
@@ -324,15 +440,14 @@ export async function runQuickExport(
       },
       derived: {
         csv: "bookmarks.csv",
-        markdown: "bookmarks.md",
+        markdown_index: "readme.md",
+        markdown_files: bookmarkMarkdownFiles.map((file) => file.path),
       },
       checksums,
     };
 
     const manifestBytes = encoder.encode(JSON.stringify(manifest, null, 2));
-    const readmeBytes = encoder.encode(buildReadme(account.handle));
 
-    // Assemble ZIP entries
     const entries: Array<{
       input: Uint8Array;
       name: string;
@@ -341,16 +456,23 @@ export async function runQuickExport(
     const now = new Date();
 
     entries.push({ input: manifestBytes, name: "manifest.json", lastModified: now });
-    entries.push({ input: readmeBytes, name: "README.md", lastModified: now });
+    entries.push({ input: readmeBytes, name: "readme.md", lastModified: now });
     entries.push({ input: csvBytes, name: "bookmarks.csv", lastModified: now });
-    entries.push({ input: mdBytes, name: "bookmarks.md", lastModified: now });
 
     for (const [name, data] of dataFiles) {
       entries.push({ input: data, name, lastModified: now });
     }
+    for (const file of bookmarkMarkdownFiles) {
+      entries.push({ input: file.bytes, name: file.path, lastModified: now });
+    }
 
     const zipStream = makeZip(entries);
-    await zipStream.pipeTo(dest);
+    if (target.kind === "fsa") {
+      await zipStream.pipeTo(target.dest);
+    } else {
+      const blob = await new Response(zipStream).blob();
+      downloadBlob(blob, filename);
+    }
 
     return {
       bookmarkCount: bookmarks.length,
@@ -359,7 +481,9 @@ export async function runQuickExport(
       readingProgressCount: readingProgress.length,
     };
   } catch (error) {
-    await dest.abort().catch(() => {});
+    if (target.kind === "fsa") {
+      await target.dest.abort().catch(() => {});
+    }
     throw error;
   }
 }
