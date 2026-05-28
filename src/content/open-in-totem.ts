@@ -136,9 +136,11 @@ function positionTooltip(button: HTMLElement, tooltip: HTMLDivElement) {
   let left = buttonRect.left + buttonRect.width / 2 - tipRect.width / 2;
   left = Math.max(padding, Math.min(left, viewportWidth - tipRect.width - padding));
 
-  tooltip.style.left = `${Math.round(left)}px`;
-  tooltip.style.top = `${Math.round(top)}px`;
-  tooltip.style.visibility = "";
+  Object.assign(tooltip.style, {
+    left: `${Math.round(left)}px`,
+    top: `${Math.round(top)}px`,
+    visibility: "",
+  });
 }
 
 function showTooltip(button: HTMLButtonElement) {
@@ -185,13 +187,20 @@ function findStatusLink(article: HTMLElement): HTMLAnchorElement | null {
   const links = querySameTweet<HTMLAnchorElement>(article, 'a[href*="/status/"]');
   if (links.length === 0) return null;
 
-  const candidates = links
-    .map((link) => ({
+  const candidates: Array<{
+    link: HTMLAnchorElement;
+    tweetId: string | null;
+    hasTime: boolean;
+  }> = [];
+  for (const link of links) {
+    const tweetId = parseTweetIdFromHref(link.getAttribute("href") || "");
+    if (!tweetId) continue;
+    candidates.push({
       link,
-      tweetId: parseTweetIdFromHref(link.getAttribute("href") || ""),
+      tweetId,
       hasTime: Boolean(link.querySelector("time")),
-    }))
-    .filter((item) => Boolean(item.tweetId));
+    });
+  }
 
   if (candidates.length === 0) return null;
 

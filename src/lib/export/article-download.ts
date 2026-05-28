@@ -93,12 +93,7 @@ export function printArticleAsPdf(
 
   const iframe = document.createElement("iframe");
   iframe.setAttribute("aria-hidden", "true");
-  iframe.style.position = "fixed";
-  iframe.style.right = "0";
-  iframe.style.bottom = "0";
-  iframe.style.width = "0";
-  iframe.style.height = "0";
-  iframe.style.border = "none";
+  iframe.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:none;";
   iframe.srcdoc = html;
   document.body.appendChild(iframe);
 

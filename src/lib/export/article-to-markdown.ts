@@ -51,10 +51,11 @@ function buildYamlFrontmatter(
 }
 
 function fenceCodeBlock(code: string): string {
-  let fence = "```";
-  while (code.includes(fence)) {
-    fence += "`";
-  }
+  const longestBacktickRun = Math.max(
+    0,
+    ...Array.from(code.matchAll(/`+/g), (match) => match[0].length),
+  );
+  const fence = "`".repeat(Math.max(3, longestBacktickRun + 1));
   return `${fence}\n${code}\n${fence}`;
 }
 

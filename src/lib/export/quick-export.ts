@@ -328,11 +328,11 @@ function downloadBlob(blob: Blob, filename: string): void {
 }
 
 function fullThreadIdsFromDetails(details: TweetDetailCache[]): Set<string> {
-  return new Set(
-    details
-      .filter((detail) => detail.detailsStatus !== "unavailable")
-      .map((detail) => detail.tweetId),
-  );
+  const ids = new Set<string>();
+  for (const detail of details) {
+    if (detail.detailsStatus !== "unavailable") ids.add(detail.tweetId);
+  }
+  return ids;
 }
 
 export async function runQuickExport(
@@ -343,10 +343,12 @@ export async function runQuickExport(
   const target = await openWritable(filename);
 
   try {
-    const bookmarks = await getAllBookmarks();
-    const details = await getAllTweetDetails();
-    const highlights = await getAllHighlights();
-    const readingProgress = await getAllReadingProgress();
+    const [bookmarks, details, highlights, readingProgress] = await Promise.all([
+      getAllBookmarks(),
+      getAllTweetDetails(),
+      getAllHighlights(),
+      getAllReadingProgress(),
+    ]);
     const fullThreadIds = fullThreadIdsFromDetails(details);
 
     const encoder = new TextEncoder();
@@ -392,22 +394,39 @@ export async function runQuickExport(
       new Date().toLocaleString(),
     );
 
-    const checksums: Record<string, string> = {};
-    for (const [name, data] of dataFiles) {
-      checksums[name] = `sha256:${await sha256hex(data)}`;
-    }
-    checksums["bookmarks.csv"] = `sha256:${await sha256hex(csvBytes)}`;
-    for (const file of bookmarkMarkdownFiles) {
-      checksums[file.path] = `sha256:${await sha256hex(file.bytes)}`;
-    }
     const readmeBytes = encoder.encode(
       buildReadme(account.handle, bookmarkMarkdownFiles),
     );
-    checksums["readme.md"] = `sha256:${await sha256hex(readmeBytes)}`;
+    const [
+      dataChecksumEntries,
+      csvChecksum,
+      markdownChecksumEntries,
+      readmeChecksum,
+      accountIdHash,
+    ] = await Promise.all([
+      Promise.all(
+        Array.from(dataFiles, async ([name, data]) =>
+          [name, `sha256:${await sha256hex(data)}`] as const,
+        ),
+      ),
+      sha256hex(csvBytes).then((hash) => `sha256:${hash}`),
+      Promise.all(
+        bookmarkMarkdownFiles.map(async (file) =>
+          [file.path, `sha256:${await sha256hex(file.bytes)}`] as const,
+        ),
+      ),
+      sha256hex(readmeBytes).then((hash) => `sha256:${hash}`),
+      sha256hex(encoder.encode(account.userId)).then((hash) => `sha256:${hash}`),
+    ]);
 
-    const accountIdHash = `sha256:${await sha256hex(encoder.encode(account.userId))}`;
+    const checksums: Record<string, string> = {};
+    for (const [name, checksum] of dataChecksumEntries) checksums[name] = checksum;
+    checksums["bookmarks.csv"] = csvChecksum;
+    for (const [name, checksum] of markdownChecksumEntries) checksums[name] = checksum;
+    checksums["readme.md"] = readmeChecksum;
+
     const shardNames = Array.from(bookmarksByYear.keys())
-      .sort()
+      .toSorted()
       .map((year) => `data/bookmarks-${year}.jsonl`);
 
     const manifest = {

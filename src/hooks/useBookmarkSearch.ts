@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { searchBookmarksDetailed } from "../lib/search";
 import type { Bookmark } from "../types";
 import type { BookmarkSignals } from "../lib/search";
-import { SEARCH_DEBOUNCE_MS } from "../lib/constants";
+import { SEARCH_DEBOUNCE_MS } from "../lib/constants/timing";
 import { getBookmarkSignals } from "../db";
 import { subscribeToReaderActivity } from "../lib/reader-activity";
 

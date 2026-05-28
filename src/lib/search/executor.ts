@@ -57,7 +57,7 @@ export function runQuery({
 
   if (!trimmed) {
     // Operators-only query: return filtered bookmarks newest-first.
-    const sorted = [...filtered].sort((a, b) => b.createdAt - a.createdAt);
+    const sorted = filtered.toSorted((a, b) => b.createdAt - a.createdAt);
     return { results: sorted, ast: tree, queryTerms: new Set() };
   }
 

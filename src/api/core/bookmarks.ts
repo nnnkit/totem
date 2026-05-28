@@ -27,26 +27,24 @@ function runtimeError(response: RuntimeResponse): string {
 
 function normalizeBookmarkChangeEvents(value: unknown): BookmarkChangeEvent[] {
   if (!Array.isArray(value)) return [];
-  return value
-    .map((item, index) => {
-      const record = asRecord(item);
-      const type = asString(record?.type);
-      const tweetId = asString(record?.tweetId);
-      if (type !== "CreateBookmark" && type !== "DeleteBookmark") return null;
-      const at = toNumber(record?.at);
-      const source = asString(record?.source) || "unknown";
-      const id =
-        asString(record?.id) ||
-        `${type}-${at || Date.now()}-${tweetId || "unknown"}-${index}`;
-      return {
-        id,
-        type,
-        tweetId: tweetId || "",
-        at,
-        source,
-      };
-    })
-    .filter((event): event is BookmarkChangeEvent => event !== null);
+  return value.flatMap((item, index) => {
+    const record = asRecord(item);
+    const type = asString(record?.type);
+    const tweetId = asString(record?.tweetId);
+    if (type !== "CreateBookmark" && type !== "DeleteBookmark") return [];
+    const at = toNumber(record?.at);
+    const source = asString(record?.source) || "unknown";
+    const id =
+      asString(record?.id) ||
+      `${type}-${at || Date.now()}-${tweetId || "unknown"}-${index}`;
+    return [{
+      id,
+      type,
+      tweetId: tweetId || "",
+      at,
+      source,
+    }];
+  });
 }
 
 export async function fetchBookmarkPage(

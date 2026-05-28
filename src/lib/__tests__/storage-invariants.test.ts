@@ -24,6 +24,13 @@ const SOURCES = import.meta.glob("../../**/*.{ts,tsx}", {
   eager: true,
 }) as Record<string, string>;
 
+const WRITE_PATTERN =
+  /chrome\.storage\.local\.(?:set|remove)\s*\(\s*[\s\S]{0,400}?\)/g;
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 // Paths from import.meta.glob are relative to THIS test file:
 //   src/lib/__tests__/storage-invariants.test.ts
 // A glob of "../../**/*.{ts,tsx}" therefore returns paths like:
@@ -40,18 +47,19 @@ function normalizeToSrcRelative(globPath: string): string {
 }
 
 function readAllSourceFiles(): Array<{ path: string; content: string }> {
-  return Object.entries(SOURCES)
-    .filter(([path]) => {
-      const isTest =
-        path.includes(".test.ts") ||
-        path.includes(".test.tsx") ||
-        path.includes("__tests__/");
-      return !isTest;
-    })
-    .map(([path, content]) => ({
+  const files: Array<{ path: string; content: string }> = [];
+  for (const [path, content] of Object.entries(SOURCES)) {
+    const isTest =
+      path.includes(".test.ts") ||
+      path.includes(".test.tsx") ||
+      path.includes("__tests__/");
+    if (isTest) continue;
+    files.push({
       path: normalizeToSrcRelative(path),
       content,
-    }));
+    });
+  }
+  return files;
 }
 
 describe("Invariant #1 — single writer per persisted fact (ARCHITECTURE.md §16)", () => {
@@ -77,6 +85,12 @@ describe("Invariant #1 — single writer per persisted fact (ARCHITECTURE.md §1
     "totem_last_light_sync",
     "totem_light_sync_needed",
   ] as const;
+  const swOwnedKeyNameRe = new RegExp(
+    `\\b(?:${SW_OWNED_KEY_NAMES.map(escapeRegExp).join("|")})\\b`,
+  );
+  const swOwnedKeyStringRe = new RegExp(
+    `["'](?:${SW_OWNED_KEY_STRINGS.map(escapeRegExp).join("|")})["']`,
+  );
 
   // Files allowed to write these keys. Every entry needs a justification in
   // a comment. Adding to this list should be a deliberate architectural
@@ -99,18 +113,11 @@ describe("Invariant #1 — single writer per persisted fact (ARCHITECTURE.md §1
       // Find every chrome.storage.local.set({ ... }) or .remove(...) call,
       // then check if any SW-owned key (by name or by string literal) appears
       // syntactically nearby.
-      const writePattern =
-        /chrome\.storage\.local\.(?:set|remove)\s*\(\s*[\s\S]{0,400}?\)/g;
-      const matches = file.content.match(writePattern) ?? [];
+      const matches = file.content.match(WRITE_PATTERN) ?? [];
 
       for (const match of matches) {
         const touchesSwKey =
-          SW_OWNED_KEY_NAMES.some((name) =>
-            new RegExp(`\\b${name}\\b`).test(match),
-          ) ||
-          SW_OWNED_KEY_STRINGS.some((str) =>
-            match.includes(`"${str}"`) || match.includes(`'${str}'`),
-          );
+          swOwnedKeyNameRe.test(match) || swOwnedKeyStringRe.test(match);
         if (touchesSwKey) {
           violations.push(`${file.path}: ${match.slice(0, 120)}…`);
         }

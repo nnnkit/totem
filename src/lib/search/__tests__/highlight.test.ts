@@ -66,10 +66,10 @@ describe("highlightField", () => {
     expect(out).not.toBeNull();
     const joined = out!.segments.map((s) => s.text).join("");
     expect(joined).toContain("<script>");
+    const markTagPattern = /<\/?mark/;
     // No segment text starts with a literal HTML mark wrapper.
     for (const seg of out!.segments) {
-      expect(seg.text.includes("<mark")).toBe(false);
-      expect(seg.text.includes("</mark")).toBe(false);
+      expect(markTagPattern.test(seg.text)).toBe(false);
     }
   });
 });

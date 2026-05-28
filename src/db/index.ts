@@ -19,7 +19,7 @@ import {
   STORE_SAVED_SEARCHES as SAVED_SEARCHES_STORE_NAME,
   STORE_SEARCH_INDEX as SEARCH_INDEX_STORE_NAME,
   SEARCH_INDEX_KEY,
-} from "../lib/constants";
+} from "../lib/constants/db";
 import { LEGACY_IDB_DATABASE_NAME } from "../lib/storage-keys";
 
 interface XBookmarksDbSchema extends DBSchema {
@@ -281,13 +281,23 @@ async function migrateLegacyDatabaseIfNeeded(
     ? [LEGACY_IDB_DATABASE_NAME]
     : [DB_NAME, LEGACY_IDB_DATABASE_NAME];
 
-  for (const sourceName of migrationSourceNames) {
-    if (sourceName === dbName) continue;
-    const didMigrate = await migrateFromDatabase(db, sourceName).catch(() => false);
-    if (didMigrate) {
-      return;
-    }
+  await migrateFromFirstAvailableDatabase(db, dbName, migrationSourceNames);
+}
+
+async function migrateFromFirstAvailableDatabase(
+  db: IDBPDatabase<XBookmarksDbSchema>,
+  dbName: string,
+  sourceNames: string[],
+  index = 0,
+): Promise<boolean> {
+  const sourceName = sourceNames[index];
+  if (!sourceName) return false;
+  if (sourceName === dbName) {
+    return migrateFromFirstAvailableDatabase(db, dbName, sourceNames, index + 1);
   }
+  const didMigrate = await migrateFromDatabase(db, sourceName).catch(() => false);
+  if (didMigrate) return true;
+  return migrateFromFirstAvailableDatabase(db, dbName, sourceNames, index + 1);
 }
 
 async function getDb(): Promise<IDBPDatabase<XBookmarksDbSchema>> {
@@ -406,22 +416,20 @@ export async function deleteBookmarksByTweetIds(
   const highlightsStore = tx.objectStore(HIGHLIGHTS_STORE_NAME);
   const highlightTweetIndex = highlightsStore.index("tweetId");
 
-  for (const tweetId of uniqueIds) {
+  await Promise.all(uniqueIds.map(async (tweetId) => {
     const bookmarkIds = await tweetIndex.getAllKeys(IDBKeyRange.only(tweetId));
-    for (const bookmarkId of bookmarkIds) {
-      await bookmarkStore.delete(bookmarkId as string);
-    }
+    await Promise.all(bookmarkIds.map((bookmarkId) => bookmarkStore.delete(bookmarkId as string)));
     if (purgeHighlights) {
       const highlightIds = await highlightTweetIndex.getAllKeys(
         IDBKeyRange.only(tweetId),
       );
-      for (const hId of highlightIds) {
-        await highlightsStore.delete(hId as string);
-      }
+      await Promise.all(highlightIds.map((hId) => highlightsStore.delete(hId as string)));
     }
-    await detailStore.delete(tweetId);
-    await progressStore.delete(tweetId);
-  }
+    await Promise.all([
+      detailStore.delete(tweetId),
+      progressStore.delete(tweetId),
+    ]);
+  }));
 
   await tx.done;
 }
@@ -615,17 +623,21 @@ export async function getHighlightCountsByTweetIds(
   if (tweetIds.length === 0) return result;
   const db = await getDb();
   const index = db.transaction(HIGHLIGHTS_STORE_NAME, "readonly").store.index("tweetId");
-  for (const tweetId of tweetIds) {
+  const entries = await Promise.all(tweetIds.map(async (tweetId) => {
     const highlights = await index.getAll(IDBKeyRange.only(tweetId));
     if (highlights.length > 0) {
       const notes = highlights.filter((highlight) =>
         highlight.type === "note" || Boolean(highlight.note)
       ).length;
-      result.set(tweetId, {
+      return [tweetId, {
         highlights: highlights.length - notes,
         notes,
-      });
+      }] as const;
     }
+    return null;
+  }));
+  for (const entry of entries) {
+    if (entry) result.set(entry[0], entry[1]);
   }
   return result;
 }
@@ -688,8 +700,7 @@ export async function clearSearchIndexJson(): Promise<void> {
 }
 
 export async function findNextBookmarkNeedingHydration(): Promise<string | null> {
-  const detailedIds = await getDetailedTweetIds();
-  const db = await getDb();
+  const [detailedIds, db] = await Promise.all([getDetailedTweetIds(), getDb()]);
   const tx = db.transaction(STORE_NAME, "readonly");
   let cursor = await tx.store.openCursor();
   while (cursor) {
@@ -703,8 +714,7 @@ export async function findNextBookmarkNeedingHydration(): Promise<string | null>
 }
 
 export async function countBookmarksNeedingHydration(): Promise<number> {
-  const detailedIds = await getDetailedTweetIds();
-  const db = await getDb();
+  const [detailedIds, db] = await Promise.all([getDetailedTweetIds(), getDb()]);
   const tx = db.transaction(STORE_NAME, "readonly");
   let count = 0;
   let cursor = await tx.store.openCursor();

@@ -18,9 +18,10 @@ function sanitizeArticle(article: ArticleContent): void {
 
 function sanitizeUrls(urls: TweetUrl[]): void {
   for (const entry of urls) {
-    if (entry.card) {
-      if (entry.card.title) entry.card.title = decodeHtmlEntities(entry.card.title);
-      if (entry.card.description) entry.card.description = decodeHtmlEntities(entry.card.description);
+    const { card } = entry;
+    if (card) {
+      if (card.title) card.title = decodeHtmlEntities(card.title);
+      if (card.description) card.description = decodeHtmlEntities(card.description);
     }
   }
 }

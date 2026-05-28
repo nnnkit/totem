@@ -20,9 +20,11 @@ export function resolveBookmarkEventPlan(
   const deleteEvents = events.filter((e) => e.type === "DeleteBookmark");
   const createEvents = events.filter((e) => e.type === "CreateBookmark");
 
-  const idsToDelete = Array.from(
-    new Set(deleteEvents.map((e) => e.tweetId).filter(Boolean)),
-  );
+  const idsToDeleteSet = new Set<string>();
+  for (const event of deleteEvents) {
+    if (event.tweetId) idsToDeleteSet.add(event.tweetId);
+  }
+  const idsToDelete = Array.from(idsToDeleteSet);
 
   const needsPageFetch = createEvents.length > 0;
   const ackIds = events.map((e) => e.id);

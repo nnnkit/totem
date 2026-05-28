@@ -1,5 +1,5 @@
 import type { Bookmark } from "../types";
-import { RELATED_WEIGHTS } from "./constants";
+import { RELATED_WEIGHTS } from "./constants/scoring";
 
 function shuffle<T>(items: T[]): T[] {
   const next = items.slice();

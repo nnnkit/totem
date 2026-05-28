@@ -6,7 +6,7 @@ import {
   READING_WPM,
   ARTICLE_READING_WPM,
   MIN_READING_MINUTES,
-} from "./constants";
+} from "./constants/ui";
 
 export function toSingleLine(value: string): string {
   return value.replace(/\s+/g, " ").trim();
@@ -71,4 +71,3 @@ export function estimateReadingMinutes(bookmark: Bookmark): number {
 
   return Math.max(1, estimate);
 }
-

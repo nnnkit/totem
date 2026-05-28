@@ -1,3 +1,7 @@
+import { COMPACT_PREVIEW_MAX } from "./constants/ui";
+
+const compactNumberFormatter = new Intl.NumberFormat("en", { notation: "compact" });
+
 export function compactText(value: string): string {
   return value.replace(/[^\S\n]+/g, " ").replace(/\n{3,}/g, "\n\n").trim();
 }
@@ -25,8 +29,6 @@ export function normalizeText(value: string): string {
   return value.replace(/\s+/g, " ").trim();
 }
 
-import { COMPACT_PREVIEW_MAX } from "./constants";
-
 export function compactPreview(text: string, maxChars = COMPACT_PREVIEW_MAX): string {
   const value = text.replace(/\s+/g, " ").trim();
   if (value.length <= maxChars) return value;
@@ -34,7 +36,7 @@ export function compactPreview(text: string, maxChars = COMPACT_PREVIEW_MAX): st
 }
 
 export function formatCompactNumber(n: number): string {
-  return new Intl.NumberFormat("en", { notation: "compact" }).format(n);
+  return compactNumberFormatter.format(n);
 }
 
 const NAMED_ENTITIES: Record<string, string> = {

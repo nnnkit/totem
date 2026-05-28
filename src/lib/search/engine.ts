@@ -1,6 +1,6 @@
 import MiniSearch, { type Options, type SearchResult } from "minisearch";
 import type { Bookmark } from "../../types";
-import { SEARCH_BOOSTS } from "../constants";
+import { SEARCH_BOOSTS } from "../constants/scoring";
 import { expandCompound, processTerm, tokenize } from "./tokenize";
 import {
   toSearchableBookmark,

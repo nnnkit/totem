@@ -188,19 +188,20 @@ export async function validateImport(
     ...(manifest.shards.highlights || []),
     ...(manifest.shards.reading_progress || []),
   ];
-  for (const shard of allShards) {
+  const checksumResults = await Promise.all(allShards.map(async (shard) => {
     const expected = manifest.checksums?.[shard];
     if (!expected) {
-      return { ok: false, reason: "checksum_mismatch" };
+      return false;
     }
     const data = files[shard];
     if (!data) {
-      return { ok: false, reason: "checksum_mismatch" };
+      return false;
     }
     const actual = `sha256:${await sha256hex(data)}`;
-    if (actual !== expected) {
-      return { ok: false, reason: "checksum_mismatch" };
-    }
+    return actual === expected;
+  }));
+  if (checksumResults.some((ok) => !ok)) {
+    return { ok: false, reason: "checksum_mismatch" };
   }
 
   const encoder = new TextEncoder();
@@ -272,9 +273,11 @@ export async function runImport(
       }
     }
 
+    const batchWrites: Promise<void>[] = [];
     for (let i = 0; i < toInsert.length; i += BATCH_SIZE) {
-      await upsertBookmarks(toInsert.slice(i, i + BATCH_SIZE));
+      batchWrites.push(upsertBookmarks(toInsert.slice(i, i + BATCH_SIZE)));
     }
+    await Promise.all(batchWrites);
     onProgress?.({ store: "bookmarks", ...result.bookmarks, total });
   }
 
@@ -285,14 +288,16 @@ export async function runImport(
     const existingDetails = await getAllTweetDetails();
     const existingIds = new Set(existingDetails.map((d) => d.tweetId));
 
+    const toInsert: TweetDetailCache[] = [];
     for (const row of rows) {
       if (existingIds.has(row.tweetId)) {
         result.details.alreadyHad++;
       } else {
-        await upsertTweetDetailCache(row);
+        toInsert.push(row);
         result.details.added++;
       }
     }
+    await Promise.all(toInsert.map((row) => upsertTweetDetailCache(row)));
     onProgress?.({ store: "details", ...result.details, total });
   }
 
@@ -303,14 +308,16 @@ export async function runImport(
     const existingHighlights = await getAllHighlights();
     const existingIds = new Set(existingHighlights.map((h) => h.id));
 
+    const toInsert: Highlight[] = [];
     for (const row of rows) {
       if (existingIds.has(row.id)) {
         result.highlights.alreadyHad++;
       } else {
-        await upsertHighlight(row);
+        toInsert.push(row);
         result.highlights.added++;
       }
     }
+    await Promise.all(toInsert.map((row) => upsertHighlight(row)));
     onProgress?.({ store: "highlights", ...result.highlights, total });
   }
 
@@ -321,14 +328,16 @@ export async function runImport(
     const existingProgress = await getAllReadingProgress();
     const existingIds = new Set(existingProgress.map((p) => p.tweetId));
 
+    const toInsert: ReadingProgress[] = [];
     for (const row of rows) {
       if (existingIds.has(row.tweetId)) {
         result.readingProgress.alreadyHad++;
       } else {
-        await upsertReadingProgress(row);
+        toInsert.push(row);
         result.readingProgress.added++;
       }
     }
+    await Promise.all(toInsert.map((row) => upsertReadingProgress(row)));
     onProgress?.({ store: "reading_progress", ...result.readingProgress, total });
   }
 

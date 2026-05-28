@@ -54,11 +54,14 @@ async function getAccountDatabaseNames(): Promise<string[]> {
   }
   try {
     const databases = await indexedDB.databases();
-    return databases
-      .map((entry) => entry.name)
-      .filter((name): name is string =>
-        typeof name === "string" && name.startsWith(IDB_ACCOUNT_DATABASE_PREFIX),
-      );
+    const names: string[] = [];
+    for (const entry of databases) {
+      const { name } = entry;
+      if (typeof name === "string" && name.startsWith(IDB_ACCOUNT_DATABASE_PREFIX)) {
+        names.push(name);
+      }
+    }
+    return names;
   } catch {
     return [];
   }

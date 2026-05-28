@@ -366,10 +366,13 @@ describe("runImport", () => {
     expect(result.highlights.added).toBe(1);
     expect(result.readingProgress.added).toBe(1);
 
-    const storedBookmarks = await getAllBookmarks();
-    const storedDetails = await getAllTweetDetails();
-    const storedHighlights = await getAllHighlights();
-    const storedProgress = await getAllReadingProgress();
+    const [storedBookmarks, storedDetails, storedHighlights, storedProgress] =
+      await Promise.all([
+        getAllBookmarks(),
+        getAllTweetDetails(),
+        getAllHighlights(),
+        getAllReadingProgress(),
+      ]);
     expect(storedBookmarks.length).toBe(1);
     expect(storedDetails.length).toBe(1);
     expect(storedHighlights.length).toBe(1);
