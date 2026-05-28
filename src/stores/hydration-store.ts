@@ -346,36 +346,37 @@ export function createHydrationStore(deps: HydrationDeps = defaultDeps()) {
           }
 
           try {
+            if (signal?.aborted) break;
             const response = await deps.fetchDetail(tweetId);
 
-            if (signal?.aborted) break;
+            if (!signal?.aborted) {
+              if (response.error) {
+                const classified = classifyError(response.error);
 
-            if (response.error) {
-              const classified = classifyError(response.error);
-
-              if (classified.unavailableReason) {
-                await deps.cacheUnavailable(tweetId, classified.unavailableReason);
-                set((s) => ({
-                  processed: s.processed + 1,
-                  unavailable: s.unavailable + 1,
-                }));
-              } else if (classified.status === "paused-429") {
-                const pauseUntil = Date.now() + RATE_LIMIT_PAUSE_MS;
-                set({ status: "paused-429", pauseUntil });
-                writeSnapshotFromState(get());
-                await heartbeat(deps.holderId, deps.lockStorage);
-                await sleep(RATE_LIMIT_PAUSE_MS, signal);
-                if (signal?.aborted) break;
-                set({ status: "running", pauseUntil: 0 });
-              } else if (classified.status === "paused-auth") {
-                set({ status: "paused-auth" });
-                loopRunning = false;
-                writeSnapshotFromState(get());
-                return;
+                if (classified.unavailableReason) {
+                  await deps.cacheUnavailable(tweetId, classified.unavailableReason);
+                  set((s) => ({
+                    processed: s.processed + 1,
+                    unavailable: s.unavailable + 1,
+                  }));
+                } else if (classified.status === "paused-429") {
+                  const pauseUntil = Date.now() + RATE_LIMIT_PAUSE_MS;
+                  set({ status: "paused-429", pauseUntil });
+                  writeSnapshotFromState(get());
+                  if (signal?.aborted) break;
+                  await heartbeat(deps.holderId, deps.lockStorage);
+                  await sleep(RATE_LIMIT_PAUSE_MS, signal);
+                  set({ status: "running", pauseUntil: 0 });
+                } else if (classified.status === "paused-auth") {
+                  set({ status: "paused-auth" });
+                  loopRunning = false;
+                  writeSnapshotFromState(get());
+                  return;
+                }
+              } else {
+                await deps.cacheDetail(tweetId, response.data);
+                set((s) => ({ processed: s.processed + 1 }));
               }
-            } else {
-              await deps.cacheDetail(tweetId, response.data);
-              set((s) => ({ processed: s.processed + 1 }));
             }
           } catch {
             // Retryable fetch/cache failure; leave the bookmark unhydrated.

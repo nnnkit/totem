@@ -518,8 +518,10 @@ export async function startAuthCaptureSession(
     }).onChanged;
   const interactive = options.interactive === true;
   const force = options.force === true;
-  const liveUserId = await readLiveTwidUserId(cookies);
-  const stored = await storage.get(["totem_auth_headers"]);
+  const [liveUserId, stored] = await Promise.all([
+    readLiveTwidUserId(cookies),
+    storage.get(["totem_auth_headers"]),
+  ]);
 
   if (
     !force &&

@@ -124,8 +124,10 @@ describe("fake chrome tabs", () => {
   });
 
   it("creates tabs with incrementing IDs", async () => {
-    const tab1 = await fakeChrome.tabs.create({ url: "https://x.com" });
-    const tab2 = await fakeChrome.tabs.create({ url: "https://example.com" });
+    const [tab1, tab2] = await Promise.all([
+      fakeChrome.tabs.create({ url: "https://x.com" }),
+      fakeChrome.tabs.create({ url: "https://example.com" }),
+    ]);
     expect(tab1.id).toBe(1);
     expect(tab2.id).toBe(2);
   });

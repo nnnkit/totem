@@ -332,18 +332,19 @@ export async function discoverQueryIdFromBundles(
 
   const scriptUrls = extractScriptUrls(html);
 
-  for (const url of scriptUrls) {
-    try {
-      const jsResp = await fetchFn(url);
-      if (!jsResp.ok) continue;
-      const text = await jsResp.text();
-      const qid = extractQueryIdForOperation(text, operationName);
-      if (qid) return qid;
-    } catch {
-      continue;
-    }
-  }
-  return null;
+  const queryIds = await Promise.all(
+    scriptUrls.map(async (url) => {
+      try {
+        const jsResp = await fetchFn(url);
+        if (!jsResp.ok) return null;
+        const text = await jsResp.text();
+        return extractQueryIdForOperation(text, operationName);
+      } catch {
+        return null;
+      }
+    }),
+  );
+  return queryIds.find((qid): qid is string => Boolean(qid)) ?? null;
 }
 
 /** Extract unique script URLs from HTML using multiple patterns. */
@@ -687,24 +688,33 @@ export async function discoverAllMissingQueryIds(
     const scriptUrls = extractScriptUrls(html);
     const remaining = new Set(stillMissing);
 
-    for (const url of scriptUrls) {
-      if (remaining.size === 0) break;
-      try {
-        const jsResp = await deps.fetchFn(url);
-        if (!jsResp.ok) continue;
-        const text = await jsResp.text();
-
-        for (const opName of remaining) {
-          const qid = extractQueryIdForOperation(text, opName);
-          if (qid) {
-            await persistResolvedQueryId(opName, qid, deps.storage);
-            remaining.delete(opName);
-          }
+    const scriptTexts = await Promise.all(
+      scriptUrls.map(async (url) => {
+        try {
+          const jsResp = await deps.fetchFn(url);
+          return jsResp.ok ? jsResp.text() : null;
+        } catch {
+          return null;
         }
-      } catch {
-        continue;
+      }),
+    );
+    const resolved: Array<{ opName: string; qid: string }> = [];
+
+    for (const text of scriptTexts) {
+      if (!text || remaining.size === 0) continue;
+      for (const opName of remaining) {
+        const qid = extractQueryIdForOperation(text, opName);
+        if (qid) {
+          resolved.push({ opName, qid });
+          remaining.delete(opName);
+        }
       }
     }
+    await Promise.all(
+      resolved.map(({ opName, qid }) =>
+        persistResolvedQueryId(opName, qid, deps.storage),
+      ),
+    );
   } finally {
     discoveryInProgress = false;
   }
@@ -722,12 +732,18 @@ export function createQueryIdHandlers(
       const ids = msg.ids;
       if (ids && typeof ids === "object") {
         const activeDeps = deps ?? defaultDeps();
+        const toPersist: Array<{ op: string; id: string }> = [];
         for (const [op, id] of Object.entries(ids)) {
           if (typeof id === "string" && id) {
             queryIdCacheSet(op, { id, ts: now });
-            await persistResolvedQueryId(op, id, activeDeps.storage);
+            toPersist.push({ op, id });
           }
         }
+        await Promise.all(
+          toPersist.map(({ op, id }) =>
+            persistResolvedQueryId(op, id, activeDeps.storage),
+          ),
+        );
       }
       return { ok: true };
     },

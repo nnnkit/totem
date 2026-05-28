@@ -2,8 +2,10 @@ import { getCompletedTweetIds } from "../db";
 import {
   OFFLINE_PREFETCH_POOL,
   OFFLINE_PREFETCH_UNREAD_MAX,
+} from "../lib/constants/ui";
+import {
   PREFETCH_INTERVAL_MS,
-} from "../lib/constants";
+} from "../lib/constants/timing";
 import type { Bookmark } from "../types";
 
 export interface PrefetchSnapshot {
@@ -28,23 +30,24 @@ export async function runPrefetchLoop({
   shouldStop,
   pauseBetween,
 }: PrefetchLoopOptions): Promise<void> {
-  for (let index = 0; index < tweetIds.length; index += 1) {
-    if (shouldStop()) return;
+  const runAt = (index: number): Promise<void> => {
+    if (shouldStop()) return Promise.resolve();
+    if (index >= tweetIds.length) return Promise.resolve();
 
-    if (index > 0 && pauseBetween) {
-      await pauseBetween();
-      if (shouldStop()) return;
-    }
+    const pause = index > 0 && pauseBetween ? pauseBetween() : Promise.resolve();
+    return pause.then(() => {
+      if (shouldStop()) return undefined;
 
-    try {
-      await fetchDetail(tweetIds[index]);
-      if (!shouldStop()) {
-        onSuccess(tweetIds[index]);
-      }
-    } catch {
-      continue;
-    }
-  }
+      return fetchDetail(tweetIds[index])
+        .then(() => {
+          if (!shouldStop()) onSuccess(tweetIds[index]);
+        })
+        .catch(() => undefined)
+        .then(() => runAt(index + 1));
+    });
+  };
+
+  return runAt(0);
 }
 
 function pickPrefetchCandidates(
@@ -146,8 +149,8 @@ export function createPrefetchController({
     (async () => {
       try {
         const snapshot = getSnapshot();
-        const completedIds = await getCompletedTweetIds().catch(() => new Set<string>());
         if (stopped || token !== runToken) return;
+        const completedIds = await getCompletedTweetIds().catch(() => new Set<string>());
 
         const candidateIds = pickPrefetchCandidates(
           snapshot.bookmarks,

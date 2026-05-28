@@ -2,7 +2,7 @@ import { useEffect, type PropsWithChildren } from "react";
 import {
   AUTH_CONNECTING_TIMEOUT_MS,
   AUTH_HEARTBEAT_MS,
-} from "../lib/constants";
+} from "../lib/constants/timing";
 import { closeDb } from "../db";
 import {
   CS_ACCOUNT_CONTEXT_ID,

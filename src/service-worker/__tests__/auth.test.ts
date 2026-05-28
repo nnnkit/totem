@@ -197,14 +197,15 @@ describe("auth module", () => {
       });
 
       const snapshot = await getSessionSnapshot(storage, makeCookies(null));
+      expect(snapshot.sessionState).toBe("logged_out");
+      expect(snapshot.hasAuthHeader).toBe(false);
+
       const stored = await storage.get([
         "totem_auth_headers",
         "totem_auth_state",
         "totem_auth_state_reason",
       ]);
 
-      expect(snapshot.sessionState).toBe("logged_out");
-      expect(snapshot.hasAuthHeader).toBe(false);
       expect(stored.totem_auth_headers).toBeUndefined();
       expect(stored.totem_auth_state).toBe("logged_out");
       expect(stored.totem_auth_state_reason).toBe("live_twid_mismatch");

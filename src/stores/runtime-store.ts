@@ -38,14 +38,16 @@ import {
   DETAIL_CACHE_RETENTION_MS,
   PAGE_FETCH_TIMEOUT_MS,
   READER_DETAIL_TIMEOUT_MS,
+  WEEK_MS,
+} from "../lib/constants/timing";
+import {
   SYNC_ABORT_TIMEOUT_FULL_MS,
   SYNC_ABORT_TIMEOUT_INCREMENTAL_MS,
   SYNC_ABORT_TIMEOUT_MAX_MS,
   SYNC_ABORT_TIMEOUT_PER_1K_MS,
   SYNC_MAX_BOOKMARKS_PER_JOB,
   SYNC_MAX_PAGES_PER_JOB,
-  WEEK_MS,
-} from "../lib/constants";
+} from "../lib/constants/sync-policy";
 import { CS_DB_CLEANUP_AT } from "../lib/storage-keys";
 import type {
   ApiCapability,
@@ -341,7 +343,7 @@ function shouldRestrictToCachedDetails(state: RuntimeState): boolean {
 }
 
 function shouldAutoSync(state: RuntimeState): boolean {
-  return state.authPhase === "ready";
+  return state.authPhase === "ready" && state.syncStatus === "idle";
 }
 
 function createInitialState(actions: RuntimeActions): RuntimeState {
@@ -537,14 +539,15 @@ export function createRuntimeStore() {
       }
     };
 
-    const hydrateCurrentAccount = async (
+    const hydrateCurrentAccount = (
       bootGeneration: number,
       allowAutoSync: boolean,
     ): Promise<void> => {
       const accountId = get().activeAccountId;
       setActiveAccountId(accountId);
+      if (get().bootGeneration !== bootGeneration) return Promise.resolve();
 
-      const [bookmarksResult, detailedIdsResult] = await Promise.allSettled([
+      return Promise.allSettled([
         withTimeout(
           getAllBookmarks(),
           DB_INIT_TIMEOUT_MS,
@@ -555,32 +558,32 @@ export function createRuntimeStore() {
           DB_INIT_TIMEOUT_MS,
           new Error("DETAIL_DB_INIT_TIMEOUT"),
         ),
-      ]);
+      ]).then(([bookmarksResult, detailedIdsResult]) => {
+        if (get().bootGeneration !== bootGeneration) return;
 
-      if (get().bootGeneration !== bootGeneration) return;
+        const bookmarks =
+          bookmarksResult.status === "fulfilled" ? bookmarksResult.value : [];
+        const detailedTweetIds =
+          detailedIdsResult.status === "fulfilled" ? detailedIdsResult.value : new Set<string>();
 
-      const bookmarks =
-        bookmarksResult.status === "fulfilled" ? bookmarksResult.value : [];
-      const detailedTweetIds =
-        detailedIdsResult.status === "fulfilled" ? detailedIdsResult.value : new Set<string>();
+        setRuntimeState((state) => ({
+          bookmarks,
+          detailedTweetIds,
+          bookmarksLoaded: true,
+          detailedIdsLoaded: true,
+          syncStatus: state.syncStatus === "syncing" ? state.syncStatus : "idle",
+        }));
 
-      setRuntimeState((state) => ({
-        bookmarks,
-        detailedTweetIds,
-        bookmarksLoaded: true,
-        detailedIdsLoaded: true,
-        syncStatus: state.syncStatus === "syncing" ? state.syncStatus : "idle",
-      }));
+        if (allowAutoSync) {
+          maybeStartAutomaticSync();
+        }
 
-      if (allowAutoSync) {
-        maybeStartAutomaticSync();
-      }
+        if (get().authPhase === "ready") {
+          void get().actions.handleBookmarkEvents().catch(() => {});
+        }
 
-      if (get().authPhase === "ready") {
-        void get().actions.handleBookmarkEvents().catch(() => {});
-      }
-
-      prefetchController.reconcile();
+        prefetchController.reconcile();
+      });
     };
 
     const loadAuthPayload = async (): Promise<AuthPayload> => {
@@ -680,6 +683,7 @@ export function createRuntimeStore() {
       // store + IDB pointer together.
       const nextStoreAccountId =
         accountChanged && !options.allowHydration ? state.activeAccountId : nextAccountId;
+      const recoveredFromReauth = phase === "ready" && state.syncStatus === "reauthing";
 
       setRuntimeState({
         authPhase: phase,
@@ -699,9 +703,12 @@ export function createRuntimeStore() {
         syncStatus:
           phase === "need_login" && state.syncStatus === "syncing"
             ? "idle"
+            : recoveredFromReauth
+              ? "idle"
             : state.syncStatus,
         syncJobKind:
-          phase === "need_login" && state.syncStatus === "syncing"
+          (phase === "need_login" && state.syncStatus === "syncing") ||
+          recoveredFromReauth
             ? "none"
             : state.syncJobKind,
       });
@@ -711,45 +718,48 @@ export function createRuntimeStore() {
       }
 
       if (needsHydration) {
-        await hydrateCurrentAccount(nextBootGeneration, options.allowAutoSync);
+        await hydrateCurrentAccount(nextBootGeneration, options.allowAutoSync && !recoveredFromReauth);
         return;
       }
 
-      if (options.allowAutoSync) {
+      if (options.allowAutoSync && !recoveredFromReauth) {
         maybeStartAutomaticSync();
       }
 
       prefetchController.reconcile();
     };
 
-    const runAuthCheck = async (): Promise<void> => {
+    const runAuthCheck = (): Promise<void> => {
       const requestId = authRequestId + 1;
       authRequestId = requestId;
 
-      try {
-        const payload = await loadAuthPayload();
-        if (requestId !== authRequestId) return;
-        await applyAuthPayload(payload, {
-          allowHydration: true,
-          allowAutoSync: true,
-        });
-      } catch {
-        if (requestId !== authRequestId) return;
-        setRuntimeState((state) => {
-          if (state.authPhase === "ready") {
+      if (requestId !== authRequestId) return Promise.resolve();
+
+      return loadAuthPayload()
+        .then(async (payload) => {
+          if (requestId !== authRequestId) return;
+          await applyAuthPayload(payload, {
+            allowHydration: true,
+            allowAutoSync: true,
+          });
+        })
+        .catch(() => {
+          if (requestId !== authRequestId) return;
+          setRuntimeState((state) => {
+            if (state.authPhase === "ready") {
+              return {
+                authState: "stale",
+                authRetryDelayMs: AUTH_RETRY_MS,
+              };
+            }
+
             return {
-              authState: "stale",
+              authState: state.authState === "authenticated" ? "stale" : state.authState,
+              authPhase: "connecting",
               authRetryDelayMs: AUTH_RETRY_MS,
             };
-          }
-
-          return {
-            authState: state.authState === "authenticated" ? "stale" : state.authState,
-            authPhase: "connecting",
-            authRetryDelayMs: AUTH_RETRY_MS,
-          };
+          });
         });
-      }
     };
 
     const sync = async (options: SyncOptions = {}): Promise<SyncRequestResult> => {
@@ -1047,24 +1057,26 @@ export function createRuntimeStore() {
 
         maybeRunDbCleanup();
 
-        try {
-          const payload = await loadAuthPayload();
-          if (get().bootGeneration !== bootGeneration) return;
-          await applyAuthPayload(payload, {
-            allowHydration: true,
-            allowAutoSync: true,
-          });
-        } catch {
-          if (get().bootGeneration !== bootGeneration) return;
+        if (get().bootGeneration !== bootGeneration) return;
+        await loadAuthPayload()
+          .then(async (payload) => {
+            if (get().bootGeneration !== bootGeneration) return;
+            await applyAuthPayload(payload, {
+              allowHydration: true,
+              allowAutoSync: true,
+            });
+          })
+          .catch(() => {
+            if (get().bootGeneration !== bootGeneration) return;
 
-          setRuntimeState({
-            authPhase: "connecting",
-            authRetryDelayMs: AUTH_RETRY_MS,
-            bookmarksLoaded: true,
-            detailedIdsLoaded: true,
-            syncStatus: "idle",
+            setRuntimeState({
+              authPhase: "connecting",
+              authRetryDelayMs: AUTH_RETRY_MS,
+              bookmarksLoaded: true,
+              detailedIdsLoaded: true,
+              syncStatus: "idle",
+            });
           });
-        }
       },
 
       dispose: () => {
@@ -1137,12 +1149,12 @@ export function createRuntimeStore() {
           if (events.length === 0) return;
 
           const plan = resolveBookmarkEventPlan(events);
-          const deleteEventIds = events
-            .filter((event) => event.type === "DeleteBookmark")
-            .map((event) => event.id);
-          const createEventIds = events
-            .filter((event) => event.type === "CreateBookmark")
-            .map((event) => event.id);
+          const deleteEventIds: string[] = [];
+          const createEventIds: string[] = [];
+          for (const event of events) {
+            if (event.type === "DeleteBookmark") deleteEventIds.push(event.id);
+            if (event.type === "CreateBookmark") createEventIds.push(event.id);
+          }
 
           if (plan.idsToDelete.length > 0) {
             const toDelete = new Set(plan.idsToDelete);
