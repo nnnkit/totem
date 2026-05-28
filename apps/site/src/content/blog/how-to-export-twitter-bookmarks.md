@@ -1,7 +1,7 @@
 ---
-title: "How to Export Your X / Twitter Bookmarks (Every Method, Ranked) — 2026"
+title: "How to Export Your X / Twitter Bookmarks (Every Method, Ranked) - 2026"
 slug: how-to-export-twitter-bookmarks
-description: "Four ways to get your X bookmarks out — a userscript, a Chrome extension, a paid SaaS, or the official X data archive. Ranked by who you are, with the one method that doesn't actually work flagged up front."
+description: "The practical ways to export X / Twitter bookmarks, what each method gives you, and when you need a CSV, readable Markdown, or a restorable local backup."
 publishedAt: 2026-04-27
 draft: false
 canonicalKeyword: export twitter bookmarks
@@ -9,131 +9,161 @@ canonicalKeyword: export twitter bookmarks
 
 # How to Export Your X / Twitter Bookmarks (Every Method, Ranked)
 
-Four methods exist. One of them — the one most people try first — doesn't actually work. The other three are good for very different people. This post sorts them by who you are, not by which tool we like most, and ends on a question the entire SERP avoids: *why* you're trying to export.
+Most people who search this are not really asking for "an export."
 
-## The honest first fact
+They are asking for one of three things:
 
-**The official X data archive does not include your bookmarks.** If you go to *Settings → Your account → Download an archive of your data* and wait the 24+ hours, what arrives in the zip is your tweets, replies, likes, DMs, and media — not your bookmarks.[^archive] The Reddit answer that ranks #2 for this query[^reddit] suggests requesting the archive; the comment thread underneath it is mostly people discovering, often days later, that the archive came back without bookmarks in it.
+- a spreadsheet of saved posts
+- a backup before something disappears
+- a way to actually read the things they saved
 
-This is the one thing every other guide buries on page 3. Lead with it: do not start here. The Bookmarks endpoint shipped in March 2022[^bookmarks-launch], two years after the data-archive feature, and the archive has never been updated to include them.
+Those are different jobs. A CSV can satisfy the first one. It is weak for the second. It does almost nothing for the third.
 
-The reason every workaround below exists is that one missing zip entry.
+So the right export method depends on what you want the file to do after it lands in your Downloads folder.
 
-## A second honest fact, before we rank tools
+## First: the official X archive is not the answer
 
-Every tool listed below is constrained by the same ceiling: **X's Bookmarks API only returns your most recent 800 bookmarks.**[^xapi] This is documented. If you have ten thousand bookmarks, no extension on earth can reach back to bookmark #9,999 from a cold start. The tools that *do* show users with 200,000+ bookmarks intact (Twillot, Dewey, [Totem](https://usetotem.xyz)) got there by indexing incrementally as the user scrolled, before old bookmarks fell off the visible window — not by exporting them after the fact.
+X has an account archive. You can request it from your account settings, wait for the download, and get a ZIP of account data. X's help page lists things like profile information, posts, Direct Messages, media, followers, following, Lists, inferred interests, and ads data.[^x-archive]
 
-So when you read "export your bookmarks," what you can actually export is **what's currently in your bookmarks tab.** For most people that's enough. If it isn't, exporting is the wrong tool entirely; you needed to start capturing months ago.
+It does not list bookmarks.
 
-With that out of the way:
+That is why the search results for "export twitter bookmarks" are full of Chrome extensions, userscripts, GitHub tools, Reddit threads, and bookmark managers. People try the official archive because it feels like the proper route. Then they open the ZIP and discover the thing they wanted is not there.
 
----
+If you need a full account archive, request the X archive. If you need bookmarks, use one of the methods below.
 
-## Method 1 — Userscript: prinsss/twitter-web-exporter
+## Second: every cold export has a ceiling
 
-**For you if:** you're comfortable installing Tampermonkey, you want raw data in JSON / CSV / HTML, and you don't want your bookmarks routed through someone else's server.
+X's Bookmarks API returns the most recent 800 bookmarked posts.[^x-bookmarks-api]
 
-`prinsss/twitter-web-exporter`[^prinsss] is the cleanest free option. It's a userscript (MIT-licensed, actively maintained — v1.4.0 was published February 25, 2026[^prinsss-release]) that installs a network interceptor in your browser. As you scroll through your bookmarks tab, it captures the GraphQL responses X's web app is already fetching, then lets you export to JSON, CSV, or HTML. No API keys, no developer account, no data leaving your machine.
+That matters. A tool cannot magically fetch a ten-year bookmark library from a cold start if X only exposes the recent window to that route. Browser tools can capture what your browser loads. API tools can request what the endpoint returns. Local-first tools can have more only if they started saving your library earlier.
 
-The trade is the install:
+So "export all bookmarks" usually means:
 
-1. Install [Tampermonkey](https://www.tampermonkey.net/) (Chrome / Firefox / Edge).
-2. Install the userscript from [GreasyFork](https://greasyfork.org/en/scripts/) or directly from the repo.
-3. Open `x.com/i/bookmarks`.
-4. Click the floating exporter icon.
-5. Scroll to the bottom of your bookmarks (this is what loads them into the interceptor's buffer).
-6. Click *Export Data* → pick a format.
+> export every bookmark the tool can currently see
 
-If you've never used Tampermonkey before, this is more friction than the average "click a button" extension. If you have, it's the obvious right answer — open source, no account, and the same author also exports tweets, likes, and media.
+For a normal account, that may be enough. For a large old archive, it may not be. The honest fix is not a better button. It is continuous local capture before you need the export.
 
-## Method 2 — Chrome / Edge extension (the one-click route)
+## Method 1: a userscript, if you want raw data
 
-**For you if:** you want a CSV in two minutes and you're fine running an extension someone else maintains.
+Use this if you are comfortable with Tampermonkey and want a local, technical export.
 
-Search the Chrome Web Store for "twitter bookmarks export" and you'll find half a dozen near-identical wrappers around the same scrape. The ones currently in the SERP top 10:
+The strongest free option is `prinsss/twitter-web-exporter`.[^prinsss] It runs in your browser, watches the GraphQL responses X already sends while you scroll, and exports data formats like JSON, CSV, and HTML. It does not need an X API key. It does not need your password. It is also not a polished consumer app.
 
-- **Export Twitter Bookmarks** (OneClick Twitter Bookmarks Exporter)[^onclick] — ranks #1 organically. Free, exports CSV.
-- **Twitter Bookmarks Downloader — Export X Bookmarks**[^tbd] — CSV, JSON, XLSX.
-- **X Bookmarks Exporter** (Microsoft Edge add-on)[^edge] — same idea, Edge variant.
+The flow is roughly:
 
-They all work the same way: open your bookmarks tab, click the extension icon, scroll, get a file. Pick whichever has the highest review count and the most recent update date in your store of choice; there is no meaningfully better one.
+1. Install a userscript manager.
+2. Install the exporter script.
+3. Open your X bookmarks page.
+4. Scroll until the posts you care about have loaded.
+5. Export the captured data.
 
-Two caveats nobody mentions:
+The strength is control. The weakness is friction. If you know what a userscript is, this is probably the cleanest raw export. If you do not, you may hate the setup more than the problem.
 
-- **You still have to scroll.** The extension can only capture what your browser actually loads. There's no "give me everything" button — you scroll to the bottom of your bookmarks and the extension siphons what passes through.
-- **Some ask for your X login.** Don't. Anything that can be done with the user's session cookie shouldn't need your password. The reputable extensions (and the userscript above) never ask.
+## Method 2: a Chrome extension, if you just need a CSV
 
-## Method 3 — Paid SaaS / bookmark manager (Dewey, Circleboom, Tweetsmash, exportxbookmarks.com)
+Use this if your goal is simple: get rows into Sheets, Excel, Notion, or a local file.
 
-**For you if:** the export isn't really the point — you want to *do something* with your bookmarks once they're out. Search them, tag them, share collections, sync to Notion.
+The current export SERP is dominated by Chrome Web Store and Edge listings: "Twitter Bookmarks Downloader - Export X Bookmarks," "Export Twitter Bookmarks," "X Bookmarks Exporter," and similar tools.[^serp-export]
 
-These tools all bundle the export step inside a wider product:
+Most of them work the same way:
 
-- **Dewey** — paid. Cloud-hosted dashboard for tagging, search, collections, export. Has its own [how-to-export guide](https://getdewey.co/how-to-use/export-bookmarks/) and ranks for this query because of it.[^dewey]
-- **Circleboom** — paid. The Onurdan / Medium tutorial that ranks #3 for "export twitter bookmarks" walks you through their flow.[^onurdan]
-- **Tweetsmash** — freemium. Similar pitch, syncs to Notion / Sheets.
-- **exportxbookmarks.com**[^exportxbookmarks] and a recent [Hacker News launch](https://news.ycombinator.com/item?id=47697679)[^hn] in the same space — the HN poster makes the export free and charges $4.69/year for the viewer that lets you organize them. A commenter on that thread sums up the whole category in one sentence: *"plenty of extensions will do this, but they give you a JSON/CSV file that's not very useful."*
+1. Open your bookmarks page.
+2. Click the extension.
+3. Let it collect the loaded bookmarks.
+4. Download CSV, JSON, XLSX, or a similar file.
 
-Pick one of these if "I want them in a CSV" was a stand-in for "I want to actually be able to find things again." Don't pick one if you genuinely just want a backup file — you'd be paying a subscription for what Method 1 does for free.
+This is the quickest path to a spreadsheet. It is also the easiest place to overestimate what you got. A CSV row is useful for sorting, filtering, and bulk inspection. It is not a reading experience. It is not a restorable app backup unless the tool explicitly supports import.
 
-## Method 4 — The official X data archive (the one that doesn't work)
+Two rules:
 
-Listed last because it's the first thing most people try, and it doesn't work for this:
+- Do not give your X password to an exporter.
+- Check what the file contains before you trust it as a backup.
 
-1. *Settings → Your account → Download an archive of your data*
-2. Re-enter password, wait 24 hours to several days for X to email you the link.
-3. Download the zip. Open `data/`.
-4. Scan the file list. **No `bookmarks.js`.** There is `tweets.js`, `like.js`, `direct-messages.js`, `account.js`, plus media folders — but bookmarks have never been included.[^archive]
+If the CSV only has URLs and text snippets, that may be fine. Just do not confuse it with a copy of your whole reading library.
 
-Worth knowing exists, mostly so you don't waste a day waiting on it. If you want a full account backup for portability or compliance reasons, request the archive *and* run one of Methods 1–3 alongside it.
+## Method 3: a bookmark manager, if export is not the real job
 
----
+Use this if "export" is really a proxy for "I want to find, organize, tag, or revisit things."
 
-## So which one should you actually use?
+Tools like Dewey, Tweetsmash, Circleboom, Twillot, XBookmark, and newer one-off exporters show up because they wrap export inside another workflow: search, tagging, digests, Notion sync, folders, or a dashboard.[^dewey-export]
 
-| You are | Use |
+That can be worth paying for if the ongoing workflow is the point.
+
+It is not worth paying for if you only need a file. In that case, a free userscript or one-click extension is usually enough.
+
+The useful question is:
+
+> Do I want a file, or do I want a place to work with the saved posts?
+
+If you want a place, compare bookmark managers. If you want a file, compare export formats.
+
+## Method 4: Totem export, if you want a local reading backup
+
+Use this if your bookmarks are already in Totem and you want a portable local copy you can read, inspect, and import back later.
+
+Totem's export is a ZIP. It includes:
+
+- `bookmarks.csv` for spreadsheets
+- `readme.md` as an index
+- `bookmarks/*.md`, one Markdown file per bookmark
+- `data/*.jsonl`, the canonical data Totem imports back
+- `manifest.json` with counts, schema version, account hash, and checksums
+
+The CSV and Markdown are there for humans. The JSONL files are there for Totem. On import, Totem reads the JSONL data, verifies checksums, checks the export schema, warns if the account does not match, and adds rows it does not already have.[^totem-format]
+
+There are two export modes:
+
+| Mode | What it is for |
 |---|---|
-| A developer / data-hoarder who wants raw JSON | Method 1 (prinsss/twitter-web-exporter) |
-| Someone who just wants a CSV in two minutes | Method 2 (a Chrome extension) |
-| Someone who wants to read, search, or tag what you saved | Method 3 (Dewey, Tweetsmash, Twillot, etc.) |
-| Someone who only wants the official X-blessed route | Method 4 — and accept that bookmarks won't be in it |
+| Basic export | Download what Totem already has now. Every bookmark gets a summary; bookmarks with cached details also get fuller content. |
+| Full export | Let Totem prepare missing full content first: tweets, threads, and articles where available. Then download the ZIP. |
 
-That table is the post most of the SERP isn't writing.
+This does not make Totem an official X archive. It does not recover old bookmarks that Totem never saw. It does not bundle your X password or turn into a cloud account.
 
-## The question the SERP avoids
+It is a local copy of your Totem library: bookmarks, details, highlights, notes, and reading progress.
 
-If you scroll back up and re-read why you opened this tab, there's a reasonable chance the actual answer wasn't "I need a CSV." It was something closer to:
+That is the difference between "I exported a list" and "I can restore my reading queue."
 
-> *"I bookmarked something useful three months ago and I want to read it before it disappears."*
+## What kind of export do you actually need?
 
-Exporting solves the backup problem. It doesn't solve the reading problem. A CSV of 1,400 tweet URLs sitting in your Downloads folder is, for almost everyone, the same thing as not having them — a different graveyard, slightly more portable.
+| You want | Use |
+|---|---|
+| Raw local data and you are technical | Userscript |
+| Spreadsheet in two minutes | Chrome / Edge exporter |
+| Search, tags, folders, or a cloud dashboard | Bookmark manager |
+| Local reading backup you can import back into Totem | Totem ZIP |
+| Full X account archive | X archive, plus one bookmark-specific method |
 
-The reason saved tweets stay unread is structural: the X bookmarks tab is buried four taps deep inside the app, the bookmarks page is a single chronological list with no search on free accounts, and you have to *decide* to go look at it. The save was passive; the retrieval is active. That asymmetry is why ~85% of saved tweets are never re-read.[^reread]
+The trap is asking for "export" without naming the next action.
 
-If your real problem is reading what you saved, the export gets you a file but not the habit. What changes the habit is putting the bookmarks somewhere you already are — your new tab, your home screen, the next surface your eyes land on without you choosing.
+If the next action is "sort rows," get CSV. If it is "read later," get Markdown or a reader. If it is "restore this library on another Chrome install," make sure the export has an import path. If it is "prove I own a copy," make sure the data is local and documented.
 
-That's the reason we built [Totem](https://usetotem.xyz). Disclosure: it's our product. It's free, runs locally in your browser (your bookmarks live in IndexedDB, not on a server we run), captures incrementally as you scroll past tweets in your bookmarks tab, and replaces your new tab page so the things you saved are in front of you instead of buried four taps deep. If you're trying to *read* your bookmarks, it's the right shape. If you're trying to back them up, use Method 1.
+## A good bookmark export has three layers
 
-## The takeaways
+The weakest export is a URL list. Useful, but thin.
 
-- The official X data archive does **not** include bookmarks. Don't start there.
-- Every export tool is capped by the same 800-most-recent ceiling on the X side.
-- For raw data, `prinsss/twitter-web-exporter` is the cleanest free option.
-- For a one-click CSV, any reputable Chrome / Edge extension does the job — they're nearly interchangeable.
-- For "export *and* something to do with them," a paid manager (Dewey, Tweetsmash, Twillot) bundles it.
-- Most people Googling this don't actually need an export. They need their bookmarks somewhere they'll actually see them. That's a different tool.
+A better export has a spreadsheet view. You can filter by author, date, media, links, and thread status.
 
-[^archive]: X Help Center, ["How to download your X archive"](https://help.x.com/en/managing-your-account/how-to-download-your-x-archive). The documented archive contents include tweets, replies, likes, DMs, and media — bookmarks are not listed. The recurring discovery that bookmarks aren't included is the entire premise of every guide in this SERP.
-[^reddit]: r/DataHoarder, ["How Do I Download All Of My Twitter Bookmarks?"](https://www.reddit.com/r/DataHoarder/comments/1iga2wd/how_do_i_download_all_of_my_twitter_bookmarks/) — currently the #2 organic result for "export twitter bookmarks."
-[^bookmarks-launch]: X Developer announcement, March 24, 2022: [Build with Bookmarks on the Twitter API v2](https://devcommunity.x.com/t/build-with-bookmarks-on-the-twitter-api-v2/168804). The data-archive feature predates this by years and has never been updated to include bookmarks.
-[^xapi]: X Developer documentation, [Bookmarks integration guide](https://developer.twitter.com/en/docs/twitter-api/tweets/bookmarks/integrate): "With the GET method of the Bookmarks lookup endpoint you will get back 800 of your most recent Bookmarked Posts."
-[^prinsss]: [prinsss/twitter-web-exporter](https://github.com/prinsss/twitter-web-exporter) — MIT-licensed userscript that exports tweets, replies, likes, bookmarks, follower lists, DMs, and media via in-browser GraphQL interception. No API key or developer account required.
-[^prinsss-release]: Latest release (v1.4.0) published February 25, 2026 per the repository's releases page.
-[^onclick]: [Export Twitter Bookmarks (OneClick) — Chrome Web Store](https://chromewebstore.google.com/detail/export-twitter-bookmarks/fondehlfbfbcegdjhoefhfbkaeengcgd) — currently #1 organic for "export twitter bookmarks."
-[^tbd]: [Twitter Bookmarks Downloader — Chrome Web Store](https://chromewebstore.google.com/detail/twitter-bookmarks-downloa/nfkbcnohjlfnclnhhblgjafldimikcdb).
-[^edge]: [X Bookmarks Exporter — Microsoft Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/fgkihcenfieelgkhjnglhlnacejnmckl).
-[^dewey]: Dewey, ["How To Export Twitter Bookmarks"](https://getdewey.co/how-to-use/export-bookmarks/) — and the product page at [getdewey.co](https://getdewey.co/).
-[^onurdan]: Onurdan, ["How I Finally Exported All My Twitter Bookmarks"](https://onurdan.medium.com/how-i-finally-exported-all-my-twitter-bookmarks-11ae887b8b0a) — walks the Circleboom flow.
-[^exportxbookmarks]: [exportxbookmarks.com](https://www.exportxbookmarks.com/) — "Organize and Analyze Your X (Twitter) bookmarks."
-[^hn]: Hacker News, ["I built a tool to let you export your X bookmarks"](https://news.ycombinator.com/item?id=47697679), April 2026 — free Chrome extension export, paid viewer at $4.69/year.
-[^reread]: We've cited this stat in our [pocket-alternatives roundup](/blog/pocket-alternatives-2026); the underlying behavioral pattern (saved-but-never-revisited content) is well-documented across read-later tools. The exact number varies by source; the order of magnitude does not.
+The best export has a restorable data layer. That is what keeps the boring but important things: which account the export came from, which rows belong in which store, whether the file is corrupted, what schema version produced it, and what should happen when you import it again.
+
+Most people do not care about this until the day they need it.
+
+That is why export is not a feature you judge by the button. You judge it by the file you get after the button.
+
+## The short version
+
+- The official X archive is useful, but not for bookmark export.
+- X's bookmark endpoint exposes a recent window, so cold exports have limits.
+- Use a userscript for raw local data.
+- Use a browser extension for a quick CSV.
+- Use a bookmark manager when you want search or organization.
+- Use Totem export when your goal is a local, readable, restorable bookmark library.
+
+Exporting is not the end of the job. It is the moment you find out whether the things you saved can survive outside the app where you saved them.
+
+[^x-archive]: X Help Center, ["How to download your X archive and Posts"](https://help.x.com/managing-your-account/how-to-download-your-twitter-archive). X lists the archive categories it considers relevant and useful; bookmarks are not listed there.
+[^x-bookmarks-api]: X Developer Platform, ["Bookmarks introduction"](https://developer.x.com/en/docs/x-api/tweets/bookmarks/introduction). X documents that the Bookmarks endpoint returns the most recent 800 bookmarked posts.
+[^prinsss]: [prinsss/twitter-web-exporter](https://github.com/prinsss/twitter-web-exporter), an MIT-licensed userscript for exporting X/Twitter web data from the browser.
+[^serp-export]: DataForSEO SERP pull, US/en, May 28, 2026: `tmp/dataforseo/serp-export-launch-export-twitter-bookmarks-2026-05-28.json`.
+[^dewey-export]: Dewey, ["How To Export Twitter Bookmarks"](https://getdewey.co/how-to-use/export-bookmarks/), one example of the bookmark-manager route.
+[^totem-format]: Totem, [Export Format v1](/export-format/v1), documents the ZIP layout, JSONL stores, CSV columns, Markdown files, and import contract.
