@@ -678,16 +678,25 @@ function FAQGroupBlock({ group }: { group: FAQGroup }) {
   );
 }
 
-function FeatureHeroTile({ feature }: { feature: FeatureItem }) {
+function FeatureHeroTile({
+  feature,
+  className,
+}: {
+  feature: FeatureItem;
+  className?: string;
+}) {
   return (
     <SiteCard
       as="article"
-      className="site-feature-card flex flex-col overflow-hidden p-4 md:p-6"
+      className={cn(
+        "site-feature-card flex flex-col overflow-hidden p-4 md:p-6",
+        className,
+      )}
     >
       <img
         src={feature.image}
         alt={feature.alt}
-        className="mb-5 aspect-video w-full rounded-xl border border-neutral-200 object-cover"
+        className="mb-5 aspect-video w-full rounded-xl border border-neutral-200 object-cover md:aspect-auto md:min-h-0 md:flex-1"
         loading="lazy"
       />
       <SiteHeading as="h3" size="card" className="mb-2">
@@ -725,16 +734,18 @@ function IconFeatureTile({
   feature,
   icon: IconCmp,
   accent,
+  className,
 }: {
   feature: IconFeatureItem;
   icon: Icon;
   accent: AccentColor;
+  className?: string;
 }) {
   const a = ACCENT_CLASSES[accent];
   return (
     <SiteCard
       as="article"
-      className="site-feature-card flex flex-col p-5 md:p-6"
+      className={cn("site-feature-card flex flex-col p-5 md:p-6", className)}
     >
       <div
         className={cn(
@@ -759,55 +770,61 @@ function IconFeatureTile({
 function PrivacyFeatureTile({
   feature,
   href,
+  className,
 }: {
   feature: PrivacyFeatureCard;
   href: string;
+  className?: string;
 }) {
   const a = ACCENT_CLASSES.emerald;
   return (
     <SiteCard
       as="article"
-      className="site-feature-card flex flex-col p-5 md:p-6"
+      className={cn("site-feature-card flex flex-col p-5 md:p-6", className)}
     >
-      <div
-        className={cn(
-          "mb-5 inline-flex size-12 items-center justify-center rounded-xl border",
-          a.panel,
-        )}
-      >
-        <ShieldCheckIcon
-          aria-hidden="true"
-          weight="duotone"
-          className={cn("size-6", a.icon)}
-        />
-      </div>
-      <SiteHeading as="h3" size="card" className="mb-2">
-        {feature.title}
-      </SiteHeading>
-      <p className="mb-4 text-sm leading-relaxed text-neutral-600">
-        {feature.body}
-      </p>
-      <ul className="mb-5 space-y-1.5">
-        {feature.bullets.map((bullet) => (
-          <li
-            key={bullet}
-            className="flex items-start gap-2 text-sm text-neutral-700"
+      <div className="flex h-full flex-col gap-6 md:flex-row md:items-start md:gap-10">
+        <div className="flex flex-col md:max-w-sm">
+          <div
+            className={cn(
+              "mb-5 inline-flex size-12 items-center justify-center rounded-xl border",
+              a.panel,
+            )}
           >
-            <CheckIcon
+            <ShieldCheckIcon
               aria-hidden="true"
-              weight="bold"
-              className="mt-0.5 size-4 shrink-0 text-emerald-600"
+              weight="duotone"
+              className={cn("size-6", a.icon)}
             />
-            <span>{bullet}</span>
-          </li>
-        ))}
-      </ul>
-      <SiteBodyLink
-        href={href}
-        className="mt-auto self-start text-sm font-medium text-neutral-900 hover:text-neutral-700"
-      >
-        {feature.linkLabel}
-      </SiteBodyLink>
+          </div>
+          <SiteHeading as="h3" size="card" className="mb-2">
+            {feature.title}
+          </SiteHeading>
+          <p className="text-sm leading-relaxed text-neutral-600">
+            {feature.body}
+          </p>
+          <SiteBodyLink
+            href={href}
+            className="mt-4 self-start text-sm font-medium text-neutral-900 hover:text-neutral-700 md:mt-auto md:pt-6"
+          >
+            {feature.linkLabel}
+          </SiteBodyLink>
+        </div>
+        <ul className="space-y-1.5 md:flex-1 md:self-center">
+          {feature.bullets.map((bullet) => (
+            <li
+              key={bullet}
+              className="flex items-start gap-2 text-sm text-neutral-700"
+            >
+              <CheckIcon
+                aria-hidden="true"
+                weight="bold"
+                className="mt-0.5 size-4 shrink-0 text-emerald-600"
+              />
+              <span>{bullet}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
     </SiteCard>
   );
 }
@@ -955,29 +972,34 @@ function LandingPage({ recentPosts }: { recentPosts: BlogSummary[] }) {
             </div>
           </SiteReveal>
 
-          <SiteRevealStagger className="grid gap-5">
-            <FeatureHeroTile feature={features.hero} />
-            <div className="grid gap-5 md:grid-cols-2">
-              <IconFeatureTile
-                feature={features.highlights}
-                icon={HighlighterCircleIcon}
-                accent="amber"
-              />
-              <IconFeatureTile
-                feature={features.clean}
-                icon={ArticleIcon}
-                accent="slate"
-              />
-              <IconFeatureTile
-                feature={features.offline}
-                icon={AirplaneTiltIcon}
-                accent="sky"
-              />
-              <PrivacyFeatureTile
-                feature={features.privacy}
-                href={SITE_LINKS.privacyUrl}
-              />
-            </div>
+          <SiteRevealStagger className="grid gap-5 md:grid-cols-3 md:grid-rows-[auto_auto_auto]">
+            <FeatureHeroTile
+              feature={features.hero}
+              className="md:col-span-2 md:row-span-2"
+            />
+            <IconFeatureTile
+              feature={features.highlights}
+              icon={HighlighterCircleIcon}
+              accent="amber"
+              className="md:col-start-3 md:row-start-1"
+            />
+            <IconFeatureTile
+              feature={features.clean}
+              icon={ArticleIcon}
+              accent="slate"
+              className="md:col-start-3 md:row-start-2"
+            />
+            <IconFeatureTile
+              feature={features.offline}
+              icon={AirplaneTiltIcon}
+              accent="sky"
+              className="md:col-start-1 md:row-start-3"
+            />
+            <PrivacyFeatureTile
+              feature={features.privacy}
+              href={SITE_LINKS.privacyUrl}
+              className="md:col-span-2 md:col-start-2 md:row-start-3"
+            />
           </SiteRevealStagger>
         </SiteSection>
 

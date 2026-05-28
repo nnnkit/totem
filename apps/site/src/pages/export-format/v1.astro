@@ -49,8 +49,6 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
         </ol>
       </nav>
 
-      <!-- ─── ZIP LAYOUT ─────────────────────────────────────────── -->
-
       <h2 id="zip-layout">ZIP layout</h2>
 
       <p>A Totem export is a standard ZIP archive with this structure:</p>
@@ -83,8 +81,6 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
       </table>
 
       <p>CSV and Markdown are derived views of the JSONL data. They exist for convenience and are ignored on re-import.</p>
-
-      <!-- ─── MANIFEST ───────────────────────────────────────────── -->
 
       <h2 id="manifest">manifest.json</h2>
 
@@ -165,8 +161,6 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
         </tbody>
       </table>
 
-      <!-- ─── JSONL STORES ───────────────────────────────────────── -->
-
       <h2 id="jsonl-stores">JSONL stores</h2>
 
       <p>
@@ -175,7 +169,6 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
         Unknown fields are ignored on import for forward compatibility.
       </p>
 
-      <!-- bookmarks -->
       <h3 id="jsonl-bookmarks">bookmarks-YYYY.jsonl</h3>
 
       <p>Year-sharded by UTC year of <code>createdAt</code>. Each line is one <code>Bookmark</code> object. Primary key: <code>id</code>.</p>
@@ -209,10 +202,9 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
         </tbody>
       </table>
 
-      <!-- details -->
       <h3 id="jsonl-details">details.jsonl</h3>
 
-      <p>Thread and detail information for hydrated bookmarks. Sparse &mdash; only bookmarks with fetched details have entries. Primary key: <code>tweetId</code>.</p>
+      <p>Thread and detail information for hydrated bookmarks. Sparse &mdash; only bookmarks with fetched details or a terminal unavailable status have entries. Primary key: <code>tweetId</code>.</p>
 
       <table>
         <thead>
@@ -223,10 +215,11 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
           <tr><td><code>fetchedAt</code></td><td><code>number</code></td><td>no</td><td>Unix ms when detail was fetched</td></tr>
           <tr><td><code>focalTweet</code></td><td><code>Bookmark</code></td><td>yes</td><td>Full bookmark object for the focal tweet (same shape as bookmarks JSONL)</td></tr>
           <tr><td><code>thread</code></td><td><code>ThreadTweet[]</code></td><td>no</td><td>Array of tweets in the thread. See <a href="#type-threadtweet">ThreadTweet</a></td></tr>
+          <tr><td><code>detailsStatus</code></td><td><code>"ok" | "unavailable"</code></td><td>yes</td><td>Hydration result. Missing on legacy rows and treated as <code>"ok"</code>.</td></tr>
+          <tr><td><code>unavailableReason</code></td><td><code>"deleted" | "protected" | "parse_failed" | "unknown"</code></td><td>yes</td><td>Present when <code>detailsStatus</code> is <code>"unavailable"</code>.</td></tr>
         </tbody>
       </table>
 
-      <!-- highlights -->
       <h3 id="jsonl-highlights">highlights.jsonl</h3>
 
       <p>User-created highlights and annotations. Append-only by nature. Primary key: <code>id</code>.</p>
@@ -249,7 +242,6 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
         </tbody>
       </table>
 
-      <!-- reading-progress -->
       <h3 id="jsonl-reading-progress">reading-progress.jsonl</h3>
 
       <p>Reading state and scroll position tracking. Primary key: <code>tweetId</code>.</p>
@@ -269,7 +261,6 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
         </tbody>
       </table>
 
-      <!-- Nested types -->
       <h3 id="nested-types">Nested types</h3>
 
       <h4 id="type-author">Author</h4>
@@ -396,8 +387,6 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
         </tbody>
       </table>
 
-      <!-- ─── CSV ────────────────────────────────────────────────── -->
-
       <h2 id="csv">CSV format</h2>
 
       <p>
@@ -433,8 +422,6 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
         <li>Double quotes within a field are escaped as <code>""</code> (two double-quote characters).</li>
         <li>The UTF-8 BOM (<code>U+FEFF</code>) precedes the header row so Excel auto-detects encoding.</li>
       </ul>
-
-      <!-- ─── MARKDOWN ───────────────────────────────────────────── -->
 
       <h2 id="markdown">Markdown format</h2>
 
@@ -475,8 +462,6 @@ Exported 2026-05-12 · [Open on X](https://x.com/…)
         <li>Image Markdown includes source alt text when available and a descriptive fallback when X did not provide alt text.</li>
       </ul>
 
-      <!-- ─── RE-IMPORT ──────────────────────────────────────────── -->
-
       <h2 id="re-import">Re-import contract</h2>
 
       <p>The Totem importer reads <code>data/*.jsonl</code> only. CSV and Markdown files inside the ZIP are derived views and are ignored on import.</p>
@@ -503,8 +488,6 @@ Exported 2026-05-12 · [Open on X](https://x.com/…)
           <tr><td>reading_progress</td><td><code>tweetId</code></td></tr>
         </tbody>
       </table>
-
-      <!-- ─── VERSIONING ─────────────────────────────────────────── -->
 
       <h2 id="versioning">Versioning policy</h2>
 

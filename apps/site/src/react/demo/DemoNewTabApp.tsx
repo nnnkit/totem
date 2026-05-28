@@ -659,6 +659,9 @@ function renderDemoNewTabApp({
         onThemePreferenceChange={setThemePreference}
         onResetAppState={resetDemo}
         onDeleteAllData={resetDemo}
+        onExport={() => {
+          updateState({ toast: { message: "Export is available in the extension." } });
+        }}
       />
       {toast && (
         <Toast
@@ -802,6 +805,13 @@ function renderDemoContent({
       getBookmarkHref={(bookmark) => getDemoReaderHref(bookmark.tweetId)}
       recommendationSource={settings.recommendationSource}
       onOpenSettings={() => updateState({ settingsOpen: true })}
+      onOpenSettingsToStorage={() => updateState({ settingsOpen: true })}
+      onOpenImport={() => {
+        updateState({ toast: { message: "Import is available in the extension." } });
+      }}
+      onOpenExport={() => {
+        updateState({ toast: { message: "Export is available in the extension." } });
+      }}
       onOpenReading={() => {
         restoreReadingTab();
         updateState({ view: "reading" });
