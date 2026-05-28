@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useEffectEvent, useState } from "react";
 import { XIcon, NotePencilIcon } from "@phosphor-icons/react";
 import type { Highlight } from "../../types";
 import {
@@ -39,6 +39,7 @@ export function HighlightPopover({
     setState(null);
     setConfirmingRemove(false);
   }, []);
+  const openNoteEvent = useEffectEvent(onOpenNote);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -57,7 +58,7 @@ export function HighlightPopover({
       if (!highlight) return;
 
       if (highlight.note) {
-        onOpenNote(highlight, mark);
+        openNoteEvent(highlight, mark);
         return;
       }
 
@@ -66,7 +67,7 @@ export function HighlightPopover({
 
     container.addEventListener("click", handleClick);
     return () => container.removeEventListener("click", handleClick);
-  }, [containerRef, getHighlight, onOpenNote]);
+  }, [containerRef, getHighlight]);
 
   if (!state) return null;
 

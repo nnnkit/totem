@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import parse from "html-react-parser";
 import type {
   Bookmark,
   ArticleContentBlock,
@@ -19,22 +20,57 @@ interface ArticleBlockRendererProps {
   entityMap: Record<string, ArticleContentEntity>;
 }
 
+function uniqueKey(seed: string, seen: Map<string, number>): string {
+  const count = seen.get(seed) ?? 0;
+  seen.set(seed, count + 1);
+  return count === 0 ? seed : `${seed}-${count}`;
+}
+
+function blockKeySeed(block: ArticleContentBlock): string {
+  const entityKeys = block.entityRanges.map((range) => range.key).join("-");
+  return `${block.type}:${block.text.slice(0, 80)}:${entityKeys}`;
+}
+
 function ArticleBlockRenderer({ blocks, entityMap }: ArticleBlockRendererProps) {
   const groups = useMemo(() => groupBlocks(blocks), [blocks]);
+  const keyedGroups = useMemo(() => {
+    const seenGroups = new Map<string, number>();
+    let section = 0;
+
+    return groups.map((group) => {
+      const blocksInGroup = group.type === "single" ? [group.block] : group.items;
+      const seed = `${group.type}:${blocksInGroup.map(blockKeySeed).join("|")}`;
+      const key = uniqueKey(seed, seenGroups);
+      const sectionId = `section-block-${section}`;
+      section += 1;
+
+      if (group.type === "single") {
+        return { ...group, key, sectionId };
+      }
+
+      const seenItems = new Map<string, number>();
+      return {
+        ...group,
+        key,
+        sectionId,
+        items: group.items.map((item) => ({
+          block: item,
+          key: uniqueKey(blockKeySeed(item), seenItems),
+        })),
+      };
+    });
+  }, [groups]);
 
   return (
     <div className="prose prose-lg prose-reader font-serif max-w-none [&_a]:text-accent [&_a:hover]:underline">
-      {groups.map((group, groupIdx) => {
+      {keyedGroups.map((group) => {
         if (group.type === "unordered-list") {
           return (
-            <ul key={`group-${groupIdx}`} id={`section-block-${groupIdx}`}>
-              {group.items.map((item, i) => (
-                <li
-                  key={`li-${groupIdx}-${i}`}
-                  dangerouslySetInnerHTML={{
-                    __html: renderBlockInlineContent(item, entityMap),
-                  }}
-                />
+            <ul key={group.key} id={group.sectionId}>
+              {group.items.map(({ block, key }) => (
+                <li key={key}>
+                  {parse(renderBlockInlineContent(block, entityMap))}
+                </li>
               ))}
             </ul>
           );
@@ -42,14 +78,11 @@ function ArticleBlockRenderer({ blocks, entityMap }: ArticleBlockRendererProps) 
 
         if (group.type === "ordered-list") {
           return (
-            <ol key={`group-${groupIdx}`} id={`section-block-${groupIdx}`}>
-              {group.items.map((item, i) => (
-                <li
-                  key={`li-${groupIdx}-${i}`}
-                  dangerouslySetInnerHTML={{
-                    __html: renderBlockInlineContent(item, entityMap),
-                  }}
-                />
+            <ol key={group.key} id={group.sectionId}>
+              {group.items.map(({ block, key }) => (
+                <li key={key}>
+                  {parse(renderBlockInlineContent(block, entityMap))}
+                </li>
               ))}
             </ol>
           );
@@ -67,7 +100,7 @@ function ArticleBlockRenderer({ blocks, entityMap }: ArticleBlockRendererProps) 
               if (typeof videoUrl === "string" && videoUrl) {
                 return (
                   <figure
-                    key={`group-${groupIdx}`}
+                    key={group.key}
                     className="-mx-6 my-6 flex justify-center"
                   >
                     <video
@@ -79,7 +112,7 @@ function ArticleBlockRenderer({ blocks, entityMap }: ArticleBlockRendererProps) 
                           ? imageUrl
                           : undefined
                       }
-                      className="h-auto max-h-[72vh] max-w-full min-w-0 rounded bg-black object-contain"
+                      className="h-auto max-h-[72vh] max-w-full min-w-0 rounded bg-gray-950 object-contain"
                     />
                   </figure>
                 );
@@ -87,7 +120,7 @@ function ArticleBlockRenderer({ blocks, entityMap }: ArticleBlockRendererProps) 
               if (typeof imageUrl === "string" && imageUrl) {
                 return (
                   <figure
-                    key={`group-${groupIdx}`}
+                    key={group.key}
                     className="-mx-6 my-6 flex justify-center"
                   >
                     <img
@@ -108,71 +141,75 @@ function ArticleBlockRenderer({ blocks, entityMap }: ArticleBlockRendererProps) 
                   .replace(/\n?```$/, "");
                 return (
                   <CodeBlock
-                    key={`group-${groupIdx}`}
+                    key={group.key}
                     code={code}
                   />
                 );
               }
             }
             if (entity?.type === "DIVIDER") {
-              return <hr key={`group-${groupIdx}`} />;
+              return <hr key={group.key} />;
             }
           }
           return null;
         }
 
         if (!block.text.trim()) {
-          return <div key={`group-${groupIdx}`} className="h-2" />;
+          return <div key={group.key} className="h-2" />;
         }
 
         if (block.type === "header-one") {
           return (
             <h2
-              key={`group-${groupIdx}`}
-              id={`section-block-${groupIdx}`}
+              key={group.key}
+              id={group.sectionId}
               className="scroll-mt-24"
-              dangerouslySetInnerHTML={{ __html: html }}
-            />
+            >
+              {parse(html)}
+            </h2>
           );
         }
 
         if (block.type === "header-two") {
           return (
             <h3
-              key={`group-${groupIdx}`}
-              id={`section-block-${groupIdx}`}
+              key={group.key}
+              id={group.sectionId}
               className="scroll-mt-24"
-              dangerouslySetInnerHTML={{ __html: html }}
-            />
+            >
+              {parse(html)}
+            </h3>
           );
         }
 
         if (block.type === "header-three") {
           return (
             <h4
-              key={`group-${groupIdx}`}
-              id={`section-block-${groupIdx}`}
+              key={group.key}
+              id={group.sectionId}
               className="scroll-mt-24"
-              dangerouslySetInnerHTML={{ __html: html }}
-            />
+            >
+              {parse(html)}
+            </h4>
           );
         }
 
         if (block.type === "blockquote") {
           return (
             <blockquote
-              key={`group-${groupIdx}`}
-              id={`section-block-${groupIdx}`}
+              key={group.key}
+              id={group.sectionId}
               className="break-inside-avoid"
-              dangerouslySetInnerHTML={{ __html: html }}
-            />
+            >
+              {parse(html)}
+            </blockquote>
           );
         }
 
         if (block.type === "code-block") {
           return (
             <CodeBlock
-              key={`group-${groupIdx}`}
+              key={group.key}
               code={block.text}
             />
           );
@@ -180,10 +217,11 @@ function ArticleBlockRenderer({ blocks, entityMap }: ArticleBlockRendererProps) 
 
         return (
           <p
-            key={`group-${groupIdx}`}
-            id={`section-block-${groupIdx}`}
-            dangerouslySetInnerHTML={{ __html: html }}
-          />
+            key={group.key}
+            id={group.sectionId}
+          >
+            {parse(html)}
+          </p>
         );
       })}
     </div>
@@ -287,11 +325,14 @@ export function TweetArticle({ article, compact = false, authorProfileImageUrl }
     );
   }
 
-  const lines = plainText
-    .split(/\n/)
-    .map((l) => l.trim())
-    .filter(Boolean);
-  const headingLineIndices = new Set(headings.map((h) => h.index));
+  const lines: string[] = [];
+  for (const line of plainText.split(/\n/)) {
+    const trimmed = line.trim();
+    if (trimmed) lines.push(trimmed);
+  }
+  const headingByLineIndex = new Map(
+    headings.map((heading, index) => [heading.index, { ...heading, headingIdx: index }]),
+  );
 
   const chunks: { heading?: string; headingIdx: number; text: string }[] = [];
   let currentLines: string[] = [];
@@ -299,7 +340,8 @@ export function TweetArticle({ article, compact = false, authorProfileImageUrl }
   let currentHeadingIdx = -1;
 
   for (let i = 0; i < lines.length; i++) {
-    if (headingLineIndices.has(i)) {
+    const heading = headingByLineIndex.get(i);
+    if (heading) {
       if (currentLines.length > 0 || currentHeading !== undefined) {
         chunks.push({
           heading: currentHeading,
@@ -307,9 +349,8 @@ export function TweetArticle({ article, compact = false, authorProfileImageUrl }
           text: currentLines.join("\n"),
         });
       }
-      const hIdx = headings.findIndex((h) => h.index === i);
-      currentHeading = headings[hIdx].text;
-      currentHeadingIdx = hIdx;
+      currentHeading = heading.text;
+      currentHeadingIdx = heading.headingIdx;
       currentLines = [];
     } else {
       currentLines.push(lines[i]);
@@ -352,8 +393,8 @@ export function TweetArticle({ article, compact = false, authorProfileImageUrl }
         </h1>
       )}
       <div>
-        {chunks.map((chunk, i) => (
-          <div key={`chunk-${i}`}>
+        {chunks.map((chunk) => (
+          <div key={`${chunk.heading ?? "intro"}:${chunk.text.slice(0, 80)}`}>
             {chunk.heading && (
               <h4
                 id={`section-article-${chunk.headingIdx}`}

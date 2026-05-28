@@ -1,4 +1,5 @@
 import { use } from "react";
+import parse from "html-react-parser";
 
 const highlightPromise = import("sugar-high").then((m) => m.highlight);
 
@@ -8,7 +9,7 @@ interface Props {
 
 function HighlightedCode({ code }: Props) {
   const highlight = use(highlightPromise);
-  return <code dangerouslySetInnerHTML={{ __html: highlight(code) }} />;
+  return <code>{parse(highlight(code))}</code>;
 }
 
 export function CodeBlock({ code }: Props) {

@@ -37,6 +37,9 @@ export function TweetMedia({ items, bleed = false, compact = false }: Props) {
 
   const columns = items.length === 1 ? "grid-cols-1" : "grid-cols-2";
   const visible = items.slice(0, 4);
+  const openPreview = (item: Media) => {
+    setPreviewImage({ src: item.url, alt: item.altText || "" });
+  };
 
   return (
     <>
@@ -49,7 +52,7 @@ export function TweetMedia({ items, bleed = false, compact = false }: Props) {
             if (item.type === "video" || item.type === "animated_gif") {
               return item.videoUrl ? (
                 <video
-                  key={`${item.url}-${index}`}
+                  key={item.videoUrl}
                   src={item.videoUrl}
                   controls
                   loop={item.type === "animated_gif"}
@@ -60,26 +63,38 @@ export function TweetMedia({ items, bleed = false, compact = false }: Props) {
                   poster={item.url}
                 />
               ) : (
-                <img
-                  key={`${item.url}-${index}`}
-                  src={item.url}
-                  alt={item.altText || ""}
-                  className={cn("w-full cursor-pointer bg-black object-contain", heightClass, spanClass)}
-                  loading="lazy"
-                  onClick={() => setPreviewImage({ src: item.url, alt: item.altText || "" })}
-                />
+                <button
+                  key={item.url}
+                  type="button"
+                  className={cn("block w-full overflow-hidden bg-gray-950", heightClass, spanClass)}
+                  onClick={() => openPreview(item)}
+                  aria-label="Open media preview"
+                >
+                  <img
+                    src={item.url}
+                    alt={item.altText || ""}
+                    className="size-full object-contain"
+                    loading="lazy"
+                  />
+                </button>
               );
             }
 
             return (
-              <img
-                key={`${item.url}-${index}`}
-                src={item.url}
-                alt={item.altText || ""}
-                className={cn("w-full cursor-pointer object-cover", heightClass, spanClass)}
-                loading="lazy"
-                onClick={() => setPreviewImage({ src: item.url, alt: item.altText || "" })}
-              />
+              <button
+                key={item.url}
+                type="button"
+                className={cn("block w-full overflow-hidden", heightClass, spanClass)}
+                onClick={() => openPreview(item)}
+                aria-label="Open media preview"
+              >
+                <img
+                  src={item.url}
+                  alt={item.altText || ""}
+                  className="size-full object-cover"
+                  loading="lazy"
+                />
+              </button>
             );
           })}
         </div>
@@ -99,7 +114,6 @@ export function TweetMedia({ items, bleed = false, compact = false }: Props) {
               src={previewRef.current.src}
               alt={previewRef.current.alt}
               className="max-h-[90vh] max-w-[90vw] object-contain animate-preview-in"
-              onClick={(e) => e.stopPropagation()}
             />
           </>
         )}

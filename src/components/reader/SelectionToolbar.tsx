@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useEffectEvent, useRef, useState } from "react";
 import {
   CaretDownIcon,
   HighlighterIcon,
@@ -146,6 +146,7 @@ export function SelectionToolbar({
     setState(null);
     setPaletteOpen(false);
   }, []);
+  const dismissEvent = useEffectEvent(dismiss);
 
   useEffect(() => {
     const handleMouseUp = () => {
@@ -154,12 +155,12 @@ export function SelectionToolbar({
       dismissTimeoutRef.current = window.setTimeout(() => {
         const selection = window.getSelection();
         if (!selection || selection.isCollapsed || !selection.toString().trim()) {
-          setState(null);
+          dismissEvent();
           return;
         }
 
         if (isInsideHighlight(selection.anchorNode!)) {
-          setState(null);
+          dismissEvent();
           return;
         }
 
@@ -168,13 +169,13 @@ export function SelectionToolbar({
 
         const range = selection.getRangeAt(0);
         if (!container.contains(range.commonAncestorContainer)) {
-          setState(null);
+          dismissEvent();
           return;
         }
 
         const ranges = serializeSelection(selection, container);
         if (ranges.length === 0) {
-          setState(null);
+          dismissEvent();
           return;
         }
 
@@ -194,10 +195,10 @@ export function SelectionToolbar({
 
   useEffect(() => {
     if (!state) return;
-    const handleScroll = () => dismiss();
+    const handleScroll = () => dismissEvent();
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
-  }, [state, dismiss]);
+  }, [state]);
 
   const virtualAnchor = state
     ? { getBoundingClientRect: () => state.anchorRect }

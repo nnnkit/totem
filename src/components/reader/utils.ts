@@ -135,14 +135,20 @@ function isLikelyQuotationLine(line: string): boolean {
   return false;
 }
 
+function trimNonEmptyLines(text: string, splitPattern: RegExp): string[] {
+  const lines: string[] = [];
+  for (const line of text.split(splitPattern)) {
+    const trimmed = line.trim();
+    if (trimmed) lines.push(trimmed);
+  }
+  return lines;
+}
+
 export function detectArticleHeadings(
   plainText: string,
   options?: { articleTitle?: string },
 ): { index: number; text: string }[] {
-  const lines = plainText
-    .split(/\n/)
-    .map((l) => l.trim())
-    .filter(Boolean);
+  const lines = trimNonEmptyLines(plainText, /\n/);
   const headings: { index: number; text: string }[] = [];
   const title = options?.articleTitle;
 
@@ -329,8 +335,16 @@ export function linkifyText(text: string): string {
 
 export function splitSentences(text: string): string[] {
   const matches = text.match(/[^.!?]+[.!?]+|[^.!?]+$/g);
-  if (!matches) return [text.trim()].filter(Boolean);
-  return matches.map((chunk) => chunk.trim()).filter(Boolean);
+  if (!matches) {
+    const trimmed = text.trim();
+    return trimmed ? [trimmed] : [];
+  }
+  const sentences: string[] = [];
+  for (const chunk of matches) {
+    const sentence = chunk.trim();
+    if (sentence) sentences.push(sentence);
+  }
+  return sentences;
 }
 
 export function paragraphizeText(
@@ -341,17 +355,11 @@ export function paragraphizeText(
   if (!input) return [];
 
   if (/\n{2,}/.test(input)) {
-    return input
-      .split(/\n{2,}/)
-      .map((segment) => segment.trim())
-      .filter(Boolean);
+    return trimNonEmptyLines(input, /\n{2,}/);
   }
 
   if (style === "tweet") {
-    const lines = input
-      .split(/\n+/)
-      .map((line) => line.trim())
-      .filter(Boolean);
+    const lines = trimNonEmptyLines(input, /\n+/);
     return lines.length > 0 ? lines : [input];
   }
 
@@ -360,10 +368,7 @@ export function paragraphizeText(
   prepared = prepared.replace(/\s(?=\d+\.\s)/g, "\n");
   prepared = prepared.replace(/([.!?])\s+(?=[A-Z0-9""])/g, "$1\n");
 
-  const lines = prepared
-    .split(/\n+/)
-    .map((line) => line.trim())
-    .filter(Boolean);
+  const lines = trimNonEmptyLines(prepared, /\n+/);
 
   const grouped: string[] = [];
   let current = "";

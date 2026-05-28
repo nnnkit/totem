@@ -199,6 +199,8 @@ function IdleView({
 
       <div className="space-y-2 mb-5">
         <label
+          htmlFor="export-mode-quick"
+          aria-label={needingHydration > 0 ? "Basic export" : "Quick export"}
           className={`flex cursor-pointer rounded border p-4 transition-colors ${
             mode === "quick"
               ? "border-accent/30 bg-accent-surface/50"
@@ -207,6 +209,7 @@ function IdleView({
         >
           <input
             type="radio"
+            id="export-mode-quick"
             name="export-mode"
             value="quick"
             checked={mode === "quick"}
@@ -240,6 +243,8 @@ function IdleView({
         </label>
 
         <label
+          htmlFor="export-mode-full"
+          aria-label="Full export"
           className={`flex cursor-pointer rounded border p-4 transition-colors ${
             mode === "full"
               ? "border-accent/30 bg-accent-surface/50"
@@ -248,6 +253,7 @@ function IdleView({
         >
           <input
             type="radio"
+            id="export-mode-full"
             name="export-mode"
             value="full"
             checked={mode === "full"}
@@ -556,7 +562,7 @@ function DoneView({
       </p>
       <div className="flex justify-end">
         <Button variant="primary" onClick={onClose}>
-          Done
+          Close export summary
         </Button>
       </div>
     </>

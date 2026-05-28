@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { getReadingProgress } from "../db";
 import type { ReadingProgress } from "../types";
-import { READING_HEIGHT_CHANGE_RATIO } from "../lib/constants";
+import { READING_HEIGHT_CHANGE_RATIO } from "../lib/constants/timing";
 
 interface UseReadingProgressOptions {
   tweetId: string;
@@ -18,8 +18,10 @@ export function useReadingProgress({
 }: UseReadingProgressOptions): UseReadingProgressResult {
   const savedProgress = useRef<ReadingProgress | null>(null);
   const restoredRef = useRef(false);
-  const [progressLoaded, setProgressLoaded] = useState(false);
-  const [isCompleted, setIsCompleted] = useState(false);
+  const [progressState, setProgressState] = useState({
+    loaded: false,
+    isCompleted: false,
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -27,19 +29,20 @@ export function useReadingProgress({
 
     restoredRef.current = false;
     savedProgress.current = null;
-    setProgressLoaded(false);
-    setIsCompleted(false);
+    setProgressState({ loaded: false, isCompleted: false });
 
     getReadingProgress(currentTweetId)
       .then((progress) => {
         if (cancelled) return;
         savedProgress.current = progress;
-        if (progress?.completed) setIsCompleted(true);
       })
       .catch(() => {})
       .finally(() => {
         if (!cancelled) {
-          setProgressLoaded(true);
+          setProgressState({
+            loaded: true,
+            isCompleted: Boolean(savedProgress.current?.completed),
+          });
         }
       });
 
@@ -49,7 +52,7 @@ export function useReadingProgress({
   }, [tweetId]);
 
   useEffect(() => {
-    if (!contentReady || !progressLoaded || restoredRef.current) return;
+    if (!contentReady || !progressState.loaded || restoredRef.current) return;
     restoredRef.current = true;
 
     const progress = savedProgress.current;
@@ -76,7 +79,7 @@ export function useReadingProgress({
         window.scrollTo(0, progress.scrollY);
       }
     });
-  }, [contentReady, progressLoaded, tweetId]);
+  }, [contentReady, progressState.loaded, tweetId]);
 
-  return { isCompleted };
+  return { isCompleted: progressState.isCompleted };
 }

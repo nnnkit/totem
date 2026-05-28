@@ -4,7 +4,7 @@ import { KIND_LABEL } from "./types";
 import { sanitizeUrl } from "./utils";
 import { cn } from "../../lib/cn";
 import { formatCompactNumber } from "../../lib/text";
-import { CARD_CLOSE_MS } from "../../lib/constants";
+import { CARD_CLOSE_MS } from "../../lib/constants/timing";
 import { TweetAuthor, VerifiedBadge, AffiliateBadge } from "./TweetAuthor";
 
 interface TweetKindPillProps {

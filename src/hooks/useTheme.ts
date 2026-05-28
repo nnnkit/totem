@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { hasChromeStorageSync, hasChromeStorageOnChanged } from "../lib/chrome";
 import { SYNC_THEME } from "../lib/storage-keys";
 
@@ -23,10 +23,8 @@ function normalizeThemePreference(value: unknown): ThemePreference {
 export function useTheme() {
   const [themePreference, setThemePreference] = useState<ThemePreference>("system");
   const [systemTheme, setSystemTheme] = useState<ResolvedTheme>(() => getSystemTheme());
-  const resolvedTheme: ResolvedTheme = useMemo(
-    () => (themePreference === "system" ? systemTheme : themePreference),
-    [themePreference, systemTheme],
-  );
+  const resolvedTheme: ResolvedTheme =
+    themePreference === "system" ? systemTheme : themePreference;
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") {

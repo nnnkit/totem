@@ -252,10 +252,18 @@ function EmptyView({
     <>
       <div
         ref={dropZoneRef}
+        role="button"
+        tabIndex={0}
         onDrop={onDrop}
         onDragOver={onDragOver}
         onDragLeave={onDragLeave}
         onClick={() => fileInputRef.current?.click()}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            fileInputRef.current?.click();
+          }
+        }}
         className={cn(
           "flex flex-col items-center justify-center gap-3 rounded border-2 border-dashed p-8 cursor-pointer transition-colors",
           dragOver
@@ -493,7 +501,7 @@ function DoneView({
 
       <div className="flex gap-2 justify-end">
         <Button variant="secondary" onClick={onClose}>
-          Done
+          Close import summary
         </Button>
         {totalAdded > 0 && (
           <Button
