@@ -11,7 +11,10 @@ import {
   BASE_DELAY_MIN,
   BASE_DELAY_MAX,
 } from "../hydration-store";
-import type { LockStorage } from "../../lib/hydration/lock";
+import {
+  STALE_THRESHOLD_MS,
+  type LockStorage,
+} from "../../lib/hydration/lock";
 
 function createFakeLockStorage(): LockStorage & { data: Record<string, unknown> } {
   const data: Record<string, unknown> = {};
@@ -266,6 +269,29 @@ describe("HydrationStore", () => {
     store.getState().dispose();
   });
 
+  it("keeps the lock fresh during a rate-limit pause", async () => {
+    const deps = createTestDeps();
+    (deps.findNext as ReturnType<typeof vi.fn>).mockResolvedValue("tweet-1");
+    (deps.countNeeding as ReturnType<typeof vi.fn>).mockResolvedValue(1);
+    (deps.fetchDetail as ReturnType<typeof vi.fn>).mockResolvedValue({
+      error: "RATE_LIMITED",
+    });
+
+    const store = createHydrationStore(deps);
+    store.getState().start();
+    await vi.advanceTimersByTimeAsync(500);
+
+    const storage = deps.lockStorage as ReturnType<typeof createFakeLockStorage>;
+    const firstTick = (storage.data.hydration_lock as { lastTickAt: number }).lastTickAt;
+
+    await vi.advanceTimersByTimeAsync(STALE_THRESHOLD_MS + 1000);
+
+    const lock = storage.data.hydration_lock as { lastTickAt: number };
+    expect(lock.lastTickAt).toBeGreaterThan(firstTick);
+    expect(Date.now() - lock.lastTickAt).toBeLessThan(STALE_THRESHOLD_MS);
+    store.getState().dispose();
+  });
+
   it("leaves transient detail errors uncached so they can retry", async () => {
     const deps = createTestDeps();
     (deps.findNext as ReturnType<typeof vi.fn>).mockResolvedValue("tweet-1");
@@ -282,6 +308,33 @@ describe("HydrationStore", () => {
     expect(deps.cacheDetail).not.toHaveBeenCalled();
     expect(store.getState().processed).toBe(0);
     expect(store.getState().unavailable).toBe(0);
+    store.getState().dispose();
+  });
+
+  it("marks detail parse failures unavailable so hydration can advance", async () => {
+    const deps = createTestDeps();
+    let callCount = 0;
+    (deps.findNext as ReturnType<typeof vi.fn>).mockImplementation(async () => {
+      callCount++;
+      return callCount <= 1 ? "tweet-parse-failed" : null;
+    });
+    (deps.countNeeding as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce(1)
+      .mockResolvedValue(0);
+    (deps.cacheDetail as ReturnType<typeof vi.fn>).mockRejectedValue(
+      new Error("DETAIL_PARSE_EMPTY"),
+    );
+
+    const store = createHydrationStore(deps);
+    store.getState().start();
+    await vi.advanceTimersByTimeAsync(30_000);
+
+    expect(deps.cacheUnavailable).toHaveBeenCalledWith("tweet-parse-failed", "parse_failed");
+    expect(store.getState()).toMatchObject({
+      status: "done",
+      processed: 1,
+      unavailable: 1,
+    });
     store.getState().dispose();
   });
 

@@ -2,7 +2,6 @@ import { useState, useRef, useCallback } from "react";
 import {
   UploadSimpleIcon,
   WarningCircleIcon,
-  ArrowsClockwiseIcon,
   CheckCircleIcon,
 } from "@phosphor-icons/react";
 import { Modal } from "./ui/Modal";
@@ -23,7 +22,7 @@ interface Props {
   open: boolean;
   onClose: () => void;
   activeAccountUserId: string | null;
-  onSyncAfterImport: () => void;
+  onRefreshAfterImport: () => void | Promise<void>;
 }
 
 type ImportState =
@@ -71,7 +70,7 @@ export function ImportModal({
   open,
   onClose,
   activeAccountUserId,
-  onSyncAfterImport,
+  onRefreshAfterImport,
 }: Props) {
   const [state, setState] = useState<ImportState>({ phase: "empty" });
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -153,6 +152,7 @@ export function ImportModal({
       const result = await runImport(validated, (progress) => {
         setState({ phase: "importing", progress });
       });
+      await onRefreshAfterImport();
       setState({ phase: "done", result });
     } catch (error) {
       setState({
@@ -160,7 +160,7 @@ export function ImportModal({
         message: error instanceof Error ? error.message : "Import failed",
       });
     }
-  }, [state]);
+  }, [onRefreshAfterImport, state]);
 
   const handleReset = useCallback(() => {
     setState({ phase: "empty" });
@@ -209,7 +209,6 @@ export function ImportModal({
         <DoneView
           result={state.result}
           onClose={handleClose}
-          onSync={onSyncAfterImport}
         />
       )}
       {state.phase === "error" && (
@@ -454,11 +453,9 @@ function ImportingView({ progress }: { progress: ImportStoreProgress | null }) {
 function DoneView({
   result,
   onClose,
-  onSync,
 }: {
   result: ImportResult;
   onClose: () => void;
-  onSync: () => void;
 }) {
   const stores = [
     { label: "Bookmarks", counts: result.bookmarks },
@@ -466,12 +463,6 @@ function DoneView({
     { label: "Highlights", counts: result.highlights },
     { label: "Reading progress", counts: result.readingProgress },
   ].filter((s) => s.counts.added > 0 || s.counts.alreadyHad > 0);
-
-  const totalAdded =
-    result.bookmarks.added +
-    result.details.added +
-    result.highlights.added +
-    result.readingProgress.added;
 
   return (
     <>
@@ -500,21 +491,9 @@ function DoneView({
       </div>
 
       <div className="flex gap-2 justify-end">
-        <Button variant="secondary" onClick={onClose}>
+        <Button variant="primary" onClick={onClose}>
           Close import summary
         </Button>
-        {totalAdded > 0 && (
-          <Button
-            variant="primary"
-            onClick={() => {
-              onSync();
-              onClose();
-            }}
-          >
-            <ArrowsClockwiseIcon className="size-4" />
-            Sync now
-          </Button>
-        )}
       </div>
     </>
   );

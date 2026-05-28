@@ -490,6 +490,11 @@ function NewTabRouteApp() {
       .catch(() => {});
   }, [actions, notifySyncBlocked]);
 
+  const handleRefreshAfterImport = useCallback(async () => {
+    await actions.reloadLocalData();
+    refreshContinueReading();
+  }, [actions, refreshContinueReading]);
+
   const openedTweetIds = useMemo(
     () => new Set(continueReading.map((item) => item.progress.tweetId)),
     [continueReading],
@@ -635,7 +640,7 @@ function NewTabRouteApp() {
         open={importOpen}
         onClose={() => updateRouteState({ importOpen: false })}
         activeAccountUserId={viewerProfile?.userId ?? null}
-        onSyncAfterImport={handleSync}
+        onRefreshAfterImport={handleRefreshAfterImport}
       />
       {toast && (
         <Toast

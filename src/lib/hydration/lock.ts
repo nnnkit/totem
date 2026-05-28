@@ -1,5 +1,6 @@
 export interface HydrationLock {
   holderId: string;
+  token: string;
   acquiredAt: number;
   lastTickAt: number;
 }
@@ -21,6 +22,10 @@ function defaultStorage(): LockStorage {
   };
 }
 
+function createLockToken(holderId: string): string {
+  return `${holderId}:${Date.now()}:${Math.random().toString(36).slice(2)}`;
+}
+
 export async function readLock(
   storage: LockStorage = defaultStorage(),
 ): Promise<HydrationLock | null> {
@@ -40,10 +45,12 @@ export async function tryAcquire(
   }
 
   const now = Date.now();
+  const token = createLockToken(holderId);
   await storage.set({
-    [LOCK_KEY]: { holderId, acquiredAt: now, lastTickAt: now } satisfies HydrationLock,
+    [LOCK_KEY]: { holderId, token, acquiredAt: now, lastTickAt: now } satisfies HydrationLock,
   });
-  return true;
+  const stored = await readLock(storage);
+  return stored?.holderId === holderId && stored.token === token;
 }
 
 export async function heartbeat(

@@ -10,6 +10,7 @@ import {
   heartbeat,
   release,
   readLock,
+  STALE_THRESHOLD_MS,
   type LockStorage,
 } from "../lib/hydration/lock";
 import { CS_HYDRATION_SNAPSHOT } from "../lib/storage-keys";
@@ -53,6 +54,7 @@ const STORAGE_QUOTA_THRESHOLD = 0.95;
 const STORAGE_CHECK_INTERVAL = 10;
 const SNAPSHOT_WRITE_INTERVAL = 1;
 const HOLDER_ID_SESSION_KEY = "totem_hydration_holder_id";
+const PAUSE_HEARTBEAT_INTERVAL_MS = Math.floor(STALE_THRESHOLD_MS / 2);
 
 let defaultAuthReady = false;
 const defaultAuthListeners = new Set<(ready: boolean) => void>();
@@ -131,6 +133,10 @@ function getDefaultHolderId(): string {
 
 function isRestorableStatus(status: HydrationStatus): boolean {
   return status !== "idle";
+}
+
+function isDetailParseFailure(error: unknown): boolean {
+  return error instanceof Error && error.message === "DETAIL_PARSE_EMPTY";
 }
 
 export interface HydrationDeps {
@@ -365,7 +371,18 @@ export function createHydrationStore(deps: HydrationDeps = defaultDeps()) {
                   writeSnapshotFromState(get());
                   if (signal?.aborted) break;
                   await heartbeat(deps.holderId, deps.lockStorage);
-                  await sleep(RATE_LIMIT_PAUSE_MS, signal);
+                  const retainedLock = await sleepWithHeartbeat(
+                    RATE_LIMIT_PAUSE_MS,
+                    deps.holderId,
+                    deps.lockStorage,
+                    signal,
+                  );
+                  if (!retainedLock || signal?.aborted) {
+                    loopRunning = false;
+                    writeSnapshotFromState(get());
+                    if (!signal?.aborted) startLockPolling();
+                    return;
+                  }
                   set({ status: "running", pauseUntil: 0 });
                 } else if (classified.status === "paused-auth") {
                   set({ status: "paused-auth" });
@@ -374,8 +391,17 @@ export function createHydrationStore(deps: HydrationDeps = defaultDeps()) {
                   return;
                 }
               } else {
-                await deps.cacheDetail(tweetId, response.data);
-                set((s) => ({ processed: s.processed + 1 }));
+                try {
+                  await deps.cacheDetail(tweetId, response.data);
+                  set((s) => ({ processed: s.processed + 1 }));
+                } catch (error) {
+                  if (!isDetailParseFailure(error)) throw error;
+                  await deps.cacheUnavailable(tweetId, "parse_failed");
+                  set((s) => ({
+                    processed: s.processed + 1,
+                    unavailable: s.unavailable + 1,
+                  }));
+                }
               }
             }
           } catch {
@@ -517,6 +543,25 @@ function sleep(ms: number, signal?: AbortSignal): Promise<void> {
       resolve();
     }, { once: true });
   });
+}
+
+async function sleepWithHeartbeat(
+  ms: number,
+  holderId: string,
+  storage: LockStorage,
+  signal?: AbortSignal,
+): Promise<boolean> {
+  const until = Date.now() + ms;
+  while (!signal?.aborted) {
+    const remaining = until - Date.now();
+    if (remaining <= 0) return true;
+
+    await sleep(Math.min(PAUSE_HEARTBEAT_INTERVAL_MS, remaining), signal);
+    if (signal?.aborted) return false;
+    if (Date.now() >= until) return true;
+    if (!(await heartbeat(holderId, storage))) return false;
+  }
+  return false;
 }
 
 let _defaultStore: ReturnType<typeof createHydrationStore> | null = null;

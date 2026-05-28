@@ -49,6 +49,16 @@ describe("HydrationLock", () => {
     expect(result).toBe(false);
   });
 
+  it("verifies the stored token before reporting acquisition", async () => {
+    const [tab1, tab2] = await Promise.all([
+      tryAcquire("tab-1", storage),
+      tryAcquire("tab-2", storage),
+    ]);
+
+    expect([tab1, tab2].filter(Boolean)).toHaveLength(1);
+    expect((await readLock(storage))?.holderId).toBe(tab1 ? "tab-1" : "tab-2");
+  });
+
   it("steals stale lock", async () => {
     await tryAcquire("tab-1", storage);
     const lock = storage.data[LOCK_KEY] as Record<string, unknown>;
