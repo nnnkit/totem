@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import {
   ArrowsClockwiseIcon,
@@ -59,7 +59,7 @@ import {
   writeFullExportReadyDismissal,
 } from "../lib/export/full-export-ready-dismissal";
 
-import { CLOCK_UPDATE_MS } from "../lib/constants";
+import { CLOCK_UPDATE_MS } from "../lib/constants/timing";
 
 interface Props {
   bookmarks: Bookmark[];
@@ -95,7 +95,271 @@ interface DecoratedBookmark {
   isRead: boolean;
 }
 
-export function NewTabHome({
+interface NewTabHomeState {
+  now: Date;
+  imgLoaded: boolean;
+  imgError: boolean;
+  cardEngaged: boolean;
+  mountSeed: number;
+}
+
+type NewTabHomePatch =
+  | Partial<NewTabHomeState>
+  | ((state: NewTabHomeState) => Partial<NewTabHomeState>);
+
+function createInitialNewTabHomeState(): NewTabHomeState {
+  return {
+    now: new Date(),
+    imgLoaded: false,
+    imgError: false,
+    cardEngaged: false,
+    mountSeed: Math.random(),
+  };
+}
+
+function newTabHomeReducer(
+  state: NewTabHomeState,
+  patch: NewTabHomePatch,
+): NewTabHomeState {
+  return {
+    ...state,
+    ...(typeof patch === "function" ? patch(state) : patch),
+  };
+}
+
+interface FooterCardProps {
+  footerState: FooterState;
+  currentItem: DecoratedBookmark | null;
+  getBookmarkHref: (bookmark: Bookmark) => string;
+  cardBase: string;
+  cardCentered: string;
+  cardEngaged: boolean;
+  onCardEngagedChange: (engaged: boolean) => void;
+  recommendationSource: RecommendationSource;
+  offlineMode: boolean;
+  onOpenBookmark: (bookmark: Bookmark) => void;
+  syncButton: SyncButtonState;
+  onSync: () => void;
+  handleLoginButton: () => void;
+  onOpenImport: () => void;
+}
+
+function FooterCard({
+  footerState,
+  currentItem,
+  getBookmarkHref,
+  cardBase,
+  cardCentered,
+  cardEngaged,
+  onCardEngagedChange,
+  recommendationSource,
+  offlineMode,
+  onOpenBookmark,
+  syncButton,
+  onSync,
+  handleLoginButton,
+  onOpenImport,
+}: FooterCardProps) {
+  switch (footerState) {
+    case "loading":
+      return (
+        <article className={cn(cardBase, "flex items-center justify-center")}>
+          <TotemLogo loading className="size-10" />
+        </article>
+      );
+    case "connecting":
+      return (
+        <article className={cardCentered}>
+          <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
+            Connecting to X&hellip;
+          </p>
+          <div className="mt-4 flex justify-center">
+            <TotemLogo loading className="size-10" />
+          </div>
+          <p className="mt-4 text-pretty text-base text-home-empty">
+            Syncing your session in the background.
+          </p>
+        </article>
+      );
+    case "need_login":
+      return (
+        <article className={cardCentered}>
+          <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
+            Log in to start reading
+          </p>
+          <p className="mt-4 text-pretty text-base text-home-empty">
+            Sign in to your X account to sync and read your saved posts.
+          </p>
+          <Button
+            className="mt-6 border-0 bg-home-accent text-white hover:opacity-90"
+            onClick={handleLoginButton}
+          >
+            Log in to X
+          </Button>
+        </article>
+      );
+    case "bookmark_card":
+      if (!currentItem) return null;
+      return (
+        <a
+          href={getBookmarkHref(currentItem.bookmark)}
+          className={cn(
+            cardBase,
+            "block cursor-pointer p-4 no-underline hover:bg-main-bg-hover max-sm:py-3.5",
+            cardEngaged && "bg-main-bg-hover",
+          )}
+          onMouseEnter={() => onCardEngagedChange(true)}
+          onMouseLeave={() => onCardEngagedChange(false)}
+          onFocusCapture={() => onCardEngagedChange(true)}
+          onBlurCapture={(event) => {
+            const nextTarget =
+              event.relatedTarget instanceof Node ? event.relatedTarget : null;
+            if (!nextTarget || !event.currentTarget.contains(nextTarget)) {
+              onCardEngagedChange(false);
+            }
+          }}
+          onKeyDown={(event) => {
+            if (event.key === " ") {
+              event.preventDefault();
+              event.stopPropagation();
+              onOpenBookmark(currentItem.bookmark);
+            }
+          }}
+          aria-label={`Read ${currentItem.title} by @${
+            currentItem.bookmark.author.screenName
+          }${
+            currentItem.minutes !== null ? `, ${currentItem.minutes} min read` : ""
+          }`}
+        >
+          <div className="flex min-h-32 flex-col translate-y-0 opacity-100 transition-[transform,opacity] duration-200 ease-overlay-in max-sm:min-h-28">
+            <div className="flex justify-between">
+              <div className="flex items-center gap-1.5">
+                <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
+                  {recommendationSource === "pinned" ? "pinned" : "your next read"}
+                </p>
+                {offlineMode && (
+                  <span title="Not signed in — showing cached bookmarks">
+                    <LinkBreakIcon className="size-4 animate-offline-pulse text-muted" />
+                  </span>
+                )}
+              </div>
+              <kbd className="ml-2 border-home-secondary-border bg-accent-tint text-home-fg-muted shadow-kbd">
+                Space
+              </kbd>
+            </div>
+            <div className="mt-4 flex flex-col gap-1">
+              <h2 className="capitalize font-serif line-clamp-2 text-balance text-lg font-medium leading-snug text-home-fg-secondary max-sm:text-base lg:text-xl">
+                {currentItem.title}
+              </h2>
+              <p className="line-clamp-1 text-xs text-home-description/80">
+                {currentItem.excerpt}
+              </p>
+            </div>
+            <div className="mt-auto flex items-center gap-2.5 pt-3">
+              <img
+                src={currentItem.bookmark.author.profileImageUrl}
+                alt={`@${currentItem.bookmark.author.screenName}`}
+                className="size-6 shrink-0 rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.06)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]"
+              />
+              <div className="min-w-0 flex flex-col gap-1">
+                <p className="truncate text-xxs font-medium text-home-fg-secondary">
+                  {currentItem.bookmark.author.name}
+                </p>
+                <p className="truncate text-xxs text-home-fg-muted">
+                  @{currentItem.bookmark.author.screenName}
+                </p>
+              </div>
+            </div>
+          </div>
+        </a>
+      );
+    case "syncing_bootstrap":
+      return (
+        <article className={cardCentered}>
+          <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
+            Syncing your bookmarks&hellip;
+          </p>
+          <div className="mt-4 flex justify-center">
+            <TotemLogo loading className="size-10" />
+          </div>
+          <p className="mt-4 text-pretty text-base text-home-empty">
+            Fetching bookmarks from your account. This may take a moment.
+          </p>
+        </article>
+      );
+    case "sync_error":
+      return (
+        <article className={cardCentered}>
+          <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
+            Something went wrong
+          </p>
+          <p className="mt-4 text-pretty text-base text-home-empty">
+            Could not sync your bookmarks. Check your connection and try again.
+          </p>
+          <Button
+            type="button"
+            onClick={onSync}
+            disabled={syncButton.disabled}
+            className="mt-6 border-0 bg-home-accent text-white hover:opacity-90"
+          >
+            Try again
+          </Button>
+        </article>
+      );
+    case "empty_offline":
+      return (
+        <article className={cardCentered}>
+          <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
+            Cached reading only
+          </p>
+          <p className="mt-4 text-pretty text-base text-home-empty">
+            Log in to X to sync the rest of your bookmarks and refresh this device.
+          </p>
+          <Button
+            type="button"
+            onClick={handleLoginButton}
+            className="mt-6 border-0 bg-home-accent text-white hover:opacity-90"
+          >
+            Log in to X
+          </Button>
+        </article>
+      );
+    case "empty_can_sync":
+    default:
+      return (
+        <>
+          <article className={cardCentered}>
+            <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
+              Your reading list is quiet
+            </p>
+            <p className="mt-4 text-pretty text-base text-home-empty">
+              No bookmarks yet. Bookmark posts on X, then sync to start reading.
+            </p>
+            <Button
+              type="button"
+              onClick={onSync}
+              disabled={syncButton.disabled}
+              className="mt-6 border-0 bg-home-accent text-white hover:opacity-90"
+            >
+              Sync bookmarks
+            </Button>
+          </article>
+          <p className="text-center text-xs text-on-bg-ghost">
+            Already have a Totem export?{" "}
+            <button
+              type="button"
+              onClick={onOpenImport}
+              className="underline hover:text-on-bg-muted"
+            >
+              Import &rarr;
+            </button>
+          </p>
+        </>
+      );
+  }
+}
+
+function useNewTabHomeModel({
   bookmarks,
   onSync,
   detailedTweetIds,
@@ -120,13 +384,19 @@ export function NewTabHome({
   offlineModeOverride,
   onLogin,
 }: Props) {
-  const [now, setNow] = useState(() => new Date());
-  const [imgLoaded, setImgLoaded] = useState(false);
-  const [imgError, setImgError] = useState(false);
-  const [cardEngaged, setCardEngaged] = useState(false);
-  const [mountSeed] = useState(() => Math.random());
+  const [homeState, updateHomeState] = useReducer(
+    newTabHomeReducer,
+    undefined,
+    createInitialNewTabHomeState,
+  );
+  const {
+    now,
+    imgLoaded,
+    imgError,
+    cardEngaged,
+    mountSeed,
+  } = homeState;
   const searchRef = useRef<HTMLInputElement>(null);
-  const prevWallpaperUrlRef = useRef<string | null>(null);
   const { wallpaperUrl, wallpaperCredit, gradientCss } =
     useWallpaper(backgroundMode);
   const { sites: topSites } = useTopSites(topSitesLimit, showTopSites);
@@ -156,9 +426,10 @@ export function NewTabHome({
         const itemsByTweetId = new Map(
           items.map((item) => [item.bookmark.tweetId, item]),
         );
-        const pinnedItems = pinnedIds
-          .map((id) => itemsByTweetId.get(id))
-          .filter(Boolean);
+        const pinnedItems = pinnedIds.flatMap((id) => {
+          const item = itemsByTweetId.get(id);
+          return item ? [item] : [];
+        });
         if (pinnedItems.length > 0) {
           const index = Math.floor(mountSeed * pinnedItems.length);
           return pinnedItems[index];
@@ -184,14 +455,15 @@ export function NewTabHome({
 
   const showWallpaper = Boolean(wallpaperUrl && !imgError);
 
-  if (prevWallpaperUrlRef.current !== wallpaperUrl) {
-    prevWallpaperUrlRef.current = wallpaperUrl;
-    setImgLoaded(false);
-    setImgError(false);
-  }
+  useEffect(() => {
+    updateHomeState({ imgLoaded: false, imgError: false });
+  }, [wallpaperUrl]);
 
   useEffect(() => {
-    const timer = window.setInterval(() => setNow(new Date()), CLOCK_UPDATE_MS);
+    const timer = window.setInterval(
+      () => updateHomeState({ now: new Date() }),
+      CLOCK_UPDATE_MS,
+    );
     return () => window.clearInterval(timer);
   }, []);
 
@@ -264,214 +536,96 @@ export function NewTabHome({
     getHydrationStore().getState().stop();
   }, []);
 
-  const renderFooterCard = () => {
-    switch (footerState) {
-      case "loading":
-        return (
-          <article className={cn(cardBase, "flex items-center justify-center")}>
-            <TotemLogo loading className="size-10" />
-          </article>
-        );
-      case "connecting":
-        return (
-          <article className={cardCentered}>
-            <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
-              Connecting to X&hellip;
-            </p>
-            <div className="mt-4 flex justify-center">
-              <TotemLogo loading className="size-10" />
-            </div>
-            <p className="mt-4 text-pretty text-base text-home-empty">
-              Syncing your session in the background.
-            </p>
-          </article>
-        );
-      case "need_login":
-        return (
-          <article className={cardCentered}>
-            <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
-              Log in to start reading
-            </p>
-            <p className="mt-4 text-pretty text-base text-home-empty">
-              Sign in to your X account to sync and read your saved posts.
-            </p>
-            <Button
-              className="mt-6 border-0 bg-home-accent text-white hover:opacity-90"
-              onClick={handleLoginButton}
-            >
-              Log in to X
-            </Button>
-          </article>
-        );
-      case "bookmark_card":
-        if (!currentItem) return null;
-        return (
-          <a
-            href={getBookmarkHref(currentItem.bookmark)}
-            className={cn(
-              cardBase,
-              "block cursor-pointer p-4 no-underline hover:bg-main-bg-hover max-sm:py-3.5",
-              cardEngaged && "bg-main-bg-hover",
-            )}
-            onMouseEnter={() => setCardEngaged(true)}
-            onMouseLeave={() => setCardEngaged(false)}
-            onFocusCapture={() => setCardEngaged(true)}
-            onBlurCapture={(event) => {
-              const nextTarget =
-                event.relatedTarget instanceof Node
-                  ? event.relatedTarget
-                  : null;
-              if (!nextTarget || !event.currentTarget.contains(nextTarget)) {
-                setCardEngaged(false);
-              }
-            }}
-            onKeyDown={(event) => {
-              if (event.key === " ") {
-                event.preventDefault();
-                event.stopPropagation();
-                onOpenBookmark(currentItem.bookmark);
-              }
-            }}
-            aria-label={`Read ${currentItem.title} by @${
-              currentItem.bookmark.author.screenName
-            }${
-              currentItem.minutes !== null
-                ? `, ${currentItem.minutes} min read`
-                : ""
-            }`}
-          >
-            <div className="flex min-h-32 flex-col translate-y-0 opacity-100 transition-[transform,opacity] duration-200 ease-overlay-in max-sm:min-h-28">
-              <div className="flex justify-between">
-                <div className="flex items-center gap-1.5">
-                  <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
-                    {recommendationSource === "pinned"
-                      ? "pinned"
-                      : "your next read"}
-                  </p>
-                  {offlineMode && (
-                    <span title="Not signed in — showing cached bookmarks">
-                      <LinkBreakIcon className="size-4 animate-offline-pulse text-muted" />
-                    </span>
-                  )}
-                </div>
-                <kbd className="ml-2 border-home-secondary-border bg-accent-tint text-home-fg-muted shadow-kbd">
-                  Space
-                </kbd>
-              </div>
-              <div className="mt-4 flex flex-col gap-1">
-                <h2 className="capitalize font-serif line-clamp-2 text-balance text-lg font-medium leading-snug text-home-fg-secondary max-sm:text-base lg:text-xl">
-                  {currentItem.title}
-                </h2>
-                <p className="line-clamp-1 text-xs text-home-description/80">
-                  {currentItem.excerpt}
-                </p>
-              </div>
-              <div className="mt-auto flex items-center gap-2.5 pt-3">
-                <img
-                  src={currentItem.bookmark.author.profileImageUrl}
-                  alt={`@${currentItem.bookmark.author.screenName}`}
-                  className="size-6 shrink-0 rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.06)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]"
-                />
-                <div className="min-w-0 flex flex-col gap-1">
-                  <p className="truncate text-xxs font-medium text-home-fg-secondary">
-                    {currentItem.bookmark.author.name}
-                  </p>
-                  <p className="truncate text-xxs text-home-fg-muted">
-                    @{currentItem.bookmark.author.screenName}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </a>
-        );
-      case "syncing_bootstrap":
-        return (
-          <article className={cardCentered}>
-            <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
-              Syncing your bookmarks&hellip;
-            </p>
-            <div className="mt-4 flex justify-center">
-              <TotemLogo loading className="size-10" />
-            </div>
-            <p className="mt-4 text-pretty text-base text-home-empty">
-              Fetching bookmarks from your account. This may take a moment.
-            </p>
-          </article>
-        );
-      case "sync_error":
-        return (
-          <article className={cardCentered}>
-            <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
-              Something went wrong
-            </p>
-            <p className="mt-4 text-pretty text-base text-home-empty">
-              Could not sync your bookmarks. Check your connection and try
-              again.
-            </p>
-            <Button
-              type="button"
-              onClick={onSync}
-              disabled={syncButton.disabled}
-              className="mt-6 border-0 bg-home-accent text-white hover:opacity-90"
-            >
-              Try again
-            </Button>
-          </article>
-        );
-      case "empty_offline":
-        return (
-          <article className={cardCentered}>
-            <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
-              Cached reading only
-            </p>
-            <p className="mt-4 text-pretty text-base text-home-empty">
-              Log in to X to sync the rest of your bookmarks and refresh this
-              device.
-            </p>
-            <Button
-              type="button"
-              onClick={handleLoginButton}
-              className="mt-6 border-0 bg-home-accent text-white hover:opacity-90"
-            >
-              Log in to X
-            </Button>
-          </article>
-        );
-      case "empty_can_sync":
-      default:
-        return (
-          <>
-            <article className={cardCentered}>
-              <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
-                Your reading list is quiet
-              </p>
-              <p className="mt-4 text-pretty text-base text-home-empty">
-                No bookmarks yet. Bookmark posts on X, then sync to start reading.
-              </p>
-              <Button
-                type="button"
-                onClick={onSync}
-                disabled={syncButton.disabled}
-                className="mt-6 border-0 bg-home-accent text-white hover:opacity-90"
-              >
-                Sync bookmarks
-              </Button>
-            </article>
-            <p className="text-center text-xs text-on-bg-ghost">
-              Already have a Totem export?{" "}
-              <button
-                type="button"
-                onClick={onOpenImport}
-                className="underline hover:text-on-bg-muted"
-              >
-                Import &rarr;
-              </button>
-            </p>
-          </>
-        );
-    }
+  return {
+    bookmarks,
+    cardBase,
+    cardCentered,
+    cardEngaged,
+    currentItem,
+    detailedTweetIds,
+    footerState,
+    getBookmarkHref,
+    gradientCss,
+    handleCancelHydration,
+    handleLoginButton,
+    handleLoginHint,
+    hydrationPauseUntil,
+    hydrationProcessed,
+    hydrationStatus,
+    hydrationTotal,
+    imgLoaded,
+    now,
+    offlineMode,
+    onOpenBookmark,
+    onOpenExport,
+    onOpenImport,
+    onOpenReading,
+    onOpenSettings,
+    onOpenSettingsToStorage,
+    onSearchEngineChange,
+    onSync,
+    recommendationSource,
+    searchEngine,
+    searchRef,
+    showCardButtons,
+    showSearchBar,
+    showWallpaper,
+    showTopSites,
+    surpriseMe,
+    syncButton,
+    topSites,
+    updateHomeState,
+    wallpaperCredit,
+    wallpaperUrl,
   };
+}
 
+export function NewTabHome(props: Props) {
+  return renderNewTabHome(useNewTabHomeModel(props));
+}
+
+function renderNewTabHome({
+  bookmarks,
+  cardBase,
+  cardCentered,
+  cardEngaged,
+  currentItem,
+  detailedTweetIds,
+  footerState,
+  getBookmarkHref,
+  gradientCss,
+  handleCancelHydration,
+  handleLoginButton,
+  handleLoginHint,
+  hydrationPauseUntil,
+  hydrationProcessed,
+  hydrationStatus,
+  hydrationTotal,
+  imgLoaded,
+  now,
+  offlineMode,
+  onOpenBookmark,
+  onOpenExport,
+  onOpenImport,
+  onOpenReading,
+  onOpenSettings,
+  onOpenSettingsToStorage,
+  onSearchEngineChange,
+  onSync,
+  recommendationSource,
+  searchEngine,
+  searchRef,
+  showCardButtons,
+  showSearchBar,
+  showWallpaper,
+  showTopSites,
+  surpriseMe,
+  syncButton,
+  topSites,
+  updateHomeState,
+  wallpaperCredit,
+  wallpaperUrl,
+}: ReturnType<typeof useNewTabHomeModel>) {
   return (
     <div className="totem-home relative flex h-dvh flex-col overflow-hidden bg-surface text-home-fg">
       {!showWallpaper && gradientCss && (
@@ -481,14 +635,14 @@ export function NewTabHome({
         />
       )}
       {showWallpaper && (
-        <div className="pointer-events-none absolute inset-0 bg-black" />
+        <div className="pointer-events-none absolute inset-0 bg-gray-950" />
       )}
       {showWallpaper && (
         <img
           src={wallpaperUrl ?? ""}
           alt=""
-          onLoad={() => setImgLoaded(true)}
-          onError={() => setImgError(true)}
+          onLoad={() => updateHomeState({ imgLoaded: true })}
+          onError={() => updateHomeState({ imgError: true })}
           className="pointer-events-none absolute inset-0 h-full w-full object-cover transition-opacity duration-300 ease-overlay-in brightness-75"
           style={{ opacity: imgLoaded ? 0.6 : 0 }}
         />
@@ -637,7 +791,22 @@ export function NewTabHome({
         </main>
 
         <footer className="mx-auto w-full max-w-lg space-y-6 pb-6">
-          {renderFooterCard()}
+          <FooterCard
+            footerState={footerState}
+            currentItem={currentItem}
+            getBookmarkHref={getBookmarkHref}
+            cardBase={cardBase}
+            cardCentered={cardCentered}
+            cardEngaged={cardEngaged}
+            onCardEngagedChange={(engaged) => updateHomeState({ cardEngaged: engaged })}
+            recommendationSource={recommendationSource}
+            offlineMode={offlineMode}
+            onOpenBookmark={onOpenBookmark}
+            syncButton={syncButton}
+            onSync={onSync}
+            handleLoginButton={handleLoginButton}
+            onOpenImport={onOpenImport}
+          />
 
           <div
             className={cn(

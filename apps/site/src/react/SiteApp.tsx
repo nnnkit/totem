@@ -8,6 +8,7 @@ import {
 } from "@phosphor-icons/react";
 import {
   useEffect,
+  useReducer,
   useRef,
   useState,
   type AnchorHTMLAttributes,
@@ -305,11 +306,36 @@ function SiteLayout({ children }: { page: SitePage; children: ReactNode }) {
   return <>{children}</>;
 }
 
+interface DemoBrowserState {
+  opened: boolean;
+  frameReady: boolean;
+  tabTitle: string;
+}
+
+type DemoBrowserPatch =
+  | Partial<DemoBrowserState>
+  | ((state: DemoBrowserState) => Partial<DemoBrowserState>);
+
+function demoBrowserReducer(
+  state: DemoBrowserState,
+  patch: DemoBrowserPatch,
+): DemoBrowserState {
+  return {
+    ...state,
+    ...(typeof patch === "function" ? patch(state) : patch),
+  };
+}
+
 function DemoBrowser() {
   const { browser } = SITE_COPY;
-  const [opened, setOpened] = useState(true);
-  const [frameReady, setFrameReady] = useState(false);
-  const [tabTitle, setTabTitle] = useState<string>(browser.defaultTabTitle);
+  const [{ opened, frameReady, tabTitle }, updateBrowser] = useReducer(
+    demoBrowserReducer,
+    {
+      opened: true,
+      frameReady: false,
+      tabTitle: browser.defaultTabTitle,
+    },
+  );
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   // Astro hydrates this component after the iframe may have already loaded
@@ -321,19 +347,21 @@ function DemoBrowser() {
     if (!iframe) return;
 
     if (iframe.contentDocument?.readyState === "complete") {
-      setFrameReady(true);
+      updateBrowser({ frameReady: true });
       return;
     }
 
-    const handleLoad = () => setFrameReady(true);
+    const handleLoad = () => updateBrowser({ frameReady: true });
     iframe.addEventListener("load", handleLoad);
     return () => iframe.removeEventListener("load", handleLoad);
   }, [opened]);
 
   useEffect(() => {
     if (!opened) {
-      setTabTitle(browser.defaultTabTitle);
-      setFrameReady(false);
+      updateBrowser({
+        tabTitle: browser.defaultTabTitle,
+        frameReady: false,
+      });
       return;
     }
 
@@ -344,10 +372,10 @@ function DemoBrowser() {
 
         const display =
           raw === browser.newTabTitle ||
-          raw.startsWith(browser.demoTabTitlePrefix)
+            raw.startsWith(browser.demoTabTitlePrefix)
             ? browser.defaultTabTitle
             : raw;
-        setTabTitle(display);
+        updateBrowser({ tabTitle: display });
       } catch {
         // Ignore cross-origin access while the iframe is booting.
       }
@@ -378,7 +406,7 @@ function DemoBrowser() {
               type="button"
               onClick={(event) => {
                 event.stopPropagation();
-                setOpened(false);
+                updateBrowser({ opened: false });
               }}
               className="site-browser-close-button"
               aria-label={browser.closeTabLabel}
@@ -400,7 +428,7 @@ function DemoBrowser() {
           <div className="site-browser-launcher">
             <button
               type="button"
-              onClick={() => setOpened(true)}
+              onClick={() => updateBrowser({ opened: true })}
               className="site-browser-launcher-button"
               aria-label={browser.launcherLabel}
             >
@@ -487,8 +515,16 @@ function DemoBrowser() {
 
       {!opened ? (
         <div
+          role="button"
+          tabIndex={0}
           className="site-browser-stage site-browser-closed-stage"
-          onClick={() => setOpened(true)}
+          onClick={() => updateBrowser({ opened: true })}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              updateBrowser({ opened: true });
+            }
+          }}
         >
           <div className="site-browser-glow" />
           <p className="site-browser-hint">{browser.closedHint}</p>
@@ -783,6 +819,29 @@ export type BlogSummary = {
   publishedAt: string | null;
 };
 
+const MONTH_NAMES = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+] as const;
+
+function formatIsoDateLabel(value: string): string {
+  const [year, month, day] = value.split("-");
+  const monthName = MONTH_NAMES[Number(month) - 1];
+  const dayNumber = Number(day);
+  if (!year || !monthName || !Number.isFinite(dayNumber)) return value;
+  return `${monthName} ${dayNumber}, ${year}`;
+}
+
 function LandingPage({ recentPosts }: { recentPosts: BlogSummary[] }) {
   const { faq, features, hero, demo } = SITE_COPY.landing;
 
@@ -1006,11 +1065,7 @@ function RecentBlogPostsSection({ posts }: { posts: BlogSummary[] }) {
                     dateTime={post.publishedAt}
                     className="text-xs uppercase tracking-widest text-neutral-400"
                   >
-                    {new Date(post.publishedAt).toLocaleDateString("en-US", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })}
+                    {formatIsoDateLabel(post.publishedAt)}
                   </time>
                 )}
                 <h3 className="mt-3 font-serif text-xl leading-tight text-neutral-900 transition-colors group-hover:text-neutral-700">
@@ -1206,11 +1261,11 @@ function PrivacyPermissionCard({
 
 function renderPolicySectionItem(item: PolicySectionItem, index: number) {
   if (typeof item === "string") {
-    return <li key={`${index}-${item.slice(0, 24)}`}>{item}</li>;
+    return <li key={item}>{item}</li>;
   }
 
   return (
-    <li key={`${index}-${item.label}`}>
+    <li key={`${item.label}-${item.text}`}>
       <strong>{item.label}</strong>: {item.text}
     </li>
   );
@@ -1237,10 +1292,10 @@ function buildSegmentPath(
 ): string {
   if (segment.path.length < 2) return "";
   const corner = 18;
-  const points = segment.path
-    .map((id) => stations[id])
-    .filter(Boolean)
-    .map((station) => ({ x: station.x, y: station.y + offset }));
+  const points = segment.path.flatMap((id) => {
+    const station = stations[id];
+    return station ? [{ x: station.x, y: station.y + offset }] : [];
+  });
 
   if (points.length < 2) return "";
 
@@ -1285,12 +1340,14 @@ function StationDetailPanel({
   stations: StationLookup;
   onSelect: (id: string) => void;
 }) {
-  const stationRoutes = station.routes
-    .map((id) => routes[id])
-    .filter((route): route is TransitRoute => Boolean(route));
-  const neighbors = station.neighbors
-    .map((id) => stations[id])
-    .filter((s): s is TransitStation => Boolean(s));
+  const stationRoutes = station.routes.flatMap((id) => {
+    const route = routes[id];
+    return route ? [route] : [];
+  });
+  const neighbors = station.neighbors.flatMap((id) => {
+    const neighbor = stations[id];
+    return neighbor ? [neighbor] : [];
+  });
 
   return (
     <aside className="transit-panel" aria-live="polite">
@@ -1436,7 +1493,7 @@ function FlowsPanel({
             const station = stations[step.stationId];
             const isCurrent = index === activeStepIndex;
             return (
-              <li key={`${activeFlow.id}-${index}`}>
+              <li key={`${activeFlow.id}-${step.stationId}-${step.note}`}>
                 <button
                   type="button"
                   onClick={() => onSelectStep(index)}
@@ -1492,7 +1549,7 @@ function InteractiveMap({
 
   const edgeOffsets = new Map<string, number>();
   const offsetForSegment = (segment: TransitSegment) => {
-    const key = [...segment.path].sort().join("|") + "::" + segment.route;
+    const key = segment.path.toSorted().join("|") + "::" + segment.route;
     const used = edgeOffsets.get(key) ?? 0;
     edgeOffsets.set(key, used + 1);
     return used;
@@ -1696,6 +1753,27 @@ function buildHowItWorksUrl(state: HowItWorksUrlState): string {
   return search ? `${path}?${search}` : path;
 }
 
+interface HowItWorksState {
+  selectedId: string;
+  filteredRouteId: string | null;
+  activeFlowId: string | null;
+  flowStepIndex: number;
+}
+
+type HowItWorksPatch =
+  | Partial<HowItWorksState>
+  | ((state: HowItWorksState) => Partial<HowItWorksState>);
+
+function howItWorksReducer(
+  state: HowItWorksState,
+  patch: HowItWorksPatch,
+): HowItWorksState {
+  return {
+    ...state,
+    ...(typeof patch === "function" ? patch(state) : patch),
+  };
+}
+
 function HowItWorksPage() {
   const { howItWorks: interactive } = SITE_COPY;
 
@@ -1747,14 +1825,15 @@ function HowItWorksPage() {
 
   const initial = deriveStateFromUrl(readHowItWorksUrl());
 
-  const [selectedId, setSelectedId] = useState<string>(initial.stationId);
-  const [filteredRouteId, setFilteredRouteId] = useState<string | null>(
-    initial.routeId,
-  );
-  const [activeFlowId, setActiveFlowId] = useState<string | null>(
-    initial.flowId,
-  );
-  const [flowStepIndex, setFlowStepIndex] = useState<number>(initial.stepIndex);
+  const [
+    { selectedId, filteredRouteId, activeFlowId, flowStepIndex },
+    updateHowItWorks,
+  ] = useReducer(howItWorksReducer, initial, (state) => ({
+    selectedId: state.stationId,
+    filteredRouteId: state.routeId,
+    activeFlowId: state.flowId,
+    flowStepIndex: state.stepIndex,
+  }));
 
   const skipNextUrlSync = useRef(true);
 
@@ -1783,10 +1862,12 @@ function HowItWorksPage() {
     const handler = () => {
       const next = deriveStateFromUrl(readHowItWorksUrl());
       skipNextUrlSync.current = true;
-      setActiveFlowId(next.flowId);
-      setFlowStepIndex(next.stepIndex);
-      setSelectedId(next.stationId);
-      setFilteredRouteId(next.routeId);
+      updateHowItWorks({
+        activeFlowId: next.flowId,
+        flowStepIndex: next.stepIndex,
+        selectedId: next.stationId,
+        filteredRouteId: next.routeId,
+      });
     };
     window.addEventListener("popstate", handler);
     return () => window.removeEventListener("popstate", handler);
@@ -1801,42 +1882,49 @@ function HowItWorksPage() {
   );
 
   const handleSelectStation = (id: string) => {
-    setSelectedId(id);
     if (activeFlow) {
       const idx = activeFlow.steps.findIndex(
         (step) => step.stationId === id,
       );
-      if (idx !== -1) setFlowStepIndex(idx);
+      updateHowItWorks({
+        selectedId: id,
+        ...(idx !== -1 ? { flowStepIndex: idx } : {}),
+      });
+      return;
     }
+    updateHowItWorks({ selectedId: id });
   };
 
   const handleSelectFlow = (flowId: string) => {
     const flow = interactive.flows.find((f) => f.id === flowId);
     if (!flow) return;
-    setActiveFlowId(flowId);
-    setFlowStepIndex(0);
-    setFilteredRouteId(null);
-    setSelectedId(flow.steps[0]?.stationId ?? selectedId);
+    updateHowItWorks({
+      activeFlowId: flowId,
+      flowStepIndex: 0,
+      filteredRouteId: null,
+      selectedId: flow.steps[0]?.stationId ?? selectedId,
+    });
   };
 
   const handleSelectStep = (index: number) => {
     if (!activeFlow) return;
-    setFlowStepIndex(index);
     const target = activeFlow.steps[index]?.stationId;
-    if (target) setSelectedId(target);
+    updateHowItWorks({
+      flowStepIndex: index,
+      ...(target ? { selectedId: target } : {}),
+    });
   };
 
   const handleClearFlow = () => {
-    setActiveFlowId(null);
-    setFlowStepIndex(0);
+    updateHowItWorks({ activeFlowId: null, flowStepIndex: 0 });
   };
 
   const toggleRouteFilter = (routeId: string) => {
-    if (activeFlow) {
-      setActiveFlowId(null);
-      setFlowStepIndex(0);
-    }
-    setFilteredRouteId((current) => (current === routeId ? null : routeId));
+    updateHowItWorks((current) => ({
+      activeFlowId: activeFlow ? null : current.activeFlowId,
+      flowStepIndex: activeFlow ? 0 : current.flowStepIndex,
+      filteredRouteId: current.filteredRouteId === routeId ? null : routeId,
+    }));
   };
 
   const selectedStation = stationMap[selectedId] ?? interactive.stations[0];
@@ -1888,7 +1976,7 @@ function HowItWorksPage() {
             {filteredRouteId !== null ? (
               <button
                 type="button"
-                onClick={() => setFilteredRouteId(null)}
+                onClick={() => updateHowItWorks({ filteredRouteId: null })}
                 className="transit-legend-clear"
               >
                 Clear filter

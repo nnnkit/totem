@@ -45,7 +45,7 @@ const TOP_SITES_LIMIT_OPTIONS = [3, 4, 5, 6, 8, 10].map((value) => ({
   label: String(value),
 }));
 
-export function SettingsModal({
+function useSettingsModalModel({
   open,
   isResetting = false,
   onClose,
@@ -95,6 +95,52 @@ export function SettingsModal({
     }
   };
 
+  return {
+    canReset,
+    closeConfirm,
+    confirmingReset,
+    handleClose,
+    handleConfirmReset,
+    isResetting,
+    onExport,
+    onThemePreferenceChange,
+    onUpdateSettings,
+    open,
+    resetAppState,
+    resetContent,
+    setConfirmingReset,
+    setResetAppState,
+    setResetContent,
+    settings,
+    storageSectionRef,
+    themePreference,
+  };
+}
+
+export function SettingsModal(props: Props) {
+  return renderSettingsModal(useSettingsModalModel(props));
+}
+
+function renderSettingsModal({
+  canReset,
+  closeConfirm,
+  confirmingReset,
+  handleClose,
+  handleConfirmReset,
+  isResetting,
+  onExport,
+  onThemePreferenceChange,
+  onUpdateSettings,
+  open,
+  resetAppState,
+  resetContent,
+  setConfirmingReset,
+  setResetAppState,
+  setResetContent,
+  settings,
+  storageSectionRef,
+  themePreference,
+}: ReturnType<typeof useSettingsModalModel>) {
   return (
     <Modal
       open={open}
@@ -167,7 +213,7 @@ export function SettingsModal({
                     optionLabel={(c) => `Default color ${c}`}
                   />
                 </div>
-                <label className="flex items-center justify-between gap-4 min-h-10">
+                <div className="flex items-center justify-between gap-4 min-h-10">
                   <div className="flex flex-col gap-0.5">
                     <span
                       id="label-open-in-totem"
@@ -186,7 +232,7 @@ export function SettingsModal({
                     }
                     aria-labelledby="label-open-in-totem"
                   />
-                </label>
+                </div>
               </div>
             </section>
 
@@ -195,7 +241,7 @@ export function SettingsModal({
                 New Tab
               </h3>
               <div className="space-y-1.5">
-                <label className="flex items-center justify-between min-h-10">
+                <div className="flex items-center justify-between min-h-10">
                   <span
                     id="label-search-bar"
                     className="text-sm text-foreground/80"
@@ -209,9 +255,9 @@ export function SettingsModal({
                     }
                     aria-labelledby="label-search-bar"
                   />
-                </label>
+                </div>
 
-                <label className="flex items-center justify-between min-h-10">
+                <div className="flex items-center justify-between min-h-10">
                   <span
                     id="label-quick-links"
                     className="text-sm text-foreground/80"
@@ -235,7 +281,7 @@ export function SettingsModal({
                     }}
                     aria-labelledby="label-quick-links"
                   />
-                </label>
+                </div>
 
                 {settings.showTopSites && (
                   <div className="flex items-center justify-between pl-4 min-h-10">
@@ -400,8 +446,7 @@ function ResetCheckbox({
   destructive,
 }: ResetCheckboxProps) {
   return (
-    <label
-      htmlFor={id}
+    <div
       className={cn(
         "flex items-start gap-3 rounded border border-border/60 bg-surface/40 p-3 cursor-pointer transition-colors",
         "hover:bg-surface/60",
@@ -440,6 +485,6 @@ function ResetCheckbox({
           {description}
         </span>
       </div>
-    </label>
+    </div>
   );
 }
