@@ -71,6 +71,14 @@ export type ValidatedImport =
 
 const SUPPORTED_EXPORT_VERSION = 1;
 const JSONL_PARSE_CHUNK_SIZE = 64 * 1024;
+// Bound the work a single ZIP can force. unzipSync inflates everything into
+// memory synchronously on the main thread, so a zip bomb (tiny compressed,
+// petabytes inflated) could hang or OOM the tab. The filter sees each entry's
+// declared uncompressed size before it is inflated, so we can bail early.
+const MAX_INPUT_ZIP_BYTES = 2 * 1024 * 1024 * 1024; // 2 GiB compressed
+const MAX_TOTAL_UNCOMPRESSED_BYTES = 1024 * 1024 * 1024; // 1 GiB inflated
+
+class ImportZipTooLargeError extends Error {}
 
 export class ImportPartialFailure extends Error {
   result: ImportResult;
@@ -139,10 +147,35 @@ function isImportManifest(value: unknown): value is ImportManifest {
   );
 }
 
-export function parseZip(file: Uint8Array): ParsedZip {
+export interface ParseZipLimits {
+  maxInputBytes?: number;
+  maxUncompressedBytes?: number;
+}
+
+export function parseZip(file: Uint8Array, limits: ParseZipLimits = {}): ParsedZip {
+  const maxInputBytes = limits.maxInputBytes ?? MAX_INPUT_ZIP_BYTES;
+  const maxUncompressedBytes = limits.maxUncompressedBytes ?? MAX_TOTAL_UNCOMPRESSED_BYTES;
+
+  if (file.byteLength > maxInputBytes) {
+    return { ok: false, reason: "not_totem_export" };
+  }
+
   let entries: Record<string, Uint8Array>;
   try {
-    entries = unzipSync(file);
+    let totalUncompressed = 0;
+    entries = unzipSync(file, {
+      filter: (info) => {
+        totalUncompressed += info.originalSize;
+        if (
+          info.originalSize > maxUncompressedBytes ||
+          totalUncompressed > maxUncompressedBytes
+        ) {
+          // Refuse before inflating the oversized entry.
+          throw new ImportZipTooLargeError();
+        }
+        return true;
+      },
+    });
   } catch {
     return { ok: false, reason: "not_totem_export" };
   }
@@ -289,16 +322,15 @@ function gatherShardRows(
 const BATCH_SIZE = 500;
 
 function dedupeRowsByStringKey<T>(
-  store: string,
   rows: T[],
   getKey: (row: T) => unknown,
 ): T[] {
   const byKey = new Map<string, T>();
   for (const row of rows) {
     const key = getKey(row);
-    if (typeof key !== "string" || key.length === 0) {
-      throw new Error(`Invalid ${store} row: missing primary key`);
-    }
+    // A row missing its primary key can't be imported (it has no identity), but
+    // it must not take down the whole store — skip it and keep the valid rows.
+    if (typeof key !== "string" || key.length === 0) continue;
     byKey.set(key, row);
   }
   return Array.from(byKey.values());
@@ -365,7 +397,6 @@ export async function runImport(
     const rawRows = gatherShardRows(manifest.shards.bookmarks || [], files) as Bookmark[];
     bookmarkCounts.total = rawRows.length;
     const rows = dedupeRowsByStringKey(
-      "bookmarks",
       rawRows,
       (row) => row.id,
     );
@@ -396,7 +427,6 @@ export async function runImport(
     const rawRows = gatherShardRows(manifest.shards.details || [], files) as TweetDetailCache[];
     detailsCounts.total = rawRows.length;
     const rows = dedupeRowsByStringKey(
-      "details",
       rawRows,
       (row) => row.tweetId,
     );
@@ -426,7 +456,6 @@ export async function runImport(
     const rawRows = gatherShardRows(manifest.shards.highlights || [], files) as Highlight[];
     highlightCounts.total = rawRows.length;
     const rows = dedupeRowsByStringKey(
-      "highlights",
       rawRows,
       (row) => row.id,
     );
@@ -459,7 +488,6 @@ export async function runImport(
     ) as ReadingProgress[];
     readingProgressCounts.total = rawRows.length;
     const rows = dedupeRowsByStringKey(
-      "reading progress",
       rawRows,
       (row) => row.tweetId,
     );

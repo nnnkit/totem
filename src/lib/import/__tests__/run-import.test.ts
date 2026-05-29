@@ -1,5 +1,5 @@
 import "fake-indexeddb/auto";
-import { describe, expect, it, beforeEach } from "vitest";
+import { describe, expect, it, beforeEach, vi } from "vitest";
 import { zipSync, strToU8 } from "fflate";
 import {
   ImportPartialFailure,
@@ -385,18 +385,21 @@ describe("runImport", () => {
     expect(storedProgress.length).toBe(1);
   });
 
-  it("throws a partial failure with committed counts when a later store fails", async () => {
+  it("skips rows missing a primary key and imports the rest of the store", async () => {
     const b = makeBookmark("b1", "t1");
     const invalidDetail = {
       fetchedAt: Date.now(),
       focalTweet: null,
       thread: [],
     } as unknown as TweetDetailCache;
+    const validDetail = makeDetail("t1");
     const h = makeHighlight("h1", "t1");
     const p = makeProgress("t1");
 
     const zip = await buildValidZip([b], {
-      details: [invalidDetail],
+      // One key-less detail row alongside a valid one: the bad row must be
+      // dropped while the valid row still imports — not the whole store lost.
+      details: [invalidDetail, validDetail],
       highlights: [h],
       readingProgress: [p],
     });
@@ -404,6 +407,46 @@ describe("runImport", () => {
     if (!parsed.ok) throw new Error("parse failed");
     const validated = await validateImport(parsed, "user123");
     if (!validated.ok) throw new Error("validation failed");
+
+    const result = await runImport(validated);
+
+    expect(result.status).toBe("complete");
+    expect(result.details).toMatchObject({
+      status: "succeeded",
+      added: 1,
+      alreadyHad: 0,
+      total: 1,
+    });
+    expect(result.bookmarks.added).toBe(1);
+    expect(result.highlights.added).toBe(1);
+    expect(result.readingProgress.added).toBe(1);
+
+    const storedDetails = await getAllTweetDetails();
+    expect(storedDetails).toHaveLength(1);
+    expect(storedDetails[0].tweetId).toBe("t1");
+  });
+
+  it("throws a partial failure with committed counts when a store write fails", async () => {
+    const b = makeBookmark("b1", "t1");
+    const d = makeDetail("t1");
+    const h = makeHighlight("h1", "t1");
+    const p = makeProgress("t1");
+
+    const zip = await buildValidZip([b], {
+      details: [d],
+      highlights: [h],
+      readingProgress: [p],
+    });
+    const parsed = parseZip(zip);
+    if (!parsed.ok) throw new Error("parse failed");
+    const validated = await validateImport(parsed, "user123");
+    if (!validated.ok) throw new Error("validation failed");
+
+    // Simulate a genuine write failure (e.g. QuotaExceededError) on one store.
+    const db = await import("../../../db");
+    vi.spyOn(db, "upsertTweetDetailCaches").mockRejectedValueOnce(
+      new Error("QuotaExceededError"),
+    );
 
     let partial: ImportPartialFailure | null = null;
     try {
@@ -414,37 +457,34 @@ describe("runImport", () => {
 
     expect(partial).toBeInstanceOf(ImportPartialFailure);
     expect(partial?.result.status).toBe("partial");
-    expect(partial?.result.bookmarks).toMatchObject({
-      status: "succeeded",
-      added: 1,
-      alreadyHad: 0,
-      total: 1,
-    });
-    expect(partial?.result.details).toMatchObject({
-      status: "failed",
-      added: 0,
-      alreadyHad: 0,
-      total: 1,
-    });
-    expect(partial?.result.details.status === "failed" ? partial.result.details.message : "")
-      .toContain("Invalid details row: missing primary key");
-    expect(partial?.result.highlights).toMatchObject({
-      status: "succeeded",
-      added: 1,
-    });
-    expect(partial?.result.readingProgress).toMatchObject({
-      status: "succeeded",
-      added: 1,
-    });
+    expect(partial?.result.bookmarks).toMatchObject({ status: "succeeded", added: 1 });
+    expect(partial?.result.details.status).toBe("failed");
+    expect(partial?.result.highlights).toMatchObject({ status: "succeeded", added: 1 });
+    expect(partial?.result.readingProgress).toMatchObject({ status: "succeeded", added: 1 });
+    vi.restoreAllMocks();
+  });
 
-    const [storedBookmarks, storedHighlights, storedProgress] = await Promise.all([
-      getAllBookmarks(),
-      getAllHighlights(),
-      getAllReadingProgress(),
-    ]);
-    expect(storedBookmarks).toHaveLength(1);
-    expect(storedHighlights).toHaveLength(1);
-    expect(storedProgress).toHaveLength(1);
+  it("refuses a ZIP whose inflated size exceeds the cap (zip-bomb guard)", async () => {
+    const b = makeBookmark("b1", "t1");
+    const zip = await buildValidZip([b], {});
+
+    // Real archive, but a tiny cap stands in for the production 1 GiB limit so
+    // we exercise the guard without allocating gigabytes. The oversized entry
+    // must be refused before fflate inflates it.
+    const parsed = parseZip(zip, { maxUncompressedBytes: 8 });
+    expect(parsed.ok).toBe(false);
+    expect(parsed.ok ? null : parsed.reason).toBe("not_totem_export");
+
+    // Same archive parses fine under the real (generous) defaults.
+    expect(parseZip(zip).ok).toBe(true);
+  });
+
+  it("refuses a ZIP whose compressed size exceeds the input cap", async () => {
+    const b = makeBookmark("b1", "t1");
+    const zip = await buildValidZip([b], {});
+    const parsed = parseZip(zip, { maxInputBytes: 4 });
+    expect(parsed.ok).toBe(false);
+    expect(parsed.ok ? null : parsed.reason).toBe("not_totem_export");
   });
 
   it("reports malformed JSONL with shard path and line number", async () => {
