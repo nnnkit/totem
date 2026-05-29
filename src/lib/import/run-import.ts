@@ -6,10 +6,11 @@ import {
   getAllHighlights,
   getAllReadingProgress,
   upsertBookmarks,
-  upsertTweetDetailCache,
-  upsertHighlight,
-  upsertReadingProgress,
+  upsertTweetDetailCaches,
+  upsertHighlights,
+  upsertReadingProgressRows,
 } from "../../db";
+import { sha256hex } from "../crypto";
 import type {
   Bookmark,
   TweetDetailCache,
@@ -45,13 +46,19 @@ export interface ImportManifest {
 export interface ImportStoreCounts {
   added: number;
   alreadyHad: number;
+  total: number;
 }
 
+export type ImportStoreOutcome =
+  | ({ status: "succeeded" } & ImportStoreCounts)
+  | ({ status: "failed"; message: string } & ImportStoreCounts);
+
 export interface ImportResult {
-  bookmarks: ImportStoreCounts;
-  details: ImportStoreCounts;
-  highlights: ImportStoreCounts;
-  readingProgress: ImportStoreCounts;
+  status: "complete" | "partial";
+  bookmarks: ImportStoreOutcome;
+  details: ImportStoreOutcome;
+  highlights: ImportStoreOutcome;
+  readingProgress: ImportStoreOutcome;
 }
 
 export type ParsedZip =
@@ -63,14 +70,24 @@ export type ValidatedImport =
   | { ok: false; reason: RefusedReason };
 
 const SUPPORTED_EXPORT_VERSION = 1;
+const JSONL_PARSE_CHUNK_SIZE = 64 * 1024;
 
-async function sha256hex(data: Uint8Array): Promise<string> {
-  const buf = new ArrayBuffer(data.byteLength);
-  new Uint8Array(buf).set(data);
-  const hash = await crypto.subtle.digest("SHA-256", buf);
-  return Array.from(new Uint8Array(hash))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
+export class ImportPartialFailure extends Error {
+  result: ImportResult;
+
+  constructor(result: ImportResult) {
+    super("Import completed with some failed stores");
+    this.name = "ImportPartialFailure";
+    this.result = result;
+  }
+}
+
+class ImportJsonlParseError extends Error {
+  constructor(path: string, lineNumber: number, cause: unknown) {
+    const message = cause instanceof Error ? cause.message : "Invalid JSON";
+    super(`${path}:${lineNumber}: ${message}`);
+    this.name = "ImportJsonlParseError";
+  }
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -211,15 +228,47 @@ export async function validateImport(
   return { ok: true, manifest, files, accountMatch };
 }
 
-function parseJsonlLines(data: Uint8Array): unknown[] {
-  const text = new TextDecoder().decode(data);
-  const rows: unknown[] = [];
-  for (const line of text.split("\n")) {
-    const trimmed = line.trim();
-    if (!trimmed) continue;
-    rows.push(JSON.parse(trimmed));
+function parseJsonlLine(path: string, lineNumber: number, line: string): unknown | null {
+  const trimmed = line.trim();
+  if (!trimmed) return null;
+  try {
+    return JSON.parse(trimmed);
+  } catch (error) {
+    throw new ImportJsonlParseError(path, lineNumber, error);
   }
-  return rows;
+}
+
+function* parseJsonlRows(path: string, data: Uint8Array): Generator<unknown> {
+  const decoder = new TextDecoder();
+  let carry = "";
+  let lineNumber = 0;
+
+  for (let offset = 0; offset < data.byteLength; offset += JSONL_PARSE_CHUNK_SIZE) {
+    const end = Math.min(offset + JSONL_PARSE_CHUNK_SIZE, data.byteLength);
+    carry += decoder.decode(data.subarray(offset, end), {
+      stream: end < data.byteLength,
+    });
+
+    let lineStart = 0;
+    let newlineIndex = carry.indexOf("\n", lineStart);
+    while (newlineIndex !== -1) {
+      const parsed = parseJsonlLine(
+        path,
+        ++lineNumber,
+        carry.slice(lineStart, newlineIndex),
+      );
+      if (parsed !== null) yield parsed;
+      lineStart = newlineIndex + 1;
+      newlineIndex = carry.indexOf("\n", lineStart);
+    }
+    carry = carry.slice(lineStart);
+  }
+
+  carry += decoder.decode();
+  if (carry.length > 0) {
+    const parsed = parseJsonlLine(path, ++lineNumber, carry);
+    if (parsed !== null) yield parsed;
+  }
 }
 
 function gatherShardRows(
@@ -229,12 +278,43 @@ function gatherShardRows(
   const rows: unknown[] = [];
   for (const shard of shards) {
     const data = files[shard];
-    if (data) rows.push(...parseJsonlLines(data));
+    if (!data) continue;
+    for (const row of parseJsonlRows(shard, data)) {
+      rows.push(row);
+    }
   }
   return rows;
 }
 
 const BATCH_SIZE = 500;
+
+function dedupeRowsByStringKey<T>(
+  store: string,
+  rows: T[],
+  getKey: (row: T) => unknown,
+): T[] {
+  const byKey = new Map<string, T>();
+  for (const row of rows) {
+    const key = getKey(row);
+    if (typeof key !== "string" || key.length === 0) {
+      throw new Error(`Invalid ${store} row: missing primary key`);
+    }
+    byKey.set(key, row);
+  }
+  return Array.from(byKey.values());
+}
+
+async function writeBatches<T>(
+  rows: T[],
+  writeBatch: (batch: T[]) => Promise<void>,
+  counts: ImportStoreCounts,
+): Promise<void> {
+  for (let i = 0; i < rows.length; i += BATCH_SIZE) {
+    const batch = rows.slice(i, i + BATCH_SIZE);
+    await writeBatch(batch);
+    counts.added += batch.length;
+  }
+}
 
 export type ImportStoreProgress = {
   store: "bookmarks" | "details" | "highlights" | "reading_progress";
@@ -243,6 +323,28 @@ export type ImportStoreProgress = {
   total: number;
 };
 
+function emptyOutcome(): ImportStoreOutcome {
+  return {
+    status: "succeeded",
+    added: 0,
+    alreadyHad: 0,
+    total: 0,
+  };
+}
+
+function failOutcome(
+  counts: ImportStoreCounts,
+  error: unknown,
+): ImportStoreOutcome {
+  return {
+    status: "failed",
+    added: counts.added,
+    alreadyHad: counts.alreadyHad,
+    total: counts.total,
+    message: error instanceof Error ? error.message : "Import failed",
+  };
+}
+
 export async function runImport(
   validated: Extract<ValidatedImport, { ok: true }>,
   onProgress?: (progress: ImportStoreProgress) => void,
@@ -250,95 +352,143 @@ export async function runImport(
   const { manifest, files } = validated;
 
   const result: ImportResult = {
-    bookmarks: { added: 0, alreadyHad: 0 },
-    details: { added: 0, alreadyHad: 0 },
-    highlights: { added: 0, alreadyHad: 0 },
-    readingProgress: { added: 0, alreadyHad: 0 },
+    status: "complete",
+    bookmarks: emptyOutcome(),
+    details: emptyOutcome(),
+    highlights: emptyOutcome(),
+    readingProgress: emptyOutcome(),
   };
 
   // Bookmarks — keyed by `id`
-  {
-    const rows = gatherShardRows(manifest.shards.bookmarks || [], files) as Bookmark[];
-    const total = rows.length;
+  let bookmarkCounts: ImportStoreCounts = { added: 0, alreadyHad: 0, total: 0 };
+  try {
+    const rawRows = gatherShardRows(manifest.shards.bookmarks || [], files) as Bookmark[];
+    bookmarkCounts.total = rawRows.length;
+    const rows = dedupeRowsByStringKey(
+      "bookmarks",
+      rawRows,
+      (row) => row.id,
+    );
+    bookmarkCounts.total = rows.length;
     const existingBookmarks = await getAllBookmarks();
     const existingIds = new Set(existingBookmarks.map((b) => b.id));
     const toInsert: Bookmark[] = [];
 
     for (const row of rows) {
       if (existingIds.has(row.id)) {
-        result.bookmarks.alreadyHad++;
+        bookmarkCounts.alreadyHad++;
       } else {
         toInsert.push(row);
-        result.bookmarks.added++;
       }
     }
 
-    const batchWrites: Promise<void>[] = [];
-    for (let i = 0; i < toInsert.length; i += BATCH_SIZE) {
-      batchWrites.push(upsertBookmarks(toInsert.slice(i, i + BATCH_SIZE)));
-    }
-    await Promise.all(batchWrites);
-    onProgress?.({ store: "bookmarks", ...result.bookmarks, total });
+    await writeBatches(toInsert, upsertBookmarks, bookmarkCounts);
+    result.bookmarks = { status: "succeeded", ...bookmarkCounts };
+    onProgress?.({ store: "bookmarks", ...result.bookmarks, total: bookmarkCounts.total });
+  } catch (error) {
+    result.status = "partial";
+    result.bookmarks = failOutcome(bookmarkCounts, error);
   }
 
   // Details — keyed by `tweetId`
-  {
-    const rows = gatherShardRows(manifest.shards.details || [], files) as TweetDetailCache[];
-    const total = rows.length;
+  let detailsCounts: ImportStoreCounts = { added: 0, alreadyHad: 0, total: 0 };
+  try {
+    const rawRows = gatherShardRows(manifest.shards.details || [], files) as TweetDetailCache[];
+    detailsCounts.total = rawRows.length;
+    const rows = dedupeRowsByStringKey(
+      "details",
+      rawRows,
+      (row) => row.tweetId,
+    );
+    detailsCounts.total = rows.length;
     const existingDetails = await getAllTweetDetails();
     const existingIds = new Set(existingDetails.map((d) => d.tweetId));
 
     const toInsert: TweetDetailCache[] = [];
     for (const row of rows) {
       if (existingIds.has(row.tweetId)) {
-        result.details.alreadyHad++;
+        detailsCounts.alreadyHad++;
       } else {
         toInsert.push(row);
-        result.details.added++;
       }
     }
-    await Promise.all(toInsert.map((row) => upsertTweetDetailCache(row)));
-    onProgress?.({ store: "details", ...result.details, total });
+    await writeBatches(toInsert, upsertTweetDetailCaches, detailsCounts);
+    result.details = { status: "succeeded", ...detailsCounts };
+    onProgress?.({ store: "details", ...result.details, total: detailsCounts.total });
+  } catch (error) {
+    result.status = "partial";
+    result.details = failOutcome(detailsCounts, error);
   }
 
   // Highlights — keyed by `id`
-  {
-    const rows = gatherShardRows(manifest.shards.highlights || [], files) as Highlight[];
-    const total = rows.length;
+  let highlightCounts: ImportStoreCounts = { added: 0, alreadyHad: 0, total: 0 };
+  try {
+    const rawRows = gatherShardRows(manifest.shards.highlights || [], files) as Highlight[];
+    highlightCounts.total = rawRows.length;
+    const rows = dedupeRowsByStringKey(
+      "highlights",
+      rawRows,
+      (row) => row.id,
+    );
+    highlightCounts.total = rows.length;
     const existingHighlights = await getAllHighlights();
     const existingIds = new Set(existingHighlights.map((h) => h.id));
 
     const toInsert: Highlight[] = [];
     for (const row of rows) {
       if (existingIds.has(row.id)) {
-        result.highlights.alreadyHad++;
+        highlightCounts.alreadyHad++;
       } else {
         toInsert.push(row);
-        result.highlights.added++;
       }
     }
-    await Promise.all(toInsert.map((row) => upsertHighlight(row)));
-    onProgress?.({ store: "highlights", ...result.highlights, total });
+    await writeBatches(toInsert, upsertHighlights, highlightCounts);
+    result.highlights = { status: "succeeded", ...highlightCounts };
+    onProgress?.({ store: "highlights", ...result.highlights, total: highlightCounts.total });
+  } catch (error) {
+    result.status = "partial";
+    result.highlights = failOutcome(highlightCounts, error);
   }
 
   // Reading progress — keyed by `tweetId`
-  {
-    const rows = gatherShardRows(manifest.shards.reading_progress || [], files) as ReadingProgress[];
-    const total = rows.length;
+  let readingProgressCounts: ImportStoreCounts = { added: 0, alreadyHad: 0, total: 0 };
+  try {
+    const rawRows = gatherShardRows(
+      manifest.shards.reading_progress || [],
+      files,
+    ) as ReadingProgress[];
+    readingProgressCounts.total = rawRows.length;
+    const rows = dedupeRowsByStringKey(
+      "reading progress",
+      rawRows,
+      (row) => row.tweetId,
+    );
+    readingProgressCounts.total = rows.length;
     const existingProgress = await getAllReadingProgress();
     const existingIds = new Set(existingProgress.map((p) => p.tweetId));
 
     const toInsert: ReadingProgress[] = [];
     for (const row of rows) {
       if (existingIds.has(row.tweetId)) {
-        result.readingProgress.alreadyHad++;
+        readingProgressCounts.alreadyHad++;
       } else {
         toInsert.push(row);
-        result.readingProgress.added++;
       }
     }
-    await Promise.all(toInsert.map((row) => upsertReadingProgress(row)));
-    onProgress?.({ store: "reading_progress", ...result.readingProgress, total });
+    await writeBatches(toInsert, upsertReadingProgressRows, readingProgressCounts);
+    result.readingProgress = { status: "succeeded", ...readingProgressCounts };
+    onProgress?.({
+      store: "reading_progress",
+      ...result.readingProgress,
+      total: readingProgressCounts.total,
+    });
+  } catch (error) {
+    result.status = "partial";
+    result.readingProgress = failOutcome(readingProgressCounts, error);
+  }
+
+  if (result.status === "partial") {
+    throw new ImportPartialFailure(result);
   }
 
   return result;

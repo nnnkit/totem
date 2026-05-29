@@ -10,8 +10,10 @@ import {
   parseZip,
   validateImport,
   runImport,
+  ImportPartialFailure,
   type ImportManifest,
   type ImportResult,
+  type ImportStoreOutcome,
   type ImportStoreProgress,
   type RefusedReason,
   type ValidatedImport,
@@ -152,9 +154,18 @@ export function ImportModal({
       const result = await runImport(validated, (progress) => {
         setState({ phase: "importing", progress });
       });
-      await onRefreshAfterImport();
       setState({ phase: "done", result });
+      await Promise.resolve(onRefreshAfterImport()).catch((error: unknown) => {
+        console.warn("Import succeeded, but post-import refresh failed.", error);
+      });
     } catch (error) {
+      if (error instanceof ImportPartialFailure) {
+        setState({ phase: "done", result: error.result });
+        await Promise.resolve(onRefreshAfterImport()).catch((refreshError: unknown) => {
+          console.warn("Import partially succeeded, but post-import refresh failed.", refreshError);
+        });
+        return;
+      }
       setState({
         phase: "error",
         message: error instanceof Error ? error.message : "Import failed",
@@ -436,11 +447,9 @@ function ImportingView({ progress }: { progress: ImportStoreProgress | null }) {
                 isCurrent ? "text-foreground" : isDone ? "text-muted" : "text-muted/50",
               )}>
                 {STORE_LABELS[store]}
-                {isDone && progress && i === currentIndex - 0
-                  ? ""
-                  : isCurrent && progress
-                    ? ` — ${formatCount(progress.added + progress.alreadyHad)} of ${formatCount(progress.total)}`
-                    : ""}
+                {isCurrent && progress
+                  ? ` — ${formatCount(progress.added + progress.alreadyHad)} of ${formatCount(progress.total)}`
+                  : ""}
               </span>
             </div>
           );
@@ -457,35 +466,60 @@ function DoneView({
   result: ImportResult;
   onClose: () => void;
 }) {
-  const stores = [
+  const stores: Array<{ label: string; counts: ImportStoreOutcome }> = [
     { label: "Bookmarks", counts: result.bookmarks },
     { label: "Thread details", counts: result.details },
     { label: "Highlights", counts: result.highlights },
     { label: "Reading progress", counts: result.readingProgress },
-  ].filter((s) => s.counts.added > 0 || s.counts.alreadyHad > 0);
+  ].filter((s) =>
+    s.counts.status === "failed" ||
+    s.counts.added > 0 ||
+    s.counts.alreadyHad > 0 ||
+    s.counts.total > 0
+  );
+  const isPartial = result.status === "partial";
 
   return (
     <>
       <div className="flex items-center gap-2 mb-3">
-        <div className="size-8 rounded-full bg-success/15 flex items-center justify-center">
-          <span className="text-success text-lg">✓</span>
+        <div className={cn(
+          "size-8 rounded-full flex items-center justify-center",
+          isPartial ? "bg-accent-surface/60" : "bg-success/15",
+        )}>
+          {isPartial ? (
+            <WarningCircleIcon weight="fill" className="size-5 text-accent" />
+          ) : (
+            <CheckCircleIcon weight="fill" className="size-5 text-success" />
+          )}
         </div>
         <span className="text-sm font-medium text-foreground">
-          Import complete
+          {isPartial ? "Import completed with issues" : "Import complete"}
         </span>
       </div>
 
       <div className="rounded border border-border/60 divide-y divide-border/40 mb-4">
-        <div className="grid grid-cols-3 px-3 py-1.5 text-xxs text-muted/70 font-medium">
+        <div className="grid grid-cols-[1fr_auto_auto] gap-3 px-3 py-1.5 text-xxs text-muted/70 font-medium">
           <span>Store</span>
           <span className="text-right">Added</span>
           <span className="text-right">Already had</span>
         </div>
         {stores.map((s) => (
-          <div key={s.label} className="grid grid-cols-3 px-3 py-1.5 text-xs">
-            <span className="text-foreground/80">{s.label}</span>
-            <span className="text-right text-success">{formatCount(s.counts.added)}</span>
-            <span className="text-right text-muted">{formatCount(s.counts.alreadyHad)}</span>
+          <div key={s.label} className="px-3 py-1.5 text-xs">
+            <div className="grid grid-cols-[1fr_auto_auto] gap-3">
+              <span className={cn(
+                "text-foreground/80",
+                s.counts.status === "failed" && "text-red-400",
+              )}>
+                {s.label}
+              </span>
+              <span className="text-right text-success">{formatCount(s.counts.added)}</span>
+              <span className="text-right text-muted">{formatCount(s.counts.alreadyHad)}</span>
+            </div>
+            {s.counts.status === "failed" && (
+              <p className="mt-1 text-xxs leading-snug text-red-400">
+                {s.counts.message}
+              </p>
+            )}
           </div>
         ))}
       </div>

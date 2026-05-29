@@ -1,7 +1,13 @@
 import "fake-indexeddb/auto";
 import { describe, expect, it, beforeEach } from "vitest";
 import { zipSync, strToU8 } from "fflate";
-import { parseZip, validateImport, runImport, type ImportManifest } from "../run-import";
+import {
+  ImportPartialFailure,
+  parseZip,
+  validateImport,
+  runImport,
+  type ImportManifest,
+} from "../run-import";
 import {
   getAllBookmarks,
   getAllTweetDetails,
@@ -377,6 +383,172 @@ describe("runImport", () => {
     expect(storedDetails.length).toBe(1);
     expect(storedHighlights.length).toBe(1);
     expect(storedProgress.length).toBe(1);
+  });
+
+  it("throws a partial failure with committed counts when a later store fails", async () => {
+    const b = makeBookmark("b1", "t1");
+    const invalidDetail = {
+      fetchedAt: Date.now(),
+      focalTweet: null,
+      thread: [],
+    } as unknown as TweetDetailCache;
+    const h = makeHighlight("h1", "t1");
+    const p = makeProgress("t1");
+
+    const zip = await buildValidZip([b], {
+      details: [invalidDetail],
+      highlights: [h],
+      readingProgress: [p],
+    });
+    const parsed = parseZip(zip);
+    if (!parsed.ok) throw new Error("parse failed");
+    const validated = await validateImport(parsed, "user123");
+    if (!validated.ok) throw new Error("validation failed");
+
+    let partial: ImportPartialFailure | null = null;
+    try {
+      await runImport(validated);
+    } catch (error) {
+      if (error instanceof ImportPartialFailure) partial = error;
+    }
+
+    expect(partial).toBeInstanceOf(ImportPartialFailure);
+    expect(partial?.result.status).toBe("partial");
+    expect(partial?.result.bookmarks).toMatchObject({
+      status: "succeeded",
+      added: 1,
+      alreadyHad: 0,
+      total: 1,
+    });
+    expect(partial?.result.details).toMatchObject({
+      status: "failed",
+      added: 0,
+      alreadyHad: 0,
+      total: 1,
+    });
+    expect(partial?.result.details.status === "failed" ? partial.result.details.message : "")
+      .toContain("Invalid details row: missing primary key");
+    expect(partial?.result.highlights).toMatchObject({
+      status: "succeeded",
+      added: 1,
+    });
+    expect(partial?.result.readingProgress).toMatchObject({
+      status: "succeeded",
+      added: 1,
+    });
+
+    const [storedBookmarks, storedHighlights, storedProgress] = await Promise.all([
+      getAllBookmarks(),
+      getAllHighlights(),
+      getAllReadingProgress(),
+    ]);
+    expect(storedBookmarks).toHaveLength(1);
+    expect(storedHighlights).toHaveLength(1);
+    expect(storedProgress).toHaveLength(1);
+  });
+
+  it("reports malformed JSONL with shard path and line number", async () => {
+    const encoder = new TextEncoder();
+    const bookmarksJsonl = encoder.encode(`${JSON.stringify(makeBookmark("b1", "t1"))}\n{"bad"\n`);
+    const emptyJsonl = encoder.encode("");
+    const accountIdHash = `sha256:${await sha256hex(encoder.encode("user123"))}`;
+    const manifest: ImportManifest = {
+      totem: { export_version: 1, schema_version: 8 },
+      account: { id_hash: accountIdHash, handle_redacted: "@t***st" },
+      counts: { bookmarks: 2, details: 0, highlights: 0, reading_progress: 0 },
+      shards: {
+        bookmarks: ["data/bookmarks-2023.jsonl"],
+        details: ["data/details.jsonl"],
+        highlights: ["data/highlights.jsonl"],
+        reading_progress: ["data/reading-progress.jsonl"],
+      },
+      checksums: {
+        "data/bookmarks-2023.jsonl": `sha256:${await sha256hex(bookmarksJsonl)}`,
+        "data/details.jsonl": `sha256:${await sha256hex(emptyJsonl)}`,
+        "data/highlights.jsonl": `sha256:${await sha256hex(emptyJsonl)}`,
+        "data/reading-progress.jsonl": `sha256:${await sha256hex(emptyJsonl)}`,
+      },
+    };
+    const zip = zipSync({
+      "manifest.json": encoder.encode(JSON.stringify(manifest, null, 2)),
+      "data/bookmarks-2023.jsonl": bookmarksJsonl,
+      "data/details.jsonl": emptyJsonl,
+      "data/highlights.jsonl": emptyJsonl,
+      "data/reading-progress.jsonl": emptyJsonl,
+    });
+    const parsed = parseZip(zip);
+    if (!parsed.ok) throw new Error("parse failed");
+    const validated = await validateImport(parsed, "user123");
+    if (!validated.ok) throw new Error("validation failed");
+
+    let partial: ImportPartialFailure | null = null;
+    try {
+      await runImport(validated);
+    } catch (error) {
+      if (error instanceof ImportPartialFailure) partial = error;
+    }
+
+    expect(partial).toBeInstanceOf(ImportPartialFailure);
+    expect(partial?.result.bookmarks.status).toBe("failed");
+    expect(partial?.result.bookmarks.status === "failed" ? partial.result.bookmarks.message : "")
+      .toContain("data/bookmarks-2023.jsonl:2");
+  });
+
+  it("deduplicates incoming rows by store primary key", async () => {
+    const earlierBookmark = makeBookmark("b1", "t1");
+    const laterBookmark = {
+      ...makeBookmark("b1", "t1"),
+      text: "later bookmark",
+    };
+    const earlierDetail = makeDetail("t1");
+    const laterDetail = {
+      ...makeDetail("t1"),
+      fetchedAt: earlierDetail.fetchedAt + 1,
+    };
+    const earlierHighlight = makeHighlight("h1", "t1");
+    const laterHighlight = {
+      ...makeHighlight("h1", "t1"),
+      selectedText: "later highlight",
+    };
+    const earlierProgress = makeProgress("t1");
+    const laterProgress = {
+      ...makeProgress("t1"),
+      scrollY: 250,
+    };
+
+    const zip = await buildValidZip([earlierBookmark, laterBookmark], {
+      details: [earlierDetail, laterDetail],
+      highlights: [earlierHighlight, laterHighlight],
+      readingProgress: [earlierProgress, laterProgress],
+    });
+    const parsed = parseZip(zip);
+    if (!parsed.ok) throw new Error("parse failed");
+    const validated = await validateImport(parsed, "user123");
+    if (!validated.ok) throw new Error("validation failed");
+
+    const result = await runImport(validated);
+
+    expect(result.bookmarks.added).toBe(1);
+    expect(result.details.added).toBe(1);
+    expect(result.highlights.added).toBe(1);
+    expect(result.readingProgress.added).toBe(1);
+
+    const [storedBookmarks, storedDetails, storedHighlights, storedProgress] =
+      await Promise.all([
+        getAllBookmarks(),
+        getAllTweetDetails(),
+        getAllHighlights(),
+        getAllReadingProgress(),
+      ]);
+
+    expect(storedBookmarks).toHaveLength(1);
+    expect(storedBookmarks[0].text).toBe("later bookmark");
+    expect(storedDetails).toHaveLength(1);
+    expect(storedDetails[0].fetchedAt).toBe(laterDetail.fetchedAt);
+    expect(storedHighlights).toHaveLength(1);
+    expect(storedHighlights[0].selectedText).toBe("later highlight");
+    expect(storedProgress).toHaveLength(1);
+    expect(storedProgress[0].scrollY).toBe(250);
   });
 
   it("calls onProgress per store", async () => {

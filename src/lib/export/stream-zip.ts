@@ -1,5 +1,15 @@
 import { makeZip } from "client-zip";
 
+export interface StreamZipEntry {
+  name: string;
+  input: Uint8Array | ReadableStream<Uint8Array>;
+  lastModified?: Date;
+}
+
+export type StreamZipEntrySource =
+  | Iterable<StreamZipEntry>
+  | AsyncIterable<StreamZipEntry>;
+
 export interface StreamJsonlZipEntry<T> {
   name: string;
   rows: AsyncIterable<T> | Iterable<T>;
@@ -69,6 +79,18 @@ export async function streamJsonlZip<T>(
     lastModified: entry.lastModified,
     input: jsonlReadableStream(entry.rows, serialize),
   }));
-  const zipStream = makeZip(inputs);
-  await zipStream.pipeTo(destination);
+  await streamZipEntries(inputs, destination);
+}
+
+export function makeZipEntriesStream(
+  entries: StreamZipEntrySource,
+): ReadableStream<Uint8Array> {
+  return makeZip(entries);
+}
+
+export async function streamZipEntries(
+  entries: StreamZipEntrySource,
+  destination: WritableStream<Uint8Array>,
+): Promise<void> {
+  await makeZipEntriesStream(entries).pipeTo(destination);
 }

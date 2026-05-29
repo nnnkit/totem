@@ -230,4 +230,32 @@ describe("runQuickExport", () => {
     expect(anchor.remove).toHaveBeenCalled();
     expect(revokeObjectURL).toHaveBeenCalledWith("blob:totem-export");
   });
+
+  it("exports thousands of bookmarks through streamed quick export entries", async () => {
+    const ROW_COUNT = 2_000;
+    const rows: Bookmark[] = [];
+    const baseSavedAt = Date.UTC(2024, 0, 1);
+    for (let i = 0; i < ROW_COUNT; i++) {
+      rows.push(makeBookmark(`tweet-${i}`, {
+        createdAt: Date.UTC(2023, 0, 1) + i,
+        sortIndex: sortIndexFromMs(baseSavedAt + i),
+        text: `Bookmark ${i}`,
+      }));
+    }
+
+    for (let i = 0; i < rows.length; i += 250) {
+      await upsertBookmarks(rows.slice(i, i + 250));
+    }
+
+    const zipBytes = await runExportThroughFilePicker();
+    const entries = unzipSync(zipBytes);
+    const manifest = JSON.parse(strFromU8(entries["manifest.json"]));
+    const bookmarkLines = manifest.shards.bookmarks.flatMap((name: string) =>
+      strFromU8(entries[name]).trim().split("\n").filter(Boolean)
+    );
+
+    expect(manifest.counts.bookmarks).toBe(ROW_COUNT);
+    expect(bookmarkLines).toHaveLength(ROW_COUNT);
+    expect(manifest.derived.markdown_files).toHaveLength(ROW_COUNT);
+  });
 });
