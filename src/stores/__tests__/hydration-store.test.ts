@@ -2,9 +2,9 @@ import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 import {
   classifyError,
   createHydrationStore,
+  createLongPauseScheduler,
   estimateHydrationDurationMs,
   jitteredDelay,
-  shouldLongPause,
   type HydrationDeps,
   type HydrationSnapshot,
   RATE_LIMIT_PAUSE_MS,
@@ -90,27 +90,31 @@ describe("estimateHydrationDurationMs", () => {
   });
 });
 
-describe("shouldLongPause", () => {
-  it("never triggers on tick 0", () => {
-    let triggered = false;
-    for (let i = 0; i < 100; i++) {
-      if (shouldLongPause(0)) triggered = true;
+describe("createLongPauseScheduler", () => {
+  it("does not pause within the first 15 requests (interval minimum)", () => {
+    const scheduler = createLongPauseScheduler();
+    for (let i = 0; i < 14; i++) {
+      expect(scheduler.shouldPauseNow()).toBe(false);
     }
-    expect(triggered).toBe(false);
   });
 
-  it("triggers for some ticks in the configured long-pause range", () => {
-    let triggeredAny = false;
-    for (let tick = 1; tick <= 100; tick++) {
-      for (let trial = 0; trial < 50; trial++) {
-        if (shouldLongPause(tick)) {
-          triggeredAny = true;
-          break;
-        }
+  it("fires exactly once per 15-25 request interval", () => {
+    const scheduler = createLongPauseScheduler();
+    let sinceLastPause = 0;
+    let pauseCount = 0;
+    for (let i = 0; i < 1000; i++) {
+      sinceLastPause++;
+      if (scheduler.shouldPauseNow()) {
+        // Each gap between pauses must land in the configured range.
+        expect(sinceLastPause).toBeGreaterThanOrEqual(15);
+        expect(sinceLastPause).toBeLessThanOrEqual(25);
+        sinceLastPause = 0;
+        pauseCount++;
       }
-      if (triggeredAny) break;
     }
-    expect(triggeredAny).toBe(true);
+    // ~1000 / 20 ≈ 50 pauses; assert it actually paused on the expected cadence.
+    expect(pauseCount).toBeGreaterThan(30);
+    expect(pauseCount).toBeLessThan(70);
   });
 });
 
@@ -405,6 +409,64 @@ describe("HydrationStore", () => {
     store.getState().dispose();
   });
 
+  it("auto-resumes from a storage pause once space frees up", async () => {
+    const deps = createTestDeps();
+    let findCount = 0;
+    (deps.findNext as ReturnType<typeof vi.fn>).mockImplementation(async () => {
+      findCount++;
+      return findCount <= 1 ? "tweet-1" : null;
+    });
+    (deps.countNeeding as ReturnType<typeof vi.fn>).mockResolvedValue(1);
+    (deps.fetchDetail as ReturnType<typeof vi.fn>).mockResolvedValue({ data: {} });
+    let storageFull = true;
+    (deps.estimateStorage as ReturnType<typeof vi.fn>).mockImplementation(async () =>
+      storageFull ? { usage: 960, quota: 1000 } : { usage: 100, quota: 1000 },
+    );
+
+    const store = createHydrationStore(deps);
+    store.getState().start();
+    await vi.advanceTimersByTimeAsync(500);
+    expect(store.getState().status).toBe("paused-storage");
+
+    // Free up space; the retry timer (5 min) should fire and finish the job.
+    storageFull = false;
+    await vi.advanceTimersByTimeAsync(5 * 60 * 1000 + 30_000);
+
+    expect(store.getState().status).toBe("done");
+    expect(store.getState().processed).toBe(1);
+    store.getState().dispose();
+  });
+
+  it("interrupts a rate-limit backoff immediately when auth is lost, then resumes on re-auth", async () => {
+    const deps = createTestDeps();
+    let findCount = 0;
+    (deps.findNext as ReturnType<typeof vi.fn>).mockImplementation(async () => {
+      findCount++;
+      return findCount <= 3 ? `tweet-${findCount}` : null;
+    });
+    (deps.countNeeding as ReturnType<typeof vi.fn>).mockResolvedValue(3);
+    (deps.fetchDetail as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce({ error: "RATE_LIMITED" })
+      .mockResolvedValue({ data: {} });
+
+    const store = createHydrationStore(deps);
+    store.getState().start();
+    await vi.advanceTimersByTimeAsync(15_000);
+    expect(store.getState().status).toBe("paused-429");
+
+    // Auth is lost mid-backoff. Without aborting the loop, it would stay stuck
+    // in the 30-minute sleep with loopRunning=true, so re-auth's start() no-ops.
+    deps._setAuthReady(false);
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(store.getState().status).toBe("paused-auth");
+
+    // Re-auth must resume and finish well within the original backoff window.
+    deps._setAuthReady(true);
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(store.getState().status).toBe("done");
+    store.getState().dispose();
+  });
+
   it("handles DETAIL_NOT_FOUND as unavailable", async () => {
     const deps = createTestDeps();
     let callCount = 0;
@@ -529,6 +591,36 @@ describe("HydrationStore", () => {
     expect(store2.getState().status).toBe("idle");
     expect(deps2.fetchDetail).not.toHaveBeenCalled();
     store2.getState().dispose();
+  });
+
+  it("stops writing when its lock is stolen by another tab", async () => {
+    const sharedStorage = createFakeLockStorage();
+    const deps = createTestDeps({ lockStorage: sharedStorage, holderId: "tab-1" });
+    (deps.findNext as ReturnType<typeof vi.fn>).mockResolvedValue("tweet-1");
+    (deps.countNeeding as ReturnType<typeof vi.fn>).mockResolvedValue(100);
+
+    const store = createHydrationStore(deps);
+    store.getState().start();
+    // Let it process at least one bookmark and become the lock holder.
+    await vi.advanceTimersByTimeAsync(15_000);
+    expect((deps.fetchDetail as ReturnType<typeof vi.fn>).mock.calls.length).toBeGreaterThan(0);
+
+    // Another tab steals the lock (its heartbeat is fresh, so we never reclaim).
+    sharedStorage.data["hydration_lock"] = {
+      holderId: "tab-2",
+      token: "tab-2:steal",
+      acquiredAt: Date.now(),
+      lastTickAt: Date.now(),
+    };
+    const callsBeforeSteal = (deps.fetchDetail as ReturnType<typeof vi.fn>).mock.calls.length;
+
+    // The next heartbeat fails; the loop must stop fetching.
+    await vi.advanceTimersByTimeAsync(30_000);
+    const callsAfterSteal = (deps.fetchDetail as ReturnType<typeof vi.fn>).mock.calls.length;
+
+    // At most one more fetch (the in-flight tick) may land before it notices.
+    expect(callsAfterSteal - callsBeforeSteal).toBeLessThanOrEqual(1);
+    store.getState().dispose();
   });
 
   it("stop clears restored rate-limit resume timers", async () => {

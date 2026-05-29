@@ -52,6 +52,7 @@ const LONG_PAUSE_INTERVAL_MAX = 25;
 const RATE_LIMIT_PAUSE_MS = 30 * 60 * 1000;
 const STORAGE_QUOTA_THRESHOLD = 0.95;
 const STORAGE_CHECK_INTERVAL = 10;
+const STORAGE_RETRY_MS = 5 * 60 * 1000;
 const SNAPSHOT_WRITE_INTERVAL = 1;
 const HOLDER_ID_SESSION_KEY = "totem_hydration_holder_id";
 const PAUSE_HEARTBEAT_INTERVAL_MS = Math.floor(STALE_THRESHOLD_MS / 2);
@@ -71,12 +72,30 @@ export function jitteredDelay(): number {
   return BASE_DELAY_MIN + Math.random() * (BASE_DELAY_MAX - BASE_DELAY_MIN);
 }
 
-export function shouldLongPause(tickCount: number): boolean {
-  if (tickCount === 0) return false;
-  const interval =
+function pickLongPauseInterval(): number {
+  return (
     LONG_PAUSE_INTERVAL_MIN +
-    Math.floor(Math.random() * (LONG_PAUSE_INTERVAL_MAX - LONG_PAUSE_INTERVAL_MIN + 1));
-  return tickCount % interval === 0;
+    Math.floor(Math.random() * (LONG_PAUSE_INTERVAL_MAX - LONG_PAUSE_INTERVAL_MIN + 1))
+  );
+}
+
+/**
+ * Counts down toward the next long pause. The interval is picked once and held
+ * until it elapses (then re-randomized), so the cadence is genuinely "one long
+ * pause every 15–25 requests" rather than a per-tick divisibility lottery.
+ */
+export function createLongPauseScheduler(): { shouldPauseNow: () => boolean } {
+  let remaining = pickLongPauseInterval();
+  return {
+    shouldPauseNow() {
+      remaining -= 1;
+      if (remaining <= 0) {
+        remaining = pickLongPauseInterval();
+        return true;
+      }
+      return false;
+    },
+  };
 }
 
 export function longPauseDelay(): number {
@@ -234,6 +253,20 @@ export function createHydrationStore(deps: HydrationDeps = defaultDeps()) {
   let unsubAuth: (() => void) | null = null;
   let disposed = false;
 
+  // Best-effort: hand the lock back when this tab goes away so other tabs don't
+  // have to wait out the full 60s stale threshold to take over. This is async
+  // and may not flush on a hard close — steal-on-stale remains the real backstop.
+  const releaseLockOnUnload = () => {
+    if (loopRunning) {
+      release(deps.holderId, deps.lockStorage).catch(() => {});
+    }
+  };
+  const hasUnloadHook =
+    typeof window !== "undefined" && typeof window.addEventListener === "function";
+  if (hasUnloadHook) {
+    window.addEventListener("pagehide", releaseLockOnUnload);
+  }
+
   const store = createStore<
     HydrationState & {
       start: () => void;
@@ -289,6 +322,9 @@ export function createHydrationStore(deps: HydrationDeps = defaultDeps()) {
       get().stop();
       unsubAuth?.();
       unsubAuth = null;
+      if (hasUnloadHook) {
+        window.removeEventListener("pagehide", releaseLockOnUnload);
+      }
     },
 
     _runLoop: async () => {
@@ -317,6 +353,7 @@ export function createHydrationStore(deps: HydrationDeps = defaultDeps()) {
 
         let tickCount = 0;
         let snapshotCounter = 0;
+        const longPause = createLongPauseScheduler();
 
         while (!signal?.aborted) {
           if (!deps.getAuthReady()) {
@@ -326,7 +363,9 @@ export function createHydrationStore(deps: HydrationDeps = defaultDeps()) {
             return;
           }
 
-          if (tickCount > 0 && tickCount % STORAGE_CHECK_INTERVAL === 0) {
+          // Check at tick 0 too so a resume after a storage pause re-pauses
+          // immediately instead of churning through items that fail to persist.
+          if (tickCount % STORAGE_CHECK_INTERVAL === 0) {
             try {
               const { usage, quota } = await deps.estimateStorage();
               if (quota > 0 && usage / quota > STORAGE_QUOTA_THRESHOLD) {
@@ -334,6 +373,9 @@ export function createHydrationStore(deps: HydrationDeps = defaultDeps()) {
                 loopRunning = false;
                 await release(deps.holderId, deps.lockStorage);
                 writeSnapshotFromState(get());
+                // Storage frees up out-of-band (user clears space), so retry on
+                // a timer rather than leaving the job stuck forever.
+                scheduleResume(STORAGE_RETRY_MS);
                 return;
               }
             } catch {
@@ -410,7 +452,15 @@ export function createHydrationStore(deps: HydrationDeps = defaultDeps()) {
 
           tickCount++;
 
-          await heartbeat(deps.holderId, deps.lockStorage);
+          // If the heartbeat fails, another tab has stolen the lock (ours went
+          // stale). Stop writing immediately so we don't run as a second writer,
+          // and poll to take over later if that tab dies.
+          if (!(await heartbeat(deps.holderId, deps.lockStorage))) {
+            loopRunning = false;
+            writeSnapshotFromState(get());
+            if (!signal?.aborted) startLockPolling();
+            return;
+          }
 
           snapshotCounter++;
           if (snapshotCounter >= SNAPSHOT_WRITE_INTERVAL) {
@@ -423,7 +473,7 @@ export function createHydrationStore(deps: HydrationDeps = defaultDeps()) {
           if (signal?.aborted) break;
 
           let delay = jitteredDelay();
-          if (shouldLongPause(tickCount)) {
+          if (longPause.shouldPauseNow()) {
             delay += longPauseDelay();
           }
           await sleep(delay, signal);
@@ -514,15 +564,25 @@ export function createHydrationStore(deps: HydrationDeps = defaultDeps()) {
     if (snapshot.status === "paused-429") {
       scheduleResume(snapshot.pauseUntil - Date.now());
     }
+
+    if (snapshot.status === "paused-storage") {
+      scheduleResume(STORAGE_RETRY_MS);
+    }
   }
 
   unsubAuth = deps.subscribeAuth((ready) => {
     const state = store.getState();
     if (ready && (state.status === "paused-auth" || state.status === "running")) {
       state.start();
-    } else if (!ready && state.status === "running") {
-      store.setState({ status: "paused-auth" });
+    } else if (!ready && (state.status === "running" || state.status === "paused-429")) {
+      store.setState({ status: "paused-auth", pauseUntil: 0 });
       writeSnapshotFromState(store.getState());
+      // Interrupt the in-flight loop (mid-sleep, mid-fetch, or mid-429-backoff)
+      // so it stops firing requests and can't clobber the paused-auth status
+      // back to running when the backoff resolves. The loop's guards drop any
+      // in-flight write, and re-auth's start() can run once loopRunning clears.
+      loopAbort?.abort();
+      loopAbort = null;
     }
   });
 
