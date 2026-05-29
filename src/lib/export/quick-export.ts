@@ -311,9 +311,9 @@ async function* csvLines(
   yield BOM + csvRow([...CSV_COLUMNS]);
   for (const file of bookmarkFiles) {
     const bookmark = await getBookmarkById(file.bookmarkId);
-    if (!bookmark) {
-      throw new Error(`Bookmark disappeared during export: ${file.bookmarkId}`);
-    }
+    // The row was deleted after we snapshotted ids (e.g. a concurrent sync or
+    // hydration write in the same tab). Skip it rather than abort the export.
+    if (!bookmark) continue;
     yield bookmarkCsvLine(bookmark, fullThreadIds);
   }
 }
@@ -433,13 +433,13 @@ async function collectReadingProgressIds(): Promise<string[]> {
 async function* bookmarksForYear(
   year: string,
   bookmarkFiles: BookmarkMarkdownFile[],
+  counter: { n: number },
 ): AsyncIterable<Bookmark> {
   for (const file of bookmarkFiles) {
     if (file.year !== year) continue;
     const bookmark = await getBookmarkById(file.bookmarkId);
-    if (!bookmark) {
-      throw new Error(`Bookmark disappeared during export: ${file.bookmarkId}`);
-    }
+    if (!bookmark) continue; // row removed mid-export; skip it
+    counter.n++;
     yield bookmark;
   }
 }
@@ -461,9 +461,7 @@ async function collectBookmarkMarkdownFiles(
 
   for (const bookmarkId of bookmarkIds) {
     const bookmark = await getBookmarkById(bookmarkId);
-    if (!bookmark) {
-      throw new Error(`Bookmark disappeared during export: ${bookmarkId}`);
-    }
+    if (!bookmark) continue; // row removed between snapshot and read; skip it
     const detail = await getTweetDetailCache(bookmark.tweetId);
     const rendered = buildBookmarkMarkdown(bookmark, detail, exportedAtLabel);
     const year = yearFromMs(bookmarkSavedAtMs(bookmark));
@@ -488,44 +486,38 @@ async function collectBookmarkMarkdownFiles(
   return { files, years: Array.from(years).toSorted() };
 }
 
-async function renderBookmarkMarkdownFile(
-  file: BookmarkMarkdownFile,
-  exportedAtLabel: string,
-): Promise<string> {
-  const bookmark = await getBookmarkById(file.bookmarkId);
-  if (!bookmark) {
-    throw new Error(`Bookmark disappeared during export: ${file.bookmarkId}`);
-  }
-  const detail = await getTweetDetailCache(bookmark.tweetId);
-  return buildBookmarkMarkdown(bookmark, detail, exportedAtLabel).body;
-}
-
-async function* detailsByIdJsonl(keys: string[]): AsyncIterable<TweetDetailCache> {
+async function* detailsByIdJsonl(
+  keys: string[],
+  counter: { n: number },
+): AsyncIterable<TweetDetailCache> {
   for (const key of keys) {
     const detail = await getTweetDetailCache(key);
-    if (!detail) {
-      throw new Error(`Tweet detail disappeared during export: ${key}`);
-    }
+    if (!detail) continue; // row removed mid-export; skip it
+    counter.n++;
     yield detail;
   }
 }
 
-async function* highlightsByIdJsonl(keys: string[]): AsyncIterable<Highlight> {
+async function* highlightsByIdJsonl(
+  keys: string[],
+  counter: { n: number },
+): AsyncIterable<Highlight> {
   for (const key of keys) {
     const highlight = await getHighlightById(key);
-    if (!highlight) {
-      throw new Error(`Highlight disappeared during export: ${key}`);
-    }
+    if (!highlight) continue; // row removed mid-export; skip it
+    counter.n++;
     yield highlight;
   }
 }
 
-async function* readingProgressByIdJsonl(keys: string[]): AsyncIterable<ReadingProgress> {
+async function* readingProgressByIdJsonl(
+  keys: string[],
+  counter: { n: number },
+): AsyncIterable<ReadingProgress> {
   for (const key of keys) {
     const progress = await getReadingProgress(key);
-    if (!progress) {
-      throw new Error(`Reading progress disappeared during export: ${key}`);
-    }
+    if (!progress) continue; // row removed mid-export; skip it
+    counter.n++;
     yield progress;
   }
 }
@@ -550,14 +542,20 @@ export async function runQuickExport(
     ]);
     const bookmarkMarkdownFiles = bookmarkFilesResult.files;
     const bookmarkYears = bookmarkFilesResult.years;
-    const bookmarkCount = bookmarkMarkdownFiles.length;
-    const highlightCount = highlightIds.length;
-    const readingProgressCount = readingProgressIds.length;
     const encoder = new TextEncoder();
     const checksums: Record<string, string> = {};
     const shardNames = bookmarkYears.map((year) => `data/bookmarks-${year}.jsonl`);
     const accountIdHash = `sha256:${await sha256hex(encoder.encode(account.userId))}`;
     const now = exportDate;
+
+    // Counts of rows actually streamed. Ids were snapshotted up front but rows
+    // are re-fetched lazily, so a concurrent delete can drop a row; tracking
+    // the real emitted count keeps the manifest honest instead of overstating.
+    const bookmarkCounter = { n: 0 };
+    const detailCounter = { n: 0 };
+    const highlightCounter = { n: 0 };
+    const progressCounter = { n: 0 };
+    const writtenMarkdownPaths: string[] = [];
 
     async function* entries(): AsyncIterable<StreamZipEntry> {
       const readme = hashingTextEntry(
@@ -584,7 +582,7 @@ export async function runQuickExport(
         const name = `data/bookmarks-${year}.jsonl`;
         const entry = hashingTextEntry(
           name,
-          jsonlLines(bookmarksForYear(year, bookmarkMarkdownFiles)),
+          jsonlLines(bookmarksForYear(year, bookmarkMarkdownFiles, bookmarkCounter)),
           checksums,
           now,
         );
@@ -594,7 +592,7 @@ export async function runQuickExport(
 
       const details = hashingTextEntry(
         "data/details.jsonl",
-        jsonlLines(detailsByIdJsonl(detailSummary.keys)),
+        jsonlLines(detailsByIdJsonl(detailSummary.keys, detailCounter)),
         checksums,
         now,
       );
@@ -603,7 +601,7 @@ export async function runQuickExport(
 
       const highlights = hashingTextEntry(
         "data/highlights.jsonl",
-        jsonlLines(highlightsByIdJsonl(highlightIds)),
+        jsonlLines(highlightsByIdJsonl(highlightIds, highlightCounter)),
         checksums,
         now,
       );
@@ -612,7 +610,7 @@ export async function runQuickExport(
 
       const progress = hashingTextEntry(
         "data/reading-progress.jsonl",
-        jsonlLines(readingProgressByIdJsonl(readingProgressIds)),
+        jsonlLines(readingProgressByIdJsonl(readingProgressIds, progressCounter)),
         checksums,
         now,
       );
@@ -620,14 +618,19 @@ export async function runQuickExport(
       await progress.done;
 
       for (const file of bookmarkMarkdownFiles) {
+        const bookmark = await getBookmarkById(file.bookmarkId);
+        if (!bookmark) continue; // row removed mid-export; skip its markdown file
+        const detail = await getTweetDetailCache(bookmark.tweetId);
+        const body = buildBookmarkMarkdown(bookmark, detail, exportedAtLabel).body;
         const markdown = hashingTextEntry(
           file.path,
-          singleTextLine(() => renderBookmarkMarkdownFile(file, exportedAtLabel)),
+          singleTextLine(() => body),
           checksums,
           now,
         );
         yield markdown.entry;
         await markdown.done;
+        writtenMarkdownPaths.push(file.path);
       }
 
       const manifest = {
@@ -647,10 +650,10 @@ export async function runQuickExport(
         },
         kind: "library",
         counts: {
-          bookmarks: bookmarkCount,
-          details: detailSummary.count,
-          highlights: highlightCount,
-          reading_progress: readingProgressCount,
+          bookmarks: bookmarkCounter.n,
+          details: detailCounter.n,
+          highlights: highlightCounter.n,
+          reading_progress: progressCounter.n,
         },
         shards: {
           bookmarks: shardNames,
@@ -661,7 +664,7 @@ export async function runQuickExport(
         derived: {
           csv: "bookmarks.csv",
           markdown_index: "readme.md",
-          markdown_files: bookmarkMarkdownFiles.map((file) => file.path),
+          markdown_files: writtenMarkdownPaths,
         },
         checksums,
       };
@@ -682,10 +685,10 @@ export async function runQuickExport(
     }
 
     return {
-      bookmarkCount,
-      detailCount: detailSummary.count,
-      highlightCount,
-      readingProgressCount,
+      bookmarkCount: bookmarkCounter.n,
+      detailCount: detailCounter.n,
+      highlightCount: highlightCounter.n,
+      readingProgressCount: progressCounter.n,
     };
   } catch (error) {
     if (target.kind === "fsa") {
