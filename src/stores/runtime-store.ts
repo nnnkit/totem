@@ -1124,12 +1124,13 @@ export function createRuntimeStore() {
       refresh: async () => sync({ trigger: "manual" }),
 
       reloadLocalData: async () => {
+        // Bump the generation so a concurrent reload/hydration supersedes this
+        // one, but keep bookmarksLoaded/detailedIdsLoaded true: the data is
+        // already on screen and only gets swapped when the re-read resolves.
+        // Flipping them false would drop the UI into a full-screen loading
+        // spinner for the duration of the read (e.g. right after an import).
         const bootGeneration = get().bootGeneration + 1;
-        setRuntimeState({
-          bootGeneration,
-          bookmarksLoaded: false,
-          detailedIdsLoaded: false,
-        });
+        setRuntimeState({ bootGeneration });
 
         const accountId = get().activeAccountId;
         setActiveAccountId(accountId);

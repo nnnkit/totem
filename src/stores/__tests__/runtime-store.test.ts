@@ -253,6 +253,42 @@ describe("runtime-store boot", () => {
     store.getState().actions.dispose();
   });
 
+  it("keeps existing bookmarks visible (no loading flash) while reloading", async () => {
+    const store = createRuntimeStore();
+    const existing = createBookmark("tweet-existing");
+    store.setState({
+      activeAccountId: "acct-1",
+      bookmarks: [existing],
+      detailedTweetIds: new Set<string>(["tweet-existing"]),
+      bookmarksLoaded: true,
+      detailedIdsLoaded: true,
+    });
+
+    let resolveBookmarks!: (rows: Bookmark[]) => void;
+    mocks.getAllBookmarks.mockReturnValueOnce(
+      new Promise<Bookmark[]>((resolve) => {
+        resolveBookmarks = resolve;
+      }),
+    );
+    mocks.getDetailedTweetIds.mockResolvedValueOnce(new Set(["tweet-imported"]));
+
+    const reloadPromise = store.getState().actions.reloadLocalData();
+
+    // Mid-reload the data is still being read, but the loaded flags must stay
+    // true and the old bookmarks remain on screen — no full-screen spinner.
+    expect(store.getState().bookmarksLoaded).toBe(true);
+    expect(store.getState().detailedIdsLoaded).toBe(true);
+    expect(store.getState().bookmarks).toEqual([existing]);
+
+    resolveBookmarks([createBookmark("tweet-imported")]);
+    await reloadPromise;
+
+    expect(store.getState().bookmarks.map((b) => b.tweetId)).toEqual([
+      "tweet-imported",
+    ]);
+    store.getState().actions.dispose();
+  });
+
   it("still reads IDB on boot after a reset so cached bookmarks resurface when the user is logged out", async () => {
     const cached = createBookmark("tweet-1");
     mocks.getAllBookmarks.mockResolvedValue([cached]);
