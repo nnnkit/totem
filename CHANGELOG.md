@@ -2,6 +2,41 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.0] - 2026-05-30
+
+- Commit promotion source images
+- Fix export import review issues
+- Stop import refresh from flashing a loading spinner
+- Harden import against bad rows and oversized ZIPs
+- Make streaming export resilient to concurrent row deletes
+- Fix hydration single-writer lock and background loop robustness
+- Address export import follow-ups
+- Refine dark mode highlight colors
+- Publish Twitter bookmark export guides
+- Polish site feature grid and export docs
+- Fix import refresh and hydration locking
+- Add shared X extension core package
+- parallelize content script builds
+- stabilize runtime sync flows
+- optimize data and export helpers
+- fix reader rendering and controls
+- refactor large app surfaces
+- fix: remove trailing settings divider
+- feat: improve export archive layout
+- feat: improve full export readiness
+- fix: sync detail cache state after hydration
+- fix: validate Totem export imports
+- Use shared auth primitives in Totem
+- RALPH: full export modal + hydration footer line (closes #39)
+- Revert "chore: pin dependency versions for supply-chain safety"
+- RALPH: hydration runtime store + single-writer lock (closes #38)
+- plan: export hydration design (closes #37)
+- RALPH: home count line + first-run import drop-zone (closes #40)
+- RALPH: public schema docs page at /export-format/v1 (closes #41)
+- RALPH: round-trip import — ZIP validation, additive IDB import, modal UI (closes #36)
+- RALPH: quick export end-to-end — JSONL + CSV + Markdown ZIP (closes #35)
+- RALPH: streaming ZIP + IDB cursor spike (closes #34)
+
 ## [1.1.25] - 2026-05-30
 
 - Commit promotion source images
