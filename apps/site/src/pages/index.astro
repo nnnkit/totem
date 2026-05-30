@@ -41,7 +41,7 @@ const recentPosts = posts.slice(0, 3).map((post) => {
   }}
 >
   <Fragment slot="head">
-    <script type="application/ld+json" set:html={JSON.stringify({
+    <script is:inline type="application/ld+json" set:html={JSON.stringify({
       "@context": "https://schema.org",
       "@type": "SoftwareApplication",
       name: "Totem",

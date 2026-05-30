@@ -229,6 +229,66 @@ describe("runtime-store boot", () => {
     expect(selectDisplayBookmarks(state)).toEqual([]);
   });
 
+  it("reloads local IDB state without starting a sync", async () => {
+    const store = createRuntimeStore();
+    const imported = createBookmark("tweet-imported");
+    store.setState({
+      activeAccountId: "acct-1",
+      bookmarks: [],
+      detailedTweetIds: new Set<string>(),
+      bookmarksLoaded: true,
+      detailedIdsLoaded: true,
+    });
+    mocks.getAllBookmarks.mockResolvedValueOnce([imported]);
+    mocks.getDetailedTweetIds.mockResolvedValueOnce(new Set(["tweet-imported"]));
+
+    await store.getState().actions.reloadLocalData();
+
+    expect(mocks.setActiveAccountId).toHaveBeenCalledWith("acct-1");
+    expect(mocks.reserveSyncRun).not.toHaveBeenCalled();
+    expect(store.getState().bookmarks).toEqual([imported]);
+    expect(store.getState().detailedTweetIds.has("tweet-imported")).toBe(true);
+    expect(store.getState().bookmarksLoaded).toBe(true);
+    expect(store.getState().detailedIdsLoaded).toBe(true);
+    store.getState().actions.dispose();
+  });
+
+  it("keeps existing bookmarks visible (no loading flash) while reloading", async () => {
+    const store = createRuntimeStore();
+    const existing = createBookmark("tweet-existing");
+    store.setState({
+      activeAccountId: "acct-1",
+      bookmarks: [existing],
+      detailedTweetIds: new Set<string>(["tweet-existing"]),
+      bookmarksLoaded: true,
+      detailedIdsLoaded: true,
+    });
+
+    let resolveBookmarks!: (rows: Bookmark[]) => void;
+    mocks.getAllBookmarks.mockReturnValueOnce(
+      new Promise<Bookmark[]>((resolve) => {
+        resolveBookmarks = resolve;
+      }),
+    );
+    mocks.getDetailedTweetIds.mockResolvedValueOnce(new Set(["tweet-imported"]));
+
+    const reloadPromise = store.getState().actions.reloadLocalData();
+
+    // Mid-reload the data is still being read, but the loaded flags must stay
+    // true and the old bookmarks remain on screen — no full-screen spinner.
+    expect(store.getState().bookmarksLoaded).toBe(true);
+    expect(store.getState().detailedIdsLoaded).toBe(true);
+    expect(store.getState().bookmarks).toEqual([existing]);
+
+    resolveBookmarks([createBookmark("tweet-imported")]);
+    await reloadPromise;
+
+    expect(store.getState().bookmarks.map((b) => b.tweetId)).toEqual([
+      "tweet-imported",
+    ]);
+    store.getState().actions.dispose();
+  });
+
   it("still reads IDB on boot after a reset so cached bookmarks resurface when the user is logged out", async () => {
     const cached = createBookmark("tweet-1");
     mocks.getAllBookmarks.mockResolvedValue([cached]);

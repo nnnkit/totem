@@ -15,11 +15,11 @@ const { header } = SITE_COPY;
   class="sticky top-0 z-50 border-b border-neutral-200 bg-white transition-colors duration-200"
 >
   <div
-    class="mx-auto flex w-full max-w-5xl items-center justify-between gap-4 px-6 py-2.5"
+    class="mx-auto flex w-full max-w-5xl items-center justify-between gap-3 px-4 py-2 sm:gap-4 sm:px-6"
   >
     <a
       href="/"
-      class="flex items-center gap-2.5 no-underline"
+      class="flex shrink-0 items-center gap-2.5 no-underline"
       aria-label={header.brandAriaLabel}
     >
       <span class="totem-logo size-7" aria-hidden="true">
@@ -41,12 +41,12 @@ const { header } = SITE_COPY;
       <span class="text-sm font-bold text-neutral-900">{header.brandName}</span>
     </a>
 
-    <nav class="flex items-center gap-2" aria-label={header.navAriaLabel}>
+    <nav class="flex shrink-0 items-center gap-1.5 sm:gap-2" aria-label={header.navAriaLabel}>
       <a
         href={SITE_LINKS.installUrl}
         target="_blank"
         rel="noopener noreferrer"
-        class="inline-flex items-center justify-center gap-2 no-underline font-semibold transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30 focus-visible:ring-offset-2 bg-neutral-900 text-white hover:bg-neutral-800 h-10 rounded-full px-4 text-sm"
+        class="inline-flex h-11 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-neutral-900 px-3 text-sm font-semibold text-white no-underline transition-colors duration-200 hover:bg-neutral-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30 focus-visible:ring-offset-2 sm:px-4"
       >
         <svg
           viewBox="-0.82 0 437.46 437.46"
@@ -100,13 +100,15 @@ const { header } = SITE_COPY;
             d="M123.137 246.197c-16.89-29.25-86.31-149.16-86.31-149.16l89.029 88.07s-9.149 18.82-5.68 45.7l2.961 15.39z"
           />
         </svg>
-        {header.installLabel}
+        <span class="hidden min-[380px]:inline">{header.installLabel}</span>
+        <span class="min-[380px]:hidden">Add</span>
       </a>
       <a
         href={demoHref}
-        class="inline-flex items-center justify-center gap-2 no-underline font-semibold transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30 focus-visible:ring-offset-2 border border-neutral-200 bg-white text-neutral-900 hover:bg-neutral-100 h-10 rounded-full px-4 text-sm"
+        class="inline-flex h-11 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-neutral-200 bg-white px-3 text-sm font-semibold text-neutral-900 no-underline transition-colors duration-200 hover:bg-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30 focus-visible:ring-offset-2 sm:px-4"
       >
-        {header.demoLabel}
+        <span class="hidden min-[380px]:inline">{header.demoLabel}</span>
+        <span class="min-[380px]:hidden">Demo</span>
       </a>
     </nav>
   </div>

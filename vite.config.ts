@@ -1,7 +1,13 @@
 import { defineConfig, build as viteBuild, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
+import { readFileSync } from "fs";
 import { resolve } from "path";
+
+const packageJson = JSON.parse(
+  readFileSync(resolve(__dirname, "package.json"), "utf8"),
+) as { version?: string };
+const appVersion = packageJson.version ?? "0.0.0";
 
 const contentScripts: Record<string, string> = {
   "open-in-totem": resolve(__dirname, "src/content/open-in-totem.ts"),
@@ -67,6 +73,9 @@ function serviceWorkerPlugin(): Plugin {
 
 export default defineConfig({
   plugins: [react(), tailwindcss(), contentScriptPlugin(), serviceWorkerPlugin()],
+  define: {
+    __TOTEM_APP_VERSION__: JSON.stringify(appVersion),
+  },
   base: "./",
   build: {
     modulePreload: { polyfill: false },

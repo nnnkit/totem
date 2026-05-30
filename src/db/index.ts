@@ -341,6 +341,42 @@ export async function upsertBookmarks(bookmarks: Bookmark[]): Promise<void> {
   await tx.done;
 }
 
+function normalizeBookmarkForRead(bookmark: Bookmark): Bookmark {
+  sanitizeBookmark(bookmark);
+  if (typeof bookmark.bookmarked !== "boolean") {
+    bookmark.bookmarked = true;
+  }
+  return bookmark;
+}
+
+export async function getBookmarkById(id: string): Promise<Bookmark | null> {
+  if (!id) return null;
+  const db = await getDb();
+  const bookmark = await db.get(STORE_NAME, id);
+  return bookmark ? normalizeBookmarkForRead(bookmark) : null;
+}
+
+export function iterateBookmarks(): AsyncIterable<Bookmark> {
+  return {
+    async *[Symbol.asyncIterator](): AsyncIterator<Bookmark> {
+      const db = await getDb();
+      const tx = db.transaction(STORE_NAME, "readonly");
+      const ids: string[] = [];
+      let cursor = await tx.store.index("sortIndex").openKeyCursor(null, "prev");
+      while (cursor) {
+        ids.push(cursor.primaryKey as string);
+        cursor = await cursor.continue();
+      }
+      await tx.done;
+
+      for (const id of ids) {
+        const bookmark = await getBookmarkById(id);
+        if (bookmark) yield bookmark;
+      }
+    },
+  };
+}
+
 export async function getAllBookmarks(): Promise<Bookmark[]> {
   const db = await getDb();
   const tx = db.transaction(STORE_NAME, "readonly");
@@ -354,10 +390,7 @@ export async function getAllBookmarks(): Promise<Bookmark[]> {
 
   await tx.done;
   for (const row of rows) {
-    sanitizeBookmark(row);
-    if (typeof row.bookmarked !== "boolean") {
-      row.bookmarked = true;
-    }
+    normalizeBookmarkForRead(row);
   }
   return rows;
 }
@@ -437,12 +470,27 @@ export async function deleteBookmarksByTweetIds(
 export async function upsertTweetDetailCache(
   detail: TweetDetailCache,
 ): Promise<void> {
+  await upsertTweetDetailCaches([detail]);
+}
+
+export async function upsertTweetDetailCaches(
+  details: TweetDetailCache[],
+): Promise<void> {
+  if (details.length === 0) return;
+
   const db = await getDb();
-  await db.put(DETAIL_STORE_NAME, detail);
-  for (const listener of detailCacheListeners) {
-    try {
-      listener(detail.tweetId);
-    } catch {
+  const tx = db.transaction(DETAIL_STORE_NAME, "readwrite");
+  for (const detail of details) {
+    tx.store.put(detail);
+  }
+  await tx.done;
+
+  for (const detail of details) {
+    for (const listener of detailCacheListeners) {
+      try {
+        listener(detail.tweetId);
+      } catch {
+      }
     }
   }
 }
@@ -469,8 +517,20 @@ export async function getTweetDetailCache(
 export async function upsertReadingProgress(
   progress: ReadingProgress,
 ): Promise<void> {
+  await upsertReadingProgressRows([progress]);
+}
+
+export async function upsertReadingProgressRows(
+  progressRows: ReadingProgress[],
+): Promise<void> {
+  if (progressRows.length === 0) return;
+
   const db = await getDb();
-  await db.put(PROGRESS_STORE_NAME, progress);
+  const tx = db.transaction(PROGRESS_STORE_NAME, "readwrite");
+  for (const progress of progressRows) {
+    tx.store.put(progress);
+  }
+  await tx.done;
   emitReaderActivity();
 }
 
@@ -573,6 +633,27 @@ export async function getAllReadingProgress(): Promise<ReadingProgress[]> {
   return rows;
 }
 
+export function iterateReadingProgress(): AsyncIterable<ReadingProgress> {
+  return {
+    async *[Symbol.asyncIterator](): AsyncIterator<ReadingProgress> {
+      const db = await getDb();
+      const tx = db.transaction(PROGRESS_STORE_NAME, "readonly");
+      const ids: string[] = [];
+      let cursor = await tx.store.index("lastReadAt").openKeyCursor(null, "prev");
+      while (cursor) {
+        ids.push(cursor.primaryKey as string);
+        cursor = await cursor.continue();
+      }
+      await tx.done;
+
+      for (const id of ids) {
+        const row = await db.get(PROGRESS_STORE_NAME, id);
+        if (row) yield row;
+      }
+    },
+  };
+}
+
 export async function getDetailedTweetIds(): Promise<Set<string>> {
   const db = await getDb();
   const keys = await db.getAllKeys(DETAIL_STORE_NAME);
@@ -593,8 +674,18 @@ export async function getCompletedTweetIds(): Promise<Set<string>> {
 }
 
 export async function upsertHighlight(highlight: Highlight): Promise<void> {
+  await upsertHighlights([highlight]);
+}
+
+export async function upsertHighlights(highlights: Highlight[]): Promise<void> {
+  if (highlights.length === 0) return;
+
   const db = await getDb();
-  await db.put(HIGHLIGHTS_STORE_NAME, highlight);
+  const tx = db.transaction(HIGHLIGHTS_STORE_NAME, "readwrite");
+  for (const highlight of highlights) {
+    tx.store.put(highlight);
+  }
+  await tx.done;
   emitReaderActivity();
 }
 
@@ -603,6 +694,12 @@ export async function deleteHighlight(id: string): Promise<void> {
   const db = await getDb();
   await db.delete(HIGHLIGHTS_STORE_NAME, id);
   emitReaderActivity();
+}
+
+export async function getHighlightById(id: string): Promise<Highlight | null> {
+  if (!id) return null;
+  const db = await getDb();
+  return (await db.get(HIGHLIGHTS_STORE_NAME, id)) ?? null;
 }
 
 export async function getHighlightsByTweetId(tweetId: string): Promise<Highlight[]> {
@@ -736,6 +833,48 @@ export async function getAllTweetDetails(): Promise<TweetDetailCache[]> {
 export async function getAllHighlights(): Promise<Highlight[]> {
   const db = await getDb();
   return db.getAll(HIGHLIGHTS_STORE_NAME);
+}
+
+export function iterateTweetDetails(): AsyncIterable<TweetDetailCache> {
+  return {
+    async *[Symbol.asyncIterator](): AsyncIterator<TweetDetailCache> {
+      const db = await getDb();
+      const tx = db.transaction(DETAIL_STORE_NAME, "readonly");
+      const keys: string[] = [];
+      let cursor = await tx.store.openKeyCursor();
+      while (cursor) {
+        keys.push(cursor.key as string);
+        cursor = await cursor.continue();
+      }
+      await tx.done;
+
+      for (const key of keys) {
+        const row = await db.get(DETAIL_STORE_NAME, key);
+        if (row) yield row;
+      }
+    },
+  };
+}
+
+export function iterateHighlights(): AsyncIterable<Highlight> {
+  return {
+    async *[Symbol.asyncIterator](): AsyncIterator<Highlight> {
+      const db = await getDb();
+      const tx = db.transaction(HIGHLIGHTS_STORE_NAME, "readonly");
+      const keys: string[] = [];
+      let cursor = await tx.store.openKeyCursor();
+      while (cursor) {
+        keys.push(cursor.key as string);
+        cursor = await cursor.continue();
+      }
+      await tx.done;
+
+      for (const key of keys) {
+        const row = await db.get(HIGHLIGHTS_STORE_NAME, key);
+        if (row) yield row;
+      }
+    },
+  };
 }
 
 export async function cleanupOldTweetDetails(

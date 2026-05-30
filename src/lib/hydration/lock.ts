@@ -1,11 +1,17 @@
 export interface HydrationLock {
   holderId: string;
+  token: string;
   acquiredAt: number;
   lastTickAt: number;
 }
 
 const LOCK_KEY = "hydration_lock";
 const STALE_THRESHOLD_MS = 60_000;
+const ACQUIRE_VERIFY_DELAY_MS = 30;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 export interface LockStorage {
   get(key: string): Promise<Record<string, unknown>>;
@@ -19,6 +25,10 @@ function defaultStorage(): LockStorage {
     set: (items) => chrome.storage.session.set(items),
     remove: (key) => chrome.storage.session.remove(key),
   };
+}
+
+function createLockToken(holderId: string): string {
+  return `${holderId}:${Date.now()}:${Math.random().toString(36).slice(2)}`;
 }
 
 export async function readLock(
@@ -40,10 +50,21 @@ export async function tryAcquire(
   }
 
   const now = Date.now();
+  const token = createLockToken(holderId);
   await storage.set({
-    [LOCK_KEY]: { holderId, acquiredAt: now, lastTickAt: now } satisfies HydrationLock,
+    [LOCK_KEY]: { holderId, token, acquiredAt: now, lastTickAt: now } satisfies HydrationLock,
   });
-  return true;
+  // chrome.storage.session has no compare-and-swap, so a tab acquiring at the
+  // same instant can overwrite our write in the gap between set and read-back.
+  // Wait a jittered moment so both contenders settle on the same final write,
+  // then confirm our token actually survived before claiming the lock. This
+  // collapses simultaneous acquirers to a single winner (last writer wins);
+  // heartbeat + steal-on-stale remain the backstops.
+  await sleep(
+    ACQUIRE_VERIFY_DELAY_MS + Math.floor(Math.random() * ACQUIRE_VERIFY_DELAY_MS),
+  );
+  const stored = await readLock(storage);
+  return stored?.holderId === holderId && stored.token === token;
 }
 
 export async function heartbeat(

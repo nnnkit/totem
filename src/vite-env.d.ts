@@ -1,5 +1,7 @@
 /// <reference types="vite/client" />
 
+declare const __TOTEM_APP_VERSION__: string;
+
 interface FilePickerAcceptType {
   description?: string;
   accept: Record<string, string[]>;

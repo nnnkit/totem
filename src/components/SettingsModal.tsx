@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import {
   CheckIcon,
   ExportIcon,
   MonitorIcon,
   MoonIcon,
   SunIcon,
+  UploadSimpleIcon,
 } from "@phosphor-icons/react";
 import { ToggleGroup } from "@base-ui/react/toggle-group";
 import { Toggle } from "@base-ui/react/toggle";
@@ -29,8 +30,8 @@ interface Props {
   onThemePreferenceChange: (value: ThemePreference) => void;
   onResetAppState: () => void;
   onDeleteAllData: () => void;
+  onImport: () => void;
   onExport: () => void;
-  scrollToStorage?: boolean;
 }
 
 const RESET_STATE_TOOLTIP =
@@ -55,19 +56,9 @@ function useSettingsModalModel({
   onThemePreferenceChange,
   onResetAppState,
   onDeleteAllData,
+  onImport,
   onExport,
-  scrollToStorage,
 }: Props) {
-  const storageSectionRef = useRef<HTMLElement>(null);
-
-  useEffect(() => {
-    if (open && scrollToStorage) {
-      const frame = requestAnimationFrame(() => {
-        storageSectionRef.current?.scrollIntoView({ behavior: "smooth" });
-      });
-      return () => cancelAnimationFrame(frame);
-    }
-  }, [open, scrollToStorage]);
   const [confirmingReset, setConfirmingReset] = useState(false);
   const [resetAppState, setResetAppState] = useState(true);
   const [resetContent, setResetContent] = useState(false);
@@ -102,6 +93,7 @@ function useSettingsModalModel({
     handleClose,
     handleConfirmReset,
     isResetting,
+    onImport,
     onExport,
     onThemePreferenceChange,
     onUpdateSettings,
@@ -112,7 +104,6 @@ function useSettingsModalModel({
     setResetAppState,
     setResetContent,
     settings,
-    storageSectionRef,
     themePreference,
   };
 }
@@ -128,6 +119,7 @@ function renderSettingsModal({
   handleClose,
   handleConfirmReset,
   isResetting,
+  onImport,
   onExport,
   onThemePreferenceChange,
   onUpdateSettings,
@@ -138,7 +130,6 @@ function renderSettingsModal({
   setResetAppState,
   setResetContent,
   settings,
-  storageSectionRef,
   themePreference,
 }: ReturnType<typeof useSettingsModalModel>) {
   return (
@@ -326,11 +317,33 @@ function renderSettingsModal({
               </div>
             </section>
 
-            <section ref={storageSectionRef} className="py-4 first:pt-0 last:pb-0">
+            <section className="py-4 first:pt-0 last:pb-0">
               <h3 className="text-sm font-semibold text-muted mb-1.5">
                 Storage
               </h3>
               <div className="space-y-4">
+                <div className="flex items-center justify-between min-h-10 gap-4">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-sm text-foreground/80">
+                      Import a Totem export
+                    </span>
+                    <span className="text-xxs text-muted/60 leading-snug">
+                      Restore bookmarks, highlights, notes, and reading progress
+                    </span>
+                  </div>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => {
+                      handleClose();
+                      onImport();
+                    }}
+                  >
+                    <UploadSimpleIcon className="size-3.5" />
+                    Import
+                  </Button>
+                </div>
+
                 <div className="flex items-center justify-between min-h-10 gap-4">
                   <div className="flex flex-col gap-0.5">
                     <span className="text-sm text-foreground/80">

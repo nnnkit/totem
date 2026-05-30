@@ -77,6 +77,68 @@ Idea  →  /dataforseo research  →  Fit check  →  Draft  →  Publish  →  
 6. **Track**: move the entry to **Published** with the live URL and date.
    Add the canonical keyword + monthly volume so we can revisit performance.
 
+## Writing setup — fragments → beats → edit
+
+Use this for every thesis, explainer, or launch-adjacent post. The goal is not
+to make AI "write the post." The goal is to keep the human voice, judgement,
+and specificity in the loop while using AI as pressure, sequencing, and cleanup.
+
+Keep each phase in a separate context. For writing, shorter context is better:
+one post packet, the voice notes above, and only the sources needed for that
+phase. If a chat is carrying old drafts, old research, and unrelated repo
+context, start a clean one before drafting.
+
+### 1. Fragment pass
+
+File: `plans/blog-drafts/NN-slug.md`, section `## Fragments`.
+
+Capture loose material without forcing structure:
+
+- real observations about how people save, forget, search, export, or re-read
+- sharp lines that sound like Totem
+- objections and caveats
+- concrete facts, dates, screenshots, and source links
+- competitor comparisons where we can be honest
+- sentences we are not allowed to write because they overclaim
+
+AI's job in this phase is to grill the idea, not draft prose. Ask it to find
+the lazy angle, the missing reader pain, the sentence that sounds like a generic
+SaaS blog, and the place where we are secretly making a bigger claim than the
+product earns.
+
+### 2. Beat pass
+
+Same file, section `## Beat Map`.
+
+Turn fragments into a path:
+
+- one reader problem
+- one thesis
+- 5-8 beats, each with a job
+- where Totem appears, usually late
+- what the post explicitly does not cover
+- sources needed per beat
+
+Draft one beat at a time. After each beat, check: is it specific, true, terse,
+and in the blog voice? If not, rewrite that beat before moving on.
+
+### 3. Editorial pass
+
+Same file, section `## Draft`.
+
+Only after the post reads well, run the cleanup pass:
+
+- add subheads that clarify the argument without sounding like SEO scaffolding
+- add internal links to relevant Totem posts
+- add source links and verify claims
+- cut repeated points
+- make the CTA honest and small
+- write frontmatter
+
+Final check before publish: if the post can be summarized as "Totem feature
+announcement," it is too promotional. It should stand alone as a useful note
+about bookmarks, reading, X, memory, or owning your saved material.
+
 ### Frontmatter template
 
 ```yaml
@@ -133,8 +195,10 @@ a third-party screenshot we don't have the right to use.
 | 2026-04-25 | Are X / Twitter Bookmarks Private? The Real Answer (2026) | [are-x-twitter-bookmarks-private](/blog/are-x-twitter-bookmarks-private) | are twitter bookmarks public | ~7,500 |
 | 2026-04-25 | Pocket Alternatives 2026 — sorted by where your reading actually comes from | [pocket-alternatives-2026](/blog/pocket-alternatives-2026) | pocket alternative | ~3,500 |
 | 2026-04-25 | The X / Twitter Bookmark Limit, Explained (and what to do when bookmarks disappear) | [twitter-x-bookmark-limit-explained](/blog/twitter-x-bookmark-limit-explained) | twitter bookmarks limit | ~1,300 |
-| 2026-04-27 | How to Export Your X / Twitter Bookmarks (Every Method, Ranked) — 2026 | [how-to-export-twitter-bookmarks](/blog/how-to-export-twitter-bookmarks) | export twitter bookmarks | ~160 |
+| 2026-04-27 | How to Export Your X / Twitter Bookmarks (Every Method, Ranked) - 2026 | [how-to-export-twitter-bookmarks](/blog/how-to-export-twitter-bookmarks) | export twitter bookmarks | ~250 |
 | 2026-04-27 | Best Chrome Bookmark Managers in 2026 — Sorted by What You Actually Save | [best-chrome-bookmark-managers-2026](/blog/best-chrome-bookmark-managers-2026) | chrome bookmark manager | ~3,500 |
+| 2026-05-28 | What Actually Gets Exported When You Export Twitter Bookmarks? | [what-gets-exported-twitter-bookmarks](/blog/what-gets-exported-twitter-bookmarks) | twitter bookmarks export | ~250 supported |
+| 2026-05-28 | How to Search Your Twitter Bookmarks Before You Export Them | [search-twitter-bookmarks-before-export](/blog/search-twitter-bookmarks-before-export) | twitter bookmarks search | ~110 |
 
 ---
 
@@ -144,10 +208,51 @@ _(none yet)_
 
 ---
 
-## Ideas — researched, fit-checked, ready to draft
+## Ideas
 
 Ordered by editorial priority (voice fit × SERP gap × intent), not raw volume.
 Split by post format: **Listicles** (ranked/segmented round-ups) and **Thesis & explainer** (single-argument or how-to with POV).
+
+### Researched, fit-checked, ready to draft
+
+### Remaining launch/export ideas — verified 2026-05-28
+
+Raw pulls:
+- `tmp/dataforseo/export-article-keywords-2026-05-28.json` — 69 keywords, US/en, cost $0.075.
+- `tmp/dataforseo/serp-export-launch-*-2026-05-28.json` — 6 SERPs, US/en, cost $0.021.
+
+Published from this batch:
+- Refreshed `/blog/how-to-export-twitter-bookmarks` for `export twitter bookmarks`.
+- Published `/blog/what-gets-exported-twitter-bookmarks` for `twitter bookmarks export`.
+- Published `/blog/search-twitter-bookmarks-before-export` for `twitter bookmarks search`.
+
+#### LX4. "Best Twitter bookmark managers for search, export, and actually reading"
+- **Canonical kw**: `twitter bookmark manager`
+- **Cluster vol**: ~120/mo (`twitter bookmark manager` 40, `twitter bookmarks manager` 40, `x bookmark manager` 10, `x bookmarks manager` 10, `twitter bookmarks app` 10, plus adjacent `how to organize twitter bookmarks` 20).
+- **Competition**: LOW.
+- **SERP gap**: SERP is Reddit, X profiles, app stores, Dewey, Circleboom, an outdated 2023 Medium post, XBookmark, TweetSmash, and Firefox add-ons. There is room for a 2026 comparison that ranks tools by job: search, export, read, organize, backup.
+- **Angle**: Honest comparison table. Totem wins "new tab reading + local export"; Dewey wins cloud multi-platform; TweetSmash wins digest/workflows; Twillot wins lightweight search; exporter extensions win one-time CSV.
+- **Fit**: ★★★★ — close to existing L3, but the export/search frame makes it launch-relevant.
+
+#### LX5. "A read-later app is only as good as its restore button"
+- **Canonical kw**: `pocket alternative` or internal-link essay, not an export keyword.
+- **Cluster vol**: no meaningful direct volume for `read later backup`, `read later export`, or `restore twitter bookmarks`.
+- **Competition**: Not worth SERP-first targeting.
+- **SERP gap**: This is a brand/trust essay, not a search-led post.
+- **Angle**: Use Pocket/Omnivore shutdown anxiety as the reader pain. A saved queue is not trustworthy unless saved items, reading progress, highlights, notes, and enough readable content can leave and come back.
+- **Fit**: ★★★ — good launch narrative, but publish after the search-led pieces.
+
+#### Deprioritized: "Tweet saver — what 'save a tweet' actually does"
+- **Canonical kw tested**: `tweet saver`
+- **Volume**: 320/mo, LOW.
+- **Problem**: SERP intent is almost entirely Twitter/X video downloader tools, not bookmark/read-later intent. Targeting it would attract the wrong reader.
+- **Use instead**: Mention "save tweets" language inside LX3/LX4, but do not make `tweet saver` the primary keyword.
+
+#### Deprioritized: "Twitter thread reader"
+- **Canonical kw tested**: `twitter thread reader`
+- **Volume**: 260/mo, LOW.
+- **Problem**: SERP intent is thread unrolling/PDF tools. Totem can participate only if the article is about reading saved threads, not export.
+- **Use instead**: Keep for a later "best Chrome extensions for reading" or "saved threads" post, not this export launch.
 
 ### Listicles
 

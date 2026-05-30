@@ -36,17 +36,17 @@ None of these mechanisms run when Chrome is closed. MV3 has no true background. 
 
 **Conservative trickle with human-paced jitter.** No header reading, no bucket math.
 
-- Base inter-request delay: random in **[1500, 3500] ms**.
-- Every 20–40 requests: an additional **[10000, 30000] ms** pause (mimics human reading).
+- Base inter-request delay: random in **[8000, 12000] ms**.
+- Every 15–25 requests: an additional **[45000, 90000] ms** pause (mimics human reading).
 - On `RATE_LIMITED` (HTTP 429 from `api-proxy.ts:204`): pause job for **15 minutes**, then resume at the same jittered cadence.
 - No `Retry-After` parsing (X often omits it; the fixed 15-min pause is cheap and conservative).
 - No bucket counter, no proactive throttling.
 
 Why not header-based: X doesn't reliably publish per-endpoint limits, and the "50% of documented limit" framing in the original PRD assumed infrastructure we don't have. The trickle rate is calibrated to be slow enough that 429s should be rare in practice — the loop is the throttle, not a counter.
 
-At base cadence, a 3000-bookmark library takes ~100 minutes; a 10k library ~5.5 hours. Acceptable for a one-shot "Make it ready" job the user kicks off and walks away from (the tab needs to stay open, but they don't have to watch it).
+At base cadence plus long pauses, a 3000-bookmark library takes ~11 hours; a 10k library ~37 hours. Acceptable for a one-shot "Make it ready" job the user kicks off and walks away from (the tab needs to stay open, but they don't have to watch it).
 
-Why the jitter range is asymmetric (1.5–3.5s, not 1.9–2.1s): bot fingerprints come from suspiciously regular timing as much as from sheer rate. Wider variance + occasional long pauses look much more like a human casually reading.
+Why the jitter range is asymmetric (8–12s, not a tight fixed interval): bot fingerprints come from suspiciously regular timing as much as from sheer rate. Wider variance + occasional long pauses look much more like a human casually reading.
 
 ---
 
@@ -254,7 +254,7 @@ The original §11 risks are mostly moot now:
 - **IDB quota at scale** — still real for huge libraries. `navigator.storage.estimate()` pre-flight before starting; pause job at 95% usage. Not fixed, but bounded.
 - ~~Account switching mid-job~~ — existing logout flow + lock release handles this; no special code
 - **Forward-compat of import logic** — adding `detailsStatus` is a `schema_version` bump (3→4). Importers ignore unknown fields. v3 importer reading v4 archive loses status info but still imports the tweet detail body — acceptable.
-- **NEW: lock thrashing** — if heartbeat is too slow, two tabs might both think the lock is stale and steal it concurrently. Mitigation: heartbeat every tick (1.5–3.5s), steal threshold 60s. 20× safety margin.
+- **NEW: lock thrashing** — if heartbeat is too slow, two tabs might both think the lock is stale and steal it concurrently. Mitigation: heartbeat every tick (8–12s), steal threshold 60s. 5× safety margin.
 
 ---
 

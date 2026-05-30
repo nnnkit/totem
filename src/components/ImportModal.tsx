@@ -2,7 +2,6 @@ import { useState, useRef, useCallback } from "react";
 import {
   UploadSimpleIcon,
   WarningCircleIcon,
-  ArrowsClockwiseIcon,
   CheckCircleIcon,
 } from "@phosphor-icons/react";
 import { Modal } from "./ui/Modal";
@@ -11,8 +10,11 @@ import {
   parseZip,
   validateImport,
   runImport,
+  ImportPartialFailure,
+  MAX_INPUT_ZIP_BYTES,
   type ImportManifest,
   type ImportResult,
+  type ImportStoreOutcome,
   type ImportStoreProgress,
   type RefusedReason,
   type ValidatedImport,
@@ -23,7 +25,7 @@ interface Props {
   open: boolean;
   onClose: () => void;
   activeAccountUserId: string | null;
-  onSyncAfterImport: () => void;
+  onRefreshAfterImport: () => void | Promise<void>;
 }
 
 type ImportState =
@@ -61,6 +63,11 @@ const REFUSED_MESSAGES: Record<RefusedReason, { title: string; description: stri
     description: "This ZIP doesn't contain any data to import.",
     action: "Try another file",
   },
+  too_large: {
+    title: "File too large",
+    description: "This ZIP is larger than Totem can import. Re-export and try again.",
+    action: "Try another file",
+  },
 };
 
 function formatCount(n: number): string {
@@ -71,7 +78,7 @@ export function ImportModal({
   open,
   onClose,
   activeAccountUserId,
-  onSyncAfterImport,
+  onRefreshAfterImport,
 }: Props) {
   const [state, setState] = useState<ImportState>({ phase: "empty" });
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -86,6 +93,10 @@ export function ImportModal({
 
   const processFile = useCallback(async (file: File) => {
     setState({ phase: "parsing" });
+    if (file.size > MAX_INPUT_ZIP_BYTES) {
+      setState({ phase: "refused", reason: "too_large" });
+      return;
+    }
     try {
       const buffer = await file.arrayBuffer();
       const zipBytes = new Uint8Array(buffer);
@@ -154,13 +165,23 @@ export function ImportModal({
         setState({ phase: "importing", progress });
       });
       setState({ phase: "done", result });
+      await Promise.resolve(onRefreshAfterImport()).catch((error: unknown) => {
+        console.warn("Import succeeded, but post-import refresh failed.", error);
+      });
     } catch (error) {
+      if (error instanceof ImportPartialFailure) {
+        setState({ phase: "done", result: error.result });
+        await Promise.resolve(onRefreshAfterImport()).catch((refreshError: unknown) => {
+          console.warn("Import partially succeeded, but post-import refresh failed.", refreshError);
+        });
+        return;
+      }
       setState({
         phase: "error",
         message: error instanceof Error ? error.message : "Import failed",
       });
     }
-  }, [state]);
+  }, [onRefreshAfterImport, state]);
 
   const handleReset = useCallback(() => {
     setState({ phase: "empty" });
@@ -209,7 +230,6 @@ export function ImportModal({
         <DoneView
           result={state.result}
           onClose={handleClose}
-          onSync={onSyncAfterImport}
         />
       )}
       {state.phase === "error" && (
@@ -393,7 +413,12 @@ function RefusedView({
         <Button variant="secondary" onClick={onClose}>
           Close
         </Button>
-        {(reason === "not_totem_export" || reason === "checksum_mismatch" || reason === "empty_zip") && (
+        {(
+          reason === "not_totem_export" ||
+          reason === "checksum_mismatch" ||
+          reason === "empty_zip" ||
+          reason === "too_large"
+        ) && (
           <Button variant="primary" onClick={onReset}>
             {info.action}
           </Button>
@@ -437,11 +462,9 @@ function ImportingView({ progress }: { progress: ImportStoreProgress | null }) {
                 isCurrent ? "text-foreground" : isDone ? "text-muted" : "text-muted/50",
               )}>
                 {STORE_LABELS[store]}
-                {isDone && progress && i === currentIndex - 0
-                  ? ""
-                  : isCurrent && progress
-                    ? ` — ${formatCount(progress.added + progress.alreadyHad)} of ${formatCount(progress.total)}`
-                    : ""}
+                {isCurrent && progress
+                  ? ` — ${formatCount(progress.added + progress.alreadyHad)} of ${formatCount(progress.total)}`
+                  : ""}
               </span>
             </div>
           );
@@ -454,67 +477,72 @@ function ImportingView({ progress }: { progress: ImportStoreProgress | null }) {
 function DoneView({
   result,
   onClose,
-  onSync,
 }: {
   result: ImportResult;
   onClose: () => void;
-  onSync: () => void;
 }) {
-  const stores = [
+  const stores: Array<{ label: string; counts: ImportStoreOutcome }> = [
     { label: "Bookmarks", counts: result.bookmarks },
     { label: "Thread details", counts: result.details },
     { label: "Highlights", counts: result.highlights },
     { label: "Reading progress", counts: result.readingProgress },
-  ].filter((s) => s.counts.added > 0 || s.counts.alreadyHad > 0);
-
-  const totalAdded =
-    result.bookmarks.added +
-    result.details.added +
-    result.highlights.added +
-    result.readingProgress.added;
+  ].filter((s) =>
+    s.counts.status === "failed" ||
+    s.counts.added > 0 ||
+    s.counts.alreadyHad > 0 ||
+    s.counts.total > 0
+  );
+  const isPartial = result.status === "partial";
 
   return (
     <>
       <div className="flex items-center gap-2 mb-3">
-        <div className="size-8 rounded-full bg-success/15 flex items-center justify-center">
-          <span className="text-success text-lg">✓</span>
+        <div className={cn(
+          "size-8 rounded-full flex items-center justify-center",
+          isPartial ? "bg-accent-surface/60" : "bg-success/15",
+        )}>
+          {isPartial ? (
+            <WarningCircleIcon weight="fill" className="size-5 text-accent" />
+          ) : (
+            <CheckCircleIcon weight="fill" className="size-5 text-success" />
+          )}
         </div>
         <span className="text-sm font-medium text-foreground">
-          Import complete
+          {isPartial ? "Import completed with issues" : "Import complete"}
         </span>
       </div>
 
       <div className="rounded border border-border/60 divide-y divide-border/40 mb-4">
-        <div className="grid grid-cols-3 px-3 py-1.5 text-xxs text-muted/70 font-medium">
+        <div className="grid grid-cols-[1fr_auto_auto] gap-3 px-3 py-1.5 text-xxs text-muted/70 font-medium">
           <span>Store</span>
           <span className="text-right">Added</span>
           <span className="text-right">Already had</span>
         </div>
         {stores.map((s) => (
-          <div key={s.label} className="grid grid-cols-3 px-3 py-1.5 text-xs">
-            <span className="text-foreground/80">{s.label}</span>
-            <span className="text-right text-success">{formatCount(s.counts.added)}</span>
-            <span className="text-right text-muted">{formatCount(s.counts.alreadyHad)}</span>
+          <div key={s.label} className="px-3 py-1.5 text-xs">
+            <div className="grid grid-cols-[1fr_auto_auto] gap-3">
+              <span className={cn(
+                "text-foreground/80",
+                s.counts.status === "failed" && "text-red-400",
+              )}>
+                {s.label}
+              </span>
+              <span className="text-right text-success">{formatCount(s.counts.added)}</span>
+              <span className="text-right text-muted">{formatCount(s.counts.alreadyHad)}</span>
+            </div>
+            {s.counts.status === "failed" && (
+              <p className="mt-1 text-xxs leading-snug text-red-400">
+                {s.counts.message}
+              </p>
+            )}
           </div>
         ))}
       </div>
 
       <div className="flex gap-2 justify-end">
-        <Button variant="secondary" onClick={onClose}>
+        <Button variant="primary" onClick={onClose}>
           Close import summary
         </Button>
-        {totalAdded > 0 && (
-          <Button
-            variant="primary"
-            onClick={() => {
-              onSync();
-              onClose();
-            }}
-          >
-            <ArrowsClockwiseIcon className="size-4" />
-            Sync now
-          </Button>
-        )}
       </div>
     </>
   );

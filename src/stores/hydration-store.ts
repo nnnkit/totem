@@ -10,6 +10,7 @@ import {
   heartbeat,
   release,
   readLock,
+  STALE_THRESHOLD_MS,
   type LockStorage,
 } from "../lib/hydration/lock";
 import { CS_HYDRATION_SNAPSHOT } from "../lib/storage-keys";
@@ -51,8 +52,11 @@ const LONG_PAUSE_INTERVAL_MAX = 25;
 const RATE_LIMIT_PAUSE_MS = 30 * 60 * 1000;
 const STORAGE_QUOTA_THRESHOLD = 0.95;
 const STORAGE_CHECK_INTERVAL = 10;
+const STORAGE_RETRY_MS = 5 * 60 * 1000;
 const SNAPSHOT_WRITE_INTERVAL = 1;
+const FULL_RECOUNT_INTERVAL = 20;
 const HOLDER_ID_SESSION_KEY = "totem_hydration_holder_id";
+const PAUSE_HEARTBEAT_INTERVAL_MS = Math.floor(STALE_THRESHOLD_MS / 2);
 
 let defaultAuthReady = false;
 const defaultAuthListeners = new Set<(ready: boolean) => void>();
@@ -69,12 +73,30 @@ export function jitteredDelay(): number {
   return BASE_DELAY_MIN + Math.random() * (BASE_DELAY_MAX - BASE_DELAY_MIN);
 }
 
-export function shouldLongPause(tickCount: number): boolean {
-  if (tickCount === 0) return false;
-  const interval =
+function pickLongPauseInterval(): number {
+  return (
     LONG_PAUSE_INTERVAL_MIN +
-    Math.floor(Math.random() * (LONG_PAUSE_INTERVAL_MAX - LONG_PAUSE_INTERVAL_MIN + 1));
-  return tickCount % interval === 0;
+    Math.floor(Math.random() * (LONG_PAUSE_INTERVAL_MAX - LONG_PAUSE_INTERVAL_MIN + 1))
+  );
+}
+
+/**
+ * Counts down toward the next long pause. The interval is picked once and held
+ * until it elapses (then re-randomized), so the cadence is genuinely "one long
+ * pause every 15–25 requests" rather than a per-tick divisibility lottery.
+ */
+export function createLongPauseScheduler(): { shouldPauseNow: () => boolean } {
+  let remaining = pickLongPauseInterval();
+  return {
+    shouldPauseNow() {
+      remaining -= 1;
+      if (remaining <= 0) {
+        remaining = pickLongPauseInterval();
+        return true;
+      }
+      return false;
+    },
+  };
 }
 
 export function longPauseDelay(): number {
@@ -131,6 +153,10 @@ function getDefaultHolderId(): string {
 
 function isRestorableStatus(status: HydrationStatus): boolean {
   return status !== "idle";
+}
+
+function isDetailParseFailure(error: unknown): boolean {
+  return error instanceof Error && error.message === "DETAIL_PARSE_EMPTY";
 }
 
 export interface HydrationDeps {
@@ -228,6 +254,20 @@ export function createHydrationStore(deps: HydrationDeps = defaultDeps()) {
   let unsubAuth: (() => void) | null = null;
   let disposed = false;
 
+  // Best-effort: hand the lock back when this tab goes away so other tabs don't
+  // have to wait out the full 60s stale threshold to take over. This is async
+  // and may not flush on a hard close — steal-on-stale remains the real backstop.
+  const releaseLockOnUnload = () => {
+    if (loopRunning) {
+      release(deps.holderId, deps.lockStorage).catch(() => {});
+    }
+  };
+  const hasUnloadHook =
+    typeof window !== "undefined" && typeof window.addEventListener === "function";
+  if (hasUnloadHook) {
+    window.addEventListener("pagehide", releaseLockOnUnload);
+  }
+
   const store = createStore<
     HydrationState & {
       start: () => void;
@@ -283,6 +323,9 @@ export function createHydrationStore(deps: HydrationDeps = defaultDeps()) {
       get().stop();
       unsubAuth?.();
       unsubAuth = null;
+      if (hasUnloadHook) {
+        window.removeEventListener("pagehide", releaseLockOnUnload);
+      }
     },
 
     _runLoop: async () => {
@@ -311,16 +354,24 @@ export function createHydrationStore(deps: HydrationDeps = defaultDeps()) {
 
         let tickCount = 0;
         let snapshotCounter = 0;
+        let remaining = total;
+        const decrementRemaining = () => {
+          remaining = Math.max(0, remaining - 1);
+        };
+        const longPause = createLongPauseScheduler();
 
         while (!signal?.aborted) {
           if (!deps.getAuthReady()) {
             set({ status: "paused-auth" });
-            writeSnapshotFromState(get());
             loopRunning = false;
+            await release(deps.holderId, deps.lockStorage);
+            writeSnapshotFromState(get());
             return;
           }
 
-          if (tickCount > 0 && tickCount % STORAGE_CHECK_INTERVAL === 0) {
+          // Check at tick 0 too so a resume after a storage pause re-pauses
+          // immediately instead of churning through items that fail to persist.
+          if (tickCount % STORAGE_CHECK_INTERVAL === 0) {
             try {
               const { usage, quota } = await deps.estimateStorage();
               if (quota > 0 && usage / quota > STORAGE_QUOTA_THRESHOLD) {
@@ -328,6 +379,9 @@ export function createHydrationStore(deps: HydrationDeps = defaultDeps()) {
                 loopRunning = false;
                 await release(deps.holderId, deps.lockStorage);
                 writeSnapshotFromState(get());
+                // Storage frees up out-of-band (user clears space), so retry on
+                // a timer rather than leaving the job stuck forever.
+                scheduleResume(STORAGE_RETRY_MS);
                 return;
               }
             } catch {
@@ -359,23 +413,47 @@ export function createHydrationStore(deps: HydrationDeps = defaultDeps()) {
                     processed: s.processed + 1,
                     unavailable: s.unavailable + 1,
                   }));
+                  decrementRemaining();
                 } else if (classified.status === "paused-429") {
                   const pauseUntil = Date.now() + RATE_LIMIT_PAUSE_MS;
                   set({ status: "paused-429", pauseUntil });
                   writeSnapshotFromState(get());
                   if (signal?.aborted) break;
                   await heartbeat(deps.holderId, deps.lockStorage);
-                  await sleep(RATE_LIMIT_PAUSE_MS, signal);
+                  const retainedLock = await sleepWithHeartbeat(
+                    RATE_LIMIT_PAUSE_MS,
+                    deps.holderId,
+                    deps.lockStorage,
+                    signal,
+                  );
+                  if (!retainedLock || signal?.aborted) {
+                    loopRunning = false;
+                    writeSnapshotFromState(get());
+                    if (!signal?.aborted) startLockPolling();
+                    return;
+                  }
                   set({ status: "running", pauseUntil: 0 });
                 } else if (classified.status === "paused-auth") {
                   set({ status: "paused-auth" });
                   loopRunning = false;
+                  await release(deps.holderId, deps.lockStorage);
                   writeSnapshotFromState(get());
                   return;
                 }
               } else {
-                await deps.cacheDetail(tweetId, response.data);
-                set((s) => ({ processed: s.processed + 1 }));
+                try {
+                  await deps.cacheDetail(tweetId, response.data);
+                  set((s) => ({ processed: s.processed + 1 }));
+                  decrementRemaining();
+                } catch (error) {
+                  if (!isDetailParseFailure(error)) throw error;
+                  await deps.cacheUnavailable(tweetId, "parse_failed");
+                  set((s) => ({
+                    processed: s.processed + 1,
+                    unavailable: s.unavailable + 1,
+                  }));
+                  decrementRemaining();
+                }
               }
             }
           } catch {
@@ -384,12 +462,22 @@ export function createHydrationStore(deps: HydrationDeps = defaultDeps()) {
 
           tickCount++;
 
-          await heartbeat(deps.holderId, deps.lockStorage);
+          // If the heartbeat fails, another tab has stolen the lock (ours went
+          // stale). Stop writing immediately so we don't run as a second writer,
+          // and poll to take over later if that tab dies.
+          if (!(await heartbeat(deps.holderId, deps.lockStorage))) {
+            loopRunning = false;
+            writeSnapshotFromState(get());
+            if (!signal?.aborted) startLockPolling();
+            return;
+          }
 
           snapshotCounter++;
           if (snapshotCounter >= SNAPSHOT_WRITE_INTERVAL) {
-            const updatedTotal = await deps.countNeeding();
-            set({ total: updatedTotal });
+            if (tickCount % FULL_RECOUNT_INTERVAL === 0) {
+              remaining = await deps.countNeeding();
+            }
+            set({ total: remaining });
             writeSnapshotFromState(get());
             snapshotCounter = 0;
           }
@@ -397,7 +485,7 @@ export function createHydrationStore(deps: HydrationDeps = defaultDeps()) {
           if (signal?.aborted) break;
 
           let delay = jitteredDelay();
-          if (shouldLongPause(tickCount)) {
+          if (longPause.shouldPauseNow()) {
             delay += longPauseDelay();
           }
           await sleep(delay, signal);
@@ -488,15 +576,26 @@ export function createHydrationStore(deps: HydrationDeps = defaultDeps()) {
     if (snapshot.status === "paused-429") {
       scheduleResume(snapshot.pauseUntil - Date.now());
     }
+
+    if (snapshot.status === "paused-storage") {
+      scheduleResume(STORAGE_RETRY_MS);
+    }
   }
 
   unsubAuth = deps.subscribeAuth((ready) => {
     const state = store.getState();
     if (ready && (state.status === "paused-auth" || state.status === "running")) {
       state.start();
-    } else if (!ready && state.status === "running") {
-      store.setState({ status: "paused-auth" });
+    } else if (!ready && (state.status === "running" || state.status === "paused-429")) {
+      store.setState({ status: "paused-auth", pauseUntil: 0 });
       writeSnapshotFromState(store.getState());
+      // Interrupt the in-flight loop (mid-sleep, mid-fetch, or mid-429-backoff)
+      // so it stops firing requests and can't clobber the paused-auth status
+      // back to running when the backoff resolves. The loop's guards drop any
+      // in-flight write, and re-auth's start() can run once loopRunning clears.
+      loopAbort?.abort();
+      loopAbort = null;
+      release(deps.holderId, deps.lockStorage).catch(() => {});
     }
   });
 
@@ -517,6 +616,25 @@ function sleep(ms: number, signal?: AbortSignal): Promise<void> {
       resolve();
     }, { once: true });
   });
+}
+
+async function sleepWithHeartbeat(
+  ms: number,
+  holderId: string,
+  storage: LockStorage,
+  signal?: AbortSignal,
+): Promise<boolean> {
+  const until = Date.now() + ms;
+  while (!signal?.aborted) {
+    const remaining = until - Date.now();
+    if (remaining <= 0) return true;
+
+    await sleep(Math.min(PAUSE_HEARTBEAT_INTERVAL_MS, remaining), signal);
+    if (signal?.aborted) return false;
+    if (Date.now() >= until) return true;
+    if (!(await heartbeat(holderId, storage))) return false;
+  }
+  return false;
 }
 
 let _defaultStore: ReturnType<typeof createHydrationStore> | null = null;

@@ -1,28 +1,32 @@
-import { makeZip } from "client-zip";
-import type { Bookmark, TweetDetailCache } from "../../types";
+import type {
+  Bookmark,
+  Highlight,
+  ReadingProgress,
+  TweetDetailCache,
+} from "../../types";
 import { getArticleMarkdownString } from "./article-download";
 import { slugifyArticleBasename } from "./article-filename";
-import { resolveReaderExportArticle } from "./tweet-export";
+import { deriveExportTitle, resolveReaderExportArticle } from "./tweet-export";
 import {
-  getAllBookmarks,
-  getAllTweetDetails,
-  getAllHighlights,
-  getAllReadingProgress,
+  getBookmarkById,
+  getHighlightById,
+  getReadingProgress,
+  getTweetDetailCache,
+  iterateBookmarks,
+  iterateTweetDetails,
+  iterateHighlights,
+  iterateReadingProgress,
 } from "../../db";
 import { DB_VERSION } from "../constants/db";
+import { sha256hex } from "../crypto";
 import { stripCardUrlsFromTweetText } from "../tweet-text";
 import { sortIndexToTimestamp } from "../time";
+import {
+  makeZipEntriesStream,
+  type StreamZipEntry,
+} from "./stream-zip";
 
-const APP_VERSION = "1.1.24";
-
-async function sha256hex(data: Uint8Array): Promise<string> {
-  const buf = new ArrayBuffer(data.byteLength);
-  new Uint8Array(buf).set(data);
-  const hash = await crypto.subtle.digest("SHA-256", buf);
-  return Array.from(new Uint8Array(hash))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-}
+const APP_VERSION = __TOTEM_APP_VERSION__;
 
 function csvEscape(value: string): string {
   if (/[",\r\n]/.test(value)) {
@@ -98,33 +102,6 @@ const CSV_COLUMNS = [
 
 const BOM = "﻿";
 
-function buildCsv(
-  bookmarks: Bookmark[],
-  fullThreadIds: Set<string>,
-): string {
-  const lines: string[] = [BOM + csvRow([...CSV_COLUMNS])];
-  for (const b of bookmarks) {
-    const text = stripCardUrlsFromTweetText(b.text, b.urls).trim();
-    const savedAt = bookmarkSavedAtMs(b);
-    lines.push(
-      csvRow([
-        b.tweetId,
-        tweetUrl(b),
-        b.author.screenName,
-        b.author.name,
-        text,
-        isoFromMs(b.createdAt),
-        isoFromMs(savedAt),
-        mediaUrlsJoined(b),
-        quotedTweetUrl(b),
-        String(b.isThread),
-        String(fullThreadIds.has(b.tweetId)),
-      ]),
-    );
-  }
-  return lines.join("");
-}
-
 function truncateTitle(text: string, max = 90): string {
   const first = text.split("\n")[0].trim();
   if (!first) return "(No text)";
@@ -136,10 +113,17 @@ function readmeLinkText(text: string): string {
 }
 
 interface BookmarkMarkdownFile {
+  bookmarkId: string;
+  year: string;
   path: string;
   title: string;
   sourceUrl: string;
-  bytes: Uint8Array;
+}
+
+interface BookmarkMarkdownMetadata {
+  exportBookmark: Bookmark;
+  sourceUrl: string;
+  title: string;
 }
 
 function bookmarkMarkdownTitle(bookmark: Bookmark): string {
@@ -178,66 +162,52 @@ function makeBookmarkMarkdownPath(
   return path;
 }
 
-function buildBookmarkMarkdownFiles(
-  bookmarks: Bookmark[],
-  details: TweetDetailCache[],
-  encoder: TextEncoder,
+function getBookmarkMarkdownMetadata(
+  bookmark: Bookmark,
+  detail: TweetDetailCache | null,
+): BookmarkMarkdownMetadata {
+  const exportBookmark = detail?.focalTweet
+    ? {
+        ...detail.focalTweet,
+        sortIndex: bookmark.sortIndex,
+        bookmarked: bookmark.bookmarked,
+      }
+    : bookmark;
+  const sourceUrl = tweetUrl(exportBookmark);
+  const title = deriveExportTitle(exportBookmark) || bookmarkMarkdownTitle(exportBookmark);
+  return { exportBookmark, sourceUrl, title };
+}
+
+function buildBookmarkMarkdown(
+  bookmark: Bookmark,
+  detail: TweetDetailCache | null,
   exportedAtLabel: string,
-): BookmarkMarkdownFile[] {
-  const detailsByTweetId = new Map(
-    details.map((detail) => [detail.tweetId, detail]),
+): { body: string; title: string; sourceUrl: string; exportBookmark: Bookmark } {
+  const metadata = getBookmarkMarkdownMetadata(bookmark, detail);
+  const article = resolveReaderExportArticle(
+    metadata.exportBookmark,
+    detail?.thread ?? [],
+    { includeThreadInExport: true },
   );
-  const usedPaths = new Set<string>();
-  const ordinalWidth = Math.max(2, String(bookmarks.length).length);
-
-  return bookmarks.map((bookmark, index) => {
-    const detail = detailsByTweetId.get(bookmark.tweetId);
-    const exportBookmark = detail?.focalTweet
-      ? {
-          ...detail.focalTweet,
-          sortIndex: bookmark.sortIndex,
-          bookmarked: bookmark.bookmarked,
-        }
-      : bookmark;
-    const article = resolveReaderExportArticle(
-      exportBookmark,
-      detail?.thread ?? [],
-      { includeThreadInExport: true },
-    );
-    const sourceUrl = tweetUrl(exportBookmark);
-    const body = getArticleMarkdownString(article, {
-      authorProfileImageUrl: exportBookmark.author.profileImageUrl,
-      metadata: {
-        postUrl: sourceUrl,
-        exportedAtLabel,
-        authorName: exportBookmark.author.name,
-        authorHandle: exportBookmark.author.screenName,
-      },
-    });
-    const title = article.title?.trim() || bookmarkMarkdownTitle(exportBookmark);
-    const path = makeBookmarkMarkdownPath(
-      exportBookmark,
-      title,
-      index,
-      ordinalWidth,
-      usedPaths,
-    );
-
-    return {
-      path,
-      title,
-      sourceUrl,
-      bytes: encoder.encode(body),
-    };
+  const body = getArticleMarkdownString(article, {
+    authorProfileImageUrl: metadata.exportBookmark.author.profileImageUrl,
+    metadata: {
+      postUrl: metadata.sourceUrl,
+      exportedAtLabel,
+      authorName: metadata.exportBookmark.author.name,
+      authorHandle: metadata.exportBookmark.author.screenName,
+    },
   });
+  return { ...metadata, body };
 }
 
 function buildReadme(
   handle: string,
   bookmarkFiles: BookmarkMarkdownFile[],
+  generatedAtMs: number,
 ): string {
   const count = bookmarkFiles.length.toLocaleString("en-US");
-  const today = dateFromMs(Date.now());
+  const today = dateFromMs(generatedAtMs);
   const links = bookmarkFiles
     .map(
       (file) =>
@@ -327,12 +297,241 @@ function downloadBlob(blob: Blob, filename: string): void {
   setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
-function fullThreadIdsFromDetails(details: TweetDetailCache[]): Set<string> {
-  const ids = new Set<string>();
-  for (const detail of details) {
-    if (detail.detailsStatus !== "unavailable") ids.add(detail.tweetId);
+function bookmarkCsvLine(
+  bookmark: Bookmark,
+  fullThreadIds: Set<string>,
+): string {
+  const text = stripCardUrlsFromTweetText(bookmark.text, bookmark.urls).trim();
+  const savedAt = bookmarkSavedAtMs(bookmark);
+  return csvRow([
+    bookmark.tweetId,
+    tweetUrl(bookmark),
+    bookmark.author.screenName,
+    bookmark.author.name,
+    text,
+    isoFromMs(bookmark.createdAt),
+    isoFromMs(savedAt),
+    mediaUrlsJoined(bookmark),
+    quotedTweetUrl(bookmark),
+    String(bookmark.isThread),
+    String(fullThreadIds.has(bookmark.tweetId)),
+  ]);
+}
+
+async function* csvLines(
+  bookmarkFiles: BookmarkMarkdownFile[],
+  fullThreadIds: Set<string>,
+): AsyncIterable<string> {
+  yield BOM + csvRow([...CSV_COLUMNS]);
+  for (const file of bookmarkFiles) {
+    const bookmark = await getBookmarkById(file.bookmarkId);
+    // The row was deleted after we snapshotted ids (e.g. a concurrent sync or
+    // hydration write in the same tab). Skip it rather than abort the export.
+    if (!bookmark) continue;
+    yield bookmarkCsvLine(bookmark, fullThreadIds);
+  }
+}
+
+async function* jsonlLines<T>(rows: AsyncIterable<T>): AsyncIterable<string> {
+  for await (const row of rows) {
+    yield `${JSON.stringify(row)}\n`;
+  }
+}
+
+function textStream(lines: AsyncIterable<string>): ReadableStream<Uint8Array> {
+  const iterator = lines[Symbol.asyncIterator]();
+  const encoder = new TextEncoder();
+
+  return new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      const { value, done } = await iterator.next();
+      if (done) {
+        controller.close();
+        return;
+      }
+      controller.enqueue(encoder.encode(value));
+    },
+    async cancel(reason) {
+      if (typeof iterator.return === "function") {
+        await iterator.return(reason);
+      }
+    },
+  });
+}
+
+function concatChunks(chunks: Uint8Array[], total: number): Uint8Array {
+  const output = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    output.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return output;
+}
+
+function hashingTextEntry(
+  name: string,
+  lines: AsyncIterable<string>,
+  checksums: Record<string, string>,
+  lastModified: Date,
+): { entry: StreamZipEntry; done: Promise<void> } {
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  let resolveDone!: () => void;
+  let rejectDone!: (error: unknown) => void;
+  const done = new Promise<void>((resolve, reject) => {
+    resolveDone = resolve;
+    rejectDone = reject;
+  });
+
+  const input = textStream((async function* () {
+    try {
+      for await (const line of lines) {
+        const chunk = new TextEncoder().encode(line);
+        chunks.push(chunk);
+        total += chunk.byteLength;
+        yield line;
+      }
+      checksums[name] = `sha256:${await sha256hex(concatChunks(chunks, total))}`;
+      resolveDone();
+    } catch (error) {
+      rejectDone(error);
+      throw error;
+    }
+  })());
+
+  return {
+    entry: { name, input, lastModified },
+    done,
+  };
+}
+
+async function* singleTextLine(
+  makeText: () => string | Promise<string>,
+): AsyncIterable<string> {
+  yield await makeText();
+}
+
+async function collectDetailSummary(): Promise<{
+  keys: string[];
+  count: number;
+  fullThreadIds: Set<string>;
+}> {
+  const keys: string[] = [];
+  const fullThreadIds = new Set<string>();
+  for await (const detail of iterateTweetDetails()) {
+    keys.push(detail.tweetId);
+    if (detail.detailsStatus !== "unavailable") {
+      fullThreadIds.add(detail.tweetId);
+    }
+  }
+  return { keys, count: keys.length, fullThreadIds };
+}
+
+async function collectHighlightIds(): Promise<string[]> {
+  const ids: string[] = [];
+  for await (const highlight of iterateHighlights()) {
+    ids.push(highlight.id);
   }
   return ids;
+}
+
+async function collectReadingProgressIds(): Promise<string[]> {
+  const ids: string[] = [];
+  for await (const progress of iterateReadingProgress()) {
+    ids.push(progress.tweetId);
+  }
+  return ids;
+}
+
+async function* bookmarksForYear(
+  year: string,
+  bookmarkFiles: BookmarkMarkdownFile[],
+  counter: { n: number },
+): AsyncIterable<Bookmark> {
+  for (const file of bookmarkFiles) {
+    if (file.year !== year) continue;
+    const bookmark = await getBookmarkById(file.bookmarkId);
+    if (!bookmark) continue; // row removed mid-export; skip it
+    counter.n++;
+    yield bookmark;
+  }
+}
+
+async function collectBookmarkMarkdownFiles(): Promise<{ files: BookmarkMarkdownFile[]; years: string[] }> {
+  const files: BookmarkMarkdownFile[] = [];
+  const years = new Set<string>();
+  const usedPaths = new Set<string>();
+  const bookmarkIds: string[] = [];
+
+  for await (const bookmark of iterateBookmarks()) {
+    bookmarkIds.push(bookmark.id);
+  }
+
+  const ordinalWidth = Math.max(2, String(bookmarkIds.length).length);
+  let index = 0;
+
+  for (const bookmarkId of bookmarkIds) {
+    const bookmark = await getBookmarkById(bookmarkId);
+    if (!bookmark) continue; // row removed between snapshot and read; skip it
+    const detail = await getTweetDetailCache(bookmark.tweetId);
+    const rendered = getBookmarkMarkdownMetadata(bookmark, detail);
+    const year = yearFromMs(bookmarkSavedAtMs(bookmark));
+    const path = makeBookmarkMarkdownPath(
+      rendered.exportBookmark,
+      rendered.title,
+      index,
+      ordinalWidth,
+      usedPaths,
+    );
+    years.add(year);
+    files.push({
+      bookmarkId: bookmark.id,
+      year,
+      path,
+      title: rendered.title,
+      sourceUrl: rendered.sourceUrl,
+    });
+    index++;
+  }
+
+  return { files, years: Array.from(years).toSorted() };
+}
+
+async function* detailsByIdJsonl(
+  keys: string[],
+  counter: { n: number },
+): AsyncIterable<TweetDetailCache> {
+  for (const key of keys) {
+    const detail = await getTweetDetailCache(key);
+    if (!detail) continue; // row removed mid-export; skip it
+    counter.n++;
+    yield detail;
+  }
+}
+
+async function* highlightsByIdJsonl(
+  keys: string[],
+  counter: { n: number },
+): AsyncIterable<Highlight> {
+  for (const key of keys) {
+    const highlight = await getHighlightById(key);
+    if (!highlight) continue; // row removed mid-export; skip it
+    counter.n++;
+    yield highlight;
+  }
+}
+
+async function* readingProgressByIdJsonl(
+  keys: string[],
+  counter: { n: number },
+): AsyncIterable<ReadingProgress> {
+  for (const key of keys) {
+    const progress = await getReadingProgress(key);
+    if (!progress) continue; // row removed mid-export; skip it
+    counter.n++;
+    yield progress;
+  }
 }
 
 export async function runQuickExport(
@@ -341,151 +540,155 @@ export async function runQuickExport(
   const today = dateFromMs(Date.now());
   const filename = `totem-export-${today}.zip`;
   const target = await openWritable(filename);
+  const exportDate = new Date();
+  const generatedAtMs = exportDate.getTime();
+  const generatedAtIso = exportDate.toISOString();
+  const exportedAtLabel = exportDate.toLocaleString();
 
   try {
-    const [bookmarks, details, highlights, readingProgress] = await Promise.all([
-      getAllBookmarks(),
-      getAllTweetDetails(),
-      getAllHighlights(),
-      getAllReadingProgress(),
+    const [bookmarkFilesResult, detailSummary, highlightIds, readingProgressIds] = await Promise.all([
+      collectBookmarkMarkdownFiles(),
+      collectDetailSummary(),
+      collectHighlightIds(),
+      collectReadingProgressIds(),
     ]);
-    const fullThreadIds = fullThreadIdsFromDetails(details);
-
+    const bookmarkMarkdownFiles = bookmarkFilesResult.files;
+    const bookmarkYears = bookmarkFilesResult.years;
     const encoder = new TextEncoder();
-
-    const bookmarksByYear = new Map<string, Bookmark[]>();
-    for (const b of bookmarks) {
-      const year = yearFromMs(bookmarkSavedAtMs(b));
-      let arr = bookmarksByYear.get(year);
-      if (!arr) {
-        arr = [];
-        bookmarksByYear.set(year, arr);
-      }
-      arr.push(b);
-    }
-
-    const dataFiles = new Map<string, Uint8Array>();
-    for (const [year, rows] of bookmarksByYear) {
-      const content = rows.map((r) => JSON.stringify(r)).join("\n") + "\n";
-      dataFiles.set(`data/bookmarks-${year}.jsonl`, encoder.encode(content));
-    }
-
-    const encodeJsonl = (rows: unknown[]): Uint8Array => {
-      if (rows.length === 0) return encoder.encode("");
-      return encoder.encode(
-        rows.map((r) => JSON.stringify(r)).join("\n") + "\n",
-      );
-    };
-
-    dataFiles.set("data/details.jsonl", encodeJsonl(details));
-    dataFiles.set("data/highlights.jsonl", encodeJsonl(highlights));
-    dataFiles.set(
-      "data/reading-progress.jsonl",
-      encodeJsonl(readingProgress),
-    );
-
-    const csvContent = buildCsv(bookmarks, fullThreadIds);
-    const csvBytes = encoder.encode(csvContent);
-
-    const bookmarkMarkdownFiles = buildBookmarkMarkdownFiles(
-      bookmarks,
-      details,
-      encoder,
-      new Date().toLocaleString(),
-    );
-
-    const readmeBytes = encoder.encode(
-      buildReadme(account.handle, bookmarkMarkdownFiles),
-    );
-    const [
-      dataChecksumEntries,
-      csvChecksum,
-      markdownChecksumEntries,
-      readmeChecksum,
-      accountIdHash,
-    ] = await Promise.all([
-      Promise.all(
-        Array.from(dataFiles, async ([name, data]) =>
-          [name, `sha256:${await sha256hex(data)}`] as const,
-        ),
-      ),
-      sha256hex(csvBytes).then((hash) => `sha256:${hash}`),
-      Promise.all(
-        bookmarkMarkdownFiles.map(async (file) =>
-          [file.path, `sha256:${await sha256hex(file.bytes)}`] as const,
-        ),
-      ),
-      sha256hex(readmeBytes).then((hash) => `sha256:${hash}`),
-      sha256hex(encoder.encode(account.userId)).then((hash) => `sha256:${hash}`),
-    ]);
-
     const checksums: Record<string, string> = {};
-    for (const [name, checksum] of dataChecksumEntries) checksums[name] = checksum;
-    checksums["bookmarks.csv"] = csvChecksum;
-    for (const [name, checksum] of markdownChecksumEntries) checksums[name] = checksum;
-    checksums["readme.md"] = readmeChecksum;
+    const shardNames = bookmarkYears.map((year) => `data/bookmarks-${year}.jsonl`);
+    const accountIdHash = `sha256:${await sha256hex(encoder.encode(account.userId))}`;
+    const now = exportDate;
 
-    const shardNames = Array.from(bookmarksByYear.keys())
-      .toSorted()
-      .map((year) => `data/bookmarks-${year}.jsonl`);
+    // Counts of rows actually streamed. Ids were snapshotted up front but rows
+    // are re-fetched lazily, so a concurrent delete can drop a row; tracking
+    // the real emitted count keeps the manifest honest instead of overstating.
+    const bookmarkCounter = { n: 0 };
+    const detailCounter = { n: 0 };
+    const highlightCounter = { n: 0 };
+    const progressCounter = { n: 0 };
+    const writtenMarkdownPaths: string[] = [];
 
-    const manifest = {
-      totem: {
-        export_version: 1,
-        schema_version: DB_VERSION,
-      },
-      generated_at: new Date().toISOString(),
-      generated_by: {
-        app: "totem",
-        version: APP_VERSION,
-        platform: "chrome-extension",
-      },
-      account: {
-        id_hash: accountIdHash,
-        handle_redacted: redactHandle(account.handle),
-      },
-      kind: "library",
-      counts: {
-        bookmarks: bookmarks.length,
-        details: details.length,
-        highlights: highlights.length,
-        reading_progress: readingProgress.length,
-      },
-      shards: {
-        bookmarks: shardNames,
-        details: ["data/details.jsonl"],
-        highlights: ["data/highlights.jsonl"],
-        reading_progress: ["data/reading-progress.jsonl"],
-      },
-      derived: {
-        csv: "bookmarks.csv",
-        markdown_index: "readme.md",
-        markdown_files: bookmarkMarkdownFiles.map((file) => file.path),
-      },
-      checksums,
-    };
+    async function* entries(): AsyncIterable<StreamZipEntry> {
+      const readme = hashingTextEntry(
+        "readme.md",
+        singleTextLine(() =>
+          buildReadme(account.handle, bookmarkMarkdownFiles, generatedAtMs)
+        ),
+        checksums,
+        now,
+      );
+      yield readme.entry;
+      await readme.done;
 
-    const manifestBytes = encoder.encode(JSON.stringify(manifest, null, 2));
+      const csv = hashingTextEntry(
+        "bookmarks.csv",
+        csvLines(bookmarkMarkdownFiles, detailSummary.fullThreadIds),
+        checksums,
+        now,
+      );
+      yield csv.entry;
+      await csv.done;
 
-    const entries: Array<{
-      input: Uint8Array;
-      name: string;
-      lastModified: Date;
-    }> = [];
-    const now = new Date();
+      for (const year of bookmarkYears) {
+        const name = `data/bookmarks-${year}.jsonl`;
+        const entry = hashingTextEntry(
+          name,
+          jsonlLines(bookmarksForYear(year, bookmarkMarkdownFiles, bookmarkCounter)),
+          checksums,
+          now,
+        );
+        yield entry.entry;
+        await entry.done;
+      }
 
-    entries.push({ input: manifestBytes, name: "manifest.json", lastModified: now });
-    entries.push({ input: readmeBytes, name: "readme.md", lastModified: now });
-    entries.push({ input: csvBytes, name: "bookmarks.csv", lastModified: now });
+      const details = hashingTextEntry(
+        "data/details.jsonl",
+        jsonlLines(detailsByIdJsonl(detailSummary.keys, detailCounter)),
+        checksums,
+        now,
+      );
+      yield details.entry;
+      await details.done;
 
-    for (const [name, data] of dataFiles) {
-      entries.push({ input: data, name, lastModified: now });
+      const highlights = hashingTextEntry(
+        "data/highlights.jsonl",
+        jsonlLines(highlightsByIdJsonl(highlightIds, highlightCounter)),
+        checksums,
+        now,
+      );
+      yield highlights.entry;
+      await highlights.done;
+
+      const progress = hashingTextEntry(
+        "data/reading-progress.jsonl",
+        jsonlLines(readingProgressByIdJsonl(readingProgressIds, progressCounter)),
+        checksums,
+        now,
+      );
+      yield progress.entry;
+      await progress.done;
+
+      for (const file of bookmarkMarkdownFiles) {
+        const bookmark = await getBookmarkById(file.bookmarkId);
+        if (!bookmark) continue; // row removed mid-export; skip its markdown file
+        const detail = await getTweetDetailCache(bookmark.tweetId);
+        const body = buildBookmarkMarkdown(bookmark, detail, exportedAtLabel).body;
+        const markdown = hashingTextEntry(
+          file.path,
+          singleTextLine(() => body),
+          checksums,
+          now,
+        );
+        yield markdown.entry;
+        await markdown.done;
+        writtenMarkdownPaths.push(file.path);
+      }
+
+      const manifest = {
+        totem: {
+          export_version: 1,
+          schema_version: DB_VERSION,
+        },
+        generated_at: generatedAtIso,
+        generated_by: {
+          app: "totem",
+          version: APP_VERSION,
+          platform: "chrome-extension",
+        },
+        account: {
+          id_hash: accountIdHash,
+          handle_redacted: redactHandle(account.handle),
+        },
+        kind: "library",
+        counts: {
+          bookmarks: bookmarkCounter.n,
+          details: detailCounter.n,
+          highlights: highlightCounter.n,
+          reading_progress: progressCounter.n,
+        },
+        shards: {
+          bookmarks: shardNames,
+          details: ["data/details.jsonl"],
+          highlights: ["data/highlights.jsonl"],
+          reading_progress: ["data/reading-progress.jsonl"],
+        },
+        derived: {
+          csv: "bookmarks.csv",
+          markdown_index: "readme.md",
+          markdown_files: writtenMarkdownPaths,
+        },
+        checksums,
+      };
+
+      yield {
+        input: encoder.encode(JSON.stringify(manifest, null, 2)),
+        name: "manifest.json",
+        lastModified: now,
+      };
     }
-    for (const file of bookmarkMarkdownFiles) {
-      entries.push({ input: file.bytes, name: file.path, lastModified: now });
-    }
 
-    const zipStream = makeZip(entries);
+    const zipStream = makeZipEntriesStream(entries());
     if (target.kind === "fsa") {
       await zipStream.pipeTo(target.dest);
     } else {
@@ -494,10 +697,10 @@ export async function runQuickExport(
     }
 
     return {
-      bookmarkCount: bookmarks.length,
-      detailCount: details.length,
-      highlightCount: highlights.length,
-      readingProgressCount: readingProgress.length,
+      bookmarkCount: bookmarkCounter.n,
+      detailCount: detailCounter.n,
+      highlightCount: highlightCounter.n,
+      readingProgressCount: progressCounter.n,
     };
   } catch (error) {
     if (target.kind === "fsa") {

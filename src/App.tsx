@@ -101,7 +101,6 @@ type AppView = "home" | "reading";
 interface NewTabRouteState {
   view: AppView;
   settingsOpen: boolean;
-  scrollToStorage: boolean;
   exportOpen: boolean;
   importOpen: boolean;
   readingTab: ReadingTab;
@@ -117,7 +116,6 @@ function createInitialNewTabRouteState(): NewTabRouteState {
   return {
     view: getNewTabView() === "reading" ? "reading" : "home",
     settingsOpen: false,
-    scrollToStorage: false,
     exportOpen: false,
     importOpen: false,
     readingTab: readStoredReadingTab(),
@@ -395,7 +393,6 @@ function NewTabRouteApp() {
   const {
     view,
     settingsOpen,
-    scrollToStorage,
     exportOpen,
     importOpen,
     readingTab,
@@ -489,6 +486,11 @@ function NewTabRouteApp() {
       })
       .catch(() => {});
   }, [actions, notifySyncBlocked]);
+
+  const handleRefreshAfterImport = useCallback(async () => {
+    await actions.reloadLocalData();
+    refreshContinueReading();
+  }, [actions, refreshContinueReading]);
 
   const openedTweetIds = useMemo(
     () => new Set(continueReading.map((item) => item.progress.tweetId)),
@@ -588,9 +590,6 @@ function NewTabRouteApp() {
         getBookmarkHref={getHomeBookmarkHref}
         recommendationSource={settings.recommendationSource}
         onOpenSettings={() => updateRouteState({ settingsOpen: true })}
-        onOpenSettingsToStorage={() => {
-          updateRouteState({ scrollToStorage: true, settingsOpen: true });
-        }}
         onOpenImport={() => updateRouteState({ importOpen: true })}
         onOpenExport={() => updateRouteState({ exportOpen: true })}
         onOpenReading={() => {
@@ -608,15 +607,15 @@ function NewTabRouteApp() {
         open={settingsOpen}
         isResetting={isResetting}
         onClose={() => {
-          updateRouteState({ settingsOpen: false, scrollToStorage: false });
+          updateRouteState({ settingsOpen: false });
         }}
-        scrollToStorage={scrollToStorage}
         settings={settings}
         onUpdateSettings={updateSettings}
         themePreference={themePreference}
         onThemePreferenceChange={setThemePreference}
         onResetAppState={handleResetAppState}
         onDeleteAllData={handleDeleteAllData}
+        onImport={() => updateRouteState({ importOpen: true })}
         onExport={() => updateRouteState({ exportOpen: true })}
       />
       <ExportModal
@@ -635,7 +634,7 @@ function NewTabRouteApp() {
         open={importOpen}
         onClose={() => updateRouteState({ importOpen: false })}
         activeAccountUserId={viewerProfile?.userId ?? null}
-        onSyncAfterImport={handleSync}
+        onRefreshAfterImport={handleRefreshAfterImport}
       />
       {toast && (
         <Toast

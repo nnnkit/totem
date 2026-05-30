@@ -138,6 +138,7 @@ export interface RuntimeActions {
   connectingTimeout: () => void;
   startLogin: () => Promise<void>;
   refresh: () => Promise<SyncRequestResult>;
+  reloadLocalData: () => Promise<void>;
   handleBookmarkEvents: () => Promise<void>;
   prepareForReset: () => void;
   unbookmark: (tweetId: string) => Promise<{ apiError?: string }>;
@@ -1121,6 +1122,47 @@ export function createRuntimeStore() {
       },
 
       refresh: async () => sync({ trigger: "manual" }),
+
+      reloadLocalData: async () => {
+        // Bump the generation so a concurrent reload/hydration supersedes this
+        // one, but keep bookmarksLoaded/detailedIdsLoaded true: the data is
+        // already on screen and only gets swapped when the re-read resolves.
+        // Flipping them false would drop the UI into a full-screen loading
+        // spinner for the duration of the read (e.g. right after an import).
+        const bootGeneration = get().bootGeneration + 1;
+        setRuntimeState({ bootGeneration });
+
+        const accountId = get().activeAccountId;
+        setActiveAccountId(accountId);
+        const [bookmarksResult, detailedIdsResult] = await Promise.allSettled([
+          withTimeout(
+            getAllBookmarks(),
+            DB_INIT_TIMEOUT_MS,
+            new Error("DB_INIT_TIMEOUT"),
+          ),
+          withTimeout(
+            getDetailedTweetIds(),
+            DB_INIT_TIMEOUT_MS,
+            new Error("DETAIL_DB_INIT_TIMEOUT"),
+          ),
+        ]);
+
+        if (get().bootGeneration !== bootGeneration) return;
+
+        const bookmarks =
+          bookmarksResult.status === "fulfilled" ? bookmarksResult.value : [];
+        const detailedTweetIds =
+          detailedIdsResult.status === "fulfilled" ? detailedIdsResult.value : new Set<string>();
+
+        setRuntimeState((state) => ({
+          bookmarks,
+          detailedTweetIds,
+          bookmarksLoaded: true,
+          detailedIdsLoaded: true,
+          syncStatus: state.syncStatus === "syncing" ? state.syncStatus : "idle",
+        }));
+        prefetchController.reconcile();
+      },
 
       /**
        * Apply a RuntimeSnapshot pushed from the service worker.

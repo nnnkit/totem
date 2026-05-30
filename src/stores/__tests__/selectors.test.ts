@@ -37,6 +37,7 @@ function makeState(overrides: Partial<RuntimeState> = {}): RuntimeState {
       connectingTimeout: vi.fn(),
       startLogin: noop,
       refresh: async () => ({ accepted: true }),
+      reloadLocalData: noop,
       handleBookmarkEvents: noop,
       prepareForReset: vi.fn(),
       unbookmark: async () => ({}),
