@@ -5,7 +5,12 @@ import {
   SUPPORT_X_URL,
 } from "../../../../src/lib/constants/support";
 
-const readingStatesImage = "/feature-previews/reading-states.jpg";
+const promotionPreviewBase = "/feature-previews/promotions";
+const readingStatesImage = `${promotionPreviewBase}/track-what-youve-read.jpg`;
+const highlightsNotesImage = `${promotionPreviewBase}/highlight-and-save-notes.jpg`;
+const cleanReaderImage = `${promotionPreviewBase}/read-threads-without-feeds.jpg`;
+const offlineReaderImage = `${promotionPreviewBase}/keep-reading-offline.jpg`;
+const exportImportImage = `${promotionPreviewBase}/export-csv-markdown.jpg`;
 
 export type FeatureItem = {
   title: string;
@@ -14,9 +19,11 @@ export type FeatureItem = {
   alt: string;
 };
 
-export type IconFeatureItem = {
+export type ImageFeatureItem = {
   title: string;
   body: string;
+  image: string;
+  alt: string;
 };
 
 export type PrivacyFeatureCard = {
@@ -119,22 +126,35 @@ const featureHero: FeatureItem = {
   title: "Pick up where you left off.",
   body: "Unread. In progress. Done. Your queue tracks reading state across every saved post — even mid-thread, even after a week away.",
   image: readingStatesImage,
-  alt: "Totem reading list showing unread, in-progress, and finished tabs with per-post progress.",
+  alt: "Totem reading list with unread, reading, and read tabs for saved X bookmarks.",
 };
 
-const featureHighlights: IconFeatureItem = {
+const featureHighlights: ImageFeatureItem = {
   title: "Highlight. Note. Done.",
   body: "Drag-select any tweet. Add a note. Saved to this device, indexed to the post.",
+  image: highlightsNotesImage,
+  alt: "Totem reader with selected text and a note editor.",
 };
 
-const featureClean: IconFeatureItem = {
+const featureClean: ImageFeatureItem = {
   title: "No sidebar. No feed.",
   body: "Every saved post in a focused reader. Just the writing — no trending, no ads, no rabbit hole.",
+  image: cleanReaderImage,
+  alt: "Totem thread reader showing a saved X thread without the X feed.",
 };
 
-const featureOffline: IconFeatureItem = {
+const featureOffline: ImageFeatureItem = {
   title: "Works on a plane.",
   body: "Bookmarks cache locally on first sync. Read 200 saved posts with zero signal.",
+  image: offlineReaderImage,
+  alt: "Totem new-tab reader showing cached bookmark content available offline.",
+};
+
+const featureExportImport: ImageFeatureItem = {
+  title: "Export and import your library.",
+  body: "Download a ZIP with CSV, Markdown, JSONL, highlights, notes, and progress. Import it later to restore your reading queue.",
+  image: exportImportImage,
+  alt: "Totem export dialog showing basic and full export options for an importable ZIP.",
 };
 
 const featurePrivacy: PrivacyFeatureCard = {
@@ -202,6 +222,7 @@ export const SITE_COPY = {
       highlights: featureHighlights,
       clean: featureClean,
       offline: featureOffline,
+      exportImport: featureExportImport,
       privacy: featurePrivacy,
     },
     faq: {

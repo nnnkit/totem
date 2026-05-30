@@ -72,7 +72,7 @@ const jsonLd = {
   }}
 >
   <Fragment slot="head">
-    <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+    <script is:inline type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
   </Fragment>
 
   <main class="mx-auto max-w-3xl px-6 pb-16 pt-12 sm:pt-16">

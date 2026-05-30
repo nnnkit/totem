@@ -54,6 +54,7 @@ const STORAGE_QUOTA_THRESHOLD = 0.95;
 const STORAGE_CHECK_INTERVAL = 10;
 const STORAGE_RETRY_MS = 5 * 60 * 1000;
 const SNAPSHOT_WRITE_INTERVAL = 1;
+const FULL_RECOUNT_INTERVAL = 20;
 const HOLDER_ID_SESSION_KEY = "totem_hydration_holder_id";
 const PAUSE_HEARTBEAT_INTERVAL_MS = Math.floor(STALE_THRESHOLD_MS / 2);
 
@@ -353,13 +354,18 @@ export function createHydrationStore(deps: HydrationDeps = defaultDeps()) {
 
         let tickCount = 0;
         let snapshotCounter = 0;
+        let remaining = total;
+        const decrementRemaining = () => {
+          remaining = Math.max(0, remaining - 1);
+        };
         const longPause = createLongPauseScheduler();
 
         while (!signal?.aborted) {
           if (!deps.getAuthReady()) {
             set({ status: "paused-auth" });
-            writeSnapshotFromState(get());
             loopRunning = false;
+            await release(deps.holderId, deps.lockStorage);
+            writeSnapshotFromState(get());
             return;
           }
 
@@ -407,6 +413,7 @@ export function createHydrationStore(deps: HydrationDeps = defaultDeps()) {
                     processed: s.processed + 1,
                     unavailable: s.unavailable + 1,
                   }));
+                  decrementRemaining();
                 } else if (classified.status === "paused-429") {
                   const pauseUntil = Date.now() + RATE_LIMIT_PAUSE_MS;
                   set({ status: "paused-429", pauseUntil });
@@ -429,6 +436,7 @@ export function createHydrationStore(deps: HydrationDeps = defaultDeps()) {
                 } else if (classified.status === "paused-auth") {
                   set({ status: "paused-auth" });
                   loopRunning = false;
+                  await release(deps.holderId, deps.lockStorage);
                   writeSnapshotFromState(get());
                   return;
                 }
@@ -436,6 +444,7 @@ export function createHydrationStore(deps: HydrationDeps = defaultDeps()) {
                 try {
                   await deps.cacheDetail(tweetId, response.data);
                   set((s) => ({ processed: s.processed + 1 }));
+                  decrementRemaining();
                 } catch (error) {
                   if (!isDetailParseFailure(error)) throw error;
                   await deps.cacheUnavailable(tweetId, "parse_failed");
@@ -443,6 +452,7 @@ export function createHydrationStore(deps: HydrationDeps = defaultDeps()) {
                     processed: s.processed + 1,
                     unavailable: s.unavailable + 1,
                   }));
+                  decrementRemaining();
                 }
               }
             }
@@ -464,8 +474,10 @@ export function createHydrationStore(deps: HydrationDeps = defaultDeps()) {
 
           snapshotCounter++;
           if (snapshotCounter >= SNAPSHOT_WRITE_INTERVAL) {
-            const updatedTotal = await deps.countNeeding();
-            set({ total: updatedTotal });
+            if (tickCount % FULL_RECOUNT_INTERVAL === 0) {
+              remaining = await deps.countNeeding();
+            }
+            set({ total: remaining });
             writeSnapshotFromState(get());
             snapshotCounter = 0;
           }
@@ -583,6 +595,7 @@ export function createHydrationStore(deps: HydrationDeps = defaultDeps()) {
       // in-flight write, and re-auth's start() can run once loopRunning clears.
       loopAbort?.abort();
       loopAbort = null;
+      release(deps.holderId, deps.lockStorage).catch(() => {});
     }
   });
 

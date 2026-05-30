@@ -23,7 +23,8 @@ export type RefusedReason =
   | "schema_too_new"
   | "checksum_mismatch"
   | "not_logged_in"
-  | "empty_zip";
+  | "empty_zip"
+  | "too_large";
 
 export interface ImportManifest {
   totem: { export_version: number; schema_version: number };
@@ -75,7 +76,7 @@ const JSONL_PARSE_CHUNK_SIZE = 64 * 1024;
 // memory synchronously on the main thread, so a zip bomb (tiny compressed,
 // petabytes inflated) could hang or OOM the tab. The filter sees each entry's
 // declared uncompressed size before it is inflated, so we can bail early.
-const MAX_INPUT_ZIP_BYTES = 2 * 1024 * 1024 * 1024; // 2 GiB compressed
+export const MAX_INPUT_ZIP_BYTES = 2 * 1024 * 1024 * 1024; // 2 GiB compressed
 const MAX_TOTAL_UNCOMPRESSED_BYTES = 1024 * 1024 * 1024; // 1 GiB inflated
 
 class ImportZipTooLargeError extends Error {}
@@ -104,6 +105,76 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function isStringArray(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((item) => typeof item === "string");
+}
+
+function isNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value);
+}
+
+function isImportableAuthor(value: unknown): value is Bookmark["author"] {
+  return (
+    isRecord(value) &&
+    typeof value.name === "string" &&
+    typeof value.screenName === "string" &&
+    typeof value.profileImageUrl === "string"
+  );
+}
+
+function isImportableBookmark(value: unknown): value is Bookmark {
+  return (
+    isRecord(value) &&
+    typeof value.id === "string" &&
+    typeof value.tweetId === "string" &&
+    typeof value.text === "string" &&
+    isNumber(value.createdAt) &&
+    typeof value.sortIndex === "string" &&
+    typeof value.bookmarked === "boolean" &&
+    isImportableAuthor(value.author) &&
+    isRecord(value.metrics) &&
+    Array.isArray(value.media) &&
+    Array.isArray(value.urls) &&
+    typeof value.isThread === "boolean" &&
+    typeof value.hasImage === "boolean" &&
+    typeof value.hasVideo === "boolean" &&
+    typeof value.hasLink === "boolean"
+  );
+}
+
+function isImportableDetail(value: unknown): value is TweetDetailCache {
+  return (
+    isRecord(value) &&
+    typeof value.tweetId === "string" &&
+    isNumber(value.fetchedAt) &&
+    (value.focalTweet === null || isImportableBookmark(value.focalTweet)) &&
+    Array.isArray(value.thread)
+  );
+}
+
+function isImportableHighlight(value: unknown): value is Highlight {
+  return (
+    isRecord(value) &&
+    typeof value.id === "string" &&
+    typeof value.tweetId === "string" &&
+    typeof value.sectionId === "string" &&
+    isNumber(value.startOffset) &&
+    isNumber(value.endOffset) &&
+    typeof value.selectedText === "string" &&
+    (value.note === null || typeof value.note === "string") &&
+    typeof value.color === "string" &&
+    isNumber(value.createdAt)
+  );
+}
+
+function isImportableReadingProgress(value: unknown): value is ReadingProgress {
+  return (
+    isRecord(value) &&
+    typeof value.tweetId === "string" &&
+    isNumber(value.openedAt) &&
+    isNumber(value.lastReadAt) &&
+    isNumber(value.scrollY) &&
+    isNumber(value.scrollHeight) &&
+    typeof value.completed === "boolean"
+  );
 }
 
 function isCountMap(value: unknown): value is ImportManifest["counts"] {
@@ -157,7 +228,7 @@ export function parseZip(file: Uint8Array, limits: ParseZipLimits = {}): ParsedZ
   const maxUncompressedBytes = limits.maxUncompressedBytes ?? MAX_TOTAL_UNCOMPRESSED_BYTES;
 
   if (file.byteLength > maxInputBytes) {
-    return { ok: false, reason: "not_totem_export" };
+    return { ok: false, reason: "too_large" };
   }
 
   let entries: Record<string, Uint8Array>;
@@ -176,7 +247,10 @@ export function parseZip(file: Uint8Array, limits: ParseZipLimits = {}): ParsedZ
         return true;
       },
     });
-  } catch {
+  } catch (error) {
+    if (error instanceof ImportZipTooLargeError) {
+      return { ok: false, reason: "too_large" };
+    }
     return { ok: false, reason: "not_totem_export" };
   }
 
@@ -394,10 +468,10 @@ export async function runImport(
   // Bookmarks — keyed by `id`
   let bookmarkCounts: ImportStoreCounts = { added: 0, alreadyHad: 0, total: 0 };
   try {
-    const rawRows = gatherShardRows(manifest.shards.bookmarks || [], files) as Bookmark[];
+    const rawRows = gatherShardRows(manifest.shards.bookmarks || [], files);
     bookmarkCounts.total = rawRows.length;
     const rows = dedupeRowsByStringKey(
-      rawRows,
+      rawRows.filter(isImportableBookmark),
       (row) => row.id,
     );
     bookmarkCounts.total = rows.length;
@@ -424,10 +498,10 @@ export async function runImport(
   // Details — keyed by `tweetId`
   let detailsCounts: ImportStoreCounts = { added: 0, alreadyHad: 0, total: 0 };
   try {
-    const rawRows = gatherShardRows(manifest.shards.details || [], files) as TweetDetailCache[];
+    const rawRows = gatherShardRows(manifest.shards.details || [], files);
     detailsCounts.total = rawRows.length;
     const rows = dedupeRowsByStringKey(
-      rawRows,
+      rawRows.filter(isImportableDetail),
       (row) => row.tweetId,
     );
     detailsCounts.total = rows.length;
@@ -453,10 +527,10 @@ export async function runImport(
   // Highlights — keyed by `id`
   let highlightCounts: ImportStoreCounts = { added: 0, alreadyHad: 0, total: 0 };
   try {
-    const rawRows = gatherShardRows(manifest.shards.highlights || [], files) as Highlight[];
+    const rawRows = gatherShardRows(manifest.shards.highlights || [], files);
     highlightCounts.total = rawRows.length;
     const rows = dedupeRowsByStringKey(
-      rawRows,
+      rawRows.filter(isImportableHighlight),
       (row) => row.id,
     );
     highlightCounts.total = rows.length;
@@ -485,10 +559,10 @@ export async function runImport(
     const rawRows = gatherShardRows(
       manifest.shards.reading_progress || [],
       files,
-    ) as ReadingProgress[];
+    );
     readingProgressCounts.total = rawRows.length;
     const rows = dedupeRowsByStringKey(
-      rawRows,
+      rawRows.filter(isImportableReadingProgress),
       (row) => row.tweetId,
     );
     readingProgressCounts.total = rows.length;

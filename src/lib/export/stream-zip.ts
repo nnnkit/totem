@@ -65,8 +65,8 @@ function asAsyncIterator<T>(iter: Iterator<T>): AsyncIterator<T> {
  *
  * The pipeline is back-pressured end-to-end: each entry's rows are pulled
  * one at a time from the source iterable as the destination consumes ZIP
- * bytes, so peak memory stays bounded to a single row plus the ZIP frame
- * buffer regardless of total row count.
+ * bytes. Peak memory stays bounded when the caller's entry streams do not
+ * retain previously emitted chunks.
  */
 export async function streamJsonlZip<T>(
   entries: ReadonlyArray<StreamJsonlZipEntry<T>>,

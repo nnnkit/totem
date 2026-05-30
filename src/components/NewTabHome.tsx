@@ -75,7 +75,6 @@ interface Props {
   onOpenBookmark: (bookmark: Bookmark) => void;
   getBookmarkHref: (bookmark: Bookmark) => string;
   onOpenSettings: () => void;
-  onOpenSettingsToStorage: () => void;
   onOpenImport: () => void;
   onOpenExport: () => void;
   recommendationSource: RecommendationSource;
@@ -373,7 +372,6 @@ function useNewTabHomeModel({
   onOpenBookmark,
   getBookmarkHref,
   onOpenSettings,
-  onOpenSettingsToStorage,
   onOpenImport,
   onOpenExport,
   recommendationSource,
@@ -561,7 +559,6 @@ function useNewTabHomeModel({
     onOpenImport,
     onOpenReading,
     onOpenSettings,
-    onOpenSettingsToStorage,
     onSearchEngineChange,
     onSync,
     recommendationSource,
@@ -609,7 +606,6 @@ function renderNewTabHome({
   onOpenImport,
   onOpenReading,
   onOpenSettings,
-  onOpenSettingsToStorage,
   onSearchEngineChange,
   onSync,
   recommendationSource,
@@ -836,28 +832,6 @@ function renderNewTabHome({
               </kbd>
             </Button>
           </div>
-
-          {bookmarks.length > 0 && (
-            <p className="mx-auto flex w-fit max-w-full flex-wrap items-center justify-center gap-x-1.5 gap-y-1 rounded-full border border-overlay-edge bg-overlay px-3 py-1.5 text-center text-xxs text-on-bg-ghost opacity-75 shadow-glass backdrop-blur-sm">
-              <span>
-                {bookmarks.length.toLocaleString("en-US")} bookmark{bookmarks.length !== 1 ? "s" : ""}
-              </span>
-              {detailedTweetIds.size > 0 && (
-                <>
-                  <span aria-hidden="true">&middot;</span>
-                  <span>{detailedTweetIds.size.toLocaleString("en-US")} with full thread context</span>
-                </>
-              )}
-              <span aria-hidden="true">&middot;</span>
-              <button
-                type="button"
-                onClick={onOpenSettingsToStorage}
-                className="underline transition-colors hover:text-on-bg-muted"
-              >
-                Export data &rarr;
-              </button>
-            </p>
-          )}
 
           <p
             className={cn(

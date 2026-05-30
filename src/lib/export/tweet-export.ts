@@ -139,7 +139,7 @@ function tweetNodeToPlainExport(tweet: TweetExportNode): string {
   ).trim();
 }
 
-function deriveExportTitle(bookmark: Bookmark): string | undefined {
+export function deriveExportTitle(bookmark: Bookmark): string | undefined {
   const fromArticle = bookmark.article?.title?.trim();
   if (fromArticle) return fromArticle;
   const preview = stripCardUrlsFromTweetText(bookmark.text, bookmark.urls)

@@ -1,10 +1,6 @@
 import {
-  AirplaneTiltIcon,
-  ArticleIcon,
   CheckIcon,
-  HighlighterCircleIcon,
   ShieldCheckIcon,
-  type Icon,
 } from "@phosphor-icons/react";
 import {
   useEffect,
@@ -27,7 +23,7 @@ import {
   type FAQItem,
   type FAQGroup,
   type FeatureItem,
-  type IconFeatureItem,
+  type ImageFeatureItem,
   type PolicySection as PolicySectionData,
   type PolicySectionItem,
   type PrivacyFeatureCard,
@@ -689,15 +685,17 @@ function FeatureHeroTile({
     <SiteCard
       as="article"
       className={cn(
-        "site-feature-card flex flex-col overflow-hidden p-4 md:p-6",
+        "site-feature-card flex h-full flex-col overflow-hidden p-4 md:p-6",
         className,
       )}
     >
       <img
         src={feature.image}
         alt={feature.alt}
-        className="mb-5 aspect-video w-full rounded-xl border border-neutral-200 object-cover md:aspect-auto md:min-h-0 md:flex-1"
+        className="mb-5 aspect-[16/10] w-full rounded-xl border border-neutral-200 object-cover"
         loading="lazy"
+        width={1400}
+        height={875}
       />
       <SiteHeading as="h3" size="card" className="mb-2">
         {feature.title}
@@ -709,56 +707,29 @@ function FeatureHeroTile({
   );
 }
 
-type AccentColor = "amber" | "slate" | "sky" | "emerald";
-
-const ACCENT_CLASSES: Record<AccentColor, { panel: string; icon: string }> = {
-  amber: {
-    panel: "border-amber-200/70 bg-amber-50",
-    icon: "text-amber-600",
-  },
-  slate: {
-    panel: "border-neutral-200 bg-neutral-50",
-    icon: "text-neutral-700",
-  },
-  sky: {
-    panel: "border-sky-200/70 bg-sky-50",
-    icon: "text-sky-600",
-  },
-  emerald: {
-    panel: "border-emerald-200/70 bg-emerald-50",
-    icon: "text-emerald-600",
-  },
-};
-
-function IconFeatureTile({
+function FeatureImageTile({
   feature,
-  icon: IconCmp,
-  accent,
   className,
 }: {
-  feature: IconFeatureItem;
-  icon: Icon;
-  accent: AccentColor;
+  feature: ImageFeatureItem;
   className?: string;
 }) {
-  const a = ACCENT_CLASSES[accent];
   return (
     <SiteCard
       as="article"
-      className={cn("site-feature-card flex flex-col p-5 md:p-6", className)}
+      className={cn(
+        "site-feature-card flex h-full flex-col p-4 md:p-5",
+        className,
+      )}
     >
-      <div
-        className={cn(
-          "mb-5 inline-flex size-12 items-center justify-center rounded-xl border",
-          a.panel,
-        )}
-      >
-        <IconCmp
-          aria-hidden="true"
-          weight="duotone"
-          className={cn("size-6", a.icon)}
-        />
-      </div>
+      <img
+        src={feature.image}
+        alt={feature.alt}
+        className="mb-5 aspect-[16/10] w-full rounded-xl border border-neutral-200 object-cover"
+        loading="lazy"
+        width={1400}
+        height={875}
+      />
       <SiteHeading as="h3" size="card" className="mb-2">
         {feature.title}
       </SiteHeading>
@@ -776,24 +747,23 @@ function PrivacyFeatureTile({
   href: string;
   className?: string;
 }) {
-  const a = ACCENT_CLASSES.emerald;
   return (
     <SiteCard
       as="article"
-      className={cn("site-feature-card flex flex-col p-5 md:p-6", className)}
+      className={cn(
+        "site-feature-card flex h-full flex-col p-5 md:p-6",
+        className,
+      )}
     >
-      <div className="flex h-full flex-col gap-6 md:flex-row md:items-start md:gap-10">
-        <div className="flex flex-col md:max-w-sm">
+      <div className="flex h-full flex-col gap-6">
+        <div className="flex flex-col">
           <div
-            className={cn(
-              "mb-5 inline-flex size-12 items-center justify-center rounded-xl border",
-              a.panel,
-            )}
+            className="mb-5 inline-flex size-12 items-center justify-center rounded-xl border border-emerald-200/70 bg-emerald-50"
           >
             <ShieldCheckIcon
               aria-hidden="true"
               weight="duotone"
-              className={cn("size-6", a.icon)}
+              className="size-6 text-emerald-600"
             />
           </div>
           <SiteHeading as="h3" size="card" className="mb-2">
@@ -804,12 +774,12 @@ function PrivacyFeatureTile({
           </p>
           <SiteBodyLink
             href={href}
-            className="mt-4 self-start text-sm font-medium text-neutral-900 hover:text-neutral-700 md:mt-auto md:pt-6"
+            className="mt-4 self-start text-sm font-medium text-neutral-900 hover:text-neutral-700"
           >
             {feature.linkLabel}
           </SiteBodyLink>
         </div>
-        <ul className="space-y-1.5 md:flex-1 md:self-center">
+        <ul className="space-y-1.5">
           {feature.bullets.map((bullet) => (
             <li
               key={bullet}
@@ -977,28 +947,26 @@ function LandingPage({ recentPosts }: { recentPosts: BlogSummary[] }) {
               feature={features.hero}
               className="md:col-span-2 md:row-span-2"
             />
-            <IconFeatureTile
+            <FeatureImageTile
               feature={features.highlights}
-              icon={HighlighterCircleIcon}
-              accent="amber"
               className="md:col-start-3 md:row-start-1"
             />
-            <IconFeatureTile
+            <FeatureImageTile
               feature={features.clean}
-              icon={ArticleIcon}
-              accent="slate"
               className="md:col-start-3 md:row-start-2"
             />
-            <IconFeatureTile
+            <FeatureImageTile
               feature={features.offline}
-              icon={AirplaneTiltIcon}
-              accent="sky"
               className="md:col-start-1 md:row-start-3"
+            />
+            <FeatureImageTile
+              feature={features.exportImport}
+              className="md:col-start-2 md:row-start-3"
             />
             <PrivacyFeatureTile
               feature={features.privacy}
               href={SITE_LINKS.privacyUrl}
-              className="md:col-span-2 md:col-start-2 md:row-start-3"
+              className="md:col-start-3 md:row-start-3"
             />
           </SiteRevealStagger>
         </SiteSection>
@@ -1281,7 +1249,7 @@ function PrivacyPermissionCard({
   );
 }
 
-function renderPolicySectionItem(item: PolicySectionItem, index: number) {
+function renderPolicySectionItem(item: PolicySectionItem) {
   if (typeof item === "string") {
     return <li key={item}>{item}</li>;
   }

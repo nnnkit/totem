@@ -473,7 +473,7 @@ describe("runImport", () => {
     // must be refused before fflate inflates it.
     const parsed = parseZip(zip, { maxUncompressedBytes: 8 });
     expect(parsed.ok).toBe(false);
-    expect(parsed.ok ? null : parsed.reason).toBe("not_totem_export");
+    expect(parsed.ok ? null : parsed.reason).toBe("too_large");
 
     // Same archive parses fine under the real (generous) defaults.
     expect(parseZip(zip).ok).toBe(true);
@@ -484,7 +484,7 @@ describe("runImport", () => {
     const zip = await buildValidZip([b], {});
     const parsed = parseZip(zip, { maxInputBytes: 4 });
     expect(parsed.ok).toBe(false);
-    expect(parsed.ok ? null : parsed.reason).toBe("not_totem_export");
+    expect(parsed.ok ? null : parsed.reason).toBe("too_large");
   });
 
   it("reports malformed JSONL with shard path and line number", async () => {
@@ -589,6 +589,60 @@ describe("runImport", () => {
     expect(storedHighlights[0].selectedText).toBe("later highlight");
     expect(storedProgress).toHaveLength(1);
     expect(storedProgress[0].scrollY).toBe(250);
+  });
+
+  it("skips malformed rows beyond the primary key", async () => {
+    const validBookmark = makeBookmark("b1", "t1");
+    const malformedBookmark = {
+      ...makeBookmark("b2", "t2"),
+      author: null,
+    } as unknown as Bookmark;
+    const validDetail = makeDetail("t1");
+    const malformedDetail = {
+      tweetId: "t2",
+      fetchedAt: Date.now(),
+      focalTweet: null,
+    } as unknown as TweetDetailCache;
+    const validHighlight = makeHighlight("h1", "t1");
+    const malformedHighlight = {
+      ...makeHighlight("h2", "t2"),
+      startOffset: "0",
+    } as unknown as Highlight;
+    const validProgress = makeProgress("t1");
+    const malformedProgress = {
+      ...makeProgress("t2"),
+      completed: "false",
+    } as unknown as ReadingProgress;
+
+    const zip = await buildValidZip([validBookmark, malformedBookmark], {
+      details: [validDetail, malformedDetail],
+      highlights: [validHighlight, malformedHighlight],
+      readingProgress: [validProgress, malformedProgress],
+    });
+    const parsed = parseZip(zip);
+    if (!parsed.ok) throw new Error("parse failed");
+    const validated = await validateImport(parsed, "user123");
+    if (!validated.ok) throw new Error("validation failed");
+
+    const result = await runImport(validated);
+
+    expect(result.bookmarks).toMatchObject({ status: "succeeded", added: 1, total: 1 });
+    expect(result.details).toMatchObject({ status: "succeeded", added: 1, total: 1 });
+    expect(result.highlights).toMatchObject({ status: "succeeded", added: 1, total: 1 });
+    expect(result.readingProgress).toMatchObject({ status: "succeeded", added: 1, total: 1 });
+
+    const [storedBookmarks, storedDetails, storedHighlights, storedProgress] =
+      await Promise.all([
+        getAllBookmarks(),
+        getAllTweetDetails(),
+        getAllHighlights(),
+        getAllReadingProgress(),
+      ]);
+
+    expect(storedBookmarks).toHaveLength(1);
+    expect(storedDetails).toHaveLength(1);
+    expect(storedHighlights).toHaveLength(1);
+    expect(storedProgress).toHaveLength(1);
   });
 
   it("calls onProgress per store", async () => {

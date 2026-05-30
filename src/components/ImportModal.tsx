@@ -11,6 +11,7 @@ import {
   validateImport,
   runImport,
   ImportPartialFailure,
+  MAX_INPUT_ZIP_BYTES,
   type ImportManifest,
   type ImportResult,
   type ImportStoreOutcome,
@@ -62,6 +63,11 @@ const REFUSED_MESSAGES: Record<RefusedReason, { title: string; description: stri
     description: "This ZIP doesn't contain any data to import.",
     action: "Try another file",
   },
+  too_large: {
+    title: "File too large",
+    description: "This ZIP is larger than Totem can import. Re-export and try again.",
+    action: "Try another file",
+  },
 };
 
 function formatCount(n: number): string {
@@ -87,6 +93,10 @@ export function ImportModal({
 
   const processFile = useCallback(async (file: File) => {
     setState({ phase: "parsing" });
+    if (file.size > MAX_INPUT_ZIP_BYTES) {
+      setState({ phase: "refused", reason: "too_large" });
+      return;
+    }
     try {
       const buffer = await file.arrayBuffer();
       const zipBytes = new Uint8Array(buffer);
@@ -403,7 +413,12 @@ function RefusedView({
         <Button variant="secondary" onClick={onClose}>
           Close
         </Button>
-        {(reason === "not_totem_export" || reason === "checksum_mismatch" || reason === "empty_zip") && (
+        {(
+          reason === "not_totem_export" ||
+          reason === "checksum_mismatch" ||
+          reason === "empty_zip" ||
+          reason === "too_large"
+        ) && (
           <Button variant="primary" onClick={onReset}>
             {info.action}
           </Button>

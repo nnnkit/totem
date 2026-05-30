@@ -6,7 +6,7 @@ import type {
 } from "../../types";
 import { getArticleMarkdownString } from "./article-download";
 import { slugifyArticleBasename } from "./article-filename";
-import { resolveReaderExportArticle } from "./tweet-export";
+import { deriveExportTitle, resolveReaderExportArticle } from "./tweet-export";
 import {
   getBookmarkById,
   getHighlightById,
@@ -120,6 +120,12 @@ interface BookmarkMarkdownFile {
   sourceUrl: string;
 }
 
+interface BookmarkMarkdownMetadata {
+  exportBookmark: Bookmark;
+  sourceUrl: string;
+  title: string;
+}
+
 function bookmarkMarkdownTitle(bookmark: Bookmark): string {
   return (
     bookmark.article?.title?.trim() ||
@@ -156,11 +162,10 @@ function makeBookmarkMarkdownPath(
   return path;
 }
 
-function buildBookmarkMarkdown(
+function getBookmarkMarkdownMetadata(
   bookmark: Bookmark,
   detail: TweetDetailCache | null,
-  exportedAtLabel: string,
-): { body: string; title: string; sourceUrl: string; exportBookmark: Bookmark } {
+): BookmarkMarkdownMetadata {
   const exportBookmark = detail?.focalTweet
     ? {
         ...detail.focalTweet,
@@ -168,23 +173,32 @@ function buildBookmarkMarkdown(
         bookmarked: bookmark.bookmarked,
       }
     : bookmark;
+  const sourceUrl = tweetUrl(exportBookmark);
+  const title = deriveExportTitle(exportBookmark) || bookmarkMarkdownTitle(exportBookmark);
+  return { exportBookmark, sourceUrl, title };
+}
+
+function buildBookmarkMarkdown(
+  bookmark: Bookmark,
+  detail: TweetDetailCache | null,
+  exportedAtLabel: string,
+): { body: string; title: string; sourceUrl: string; exportBookmark: Bookmark } {
+  const metadata = getBookmarkMarkdownMetadata(bookmark, detail);
   const article = resolveReaderExportArticle(
-    exportBookmark,
+    metadata.exportBookmark,
     detail?.thread ?? [],
     { includeThreadInExport: true },
   );
-  const sourceUrl = tweetUrl(exportBookmark);
   const body = getArticleMarkdownString(article, {
-    authorProfileImageUrl: exportBookmark.author.profileImageUrl,
+    authorProfileImageUrl: metadata.exportBookmark.author.profileImageUrl,
     metadata: {
-      postUrl: sourceUrl,
+      postUrl: metadata.sourceUrl,
       exportedAtLabel,
-      authorName: exportBookmark.author.name,
-      authorHandle: exportBookmark.author.screenName,
+      authorName: metadata.exportBookmark.author.name,
+      authorHandle: metadata.exportBookmark.author.screenName,
     },
   });
-  const title = article.title?.trim() || bookmarkMarkdownTitle(exportBookmark);
-  return { body, title, sourceUrl, exportBookmark };
+  return { ...metadata, body };
 }
 
 function buildReadme(
@@ -444,9 +458,7 @@ async function* bookmarksForYear(
   }
 }
 
-async function collectBookmarkMarkdownFiles(
-  exportedAtLabel: string,
-): Promise<{ files: BookmarkMarkdownFile[]; years: string[] }> {
+async function collectBookmarkMarkdownFiles(): Promise<{ files: BookmarkMarkdownFile[]; years: string[] }> {
   const files: BookmarkMarkdownFile[] = [];
   const years = new Set<string>();
   const usedPaths = new Set<string>();
@@ -463,7 +475,7 @@ async function collectBookmarkMarkdownFiles(
     const bookmark = await getBookmarkById(bookmarkId);
     if (!bookmark) continue; // row removed between snapshot and read; skip it
     const detail = await getTweetDetailCache(bookmark.tweetId);
-    const rendered = buildBookmarkMarkdown(bookmark, detail, exportedAtLabel);
+    const rendered = getBookmarkMarkdownMetadata(bookmark, detail);
     const year = yearFromMs(bookmarkSavedAtMs(bookmark));
     const path = makeBookmarkMarkdownPath(
       rendered.exportBookmark,
@@ -535,7 +547,7 @@ export async function runQuickExport(
 
   try {
     const [bookmarkFilesResult, detailSummary, highlightIds, readingProgressIds] = await Promise.all([
-      collectBookmarkMarkdownFiles(exportedAtLabel),
+      collectBookmarkMarkdownFiles(),
       collectDetailSummary(),
       collectHighlightIds(),
       collectReadingProgressIds(),

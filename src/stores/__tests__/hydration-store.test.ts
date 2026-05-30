@@ -344,6 +344,7 @@ describe("HydrationStore", () => {
 
   it("pauses on auth error", async () => {
     const deps = createTestDeps();
+    const storage = deps.lockStorage as ReturnType<typeof createFakeLockStorage>;
     (deps.findNext as ReturnType<typeof vi.fn>).mockResolvedValue("tweet-1");
     (deps.countNeeding as ReturnType<typeof vi.fn>).mockResolvedValue(1);
     (deps.fetchDetail as ReturnType<typeof vi.fn>).mockResolvedValue({
@@ -355,6 +356,7 @@ describe("HydrationStore", () => {
     await vi.advanceTimersByTimeAsync(500);
 
     expect(store.getState().status).toBe("paused-auth");
+    expect(storage.data.hydration_lock).toBeUndefined();
     store.getState().dispose();
   });
 
@@ -439,6 +441,7 @@ describe("HydrationStore", () => {
 
   it("interrupts a rate-limit backoff immediately when auth is lost, then resumes on re-auth", async () => {
     const deps = createTestDeps();
+    const storage = deps.lockStorage as ReturnType<typeof createFakeLockStorage>;
     let findCount = 0;
     (deps.findNext as ReturnType<typeof vi.fn>).mockImplementation(async () => {
       findCount++;
@@ -459,6 +462,7 @@ describe("HydrationStore", () => {
     deps._setAuthReady(false);
     await vi.advanceTimersByTimeAsync(1000);
     expect(store.getState().status).toBe("paused-auth");
+    expect(storage.data.hydration_lock).toBeUndefined();
 
     // Re-auth must resume and finish well within the original backoff window.
     deps._setAuthReady(true);
@@ -527,6 +531,26 @@ describe("HydrationStore", () => {
     expect(deps._snapshots.length).toBeGreaterThan(0);
     const lastSnapshot = deps._snapshots[deps._snapshots.length - 1];
     expect(lastSnapshot.status).toBe("done");
+    store.getState().dispose();
+  });
+
+  it("does not recount the full hydration queue on every tick", async () => {
+    const deps = createTestDeps();
+    let callCount = 0;
+    (deps.findNext as ReturnType<typeof vi.fn>).mockImplementation(async () => {
+      callCount++;
+      return callCount <= 5 ? `tweet-${callCount}` : null;
+    });
+    (deps.countNeeding as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce(5)
+      .mockResolvedValue(0);
+
+    const store = createHydrationStore(deps);
+    store.getState().start();
+    await vi.advanceTimersByTimeAsync(90_000);
+
+    expect(deps.countNeeding).toHaveBeenCalledTimes(2);
+    expect(store.getState().status).toBe("done");
     store.getState().dispose();
   });
 
@@ -715,6 +739,7 @@ describe("HydrationStore", () => {
 
   it("handles auth check during loop — pauses when not ready", async () => {
     const deps = createTestDeps();
+    const storage = deps.lockStorage as ReturnType<typeof createFakeLockStorage>;
     let callCount = 0;
     (deps.findNext as ReturnType<typeof vi.fn>).mockImplementation(async () => {
       callCount++;
@@ -728,6 +753,7 @@ describe("HydrationStore", () => {
     await vi.advanceTimersByTimeAsync(30_000);
 
     expect(store.getState().status).toBe("paused-auth");
+    expect(storage.data.hydration_lock).toBeUndefined();
     store.getState().dispose();
   });
 
