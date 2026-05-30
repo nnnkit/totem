@@ -161,8 +161,8 @@ export function searchBookmarksDetailed(
     });
   }
 
-  const results = [...merged.values()]
-    .sort((a, b) => a.rank - b.rank)
+  const results = Array.from(merged.values())
+    .toSorted((a, b) => a.rank - b.rank)
     .map((x) => x.bookmark);
 
   // "Did you mean" — only when results are sparse and the query is a single

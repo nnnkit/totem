@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   CheckIcon,
+  ExportIcon,
   MonitorIcon,
   MoonIcon,
   SunIcon,
-  XIcon,
 } from "@phosphor-icons/react";
 import { ToggleGroup } from "@base-ui/react/toggle-group";
 import { Toggle } from "@base-ui/react/toggle";
@@ -29,6 +29,8 @@ interface Props {
   onThemePreferenceChange: (value: ThemePreference) => void;
   onResetAppState: () => void;
   onDeleteAllData: () => void;
+  onExport: () => void;
+  scrollToStorage?: boolean;
 }
 
 const RESET_STATE_TOOLTIP =
@@ -43,7 +45,7 @@ const TOP_SITES_LIMIT_OPTIONS = [3, 4, 5, 6, 8, 10].map((value) => ({
   label: String(value),
 }));
 
-export function SettingsModal({
+function useSettingsModalModel({
   open,
   isResetting = false,
   onClose,
@@ -53,7 +55,19 @@ export function SettingsModal({
   onThemePreferenceChange,
   onResetAppState,
   onDeleteAllData,
+  onExport,
+  scrollToStorage,
 }: Props) {
+  const storageSectionRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    if (open && scrollToStorage) {
+      const frame = requestAnimationFrame(() => {
+        storageSectionRef.current?.scrollIntoView({ behavior: "smooth" });
+      });
+      return () => cancelAnimationFrame(frame);
+    }
+  }, [open, scrollToStorage]);
   const [confirmingReset, setConfirmingReset] = useState(false);
   const [resetAppState, setResetAppState] = useState(true);
   const [resetContent, setResetContent] = useState(false);
@@ -81,36 +95,62 @@ export function SettingsModal({
     }
   };
 
+  return {
+    canReset,
+    closeConfirm,
+    confirmingReset,
+    handleClose,
+    handleConfirmReset,
+    isResetting,
+    onExport,
+    onThemePreferenceChange,
+    onUpdateSettings,
+    open,
+    resetAppState,
+    resetContent,
+    setConfirmingReset,
+    setResetAppState,
+    setResetContent,
+    settings,
+    storageSectionRef,
+    themePreference,
+  };
+}
+
+export function SettingsModal(props: Props) {
+  return renderSettingsModal(useSettingsModalModel(props));
+}
+
+function renderSettingsModal({
+  canReset,
+  closeConfirm,
+  confirmingReset,
+  handleClose,
+  handleConfirmReset,
+  isResetting,
+  onExport,
+  onThemePreferenceChange,
+  onUpdateSettings,
+  open,
+  resetAppState,
+  resetContent,
+  setConfirmingReset,
+  setResetAppState,
+  setResetContent,
+  settings,
+  storageSectionRef,
+  themePreference,
+}: ReturnType<typeof useSettingsModalModel>) {
   return (
     <Modal
       open={open}
       onClose={handleClose}
       className="bg-black/50"
-      ariaLabelledBy="settings-title"
+      title="Settings"
+      titleId="settings-title"
+      closeLabel="Close settings"
+      bodyClassName="overflow-y-auto px-6 pb-6 divide-y divide-border"
     >
-        <div
-          className="max-w-md mx-auto mt-[10vh] max-h-[80vh] flex flex-col rounded border border-border bg-surface-card shadow-xl"
-        >
-          <div className="flex shrink-0 items-center justify-between px-6 pt-5 pb-3">
-            <h2
-              id="settings-title"
-              className="text-lg font-semibold text-foreground text-balance"
-            >
-              Settings
-            </h2>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleClose}
-              className="-mr-2"
-              aria-label="Close settings"
-              title="Close"
-            >
-              <XIcon className="size-5" />
-            </Button>
-          </div>
-
-          <div className="overflow-y-auto px-6 pb-6 divide-y divide-border">
             <section className="py-4 first:pt-0 last:pb-0">
               <h3 className="text-sm font-semibold text-muted mb-1.5">
                 Appearance
@@ -173,7 +213,7 @@ export function SettingsModal({
                     optionLabel={(c) => `Default color ${c}`}
                   />
                 </div>
-                <label className="flex items-center justify-between gap-4 min-h-10">
+                <div className="flex items-center justify-between gap-4 min-h-10">
                   <div className="flex flex-col gap-0.5">
                     <span
                       id="label-open-in-totem"
@@ -192,7 +232,7 @@ export function SettingsModal({
                     }
                     aria-labelledby="label-open-in-totem"
                   />
-                </label>
+                </div>
               </div>
             </section>
 
@@ -201,7 +241,7 @@ export function SettingsModal({
                 New Tab
               </h3>
               <div className="space-y-1.5">
-                <label className="flex items-center justify-between min-h-10">
+                <div className="flex items-center justify-between min-h-10">
                   <span
                     id="label-search-bar"
                     className="text-sm text-foreground/80"
@@ -215,9 +255,9 @@ export function SettingsModal({
                     }
                     aria-labelledby="label-search-bar"
                   />
-                </label>
+                </div>
 
-                <label className="flex items-center justify-between min-h-10">
+                <div className="flex items-center justify-between min-h-10">
                   <span
                     id="label-quick-links"
                     className="text-sm text-foreground/80"
@@ -241,7 +281,7 @@ export function SettingsModal({
                     }}
                     aria-labelledby="label-quick-links"
                   />
-                </label>
+                </div>
 
                 {settings.showTopSites && (
                   <div className="flex items-center justify-between pl-4 min-h-10">
@@ -286,75 +326,100 @@ export function SettingsModal({
               </div>
             </section>
 
-            <section className="py-4 first:pt-0 last:pb-0">
-              {confirmingReset ? (
-                <div className="space-y-3">
-                  <p className="text-xs text-muted/80 leading-snug">
-                    Choose what to reset. App state alone is enough to fix
-                    most stuck-UI issues.
-                  </p>
-                  <div className="space-y-2">
-                    <ResetCheckbox
-                      id="reset-app-state"
-                      label="App state"
-                      description="Cached UI, sync flags, bookmark cache."
-                      tooltip={RESET_STATE_TOOLTIP}
-                      checked={resetAppState}
-                      onCheckedChange={setResetAppState}
-                      disabled={isResetting}
-                    />
-                    <ResetCheckbox
-                      id="reset-content"
-                      label="Personal content"
-                      description="Highlights, notes, reading status, saved searches."
-                      tooltip={RESET_CONTENT_TOOLTIP}
-                      checked={resetContent}
-                      onCheckedChange={setResetContent}
-                      disabled={isResetting}
-                      destructive
-                    />
+            <section ref={storageSectionRef} className="py-4 first:pt-0 last:pb-0">
+              <h3 className="text-sm font-semibold text-muted mb-1.5">
+                Storage
+              </h3>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between min-h-10 gap-4">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-sm text-foreground/80">
+                      Export your data
+                    </span>
+                    <span className="text-xxs text-muted/60 leading-snug">
+                      Download your bookmarks as CSV, Markdown, and JSONL
+                    </span>
                   </div>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="secondary"
-                      onClick={closeConfirm}
-                      disabled={isResetting}
-                      className="flex-1"
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      variant={resetContent ? "destructive" : "primary"}
-                      onClick={handleConfirmReset}
-                      disabled={isResetting || !canReset}
-                      className={cn(
-                        "flex-1",
-                        resetContent && "border border-red-500/30",
-                      )}
-                    >
-                      {isResetting
-                        ? resetContent
-                          ? "Deleting..."
-                          : "Resetting..."
-                        : resetContent
-                          ? "Confirm delete"
-                          : "Reset"}
-                    </Button>
-                  </div>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => {
+                      handleClose();
+                      onExport();
+                    }}
+                  >
+                    <ExportIcon className="size-3.5" />
+                    Export
+                  </Button>
                 </div>
-              ) : (
-                <Button
-                  variant="secondary"
-                  onClick={() => setConfirmingReset(true)}
-                  disabled={isResetting}
-                  className="w-full"
-                >
-                  {isResetting ? "Resetting..." : "Reset data"}
-                </Button>
-              )}
+
+                {confirmingReset ? (
+                  <div className="space-y-3">
+                    <p className="text-xs text-muted/80 leading-snug">
+                      Choose what to reset. App state alone is enough to fix
+                      most stuck-UI issues.
+                    </p>
+                    <div className="space-y-2">
+                      <ResetCheckbox
+                        id="reset-app-state"
+                        label="App state"
+                        description="Cached UI, sync flags, bookmark cache."
+                        tooltip={RESET_STATE_TOOLTIP}
+                        checked={resetAppState}
+                        onCheckedChange={setResetAppState}
+                        disabled={isResetting}
+                      />
+                      <ResetCheckbox
+                        id="reset-content"
+                        label="Personal content"
+                        description="Highlights, notes, reading status, saved searches."
+                        tooltip={RESET_CONTENT_TOOLTIP}
+                        checked={resetContent}
+                        onCheckedChange={setResetContent}
+                        disabled={isResetting}
+                        destructive
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="secondary"
+                        onClick={closeConfirm}
+                        disabled={isResetting}
+                        className="flex-1"
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        variant={resetContent ? "destructive" : "primary"}
+                        onClick={handleConfirmReset}
+                        disabled={isResetting || !canReset}
+                        className={cn(
+                          "flex-1",
+                          resetContent && "border border-red-500/30",
+                        )}
+                      >
+                        {isResetting
+                          ? resetContent
+                            ? "Deleting..."
+                            : "Resetting..."
+                          : resetContent
+                            ? "Confirm delete"
+                            : "Reset"}
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <Button
+                    variant="secondary"
+                    onClick={() => setConfirmingReset(true)}
+                    disabled={isResetting}
+                    className="w-full"
+                  >
+                    {isResetting ? "Resetting..." : "Reset data"}
+                  </Button>
+                )}
+              </div>
             </section>
-          </div>
-        </div>
     </Modal>
   );
 }
@@ -381,8 +446,7 @@ function ResetCheckbox({
   destructive,
 }: ResetCheckboxProps) {
   return (
-    <label
-      htmlFor={id}
+    <div
       className={cn(
         "flex items-start gap-3 rounded border border-border/60 bg-surface/40 p-3 cursor-pointer transition-colors",
         "hover:bg-surface/60",
@@ -421,6 +485,6 @@ function ResetCheckbox({
           {description}
         </span>
       </div>
-    </label>
+    </div>
   );
 }

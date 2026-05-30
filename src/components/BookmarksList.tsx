@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
 import { Autocomplete } from "@base-ui/react/autocomplete";
 import { Tabs } from "@base-ui/react/tabs";
 import { useHotkeys } from "react-hotkeys-hook";
@@ -23,7 +23,7 @@ import {
   readRecentSearches,
   removeRecentSearch,
 } from "../lib/recent-searches";
-import { NEW_BADGE_CUTOFF_MS } from "../lib/constants";
+import { NEW_BADGE_CUTOFF_MS } from "../lib/constants/ui";
 import {
   getPinnedTweetIds,
   getPinnedTweetIdsOrdered,
@@ -75,6 +75,52 @@ interface BookmarkRow {
   subtitle?: string;
 }
 
+type SearchScope = "all" | "unread" | "continue" | "read";
+
+interface BookmarksListState {
+  focusedIndex: number;
+  sortPreferences: ReadingSortPreferences;
+  pinnedIds: Set<string>;
+  pinnedOrder: string[];
+  toastMessage: string | null;
+  showUnpinButtons: boolean;
+  searchScope: SearchScope;
+  isMac: boolean;
+  isSearchFocused: boolean;
+  recents: string[];
+  highlightCounts: Map<string, HighlightCounts>;
+}
+
+type BookmarksListPatch =
+  | Partial<BookmarksListState>
+  | ((state: BookmarksListState) => Partial<BookmarksListState>);
+
+function createInitialBookmarksListState(): BookmarksListState {
+  return {
+    focusedIndex: -1,
+    sortPreferences: readStoredReadingSortPreferences(),
+    pinnedIds: getPinnedTweetIds(),
+    pinnedOrder: getPinnedTweetIdsOrdered(),
+    toastMessage: null,
+    showUnpinButtons: false,
+    searchScope: "all",
+    isMac: false,
+    isSearchFocused: false,
+    recents: readRecentSearches(),
+    highlightCounts: new Map(),
+  };
+}
+
+function bookmarksListReducer(
+  state: BookmarksListState,
+  patch: BookmarksListPatch,
+): BookmarksListState {
+  return {
+    ...state,
+    ...(typeof patch === "function" ? patch(state) : patch),
+  };
+}
+
 const SORT_OPTIONS: SelectOption[] = [
   { value: "recent", label: "Recent" },
   { value: "oldest", label: "Oldest" },
@@ -112,7 +158,7 @@ function getBookmarkTimestamp(bookmark: Bookmark): number | null {
   }
 }
 
-export function BookmarksList({
+function useBookmarksListModel({
   continueReadingItems,
   unreadBookmarks,
   activeTab,
@@ -131,42 +177,49 @@ export function BookmarksList({
   const actions = useRuntimeActions();
   const syncButton = syncButtonStateOverride ?? runtimeSyncButton;
   const offlineMode = offlineModeOverride ?? runtimeOfflineMode;
-  const [focusedIndex, setFocusedIndex] = useState(-1);
-  const [sortPreferences, setSortPreferences] =
-    useState<ReadingSortPreferences>(() => readStoredReadingSortPreferences());
-  const [pinnedIds, setPinnedIds] = useState(() => getPinnedTweetIds());
-  const [pinnedOrder, setPinnedOrder] = useState(() =>
-    getPinnedTweetIdsOrdered(),
+  const [listState, updateListState] = useReducer(
+    bookmarksListReducer,
+    undefined,
+    createInitialBookmarksListState,
   );
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [showUnpinButtons, setShowUnpinButtons] = useState(false);
-  /**
-   * When searching, results span all read states by default. The user can
-   * narrow with the tab strip; that narrowing lives in `searchScope` so it
-   * doesn't disturb `activeTab` (which restores the user's prior tab when
-   * the query clears).
-   */
-  const [searchScope, setSearchScope] = useState<
-    "all" | "unread" | "continue" | "read"
-  >("all");
+  const {
+    focusedIndex,
+    sortPreferences,
+    pinnedIds,
+    pinnedOrder,
+    toastMessage,
+    showUnpinButtons,
+    searchScope,
+    isMac,
+    isSearchFocused,
+    recents,
+    highlightCounts,
+  } = listState;
   const searchInputRef = useRef<HTMLInputElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const pinnedCardRefs = useRef<Map<number, HTMLAnchorElement>>(new Map());
 
-  useEffect(() => {
-    setFocusedIndex(-1);
-  }, [activeTab]);
+  const changeTab = useCallback((tab: ReadingTab) => {
+    updateListState({ focusedIndex: -1 });
+    onTabChange(tab);
+  }, [onTabChange]);
+
+  const changeSearchScope = useCallback((scope: SearchScope) => {
+    updateListState({ focusedIndex: -1, searchScope: scope });
+  }, []);
 
   useEffect(() => {
     return subscribeToPinChanges(() => {
-      setPinnedIds(getPinnedTweetIds());
-      setPinnedOrder(getPinnedTweetIdsOrdered());
+      updateListState({
+        pinnedIds: getPinnedTweetIds(),
+        pinnedOrder: getPinnedTweetIdsOrdered(),
+      });
     });
   }, []);
 
   useEffect(() => {
     if (!showUnpinButtons) return;
-    const timer = setTimeout(() => setShowUnpinButtons(false), 3000);
+    const timer = setTimeout(() => updateListState({ showUnpinButtons: false }), 3000);
     return () => clearTimeout(timer);
   }, [showUnpinButtons]);
 
@@ -205,24 +258,21 @@ export function BookmarksList({
     { preventDefault: true, enableOnFormTags: ["input"] },
   );
 
-  const [isMac, setIsMac] = useState(false);
   useEffect(() => {
     if (typeof navigator === "undefined") return;
-    setIsMac(/Mac|iPhone|iPad|iPod/.test(navigator.platform));
+    updateListState({ isMac: /Mac|iPhone|iPad|iPod/.test(navigator.platform) });
   }, []);
-  const [isSearchFocused, setIsSearchFocused] = useState(false);
   const showSearchHint = !isSearchFocused && query.length === 0;
   const showSuggestions = isSearchFocused && query.length === 0;
 
-  const [recents, setRecents] = useState<string[]>(() => readRecentSearches());
   // Refresh the recent list each time the suggestion popup opens so a query
   // committed in this session shows up without a remount.
   useEffect(() => {
-    if (showSuggestions) setRecents(readRecentSearches());
+    if (showSuggestions) updateListState({ recents: readRecentSearches() });
   }, [showSuggestions]);
 
   const handleRemoveRecent = useCallback((q: string) => {
-    setRecents(removeRecentSearch(q));
+    updateListState({ recents: removeRecentSearch(q) });
   }, []);
 
   const insertSuggestion = useCallback(
@@ -282,20 +332,16 @@ export function BookmarksList({
     return ids;
   }, [unreadBookmarks, continueReadingItems]);
 
-  const [highlightCounts, setHighlightCounts] = useState<
-    Map<string, HighlightCounts>
-  >(new Map());
-
   const visibleTweetIds = useMemo(() => {
     if (activeTab === "continue") {
-      return continueReadingItems
-        .filter((item) => !item.progress.completed)
-        .map((item) => item.bookmark.tweetId);
+      return continueReadingItems.flatMap((item) =>
+        item.progress.completed ? [] : [item.bookmark.tweetId],
+      );
     }
     if (activeTab === "read") {
-      return continueReadingItems
-        .filter((item) => item.progress.completed)
-        .map((item) => item.bookmark.tweetId);
+      return continueReadingItems.flatMap((item) =>
+        item.progress.completed ? [item.bookmark.tweetId] : [],
+      );
     }
     return unreadBookmarks.map((bookmark) => bookmark.tweetId);
   }, [activeTab, continueReadingItems, unreadBookmarks]);
@@ -303,17 +349,17 @@ export function BookmarksList({
   const refreshHighlightCounts = useCallback(() => {
     const tweetIds = visibleTweetIds;
     if (tweetIds.length === 0) {
-      setHighlightCounts(new Map());
+      updateListState({ highlightCounts: new Map() });
       return;
     }
 
     let cancelled = false;
     getHighlightCountsByTweetIds(tweetIds)
       .then((counts) => {
-        if (!cancelled) setHighlightCounts(counts);
+        if (!cancelled) updateListState({ highlightCounts: counts });
       })
       .catch(() => {
-        if (!cancelled) setHighlightCounts(new Map());
+        if (!cancelled) updateListState({ highlightCounts: new Map() });
       });
 
     return () => {
@@ -398,7 +444,7 @@ export function BookmarksList({
   // Reset search scope to "all" whenever the user exits search mode so the
   // next query starts from a global view.
   useEffect(() => {
-    if (!isSearching) setSearchScope("all");
+    if (!isSearching) updateListState({ searchScope: "all" });
   }, [isSearching]);
 
   // Match counts per state for the tab strip in search mode.
@@ -536,10 +582,10 @@ export function BookmarksList({
   const handleSortChange = useCallback(
     (nextSort: string) => {
       if (!isReadingSort(nextSort)) return;
-      setSortPreferences((current) => {
-        const next = { ...current, [activeTab]: nextSort };
+      updateListState((current) => {
+        const next = { ...current.sortPreferences, [activeTab]: nextSort };
         writeStoredReadingSortPreferences(next);
-        return next;
+        return { sortPreferences: next };
       });
     },
     [activeTab],
@@ -548,9 +594,12 @@ export function BookmarksList({
   useHotkeys(
     "j, ArrowDown",
     () => {
-      setFocusedIndex((prev) =>
-        prev < visibleBookmarks.length - 1 ? prev + 1 : prev,
-      );
+      updateListState((current) => ({
+        focusedIndex:
+          current.focusedIndex < visibleBookmarks.length - 1
+            ? current.focusedIndex + 1
+            : current.focusedIndex,
+      }));
     },
     { preventDefault: true, ignoreEventWhen: ignoreListHotkeys },
     [visibleBookmarks.length],
@@ -559,7 +608,9 @@ export function BookmarksList({
   useHotkeys(
     "k, ArrowUp",
     () => {
-      setFocusedIndex((prev) => (prev > 0 ? prev - 1 : prev));
+      updateListState((current) => ({
+        focusedIndex: current.focusedIndex > 0 ? current.focusedIndex - 1 : current.focusedIndex,
+      }));
     },
     { preventDefault: true, ignoreEventWhen: ignoreListHotkeys },
   );
@@ -588,30 +639,30 @@ export function BookmarksList({
     "tab",
     () => {
       const idx = tabOrder.indexOf(activeTab);
-      onTabChange(tabOrder[(idx + 1) % tabOrder.length]);
+      changeTab(tabOrder[(idx + 1) % tabOrder.length]);
     },
     { preventDefault: true, ignoreEventWhen: ignoreListHotkeys },
-    [activeTab, onTabChange],
+    [activeTab, changeTab],
   );
 
   useHotkeys(
     "ArrowRight",
     () => {
       const idx = tabOrder.indexOf(activeTab);
-      if (idx < tabOrder.length - 1) onTabChange(tabOrder[idx + 1]);
+      if (idx < tabOrder.length - 1) changeTab(tabOrder[idx + 1]);
     },
     { preventDefault: true, ignoreEventWhen: ignoreListHotkeys },
-    [activeTab, onTabChange],
+    [activeTab, changeTab],
   );
 
   useHotkeys(
     "ArrowLeft",
     () => {
       const idx = tabOrder.indexOf(activeTab);
-      if (idx > 0) onTabChange(tabOrder[idx - 1]);
+      if (idx > 0) changeTab(tabOrder[idx - 1]);
     },
     { preventDefault: true, ignoreEventWhen: ignoreListHotkeys },
-    [activeTab, onTabChange],
+    [activeTab, changeTab],
   );
 
   const showSyncControls = syncButton.visible;
@@ -626,15 +677,27 @@ export function BookmarksList({
       event.preventDefault();
       event.stopPropagation();
       const result = togglePin(tweetId, unreadIdSet);
-      setPinnedIds(result.ids);
-      setPinnedOrder(getPinnedTweetIdsOrdered());
-      if (result.hitCap) {
-        setToastMessage("You can pin up to 6 bookmarks.");
-        setShowUnpinButtons(true);
-      }
+      updateListState({
+        pinnedIds: result.ids,
+        pinnedOrder: getPinnedTweetIdsOrdered(),
+        ...(result.hitCap
+          ? {
+              toastMessage: "You can pin up to 6 bookmarks.",
+              showUnpinButtons: true,
+            }
+          : {}),
+      });
     },
     [unreadIdSet],
   );
+
+  const handleLogin = useCallback(() => {
+    if (onLogin) {
+      onLogin();
+      return;
+    }
+    void actions.startLogin();
+  }, [actions, onLogin]);
 
   const hasItems = visibleBookmarks.length > 0;
 
@@ -690,6 +753,105 @@ export function BookmarksList({
     );
   };
 
+  return {
+    activeSort,
+    activeTab,
+    changeSearchScope,
+    changeTab,
+    containerWidthClass,
+    didYouMean,
+    focusedIndex,
+    getBookmarkHref,
+    handleLogin,
+    handleRemoveRecent,
+    handleSortChange,
+    handleTogglePin,
+    hasItems,
+    highlightCounts,
+    insertSuggestion,
+    isMac,
+    isSearching,
+    newBookmarkIds,
+    offlineMode,
+    onBack,
+    pinnedBookmarks,
+    pinnedCardRefs,
+    pinnedCount,
+    pinnedIds,
+    query,
+    queryTerms,
+    recents,
+    renderEmptyState,
+    scrollContainerRef,
+    searchInputRef,
+    searchMatchCounts,
+    searchScope,
+    setQuery,
+    showSearchHint,
+    showSuggestions,
+    showUnpinButtons,
+    sortedCompleted,
+    sortedInProgress,
+    sortedUnread,
+    toastMessage,
+    unpinnedRows,
+    updateListState,
+    virtualizer,
+    visibleBookmarks,
+    visiblePinnedCount,
+  };
+}
+
+export function BookmarksList(props: Props) {
+  return renderBookmarksList(useBookmarksListModel(props));
+}
+
+function renderBookmarksList({
+  activeSort,
+  activeTab,
+  changeSearchScope,
+  changeTab,
+  containerWidthClass,
+  didYouMean,
+  focusedIndex,
+  getBookmarkHref,
+  handleLogin,
+  handleRemoveRecent,
+  handleSortChange,
+  handleTogglePin,
+  hasItems,
+  highlightCounts,
+  insertSuggestion,
+  isMac,
+  isSearching,
+  newBookmarkIds,
+  offlineMode,
+  onBack,
+  pinnedBookmarks,
+  pinnedCardRefs,
+  pinnedCount,
+  pinnedIds,
+  query,
+  queryTerms,
+  recents,
+  renderEmptyState,
+  scrollContainerRef,
+  searchInputRef,
+  searchMatchCounts,
+  searchScope,
+  setQuery,
+  showSearchHint,
+  showSuggestions,
+  showUnpinButtons,
+  sortedCompleted,
+  sortedInProgress,
+  sortedUnread,
+  toastMessage,
+  unpinnedRows,
+  updateListState,
+  virtualizer,
+  visiblePinnedCount,
+}: ReturnType<typeof useBookmarksListModel>) {
   return (
     <div className="flex h-dvh flex-col bg-surface">
       <div className="sticky top-0 z-10 shrink-0 border-b border-border bg-surface/80 backdrop-blur-md">
@@ -723,8 +885,8 @@ export function BookmarksList({
               <MagnifyingGlassIcon className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted/65" />
               <Autocomplete.Input
                 ref={searchInputRef}
-                onFocus={() => setIsSearchFocused(true)}
-                onBlur={() => setIsSearchFocused(false)}
+                onFocus={() => updateListState({ isSearchFocused: true })}
+                onBlur={() => updateListState({ isSearchFocused: false })}
                 onKeyDown={(event) => {
                   if (event.key === "Escape") {
                     setQuery("");
@@ -817,9 +979,9 @@ export function BookmarksList({
           value={isSearching ? searchScope : activeTab}
           onValueChange={(value) => {
             if (isSearching) {
-              setSearchScope(value as "all" | "unread" | "continue" | "read");
+              changeSearchScope(value as "all" | "unread" | "continue" | "read");
             } else {
-              onTabChange(value as ReadingTab);
+              changeTab(value as ReadingTab);
             }
           }}
           className={cn("mx-auto px-6", containerWidthClass)}
@@ -968,8 +1130,21 @@ export function BookmarksList({
                       <img
                         src={bookmark.author.profileImageUrl}
                         alt={`@${bookmark.author.screenName}`}
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`Open @${bookmark.author.screenName} on X`}
                         className="size-5 shrink-0 cursor-pointer rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.06)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]"
                         onClick={(e) => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          window.open(
+                            `https://x.com/${bookmark.author.screenName}`,
+                            "_blank",
+                            "noopener,noreferrer",
+                          );
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key !== "Enter" && e.key !== " ") return;
                           e.stopPropagation();
                           e.preventDefault();
                           window.open(
@@ -1084,8 +1259,21 @@ export function BookmarksList({
                       <img
                         src={bookmark.author.profileImageUrl}
                         alt={`@${bookmark.author.screenName}`}
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`Open @${bookmark.author.screenName} on X`}
                         className="size-9 shrink-0 cursor-pointer rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.06)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]"
                         onClick={(e) => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          window.open(
+                            `https://x.com/${bookmark.author.screenName}`,
+                            "_blank",
+                            "noopener,noreferrer",
+                          );
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key !== "Enter" && e.key !== " ") return;
                           e.stopPropagation();
                           e.preventDefault();
                           window.open(
@@ -1219,22 +1407,14 @@ export function BookmarksList({
 
           {offlineMode && (
             <div className="mt-8">
-              <OfflineBanner
-                onLogin={() => {
-                  if (onLogin) {
-                    onLogin();
-                    return;
-                  }
-                  void actions.startLogin();
-                }}
-              />
+              <OfflineBanner onLogin={handleLogin} />
             </div>
           )}
         </main>
       </div>
 
       {toastMessage && (
-        <Toast message={toastMessage} onDismiss={() => setToastMessage(null)} />
+        <Toast message={toastMessage} onDismiss={() => updateListState({ toastMessage: null })} />
       )}
     </div>
   );

@@ -1,6 +1,6 @@
 import type { Bookmark } from "../types";
 import type { BookmarkPageResult } from "../api/parsers";
-import { SYNC_PAGE_SIZE } from "./constants";
+import { SYNC_PAGE_SIZE } from "./constants/sync-policy";
 
 interface ReconcileResult {
   newBookmarks: Bookmark[];

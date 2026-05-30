@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
 import { BookmarkReader } from "../../../../../src/components/BookmarkReader";
 import { BookmarksList } from "../../../../../src/components/BookmarksList";
 import { NewTabHome } from "../../../../../src/components/NewTabHome";
@@ -31,12 +31,64 @@ import {
   DEFAULT_DEMO_SETTINGS,
   DEMO_FALLBACK_PAYLOAD,
   type DemoDetailEntry,
+  type DemoPayload,
 } from "./fixtures";
 
 type DemoView = "home" | "reading";
 
 interface ToastState {
   message: string;
+}
+
+interface DemoState {
+  bookmarks: Bookmark[];
+  seedDetails: Record<string, DemoDetailEntry>;
+  seedProgress: ReadingProgress[];
+  dataReady: boolean;
+  syncStatus: SyncStatus;
+  view: DemoView;
+  selectedTweetId: string | null;
+  settingsOpen: boolean;
+  settings: UserSettings;
+  toast: ToastState | null;
+  shuffleSeed: number;
+  seedVersion: number;
+  readingTab: ReadingTab;
+}
+
+type DemoStatePatch = Partial<DemoState> | ((state: DemoState) => Partial<DemoState>);
+
+function readInitialReadingTab(): ReadingTab {
+  const stored = localStorage.getItem(DEMO_READING_TAB_KEY);
+  if (stored === "unread" || stored === "continue" || stored === "read") {
+    return stored;
+  }
+  return "unread";
+}
+
+function createInitialDemoState(): DemoState {
+  return {
+    bookmarks: [],
+    seedDetails: {},
+    seedProgress: [],
+    dataReady: false,
+    syncStatus: "idle",
+    view: "home",
+    selectedTweetId: null,
+    settingsOpen: false,
+    settings: DEFAULT_DEMO_SETTINGS,
+    toast: null,
+    shuffleSeed: 0,
+    seedVersion: 0,
+    readingTab: readInitialReadingTab(),
+  };
+}
+
+function demoStateReducer(state: DemoState, patch: DemoStatePatch): DemoState {
+  return {
+    ...state,
+    ...(typeof patch === "function" ? patch(state) : patch),
+  };
 }
 
 interface RuntimeSeed {
@@ -242,32 +294,32 @@ async function loadPayloadFromFile(): Promise<TotemSeedPayload | null> {
   }
 }
 
-export function DemoNewTabApp() {
+function useDemoNewTabModel() {
   const { themePreference, setThemePreference } = useTheme();
-  const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
-  const [seedDetails, setSeedDetails] = useState<Record<string, DemoDetailEntry>>({});
-  const [seedProgress, setSeedProgress] = useState<ReadingProgress[]>([]);
-  const [dataReady, setDataReady] = useState(false);
-  const [syncStatus, setSyncStatus] = useState<SyncStatus>("idle");
-  const [view, setView] = useState<DemoView>("home");
-  const [selectedBookmark, setSelectedBookmark] = useState<Bookmark | null>(null);
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [settings, setSettings] = useState<UserSettings>(DEFAULT_DEMO_SETTINGS);
-  const [toast, setToast] = useState<ToastState | null>(null);
-  const [shuffleSeed, setShuffleSeed] = useState(0);
-  const [seedVersion, setSeedVersion] = useState(0);
+  const [state, updateState] = useReducer(
+    demoStateReducer,
+    undefined,
+    createInitialDemoState,
+  );
+  const {
+    bookmarks,
+    seedDetails,
+    seedProgress,
+    dataReady,
+    syncStatus,
+    view,
+    selectedTweetId,
+    settingsOpen,
+    settings,
+    toast,
+    shuffleSeed,
+    seedVersion,
+    readingTab,
+  } = state;
   const syncTimeoutRef = useRef<number | null>(null);
 
   const { continueReading, allUnread, refresh: refreshContinueReading } =
     useContinueReading(bookmarks);
-
-  const [readingTab, setReadingTab] = useState<ReadingTab>(() => {
-    const stored = localStorage.getItem(DEMO_READING_TAB_KEY);
-    if (stored === "unread" || stored === "continue" || stored === "read") {
-      return stored;
-    }
-    return "unread";
-  });
 
   const detailedTweetIds = useMemo(
     () => new Set(bookmarks.map((bookmark) => bookmark.tweetId)),
@@ -277,6 +329,10 @@ export function DemoNewTabApp() {
   const openedTweetIds = useMemo(
     () => new Set(continueReading.map((item) => item.progress.tweetId)),
     [continueReading],
+  );
+  const selectedBookmark = useMemo(
+    () => bookmarks.find((bookmark) => bookmark.tweetId === selectedTweetId) ?? null,
+    [bookmarks, selectedTweetId],
   );
   const demoSyncButtonState = useMemo<SyncButtonState>(
     () => ({
@@ -297,46 +353,43 @@ export function DemoNewTabApp() {
   useEffect(() => {
     let cancelled = false;
 
-    const load = async () => {
-      const payload = (await loadPayloadFromFile()) ?? DEMO_FALLBACK_PAYLOAD;
+    const applySeed = (payload: DemoPayload, loadedFromFile: boolean) => {
       const seed = buildRuntimeSeed(payload);
-
       if (cancelled) return;
 
-      setBookmarks(seed.bookmarks);
-      setSeedDetails(seed.detailByTweetId);
-      setSeedProgress(seed.readingProgress);
-      setSettings(seed.settings);
       setThemePreference(seed.themePreference);
-      setDataReady(true);
-      setSeedVersion((value) => value + 1);
-
-      if (payload !== DEMO_FALLBACK_PAYLOAD) {
-        const count = seed.bookmarks.length;
-        const tweetLabel = count === 1 ? "tweet" : "tweets";
-        const sourceLabel = seed.source || "demo-data.json";
-        setToast({
-          message: `Demo ready: ${count} ${tweetLabel} loaded from ${sourceLabel}.`,
-        });
-      } else {
-        setToast({
-          message: "Could not load demo-data.json, so we loaded fallback demo data.",
-        });
-      }
+      const toast = loadedFromFile
+        ? (() => {
+            const count = seed.bookmarks.length;
+            const tweetLabel = count === 1 ? "tweet" : "tweets";
+            const sourceLabel = seed.source || "demo-data.json";
+            return {
+              message: `Demo ready: ${count} ${tweetLabel} loaded from ${sourceLabel}.`,
+            };
+          })()
+        : {
+            message: "Could not load demo-data.json, so we loaded fallback demo data.",
+          };
+      updateState((current) => ({
+        bookmarks: seed.bookmarks,
+        seedDetails: seed.detailByTweetId,
+        seedProgress: seed.readingProgress,
+        settings: seed.settings,
+        dataReady: true,
+        seedVersion: current.seedVersion + 1,
+        toast,
+      }));
     };
 
-    load().catch(() => {
+    loadPayloadFromFile().then((payload) => {
+      applySeed(payload ?? DEMO_FALLBACK_PAYLOAD, payload !== null);
+    }).catch(() => {
       if (cancelled) return;
-      const seed = buildRuntimeSeed(DEMO_FALLBACK_PAYLOAD);
-      setBookmarks(seed.bookmarks);
-      setSeedDetails(seed.detailByTweetId);
-      setSeedProgress(seed.readingProgress);
-      setSettings(seed.settings);
-      setThemePreference(seed.themePreference);
-      setDataReady(true);
-      setSeedVersion((value) => value + 1);
-      setToast({
-        message: "Demo data failed to load, so fallback fixtures were used.",
+      applySeed(DEMO_FALLBACK_PAYLOAD, false);
+      updateState({
+        toast: {
+          message: "Demo data failed to load, so fallback fixtures were used.",
+        },
       });
     });
 
@@ -352,17 +405,17 @@ export function DemoNewTabApp() {
 
     const seedProgressState = async () => {
       await clearAllLocalData();
-      for (const [tweetId, detail] of Object.entries(seedDetails)) {
-        await upsertTweetDetailCache({
-          tweetId,
-          fetchedAt: detail.fetchedAt ?? Date.now(),
-          focalTweet: detail.focalTweet,
-          thread: detail.thread,
-        });
-      }
-      for (const progress of seedProgress) {
-        await upsertReadingProgress(progress);
-      }
+      await Promise.all([
+        ...Object.entries(seedDetails).map(([tweetId, detail]) =>
+          upsertTweetDetailCache({
+            tweetId,
+            fetchedAt: detail.fetchedAt ?? Date.now(),
+            focalTweet: detail.focalTweet,
+            thread: detail.thread,
+          }),
+        ),
+        ...seedProgress.map((progress) => upsertReadingProgress(progress)),
+      ]);
       if (!cancelled) {
         refreshContinueReading();
       }
@@ -390,14 +443,6 @@ export function DemoNewTabApp() {
     [],
   );
 
-  useEffect(() => {
-    if (!selectedBookmark) return;
-    const stillExists = bookmarks.some((bookmark) => bookmark.tweetId === selectedBookmark.tweetId);
-    if (!stillExists) {
-      setSelectedBookmark(null);
-    }
-  }, [bookmarks, selectedBookmark]);
-
   const tabHasItems = useCallback(
     (tab: ReadingTab) => {
       if (tab === "unread") return allUnread.length > 0;
@@ -410,15 +455,15 @@ export function DemoNewTabApp() {
   const restoreReadingTab = useCallback(() => {
     const stored = localStorage.getItem(DEMO_READING_TAB_KEY);
     if (stored === "unread" || stored === "continue" || stored === "read") {
-      setReadingTab(stored);
+      updateState({ readingTab: stored });
     } else {
-      setReadingTab("unread");
+      updateState({ readingTab: "unread" });
     }
   }, []);
 
   const handleReadingTabChange = useCallback(
     (tab: ReadingTab) => {
-      setReadingTab(tab);
+      updateState({ readingTab: tab });
       if (tabHasItems(tab)) {
         localStorage.setItem(DEMO_READING_TAB_KEY, tab);
       }
@@ -432,9 +477,9 @@ export function DemoNewTabApp() {
       syncTimeoutRef.current = null;
     }
 
-    setSyncStatus("syncing");
+    updateState({ syncStatus: "syncing" });
     syncTimeoutRef.current = window.setTimeout(() => {
-      setSyncStatus("idle");
+      updateState({ syncStatus: "idle" });
       syncTimeoutRef.current = null;
     }, 900);
   }, []);
@@ -457,14 +502,14 @@ export function DemoNewTabApp() {
       ensureReadingProgressExists(bookmark.tweetId)
         .then(refreshContinueReading)
         .catch(() => {});
-      setSelectedBookmark(bookmark);
+      updateState({ selectedTweetId: bookmark.tweetId });
       window.location.hash = `read=${encodeURIComponent(bookmark.tweetId)}`;
     },
     [refreshContinueReading],
   );
 
   const closeReader = useCallback(() => {
-    setSelectedBookmark(null);
+    updateState({ selectedTweetId: null });
     window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
     refreshContinueReading();
   }, [refreshContinueReading]);
@@ -473,11 +518,11 @@ export function DemoNewTabApp() {
     const syncReaderFromHash = () => {
       const tweetId = getDemoReaderTweetId();
       if (!tweetId) {
-        setSelectedBookmark(null);
+        updateState({ selectedTweetId: null });
         return;
       }
       const target = bookmarks.find((bookmark) => bookmark.tweetId === tweetId) || null;
-      setSelectedBookmark(target);
+      updateState({ selectedTweetId: target?.tweetId ?? null });
       if (target) {
         ensureReadingProgressExists(target.tweetId)
           .then(refreshContinueReading)
@@ -497,7 +542,7 @@ export function DemoNewTabApp() {
   const hasNext = selectedIndex >= 0 && selectedIndex < bookmarks.length - 1;
 
   const handleShuffle = useCallback(() => {
-    setShuffleSeed((seed) => seed + 1);
+    updateState((current) => ({ shuffleSeed: current.shuffleSeed + 1 }));
   }, []);
 
   const relatedBookmarks = useMemo(
@@ -508,11 +553,13 @@ export function DemoNewTabApp() {
   const handleDeleteBookmark = useCallback(() => {
     if (!selectedBookmark) return;
     const removedId = selectedBookmark.tweetId;
-    setBookmarks((current) => current.filter((bookmark) => bookmark.tweetId !== removedId));
-    setView("reading");
-    setSelectedBookmark(null);
+    updateState((current) => ({
+      bookmarks: current.bookmarks.filter((bookmark) => bookmark.tweetId !== removedId),
+      view: "reading",
+      selectedTweetId: null,
+      toast: { message: "Removed from demo queue." },
+    }));
     refreshContinueReading();
-    setToast({ message: "Removed from demo queue." });
   }, [refreshContinueReading, selectedBookmark]);
 
   const handleMarkAsRead = useCallback(
@@ -534,99 +581,78 @@ export function DemoNewTabApp() {
   );
 
   const updateSettings = useCallback((patch: Partial<UserSettings>) => {
-    setSettings((current) => ({ ...current, ...patch }));
+    updateState((current) => ({ settings: { ...current.settings, ...patch } }));
   }, []);
 
   const resetDemo = useCallback(() => {
     window.location.reload();
   }, []);
 
-  const mainContent = (() => {
-    if (!dataReady) {
-      return (
-        <div className="min-h-dvh bg-[#0b1118] text-white grid place-items-center px-6 text-center">
-          <div>
-            <p className="text-sm uppercase tracking-[0.18em] text-white/60">Totem Demo</p>
-            <h1 className="mt-3 text-2xl font-semibold">Loading demo data</h1>
-            <p className="mt-2 text-white/70">Preparing detailed tweets from <code>demo-data.json</code>.</p>
-          </div>
-        </div>
-      );
-    }
+  const mainContent = renderDemoContent({
+    dataReady,
+    selectedBookmark,
+    relatedBookmarks,
+    bookmarks,
+    selectedIndex,
+    hasPrev,
+    hasNext,
+    view,
+    continueReading,
+    allUnread,
+    readingTab,
+    demoSyncButtonState,
+    detailedTweetIds,
+    settings,
+    openedTweetIds,
+    demoFooterState,
+    closeReader,
+    handleShuffle,
+    handleDeleteBookmark,
+    handleMarkAsRead,
+    handleMarkAsUnread,
+    loadDetail,
+    handleReadingTabChange,
+    openBookmark,
+    handleSync,
+    updateSettings,
+    restoreReadingTab,
+    updateState,
+  });
 
-    if (selectedBookmark) {
-      return (
-        <BookmarkReader
-          key={selectedBookmark.tweetId}
-          bookmark={selectedBookmark}
-          relatedBookmarks={relatedBookmarks}
-          getBookmarkHref={(bookmark) => getDemoReaderHref(bookmark.tweetId)}
-          onBack={closeReader}
-          onShuffle={handleShuffle}
-          prevHref={hasPrev ? getDemoReaderHref(bookmarks[selectedIndex - 1].tweetId) : undefined}
-          nextHref={hasNext ? getDemoReaderHref(bookmarks[selectedIndex + 1].tweetId) : undefined}
-          bookmarkAction={{
-            label: "Unbookmark",
-            active: true,
-            onClick: handleDeleteBookmark,
-          }}
-          onMarkAsRead={handleMarkAsRead}
-          onMarkAsUnread={handleMarkAsUnread}
-          loadDetail={loadDetail}
-        />
-      );
-    }
+  return {
+    mainContent,
+    resetDemo,
+    setThemePreference,
+    settings,
+    settingsOpen,
+    themePreference,
+    toast,
+    updateSettings,
+    updateState,
+  };
+}
 
-    if (view === "reading") {
-      return (
-        <BookmarksList
-          continueReadingItems={continueReading}
-          unreadBookmarks={allUnread}
-          activeTab={readingTab}
-          onTabChange={handleReadingTabChange}
-          onOpenBookmark={openBookmark}
-          getBookmarkHref={(bookmark) => getDemoReaderHref(bookmark.tweetId)}
-          onSync={handleSync}
-          onBack={() => setView("home")}
-          syncButtonStateOverride={demoSyncButtonState}
-          offlineModeOverride={false}
-        />
-      );
-    }
+export function DemoNewTabApp() {
+  return renderDemoNewTabApp(useDemoNewTabModel());
+}
 
-    return (
-      <NewTabHome
-        bookmarks={bookmarks}
-        onSync={handleSync}
-        detailedTweetIds={detailedTweetIds}
-        showTopSites={settings.showTopSites}
-        showSearchBar={settings.showSearchBar}
-        searchEngine={settings.searchEngine}
-        onSearchEngineChange={(engine) => updateSettings({ searchEngine: engine })}
-        topSitesLimit={settings.topSitesLimit}
-        backgroundMode={settings.backgroundMode}
-        openedTweetIds={openedTweetIds}
-        onOpenBookmark={openBookmark}
-        getBookmarkHref={(bookmark) => getDemoReaderHref(bookmark.tweetId)}
-        recommendationSource={settings.recommendationSource}
-        onOpenSettings={() => setSettingsOpen(true)}
-        onOpenReading={() => {
-          restoreReadingTab();
-          setView("reading");
-        }}
-        footerStateOverride={demoFooterState}
-        syncButtonStateOverride={demoSyncButtonState}
-        offlineModeOverride={false}
-      />
-    );
-  })();
-
+function renderDemoNewTabApp({
+  mainContent,
+  resetDemo,
+  setThemePreference,
+  settings,
+  settingsOpen,
+  themePreference,
+  toast,
+  updateSettings,
+  updateState,
+}: ReturnType<typeof useDemoNewTabModel>) {
   return (
     <>
       {mainContent}
       <SettingsModal
         open={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
+        onClose={() => updateState({ settingsOpen: false })}
         settings={settings}
         onUpdateSettings={updateSettings}
         themePreference={themePreference}
@@ -637,9 +663,152 @@ export function DemoNewTabApp() {
       {toast && (
         <Toast
           message={toast.message}
-          onDismiss={() => setToast(null)}
+          onDismiss={() => updateState({ toast: null })}
         />
       )}
     </>
+  );
+}
+
+interface DemoContentArgs {
+  dataReady: boolean;
+  selectedBookmark: Bookmark | null;
+  relatedBookmarks: Bookmark[];
+  bookmarks: Bookmark[];
+  selectedIndex: number;
+  hasPrev: boolean;
+  hasNext: boolean;
+  view: DemoView;
+  continueReading: ReturnType<typeof useContinueReading>["continueReading"];
+  allUnread: Bookmark[];
+  readingTab: ReadingTab;
+  demoSyncButtonState: SyncButtonState;
+  detailedTweetIds: Set<string>;
+  settings: UserSettings;
+  openedTweetIds: Set<string>;
+  demoFooterState: FooterState;
+  closeReader: () => void;
+  handleShuffle: () => void;
+  handleDeleteBookmark: () => void;
+  handleMarkAsRead: (tweetId: string) => void;
+  handleMarkAsUnread: (tweetId: string) => void;
+  loadDetail: (tweetId: string) => Promise<{
+    focalTweet: Bookmark | null;
+    thread: ThreadTweet[];
+  }>;
+  handleReadingTabChange: (tab: ReadingTab) => void;
+  openBookmark: (bookmark: Bookmark) => void;
+  handleSync: () => void;
+  updateSettings: (patch: Partial<UserSettings>) => void;
+  restoreReadingTab: () => void;
+  updateState: (patch: DemoStatePatch) => void;
+}
+
+function renderDemoContent({
+  dataReady,
+  selectedBookmark,
+  relatedBookmarks,
+  bookmarks,
+  selectedIndex,
+  hasPrev,
+  hasNext,
+  view,
+  continueReading,
+  allUnread,
+  readingTab,
+  demoSyncButtonState,
+  detailedTweetIds,
+  settings,
+  openedTweetIds,
+  demoFooterState,
+  closeReader,
+  handleShuffle,
+  handleDeleteBookmark,
+  handleMarkAsRead,
+  handleMarkAsUnread,
+  loadDetail,
+  handleReadingTabChange,
+  openBookmark,
+  handleSync,
+  updateSettings,
+  restoreReadingTab,
+  updateState,
+}: DemoContentArgs) {
+  if (!dataReady) {
+    return (
+      <div className="min-h-dvh bg-[#0b1118] text-white grid place-items-center px-6 text-center">
+        <div>
+          <p className="text-sm uppercase tracking-[0.18em] text-white/60">Totem Demo</p>
+          <h1 className="mt-3 text-2xl font-semibold">Loading demo data</h1>
+          <p className="mt-2 text-white/70">Preparing detailed tweets from <code>demo-data.json</code>.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (selectedBookmark) {
+    return (
+      <BookmarkReader
+        key={selectedBookmark.tweetId}
+        bookmark={selectedBookmark}
+        relatedBookmarks={relatedBookmarks}
+        getBookmarkHref={(bookmark) => getDemoReaderHref(bookmark.tweetId)}
+        onBack={closeReader}
+        onShuffle={handleShuffle}
+        prevHref={hasPrev ? getDemoReaderHref(bookmarks[selectedIndex - 1].tweetId) : undefined}
+        nextHref={hasNext ? getDemoReaderHref(bookmarks[selectedIndex + 1].tweetId) : undefined}
+        bookmarkAction={{
+          label: "Unbookmark",
+          active: true,
+          onClick: handleDeleteBookmark,
+        }}
+        onMarkAsRead={handleMarkAsRead}
+        onMarkAsUnread={handleMarkAsUnread}
+        loadDetail={loadDetail}
+      />
+    );
+  }
+
+  if (view === "reading") {
+    return (
+      <BookmarksList
+        continueReadingItems={continueReading}
+        unreadBookmarks={allUnread}
+        activeTab={readingTab}
+        onTabChange={handleReadingTabChange}
+        onOpenBookmark={openBookmark}
+        getBookmarkHref={(bookmark) => getDemoReaderHref(bookmark.tweetId)}
+        onSync={handleSync}
+        onBack={() => updateState({ view: "home" })}
+        syncButtonStateOverride={demoSyncButtonState}
+        offlineModeOverride={false}
+      />
+    );
+  }
+
+  return (
+    <NewTabHome
+      bookmarks={bookmarks}
+      onSync={handleSync}
+      detailedTweetIds={detailedTweetIds}
+      showTopSites={settings.showTopSites}
+      showSearchBar={settings.showSearchBar}
+      searchEngine={settings.searchEngine}
+      onSearchEngineChange={(engine) => updateSettings({ searchEngine: engine })}
+      topSitesLimit={settings.topSitesLimit}
+      backgroundMode={settings.backgroundMode}
+      openedTweetIds={openedTweetIds}
+      onOpenBookmark={openBookmark}
+      getBookmarkHref={(bookmark) => getDemoReaderHref(bookmark.tweetId)}
+      recommendationSource={settings.recommendationSource}
+      onOpenSettings={() => updateState({ settingsOpen: true })}
+      onOpenReading={() => {
+        restoreReadingTab();
+        updateState({ view: "reading" });
+      }}
+      footerStateOverride={demoFooterState}
+      syncButtonStateOverride={demoSyncButtonState}
+      offlineModeOverride={false}
+    />
   );
 }

@@ -8,6 +8,7 @@
 
 From open issues, **exclude** any that:
 - Have label `ralph:in-progress` — another worker has it.
+- Have label `ralph:skip` or `hitl` — human-driven by design (don't pick, don't claim).
 - Have a `Blocked by #N` line in the body where #N is still OPEN.
 
 From what remains, prioritize:

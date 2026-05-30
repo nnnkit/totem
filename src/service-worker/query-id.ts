@@ -14,6 +14,10 @@
 import type { MessageRequest } from "../types/messages";
 import type { HandlerMap } from "./index";
 import {
+  isQueryIdStaleError,
+  QueryIdStaleError,
+} from "@make/x-twitter-extension-core/query-id";
+import {
   extractQueryIdForOperation,
   isQueryIdStale,
   parseGraphqlEndpoint,
@@ -36,6 +40,7 @@ const QUERY_ID_OPS = [
 ] as const;
 
 export type QueryIdOperationName = (typeof QUERY_ID_OPS)[number];
+export { QueryIdStaleError };
 
 // ── Diagnostics ─────────────────────────────────────────────────
 
@@ -260,6 +265,49 @@ function lookupCatalog(
   return best ? best.queryId : null;
 }
 
+async function persistResolvedQueryId(
+  operationName: string,
+  queryId: string,
+  storage: typeof chrome.storage.local,
+  staleQueryId?: string,
+): Promise<void> {
+  if (!queryId) return;
+
+  const catalog = await loadGraphqlCatalog(storage);
+  if (staleQueryId) {
+    for (const [key, entry] of Object.entries(catalog.endpoints)) {
+      if (entry.operation === operationName && entry.queryId === staleQueryId) {
+        delete catalog.endpoints[key];
+      }
+    }
+  }
+
+  const now = Date.now();
+  const key = `${operationName}:${queryId}`;
+  const existing = catalog.endpoints[key];
+  catalog.endpoints[key] = {
+    key,
+    operation: operationName,
+    queryId,
+    path: existing?.path ?? `/i/api/graphql/${queryId}/${operationName}`,
+    firstSeen: existing?.firstSeen ?? now,
+    lastSeen: now,
+    seenCount: existing?.seenCount ?? 1,
+    methods: existing?.methods ?? [],
+    sampleUrl:
+      existing?.sampleUrl ??
+      `https://x.com/i/api/graphql/${queryId}/${operationName}`,
+    sampleVariables: existing?.sampleVariables ?? null,
+    sampleFeatures: existing?.sampleFeatures ?? null,
+    sampleFieldToggles: existing?.sampleFieldToggles ?? null,
+  };
+  catalog.updatedAt = now;
+  enforceCatalogLimit(catalog);
+  catalogDirty = true;
+  queryIdCacheSet(operationName, { id: queryId, ts: now });
+  await flushGraphqlCatalog(storage);
+}
+
 // ── Bundle scraping (hardened) ──────────────────────────────────
 
 /** Broadened script URL patterns — not limited to abs.twimg.com */
@@ -284,18 +332,19 @@ export async function discoverQueryIdFromBundles(
 
   const scriptUrls = extractScriptUrls(html);
 
-  for (const url of scriptUrls) {
-    try {
-      const jsResp = await fetchFn(url);
-      if (!jsResp.ok) continue;
-      const text = await jsResp.text();
-      const qid = extractQueryIdForOperation(text, operationName);
-      if (qid) return qid;
-    } catch {
-      continue;
-    }
-  }
-  return null;
+  const queryIds = await Promise.all(
+    scriptUrls.map(async (url) => {
+      try {
+        const jsResp = await fetchFn(url);
+        if (!jsResp.ok) return null;
+        const text = await jsResp.text();
+        return extractQueryIdForOperation(text, operationName);
+      } catch {
+        return null;
+      }
+    }),
+  );
+  return queryIds.find((qid): qid is string => Boolean(qid)) ?? null;
 }
 
 /** Extract unique script URLs from HTML using multiple patterns. */
@@ -487,6 +536,7 @@ export async function resolveQueryId(
 export async function forceRediscoverQueryId(
   operationName: string,
   deps: ResolveDeps = defaultDeps(),
+  staleQueryId?: string,
 ): Promise<string | null> {
   queryIdMemCache.delete(operationName);
 
@@ -497,7 +547,12 @@ export async function forceRediscoverQueryId(
     );
     if (freshId) {
       logDiagnostic(operationName, "force", "hit", "bundles");
-      queryIdCacheSet(operationName, { id: freshId, ts: Date.now() });
+      await persistResolvedQueryId(
+        operationName,
+        freshId,
+        deps.storage,
+        staleQueryId,
+      );
       return freshId;
     }
   } catch {
@@ -509,6 +564,12 @@ export async function forceRediscoverQueryId(
       const tabDiscovered = await discoverQueryIdViaTab(deps.tabs);
       if (tabDiscovered) {
         logDiagnostic(operationName, "force", "hit", "tab");
+        await persistResolvedQueryId(
+          operationName,
+          tabDiscovered,
+          deps.storage,
+          staleQueryId,
+        );
         return tabDiscovered;
       }
     } catch {
@@ -551,11 +612,25 @@ export async function withQueryId<T>(
     throw new NoQueryIdError(operationName);
   }
 
-  const result = await fn(queryId);
+  let result: T;
+  try {
+    result = await fn(queryId);
+  } catch (err) {
+    if (isQueryIdStaleError(err)) {
+      const freshId = await forceRediscoverQueryId(
+        operationName,
+        deps,
+        err.staleQueryId || queryId,
+      );
+      if (!freshId || freshId === queryId) throw err;
+      return fn(freshId);
+    }
+    throw err;
+  }
 
   // Check if the response indicates a stale query ID
   if (result && typeof result === "object" && isQueryIdStale(result)) {
-    const freshId = await forceRediscoverQueryId(operationName, deps);
+    const freshId = await forceRediscoverQueryId(operationName, deps, queryId);
     if (!freshId) {
       throw new NoQueryIdError(operationName);
     }
@@ -613,24 +688,33 @@ export async function discoverAllMissingQueryIds(
     const scriptUrls = extractScriptUrls(html);
     const remaining = new Set(stillMissing);
 
-    for (const url of scriptUrls) {
-      if (remaining.size === 0) break;
-      try {
-        const jsResp = await deps.fetchFn(url);
-        if (!jsResp.ok) continue;
-        const text = await jsResp.text();
-
-        for (const opName of remaining) {
-          const qid = extractQueryIdForOperation(text, opName);
-          if (qid) {
-            queryIdCacheSet(opName, { id: qid, ts: Date.now() });
-            remaining.delete(opName);
-          }
+    const scriptTexts = await Promise.all(
+      scriptUrls.map(async (url) => {
+        try {
+          const jsResp = await deps.fetchFn(url);
+          return jsResp.ok ? jsResp.text() : null;
+        } catch {
+          return null;
         }
-      } catch {
-        continue;
+      }),
+    );
+    const resolved: Array<{ opName: string; qid: string }> = [];
+
+    for (const text of scriptTexts) {
+      if (!text || remaining.size === 0) continue;
+      for (const opName of remaining) {
+        const qid = extractQueryIdForOperation(text, opName);
+        if (qid) {
+          resolved.push({ opName, qid });
+          remaining.delete(opName);
+        }
       }
     }
+    await Promise.all(
+      resolved.map(({ opName, qid }) =>
+        persistResolvedQueryId(opName, qid, deps.storage),
+      ),
+    );
   } finally {
     discoveryInProgress = false;
   }
@@ -647,11 +731,19 @@ export function createQueryIdHandlers(
       const now = Date.now();
       const ids = msg.ids;
       if (ids && typeof ids === "object") {
+        const activeDeps = deps ?? defaultDeps();
+        const toPersist: Array<{ op: string; id: string }> = [];
         for (const [op, id] of Object.entries(ids)) {
           if (typeof id === "string" && id) {
             queryIdCacheSet(op, { id, ts: now });
+            toPersist.push({ op, id });
           }
         }
+        await Promise.all(
+          toPersist.map(({ op, id }) =>
+            persistResolvedQueryId(op, id, activeDeps.storage),
+          ),
+        );
       }
       return { ok: true };
     },

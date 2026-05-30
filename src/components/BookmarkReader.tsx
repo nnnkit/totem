@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import {
   ArrowLeftIcon,
@@ -64,7 +64,25 @@ interface NotePanelState {
   removeOnCancel?: boolean;
 }
 
-export function BookmarkReader({
+interface DetailState {
+  resolvedBookmark: Bookmark | null;
+  thread: ThreadTweet[];
+  loading: boolean;
+  error: string | null;
+}
+
+const initialDetailState: DetailState = {
+  resolvedBookmark: null,
+  thread: [],
+  loading: true,
+  error: null,
+};
+
+function detailStateReducer(_: DetailState, next: DetailState): DetailState {
+  return next;
+}
+
+function useBookmarkReaderModel({
   bookmark,
   relatedBookmarks,
   getBookmarkHref,
@@ -83,58 +101,60 @@ export function BookmarkReader({
   const { resolvedTheme, setThemePreference } = useTheme();
   const actions = useRuntimeActions();
   const [readOverride, setReadOverride] = useState<boolean | null>(null);
-  const [resolvedBookmark, setResolvedBookmark] = useState<Bookmark | null>(
-    null,
+  const [detailState, replaceDetailState] = useReducer(
+    detailStateReducer,
+    initialDetailState,
   );
-  const [detailThread, setDetailThread] = useState<ThreadTweet[]>([]);
-  const [detailLoading, setDetailLoading] = useState(true);
-  const [detailError, setDetailError] = useState<string | null>(null);
-  const [sessionHighlightColor, setSessionHighlightColor] = useState<HighlightColor>(() =>
-    resolveHighlightColor(defaultHighlightColor),
-  );
-
-  useEffect(() => {
-    setSessionHighlightColor(resolveHighlightColor(defaultHighlightColor));
-  }, [defaultHighlightColor]);
+  const resolvedDefaultHighlightColor = resolveHighlightColor(defaultHighlightColor);
+  const [sessionHighlightState, setSessionHighlightState] = useState(() => ({
+    defaultColor: resolvedDefaultHighlightColor,
+    color: resolvedDefaultHighlightColor,
+  }));
+  const sessionHighlightColor =
+    sessionHighlightState.defaultColor === resolvedDefaultHighlightColor
+      ? sessionHighlightState.color
+      : resolvedDefaultHighlightColor;
+  const setSessionHighlightColor = useCallback((color: HighlightColor) => {
+    setSessionHighlightState({
+      defaultColor: resolvedDefaultHighlightColor,
+      color,
+    });
+  }, [resolvedDefaultHighlightColor]);
   const { isCompleted } = useReadingProgress({
     tweetId: bookmark.tweetId,
-    contentReady: !detailLoading,
+    contentReady: !detailState.loading,
   });
   const effectiveMarkedRead = readOverride ?? isCompleted;
-  const readerAvailability = useReaderAvailabilityState(detailError);
+  const readerAvailability = useReaderAvailabilityState(detailState.error);
 
   useEffect(() => {
     let cancelled = false;
 
-    setResolvedBookmark(null);
-    setDetailThread([]);
-    setDetailError(null);
-    setDetailLoading(true);
+    replaceDetailState(initialDetailState);
 
     (loadDetail ?? actions.loadReaderDetail)(bookmark.tweetId)
       .then((detail) => {
         if (cancelled) return;
 
-        if (detail.focalTweet) {
-          setResolvedBookmark({
+        replaceDetailState({
+          resolvedBookmark: detail.focalTweet ? {
             ...detail.focalTweet,
             sortIndex: bookmark.sortIndex,
             bookmarked: bookmark.bookmarked,
-          });
-        }
-
-        if (detail.thread.length > 0) {
-          setDetailThread(
-            detail.thread.toSorted((a, b) => a.createdAt - b.createdAt),
-          );
-        }
-
-        setDetailLoading(false);
+          } : null,
+          thread: detail.thread.toSorted((a, b) => a.createdAt - b.createdAt),
+          loading: false,
+          error: null,
+        });
       })
       .catch((error) => {
         if (cancelled) return;
-        setDetailError(error instanceof Error ? error.message : "DETAIL_ERROR");
-        setDetailLoading(false);
+        replaceDetailState({
+          resolvedBookmark: null,
+          thread: [],
+          loading: false,
+          error: error instanceof Error ? error.message : "DETAIL_ERROR",
+        });
       });
 
     return () => {
@@ -145,7 +165,7 @@ export function BookmarkReader({
   const { addHighlight, removeHighlight, updateHighlightNote, updateHighlightColor, getHighlight, applyNow, setPendingNoteId } =
     useHighlights({
       tweetId: bookmark.tweetId,
-      contentReady: !detailLoading,
+      contentReady: !detailState.loading,
       containerRef: articleRef,
     });
 
@@ -210,13 +230,13 @@ export function BookmarkReader({
   }, [effectiveMarkedRead, onMarkAsRead, onMarkAsUnread, bookmark.tweetId]);
 
   const displayBookmark = useMemo(() => {
-    if (!resolvedBookmark) return bookmark;
+    if (!detailState.resolvedBookmark) return bookmark;
     return {
-      ...resolvedBookmark,
+      ...detailState.resolvedBookmark,
       sortIndex: bookmark.sortIndex,
       bookmarked: bookmark.bookmarked,
     };
-  }, [bookmark, resolvedBookmark]);
+  }, [bookmark, detailState.resolvedBookmark]);
   const displayKind = useMemo(
     () => resolveTweetKind(displayBookmark),
     [displayBookmark],
@@ -265,14 +285,14 @@ export function BookmarkReader({
 
   const containerWidthClass = "max-w-2xl";
 
-  const canExportPost = !detailLoading;
+  const canExportPost = !detailState.loading;
 
   const exportArticle = useMemo(
     () =>
-      resolveReaderExportArticle(displayBookmark, detailThread, {
+      resolveReaderExportArticle(displayBookmark, detailState.thread, {
         includeThreadInExport: true,
       }),
-    [displayBookmark, detailThread],
+    [displayBookmark, detailState.thread],
   );
 
   const exportMetadata = useMemo(
@@ -330,6 +350,88 @@ export function BookmarkReader({
     exportMetadata,
   ]);
 
+  return {
+    actions,
+    addHighlight,
+    articleRef,
+    bookmarkAction,
+    canExportPost,
+    containerWidthClass,
+    detailState,
+    displayBookmark,
+    displayKind,
+    effectiveMarkedRead,
+    getBookmarkHref,
+    getHighlight,
+    handleAddNoteFromToolbar,
+    handleCopyArticleMarkdown,
+    handleDeleteNote,
+    handleDownloadArticleMarkdown,
+    handlePrintArticlePdf,
+    handleSaveNote,
+    handleToggleRead,
+    nextHref,
+    notePanelState,
+    onBack,
+    onLogin,
+    onMarkAsRead,
+    onShuffle,
+    prevHref,
+    readerAvailability,
+    relatedBookmarks,
+    removeHighlight,
+    resolvedTheme,
+    sessionHighlightColor,
+    setNotePanelState,
+    setPendingNoteId,
+    setSessionHighlightColor,
+    setThemePreference,
+    updateHighlightColor,
+  };
+}
+
+export function BookmarkReader(props: Props) {
+  return renderBookmarkReader(useBookmarkReaderModel(props));
+}
+
+function renderBookmarkReader({
+  actions,
+  addHighlight,
+  articleRef,
+  bookmarkAction,
+  canExportPost,
+  containerWidthClass,
+  detailState,
+  displayBookmark,
+  displayKind,
+  effectiveMarkedRead,
+  getBookmarkHref,
+  getHighlight,
+  handleAddNoteFromToolbar,
+  handleCopyArticleMarkdown,
+  handleDeleteNote,
+  handleDownloadArticleMarkdown,
+  handlePrintArticlePdf,
+  handleSaveNote,
+  handleToggleRead,
+  nextHref,
+  notePanelState,
+  onBack,
+  onLogin,
+  onMarkAsRead,
+  onShuffle,
+  prevHref,
+  readerAvailability,
+  relatedBookmarks,
+  removeHighlight,
+  resolvedTheme,
+  sessionHighlightColor,
+  setNotePanelState,
+  setPendingNoteId,
+  setSessionHighlightColor,
+  setThemePreference,
+  updateHighlightColor,
+}: ReturnType<typeof useBookmarkReaderModel>) {
   return (
     <div className="reader-page min-h-dvh">
       <div className="sticky top-0 z-10 border-b border-border bg-surface/80 backdrop-blur-md">
@@ -381,9 +483,9 @@ export function BookmarkReader({
         <TweetContent
           displayBookmark={displayBookmark}
           displayKind={displayKind}
-          detailThread={detailThread}
-          detailLoading={detailLoading}
-          detailError={detailError}
+          detailThread={detailState.thread}
+          detailLoading={detailState.loading}
+          detailError={detailState.error}
           detailErrorKind={readerAvailability.errorKind}
           relatedBookmarks={relatedBookmarks}
           getBookmarkHref={getBookmarkHref}

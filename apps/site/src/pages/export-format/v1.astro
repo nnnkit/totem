@@ -1,0 +1,526 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+---
+
+<BaseLayout
+  title="Totem Export Format v1 — Schema Documentation"
+  description="Field-by-field documentation of the Totem export ZIP format: manifest.json, JSONL stores, CSV columns, and Markdown structure."
+  canonical="https://usetotem.xyz/export-format/v1"
+  og={{
+    type: "article",
+    description:
+      "Version-pinned schema documentation for the Totem export format. Every field, every type, with examples.",
+    image: "https://usetotem.xyz/icons/icon-128.png",
+  }}
+  twitter={{
+    description: "Version-pinned schema documentation for the Totem export format.",
+    image: "https://usetotem.xyz/icons/icon-128.png",
+  }}
+>
+  <main class="mx-auto max-w-3xl px-6 pb-16 pt-12 sm:pt-16">
+    <a
+      href="/"
+      class="mb-8 inline-block text-sm text-neutral-500 no-underline transition-colors hover:text-neutral-900"
+    >
+      &larr; Home
+    </a>
+
+    <article
+      class="prose prose-neutral mt-4 max-w-none prose-headings:font-serif prose-h1:text-balance prose-h1:text-4xl prose-h1:leading-tight prose-h2:mt-12 prose-h2:text-2xl prose-a:text-neutral-900 prose-a:underline prose-a:underline-offset-4 hover:prose-a:text-neutral-700 prose-blockquote:border-l-2 prose-blockquote:border-neutral-300 prose-blockquote:font-normal prose-blockquote:not-italic prose-blockquote:text-neutral-700 prose-img:rounded-xl prose-table:text-sm"
+    >
+      <h1>Totem Export Format <span class="text-neutral-400">v1</span></h1>
+
+      <p class="lead text-lg text-neutral-600">
+        This page documents the Totem export ZIP format, field by field.
+        It is version-pinned: <strong>v1 is frozen</strong>. Any breaking changes will ship as
+        <code>v2</code> at a separate URL.
+      </p>
+
+      <nav class="my-8 rounded-lg border border-neutral-200 bg-neutral-50 p-4 text-sm not-prose">
+        <p class="mb-2 font-medium text-neutral-700">On this page</p>
+        <ol class="list-decimal space-y-1 pl-5 text-neutral-600">
+          <li><a href="#zip-layout" class="text-neutral-900 underline underline-offset-4 hover:text-neutral-700">ZIP layout</a></li>
+          <li><a href="#manifest" class="text-neutral-900 underline underline-offset-4 hover:text-neutral-700">manifest.json</a></li>
+          <li><a href="#jsonl-stores" class="text-neutral-900 underline underline-offset-4 hover:text-neutral-700">JSONL stores</a></li>
+          <li><a href="#csv" class="text-neutral-900 underline underline-offset-4 hover:text-neutral-700">CSV format</a></li>
+          <li><a href="#markdown" class="text-neutral-900 underline underline-offset-4 hover:text-neutral-700">Markdown format</a></li>
+          <li><a href="#re-import" class="text-neutral-900 underline underline-offset-4 hover:text-neutral-700">Re-import contract</a></li>
+          <li><a href="#versioning" class="text-neutral-900 underline underline-offset-4 hover:text-neutral-700">Versioning policy</a></li>
+        </ol>
+      </nav>
+
+      <!-- ─── ZIP LAYOUT ─────────────────────────────────────────── -->
+
+      <h2 id="zip-layout">ZIP layout</h2>
+
+      <p>A Totem export is a standard ZIP archive with this structure:</p>
+
+      <pre><code>totem-export-YYYY-MM-DD.zip
+├── manifest.json
+├── readme.md
+├── bookmarks.csv
+├── bookmarks/
+│   ├── 01-bookmark-title.md
+│   └── 02-another-bookmark-title.md
+└── data/
+    ├── bookmarks-2024.jsonl
+    ├── bookmarks-2025.jsonl
+    ├── details.jsonl
+    ├── highlights.jsonl
+    └── reading-progress.jsonl</code></pre>
+
+      <table>
+        <thead>
+          <tr><th>File</th><th>Role</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>manifest.json</code></td><td>Export metadata, version info, SHA-256 checksums</td></tr>
+          <tr><td><code>readme.md</code></td><td>Index of every exported bookmark and plain-English guide</td></tr>
+          <tr><td><code>bookmarks.csv</code></td><td>Spreadsheet-friendly view (RFC 4180, UTF-8 + BOM)</td></tr>
+          <tr><td><code>bookmarks/*.md</code></td><td>Human-readable Markdown, one file per bookmark</td></tr>
+          <tr><td><code>data/*.jsonl</code></td><td>Canonical data &mdash; the <strong>only</strong> source the importer reads</td></tr>
+        </tbody>
+      </table>
+
+      <p>CSV and Markdown are derived views of the JSONL data. They exist for convenience and are ignored on re-import.</p>
+
+      <!-- ─── MANIFEST ───────────────────────────────────────────── -->
+
+      <h2 id="manifest">manifest.json</h2>
+
+      <pre><code>{`{
+  "totem": {
+    "export_version": 1,
+    "schema_version": 8
+  },
+  "generated_at": "2026-05-12T14:23:00.000Z",
+  "generated_by": {
+    "app": "totem",
+    "version": "1.1.24",
+    "platform": "chrome-extension"
+  },
+  "account": {
+    "id_hash": "sha256:9c8d…",
+    "handle_redacted": "@y***ndle"
+  },
+  "kind": "library",
+  "counts": {
+    "bookmarks": 3000,
+    "details": 2816,
+    "highlights": 47,
+    "reading_progress": 312
+  },
+  "shards": {
+    "bookmarks": [
+      "data/bookmarks-2024.jsonl",
+      "data/bookmarks-2025.jsonl"
+    ],
+    "details": ["data/details.jsonl"],
+    "highlights": ["data/highlights.jsonl"],
+    "reading_progress": ["data/reading-progress.jsonl"]
+  },
+  "derived": {
+    "csv": "bookmarks.csv",
+    "markdown_index": "readme.md",
+    "markdown_files": [
+      "bookmarks/01-first-bookmark.md",
+      "bookmarks/02-second-bookmark.md"
+    ]
+  },
+  "checksums": {
+    "data/bookmarks-2024.jsonl": "sha256:ab12…",
+    "data/bookmarks-2025.jsonl": "sha256:cd34…",
+    "data/details.jsonl": "sha256:ef56…",
+    "data/highlights.jsonl": "sha256:78ab…",
+    "data/reading-progress.jsonl": "sha256:cd90…",
+    "bookmarks.csv": "sha256:11aa…",
+    "readme.md": "sha256:22bb…",
+    "bookmarks/01-first-bookmark.md": "sha256:33cc…",
+    "bookmarks/02-second-bookmark.md": "sha256:44dd…"
+  }
+}`}</code></pre>
+
+      <h3>Field reference</h3>
+
+      <table>
+        <thead>
+          <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>totem.export_version</code></td><td><code>number</code></td><td>Format version. Always <code>1</code> for this spec.</td></tr>
+          <tr><td><code>totem.schema_version</code></td><td><code>number</code></td><td>IDB schema version at export time. Currently <code>8</code>. Import refuses if this exceeds the importer's version.</td></tr>
+          <tr><td><code>generated_at</code></td><td><code>string</code></td><td>ISO 8601 UTC timestamp of export.</td></tr>
+          <tr><td><code>generated_by.app</code></td><td><code>"totem"</code></td><td>Always <code>"totem"</code>.</td></tr>
+          <tr><td><code>generated_by.version</code></td><td><code>string</code></td><td>Totem app version (semver).</td></tr>
+          <tr><td><code>generated_by.platform</code></td><td><code>"chrome-extension"</code></td><td>Runtime platform.</td></tr>
+          <tr><td><code>account.id_hash</code></td><td><code>string</code></td><td>SHA-256 of the X user ID, prefixed <code>sha256:</code>. Used for account-match check on import.</td></tr>
+          <tr><td><code>account.handle_redacted</code></td><td><code>string</code></td><td>Redacted handle: first char + <code>***</code> + last 4 chars. E.g. <code>@y***ndle</code>.</td></tr>
+          <tr><td><code>kind</code></td><td><code>"library"</code></td><td>Export scope. Always <code>"library"</code> in v1.</td></tr>
+          <tr><td><code>counts.*</code></td><td><code>number</code></td><td>Row counts per store: <code>bookmarks</code>, <code>details</code>, <code>highlights</code>, <code>reading_progress</code>.</td></tr>
+          <tr><td><code>shards.*</code></td><td><code>string[]</code></td><td>Paths to JSONL files for each store. Bookmarks are year-sharded (<code>data/bookmarks-YYYY.jsonl</code>).</td></tr>
+          <tr><td><code>derived.csv</code></td><td><code>string</code></td><td>Path to the CSV file. Always <code>"bookmarks.csv"</code>.</td></tr>
+          <tr><td><code>derived.markdown_index</code></td><td><code>string</code></td><td>Path to the Markdown index. Always <code>"readme.md"</code>.</td></tr>
+          <tr><td><code>derived.markdown_files</code></td><td><code>string[]</code></td><td>Paths to per-bookmark Markdown files under <code>bookmarks/</code>.</td></tr>
+          <tr><td><code>checksums.*</code></td><td><code>string</code></td><td>SHA-256 hex digest prefixed <code>sha256:</code> for each data and derived file. Verified on import.</td></tr>
+        </tbody>
+      </table>
+
+      <!-- ─── JSONL STORES ───────────────────────────────────────── -->
+
+      <h2 id="jsonl-stores">JSONL stores</h2>
+
+      <p>
+        Each <code>.jsonl</code> file contains one JSON object per line (no trailing comma, newline-delimited).
+        Field names mirror <code>src/types/index.ts</code> exactly &mdash; no translation layer.
+        Unknown fields are ignored on import for forward compatibility.
+      </p>
+
+      <!-- bookmarks -->
+      <h3 id="jsonl-bookmarks">bookmarks-YYYY.jsonl</h3>
+
+      <p>Year-sharded by UTC year of <code>createdAt</code>. Each line is one <code>Bookmark</code> object. Primary key: <code>id</code>.</p>
+
+      <table>
+        <thead>
+          <tr><th>Field</th><th>Type</th><th>Nullable</th><th>Example</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>id</code></td><td><code>string</code></td><td>no</td><td><code>"bm_abc123"</code></td></tr>
+          <tr><td><code>tweetId</code></td><td><code>string</code></td><td>no</td><td><code>"1792345678901234567"</code></td></tr>
+          <tr><td><code>text</code></td><td><code>string</code></td><td>no</td><td><code>"Just shipped the new feature…"</code></td></tr>
+          <tr><td><code>createdAt</code></td><td><code>number</code></td><td>no</td><td><code>1715500800000</code> (Unix ms)</td></tr>
+          <tr><td><code>sortIndex</code></td><td><code>string</code></td><td>no</td><td><code>"1792345678901234567"</code></td></tr>
+          <tr><td><code>bookmarked</code></td><td><code>boolean</code></td><td>no</td><td><code>true</code></td></tr>
+          <tr><td><code>author</code></td><td><code>Author</code></td><td>no</td><td>See <a href="#type-author">Author</a></td></tr>
+          <tr><td><code>metrics</code></td><td><code>Metrics</code></td><td>no</td><td>See <a href="#type-metrics">Metrics</a></td></tr>
+          <tr><td><code>media</code></td><td><code>Media[]</code></td><td>no</td><td>See <a href="#type-media">Media</a></td></tr>
+          <tr><td><code>urls</code></td><td><code>TweetUrl[]</code></td><td>no</td><td>See <a href="#type-tweeturl">TweetUrl</a></td></tr>
+          <tr><td><code>isThread</code></td><td><code>boolean</code></td><td>no</td><td><code>false</code></td></tr>
+          <tr><td><code>hasImage</code></td><td><code>boolean</code></td><td>no</td><td><code>true</code></td></tr>
+          <tr><td><code>hasVideo</code></td><td><code>boolean</code></td><td>no</td><td><code>false</code></td></tr>
+          <tr><td><code>hasLink</code></td><td><code>boolean</code></td><td>no</td><td><code>true</code></td></tr>
+          <tr><td><code>quotedTweet</code></td><td><code>QuotedTweet</code></td><td>yes</td><td>See <a href="#type-quotedtweet">QuotedTweet</a></td></tr>
+          <tr><td><code>retweetedTweet</code></td><td><code>QuotedTweet</code></td><td>yes</td><td>Same shape as <code>quotedTweet</code></td></tr>
+          <tr><td><code>article</code></td><td><code>ArticleContent</code></td><td>yes</td><td>See <a href="#type-articlecontent">ArticleContent</a></td></tr>
+          <tr><td><code>tweetKind</code></td><td><code>string</code></td><td>yes</td><td><code>"tweet"</code> | <code>"reply"</code> | <code>"quote"</code> | <code>"repost"</code> | <code>"thread"</code> | <code>"article"</code></td></tr>
+          <tr><td><code>tweetDisplayType</code></td><td><code>string</code></td><td>yes</td><td>Display hint from X API</td></tr>
+          <tr><td><code>inReplyToTweetId</code></td><td><code>string</code></td><td>yes</td><td><code>"1792345678901234560"</code></td></tr>
+          <tr><td><code>inReplyToScreenName</code></td><td><code>string</code></td><td>yes</td><td><code>"someuser"</code></td></tr>
+        </tbody>
+      </table>
+
+      <!-- details -->
+      <h3 id="jsonl-details">details.jsonl</h3>
+
+      <p>Thread and detail information for hydrated bookmarks. Sparse &mdash; only bookmarks with fetched details have entries. Primary key: <code>tweetId</code>.</p>
+
+      <table>
+        <thead>
+          <tr><th>Field</th><th>Type</th><th>Nullable</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>tweetId</code></td><td><code>string</code></td><td>no</td><td>References a bookmark's <code>tweetId</code></td></tr>
+          <tr><td><code>fetchedAt</code></td><td><code>number</code></td><td>no</td><td>Unix ms when detail was fetched</td></tr>
+          <tr><td><code>focalTweet</code></td><td><code>Bookmark</code></td><td>yes</td><td>Full bookmark object for the focal tweet (same shape as bookmarks JSONL)</td></tr>
+          <tr><td><code>thread</code></td><td><code>ThreadTweet[]</code></td><td>no</td><td>Array of tweets in the thread. See <a href="#type-threadtweet">ThreadTweet</a></td></tr>
+        </tbody>
+      </table>
+
+      <!-- highlights -->
+      <h3 id="jsonl-highlights">highlights.jsonl</h3>
+
+      <p>User-created highlights and annotations. Append-only by nature. Primary key: <code>id</code>.</p>
+
+      <table>
+        <thead>
+          <tr><th>Field</th><th>Type</th><th>Nullable</th><th>Example</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>id</code></td><td><code>string</code></td><td>no</td><td><code>"hl_xyz789"</code></td></tr>
+          <tr><td><code>tweetId</code></td><td><code>string</code></td><td>no</td><td><code>"1792345678901234567"</code></td></tr>
+          <tr><td><code>sectionId</code></td><td><code>string</code></td><td>no</td><td>Section within article/tweet</td></tr>
+          <tr><td><code>startOffset</code></td><td><code>number</code></td><td>no</td><td><code>42</code></td></tr>
+          <tr><td><code>endOffset</code></td><td><code>number</code></td><td>no</td><td><code>108</code></td></tr>
+          <tr><td><code>selectedText</code></td><td><code>string</code></td><td>no</td><td><code>"the key insight is…"</code></td></tr>
+          <tr><td><code>note</code></td><td><code>string</code></td><td>yes</td><td><code>"Follow up on this"</code></td></tr>
+          <tr><td><code>color</code></td><td><code>string</code></td><td>no</td><td><code>"yellow"</code></td></tr>
+          <tr><td><code>createdAt</code></td><td><code>number</code></td><td>no</td><td><code>1715500800000</code> (Unix ms)</td></tr>
+          <tr><td><code>type</code></td><td><code>string</code></td><td>yes</td><td><code>"highlight"</code> | <code>"note"</code></td></tr>
+        </tbody>
+      </table>
+
+      <!-- reading-progress -->
+      <h3 id="jsonl-reading-progress">reading-progress.jsonl</h3>
+
+      <p>Reading state and scroll position tracking. Primary key: <code>tweetId</code>.</p>
+
+      <table>
+        <thead>
+          <tr><th>Field</th><th>Type</th><th>Nullable</th><th>Example</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>tweetId</code></td><td><code>string</code></td><td>no</td><td><code>"1792345678901234567"</code></td></tr>
+          <tr><td><code>openedAt</code></td><td><code>number</code></td><td>no</td><td><code>1715500800000</code> (Unix ms)</td></tr>
+          <tr><td><code>lastReadAt</code></td><td><code>number</code></td><td>no</td><td><code>1715501400000</code> (Unix ms)</td></tr>
+          <tr><td><code>scrollY</code></td><td><code>number</code></td><td>no</td><td><code>1420</code> (pixels)</td></tr>
+          <tr><td><code>scrollHeight</code></td><td><code>number</code></td><td>no</td><td><code>3200</code> (pixels)</td></tr>
+          <tr><td><code>completed</code></td><td><code>boolean</code></td><td>no</td><td><code>true</code></td></tr>
+          <tr><td><code>reopenCount</code></td><td><code>number</code></td><td>yes</td><td><code>2</code> (defaults to 0 for legacy rows)</td></tr>
+        </tbody>
+      </table>
+
+      <!-- Nested types -->
+      <h3 id="nested-types">Nested types</h3>
+
+      <h4 id="type-author">Author</h4>
+      <table>
+        <thead>
+          <tr><th>Field</th><th>Type</th><th>Nullable</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>name</code></td><td><code>string</code></td><td>no</td></tr>
+          <tr><td><code>screenName</code></td><td><code>string</code></td><td>no</td></tr>
+          <tr><td><code>profileImageUrl</code></td><td><code>string</code></td><td>no</td></tr>
+          <tr><td><code>verified</code></td><td><code>boolean</code></td><td>no</td></tr>
+          <tr><td><code>bio</code></td><td><code>string</code></td><td>yes</td></tr>
+          <tr><td><code>followersCount</code></td><td><code>number</code></td><td>yes</td></tr>
+          <tr><td><code>followingCount</code></td><td><code>number</code></td><td>yes</td></tr>
+          <tr><td><code>website</code></td><td><code>string</code></td><td>yes</td></tr>
+          <tr><td><code>createdAt</code></td><td><code>string</code></td><td>yes</td></tr>
+          <tr><td><code>bannerUrl</code></td><td><code>string</code></td><td>yes</td></tr>
+          <tr><td><code>affiliate</code></td><td><code>{`{ name, badgeUrl?, url? }`}</code></td><td>yes</td></tr>
+        </tbody>
+      </table>
+
+      <h4 id="type-metrics">Metrics</h4>
+      <table>
+        <thead>
+          <tr><th>Field</th><th>Type</th><th>Nullable</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>likes</code></td><td><code>number</code></td><td>no</td></tr>
+          <tr><td><code>retweets</code></td><td><code>number</code></td><td>no</td></tr>
+          <tr><td><code>replies</code></td><td><code>number</code></td><td>no</td></tr>
+          <tr><td><code>views</code></td><td><code>number</code></td><td>no</td></tr>
+          <tr><td><code>bookmarks</code></td><td><code>number</code></td><td>no</td></tr>
+        </tbody>
+      </table>
+
+      <h4 id="type-media">Media</h4>
+      <table>
+        <thead>
+          <tr><th>Field</th><th>Type</th><th>Nullable</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>type</code></td><td><code>"photo" | "video" | "animated_gif"</code></td><td>no</td></tr>
+          <tr><td><code>url</code></td><td><code>string</code></td><td>no</td></tr>
+          <tr><td><code>videoUrl</code></td><td><code>string</code></td><td>yes</td></tr>
+          <tr><td><code>width</code></td><td><code>number</code></td><td>no</td></tr>
+          <tr><td><code>height</code></td><td><code>number</code></td><td>no</td></tr>
+          <tr><td><code>altText</code></td><td><code>string</code></td><td>yes</td></tr>
+        </tbody>
+      </table>
+
+      <h4 id="type-tweeturl">TweetUrl</h4>
+      <table>
+        <thead>
+          <tr><th>Field</th><th>Type</th><th>Nullable</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>url</code></td><td><code>string</code></td><td>no</td></tr>
+          <tr><td><code>displayUrl</code></td><td><code>string</code></td><td>no</td></tr>
+          <tr><td><code>expandedUrl</code></td><td><code>string</code></td><td>no</td></tr>
+          <tr><td><code>card</code></td><td><code>LinkCard</code></td><td>yes</td></tr>
+        </tbody>
+      </table>
+
+      <p><strong>LinkCard</strong> (nested in <code>TweetUrl.card</code>):</p>
+      <table>
+        <thead>
+          <tr><th>Field</th><th>Type</th><th>Nullable</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>title</code></td><td><code>string</code></td><td>yes</td></tr>
+          <tr><td><code>description</code></td><td><code>string</code></td><td>yes</td></tr>
+          <tr><td><code>imageUrl</code></td><td><code>string</code></td><td>yes</td></tr>
+          <tr><td><code>imageAlt</code></td><td><code>string</code></td><td>yes</td></tr>
+          <tr><td><code>domain</code></td><td><code>string</code></td><td>yes</td></tr>
+          <tr><td><code>cardType</code></td><td><code>string</code></td><td>yes</td></tr>
+        </tbody>
+      </table>
+
+      <h4 id="type-quotedtweet">QuotedTweet</h4>
+      <table>
+        <thead>
+          <tr><th>Field</th><th>Type</th><th>Nullable</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>tweetId</code></td><td><code>string</code></td><td>no</td></tr>
+          <tr><td><code>text</code></td><td><code>string</code></td><td>no</td></tr>
+          <tr><td><code>createdAt</code></td><td><code>number</code></td><td>no</td></tr>
+          <tr><td><code>author</code></td><td><code>Author</code></td><td>no</td></tr>
+          <tr><td><code>media</code></td><td><code>Media[]</code></td><td>no</td></tr>
+          <tr><td><code>urls</code></td><td><code>TweetUrl[]</code></td><td>yes</td></tr>
+          <tr><td><code>article</code></td><td><code>ArticleContent</code></td><td>yes</td></tr>
+        </tbody>
+      </table>
+
+      <h4 id="type-threadtweet">ThreadTweet</h4>
+      <p>Same as <code>QuotedTweet</code> plus:</p>
+      <table>
+        <thead>
+          <tr><th>Field</th><th>Type</th><th>Nullable</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>quotedTweet</code></td><td><code>QuotedTweet</code></td><td>yes</td></tr>
+          <tr><td><code>retweetedTweet</code></td><td><code>QuotedTweet</code></td><td>yes</td></tr>
+          <tr><td><code>tweetKind</code></td><td><code>string</code></td><td>yes</td></tr>
+          <tr><td><code>tweetDisplayType</code></td><td><code>string</code></td><td>yes</td></tr>
+          <tr><td><code>inReplyToTweetId</code></td><td><code>string</code></td><td>yes</td></tr>
+          <tr><td><code>inReplyToScreenName</code></td><td><code>string</code></td><td>yes</td></tr>
+          <tr><td><code>isThread</code></td><td><code>boolean</code></td><td>yes</td></tr>
+        </tbody>
+      </table>
+
+      <h4 id="type-articlecontent">ArticleContent</h4>
+      <table>
+        <thead>
+          <tr><th>Field</th><th>Type</th><th>Nullable</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>title</code></td><td><code>string</code></td><td>yes</td></tr>
+          <tr><td><code>plainText</code></td><td><code>string</code></td><td>no</td></tr>
+          <tr><td><code>coverImageUrl</code></td><td><code>string</code></td><td>yes</td></tr>
+          <tr><td><code>contentBlocks</code></td><td><code>ArticleContentBlock[]</code></td><td>yes</td></tr>
+          <tr><td><code>entityMap</code></td><td><code>Record&lt;string, ArticleContentEntity&gt;</code></td><td>yes</td></tr>
+        </tbody>
+      </table>
+
+      <!-- ─── CSV ────────────────────────────────────────────────── -->
+
+      <h2 id="csv">CSV format</h2>
+
+      <p>
+        <code>bookmarks.csv</code> is an <a href="https://www.rfc-editor.org/rfc/rfc4180">RFC 4180</a>-compliant
+        CSV file encoded as UTF-8 with a byte-order mark (BOM) so Excel renders emoji correctly.
+        Line endings are <code>\r\n</code>. One header row, one data row per bookmark.
+      </p>
+
+      <h3>Columns (in order)</h3>
+
+      <table>
+        <thead>
+          <tr><th>#</th><th>Column</th><th>Type</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>1</td><td><code>tweet_id</code></td><td>string</td><td>X tweet ID</td></tr>
+          <tr><td>2</td><td><code>tweet_url</code></td><td>string</td><td><code>https://x.com/&#123;handle&#125;/status/&#123;id&#125;</code></td></tr>
+          <tr><td>3</td><td><code>author_handle</code></td><td>string</td><td>Author's X handle (no <code>@</code> prefix)</td></tr>
+          <tr><td>4</td><td><code>author_name</code></td><td>string</td><td>Author's display name</td></tr>
+          <tr><td>5</td><td><code>text</code></td><td>string</td><td>Tweet body with card URLs stripped. Newlines preserved inside quoted field.</td></tr>
+          <tr><td>6</td><td><code>created_at</code></td><td>string</td><td>ISO 8601 UTC (e.g. <code>2026-05-12T14:23:00.000Z</code>)</td></tr>
+          <tr><td>7</td><td><code>bookmarked_at</code></td><td>string</td><td>ISO 8601 UTC. Same as <code>created_at</code> (X does not expose a separate bookmark timestamp).</td></tr>
+          <tr><td>8</td><td><code>media_urls</code></td><td>string</td><td>Pipe-separated (<code>|</code>) URLs. Photos first, then videos. Empty string if none.</td></tr>
+          <tr><td>9</td><td><code>quoted_tweet_url</code></td><td>string</td><td>URL of the quoted tweet, or empty string.</td></tr>
+          <tr><td>10</td><td><code>is_thread</code></td><td>string</td><td><code>"true"</code> or <code>"false"</code></td></tr>
+          <tr><td>11</td><td><code>has_full_thread</code></td><td>string</td><td><code>"true"</code> if a <code>tweet_details</code> row exists for this bookmark. Lets you filter to fully-hydrated rows in Sheets.</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Quoting rules</h3>
+      <ul>
+        <li>Fields containing commas, double quotes, or line breaks are enclosed in double quotes.</li>
+        <li>Double quotes within a field are escaped as <code>""</code> (two double-quote characters).</li>
+        <li>The UTF-8 BOM (<code>U+FEFF</code>) precedes the header row so Excel auto-detects encoding.</li>
+      </ul>
+
+      <!-- ─── MARKDOWN ───────────────────────────────────────────── -->
+
+      <h2 id="markdown">Markdown format</h2>
+
+      <p>
+        <code>readme.md</code> is a Markdown index linking to one file per bookmark under
+        <code>bookmarks/</code>. Bookmark files are ordered by <code>bookmarkedAt</code> descending
+        (newest first), with zero-padded numeric prefixes to keep filenames sortable.
+      </p>
+
+      <h3>Structure</h3>
+
+      <pre><code>{`# Totem export — 3,000 bookmarks
+
+Generated 2026-05-12 from @yourhandle.
+
+## Bookmarks
+
+- [First bookmark](bookmarks/0001-first-bookmark.md) · [Open on X](https://x.com/…)
+- [Second bookmark](bookmarks/0002-second-bookmark.md) · [Open on X](https://x.com/…)
+
+---
+
+# First bookmark
+
+By Author Name (@author)
+
+> tweet body, threads inline if hydrated
+
+Exported 2026-05-12 · [Open on X](https://x.com/…)
+
+---`}</code></pre>
+
+      <h3>Formatting rules</h3>
+      <ul>
+        <li><code>readme.md</code> uses a localized bookmark count (e.g. <code>3,000</code>) and links to every bookmark file.</li>
+        <li>Per-bookmark filenames use a zero-padded ordinal and a slug generated from the article title or first line of tweet text.</li>
+        <li>Bookmark Markdown is rendered with the same structure as Totem's reader Copy Markdown export.</li>
+        <li>Image Markdown includes source alt text when available and a descriptive fallback when X did not provide alt text.</li>
+      </ul>
+
+      <!-- ─── RE-IMPORT ──────────────────────────────────────────── -->
+
+      <h2 id="re-import">Re-import contract</h2>
+
+      <p>The Totem importer reads <code>data/*.jsonl</code> only. CSV and Markdown files inside the ZIP are derived views and are ignored on import.</p>
+
+      <h3>Import rules</h3>
+      <ul>
+        <li><strong>Additive only.</strong> Existing rows are never overwritten. If a row's primary key already exists in the local database, it is counted as <code>already_had</code> and skipped.</li>
+        <li><strong>Account check.</strong> The importer computes the SHA-256 of the active user's X ID and compares it to <code>manifest.account.id_hash</code>. Mismatch triggers a confirmation prompt (not a block).</li>
+        <li><strong>Schema check.</strong> Import refuses if <code>manifest.totem.schema_version</code> exceeds the local <code>DB_VERSION</code>. Update Totem first.</li>
+        <li><strong>Checksum verification.</strong> Every JSONL shard's SHA-256 is verified against <code>manifest.checksums</code> before any writes. Mismatch refuses the import.</li>
+        <li><strong>Per-store sequential.</strong> Stores are imported in order: bookmarks, details, highlights, reading progress. Failure on one store stops the chain but does not roll back successful stores.</li>
+        <li><strong>Batched writes.</strong> Inserts are batched at ~500 rows per IDB transaction commit.</li>
+      </ul>
+
+      <h3>Primary keys per store</h3>
+      <table>
+        <thead>
+          <tr><th>Store</th><th>Primary key field</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>bookmarks</td><td><code>id</code></td></tr>
+          <tr><td>details</td><td><code>tweetId</code></td></tr>
+          <tr><td>highlights</td><td><code>id</code></td></tr>
+          <tr><td>reading_progress</td><td><code>tweetId</code></td></tr>
+        </tbody>
+      </table>
+
+      <!-- ─── VERSIONING ─────────────────────────────────────────── -->
+
+      <h2 id="versioning">Versioning policy</h2>
+
+      <ul>
+        <li><strong><code>v1</code> is frozen.</strong> The field set, file layout, and CSV columns documented on this page will not change. New fields may be added to JSONL rows (importers ignore unknown fields), but no existing fields will be removed or have their types changed.</li>
+        <li><strong><code>v2</code> will live at a separate URL</strong> (<code>/export-format/v2</code>) if and when breaking changes are needed.</li>
+        <li><strong><code>export_version</code></strong> in <code>manifest.json</code> identifies the ZIP format version (this page documents version <code>1</code>).</li>
+        <li><strong><code>schema_version</code></strong> in <code>manifest.json</code> tracks the IDB schema version and controls import compatibility. Field-additive changes do not bump <code>export_version</code>; only structural breaks do.</li>
+      </ul>
+
+      <hr class="my-12" />
+
+      <p class="text-sm text-neutral-500">
+        This documentation corresponds to Totem export format v1, generated by Totem &ge; 1.1.24.
+        For questions or tooling support, see the project repository.
+      </p>
+    </article>
+  </main>
+</BaseLayout>

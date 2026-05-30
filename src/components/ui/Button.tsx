@@ -1,4 +1,4 @@
-import { forwardRef, type ButtonHTMLAttributes } from "react";
+import { type ButtonHTMLAttributes, type Ref } from "react";
 import { cn } from "../../lib/cn";
 
 const variants = {
@@ -24,32 +24,31 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant;
   size?: Size;
   href?: string;
+  ref?: Ref<HTMLButtonElement>;
 }
 
 const base =
   "inline-flex items-center justify-center gap-1.5 rounded font-medium transition-[background-color,color,border-color,opacity,transform] duration-150 ease-[var(--ease-hover)] disabled:opacity-50 disabled:pointer-events-none";
 
-export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant = "primary", size = "default", href, ...props }, ref) => {
-    const classes = cn(base, variants[variant], sizes[size], className);
+export function Button({ className, variant = "primary", size = "default", href, ref, ...props }: ButtonProps) {
+  const classes = cn(base, variants[variant], sizes[size], className);
 
-    if (href) {
-      const opensNewTab = /^https?:\/\//.test(href);
+  if (href) {
+    const opensNewTab = /^https?:\/\//.test(href);
 
-      return (
-        <a
-          href={href}
-          target={opensNewTab ? "_blank" : undefined}
-          rel={opensNewTab ? "noopener noreferrer" : undefined}
-          className={classes}
-          aria-label={props["aria-label"]}
-          title={props.title}
-        >
-          {props.children}
-        </a>
-      );
-    }
+    return (
+      <a
+        href={href}
+        target={opensNewTab ? "_blank" : undefined}
+        rel={opensNewTab ? "noopener noreferrer" : undefined}
+        className={classes}
+        aria-label={props["aria-label"]}
+        title={props.title}
+      >
+        {props.children}
+      </a>
+    );
+  }
 
-    return <button ref={ref} className={classes} {...props} />;
-  },
-);
+  return <button ref={ref} className={classes} {...props} />;
+}

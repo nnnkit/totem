@@ -294,8 +294,10 @@ export function createSyncHandlers(deps: SyncDeps = {}): HandlerMap {
         msg.trigger === "manual" ? ("manual" as const) : ("auto" as const);
       const localCount = normalizeFiniteNumber(msg.localCount, 0);
 
-      const state = await readState();
-      const sessionSnapshot = await getSession();
+      const [state, sessionSnapshot] = await Promise.all([
+        readState(),
+        getSession(),
+      ]);
       const accountKey = normalizeSyncAccountId(
         (msg.accountId as string) || sessionSnapshot.accountContextId,
       );

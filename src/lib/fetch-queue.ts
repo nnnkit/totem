@@ -4,7 +4,7 @@ import {
   FETCH_READ_PAUSE_CHANCE,
   FETCH_READ_PAUSE_MIN_MS,
   FETCH_READ_PAUSE_JITTER_MS,
-} from "./constants";
+} from "./constants/timing";
 
 type QueueTask<T> = {
   execute: () => Promise<T>;
@@ -40,19 +40,25 @@ export class FetchQueue {
     if (this.draining) return;
     this.draining = true;
 
-    while (this.tasks.length > 0 && !this.aborted) {
+    const runNext = (): Promise<void> => {
+      if (this.tasks.length === 0 || this.aborted) return Promise.resolve();
       const task = this.tasks.shift()!;
-      try {
-        const result = await task.execute();
-        task.resolve(result);
-      } catch (err) {
-        task.reject(err);
-      }
 
-      if (this.tasks.length > 0 && !this.aborted) {
-        await humanDelay();
-      }
-    }
+      return task.execute()
+        .then((result) => {
+          task.resolve(result);
+        })
+        .catch((err) => {
+          task.reject(err);
+        })
+        .then(() => Promise.resolve())
+        .then(() => {
+          if (this.tasks.length === 0 || this.aborted) return undefined;
+          return humanDelay().then(runNext);
+        });
+    };
+
+    await runNext();
 
     this.draining = false;
   }

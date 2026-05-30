@@ -68,8 +68,8 @@ export function TweetLinks({ urls }: Props) {
 
   return (
     <div className="mt-6 flex flex-col gap-2.5">
-      {cardUrls.map((url, index) => (
-        <LinkPreviewCard key={`${url.href}-${index}`} url={url} />
+      {cardUrls.map((url) => (
+        <LinkPreviewCard key={`${url.href}-${url.displayUrl}-${url.card.title}`} url={url} />
       ))}
     </div>
   );

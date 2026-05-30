@@ -379,6 +379,20 @@ describe("query-id module", () => {
       expect(fn).toHaveBeenNthCalledWith(1, "STALE_ID");
       expect(fn).toHaveBeenNthCalledWith(2, "FRESH_ID_xxx");
       expect(result).toEqual({ data: { tweet: {} } });
+
+      _resetForTesting();
+      await expect(resolveQueryId("TweetDetail", deps)).resolves.toBe(
+        "FRESH_ID_xxx",
+      );
+
+      const stored = await storage.get(["totem_graphql_catalog"]);
+      const catalog = stored.totem_graphql_catalog as {
+        endpoints: Record<string, { queryId: string }>;
+      };
+      expect(catalog.endpoints["TweetDetail:STALE_ID"]).toBeUndefined();
+      expect(catalog.endpoints["TweetDetail:FRESH_ID_xxx"]?.queryId).toBe(
+        "FRESH_ID_xxx",
+      );
     });
 
     it("throws NoQueryIdError when resolution fails entirely", async () => {

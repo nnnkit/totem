@@ -41,21 +41,26 @@ function parseUrlMappings(
   entities: UnknownRecord | null,
 ): { url: string; expanded_url: string }[] {
   const urls = asRecords(entities?.urls);
-  return urls.map((url) => ({
-    url: asString(url.url) || "",
-    expanded_url: asString(url.expanded_url) || "",
-  }));
+  const mappings: { url: string; expanded_url: string }[] = [];
+  for (const url of urls) {
+    mappings.push({
+      url: asString(url.url) || "",
+      expanded_url: asString(url.expanded_url) || "",
+    });
+  }
+  return mappings;
 }
 
 function parseUrls(entities: UnknownRecord | null): TweetUrl[] {
   const urls = asRecords(entities?.urls);
-  return urls
-    .map((url) => ({
+  return urls.flatMap((url) => {
+    const item = {
       url: asString(url.url) || "",
       displayUrl: asString(url.display_url) || "",
       expandedUrl: asString(url.expanded_url) || "",
-    }))
-    .filter((url) => Boolean(url.url || url.expandedUrl));
+    };
+    return item.url || item.expandedUrl ? [item] : [];
+  });
 }
 
 function parseMedia(legacy: UnknownRecord): Media[] {
@@ -67,42 +72,40 @@ function parseMedia(legacy: UnknownRecord): Media[] {
     rawMedia = asRecords(entities?.media);
   }
 
-  return rawMedia
-    .map((media) => {
-      const type = asString(media.type);
-      if (type !== "photo" && type !== "video" && type !== "animated_gif") {
-        return null;
-      }
+  return rawMedia.flatMap((media) => {
+    const type = asString(media.type);
+    if (type !== "photo" && type !== "video" && type !== "animated_gif") {
+      return [];
+    }
 
-      const sizes = asRecord(media.sizes);
-      const largeSize = asRecord(sizes?.large);
+    const sizes = asRecord(media.sizes);
+    const largeSize = asRecord(sizes?.large);
 
-      const item: Media = {
-        type,
-        url: asString(media.media_url_https) || asString(media.media_url) || "",
-        width: toNumber(largeSize?.w),
-        height: toNumber(largeSize?.h),
-        altText: asString(media.ext_alt_text) || undefined,
-      };
+    const item: Media = {
+      type,
+      url: asString(media.media_url_https) || asString(media.media_url) || "",
+      width: toNumber(largeSize?.w),
+      height: toNumber(largeSize?.h),
+      altText: asString(media.ext_alt_text) || undefined,
+    };
 
-      if (type === "video" || type === "animated_gif") {
-        const videoInfo = asRecord(media.video_info);
-        const variants = asRecords(videoInfo?.variants).filter(
-          (variant) => asString(variant.content_type) === "video/mp4",
+    if (type === "video" || type === "animated_gif") {
+      const videoInfo = asRecord(media.video_info);
+      const variants = asRecords(videoInfo?.variants).filter(
+        (variant) => asString(variant.content_type) === "video/mp4",
+      );
+
+      if (variants.length > 0) {
+        const sortedVariants = variants.toSorted(
+          (a, b) => toNumber(a.bitrate) - toNumber(b.bitrate),
         );
-
-        if (variants.length > 0) {
-          const sortedVariants = variants.toSorted(
-            (a, b) => toNumber(a.bitrate) - toNumber(b.bitrate),
-          );
-          const best = sortedVariants[sortedVariants.length - 1];
-          item.videoUrl = asString(best?.url) || undefined;
-        }
+        const best = sortedVariants[sortedVariants.length - 1];
+        item.videoUrl = asString(best?.url) || undefined;
       }
+    }
 
-      return item;
-    })
-    .filter((item): item is Media => item !== null);
+    return [item];
+  });
 }
 
 function unwrapTweet(result: UnknownRecord | null): UnknownRecord | null {
@@ -125,9 +128,14 @@ function normalizeArticleText(text: string): string {
 }
 
 function pickLongest(values: Array<string | null>): string {
-  return values
-    .filter((value): value is string => Boolean(value && value.trim()))
-    .sort((a, b) => b.length - a.length)[0] || "";
+  let longest = "";
+  for (const value of values) {
+    const trimmed = value?.trim();
+    if (trimmed && trimmed.length > longest.length) {
+      longest = trimmed;
+    }
+  }
+  return longest;
 }
 
 function isLikelyProfileImageUrl(value: string | null): boolean {
@@ -178,46 +186,46 @@ function parseInlineStyleRanges(
   value: unknown,
 ): ArticleContentBlock["inlineStyleRanges"] {
   if (!Array.isArray(value)) return [];
-  return value
-    .filter(
-      (item): item is { offset: number; length: number; style: string } => {
-        const r = asRecord(item);
-        return (
-          r !== null &&
-          typeof r.offset === "number" &&
-          typeof r.length === "number" &&
-          typeof r.style === "string"
-        );
-      },
-    )
-    .map((item) => ({
-      offset: item.offset,
-      length: item.length,
-      style: item.style,
-    }));
+  const ranges: ArticleContentBlock["inlineStyleRanges"] = [];
+  for (const item of value) {
+    const r = asRecord(item);
+    if (
+      r !== null &&
+      typeof r.offset === "number" &&
+      typeof r.length === "number" &&
+      typeof r.style === "string"
+    ) {
+      ranges.push({
+        offset: r.offset,
+        length: r.length,
+        style: r.style,
+      });
+    }
+  }
+  return ranges;
 }
 
 function parseEntityRanges(
   value: unknown,
 ): ArticleContentBlock["entityRanges"] {
   if (!Array.isArray(value)) return [];
-  return value
-    .filter(
-      (item): item is { offset: number; length: number; key: number } => {
-        const r = asRecord(item);
-        return (
-          r !== null &&
-          typeof r.offset === "number" &&
-          typeof r.length === "number" &&
-          typeof r.key === "number"
-        );
-      },
-    )
-    .map((item) => ({
-      offset: item.offset,
-      length: item.length,
-      key: item.key,
-    }));
+  const ranges: ArticleContentBlock["entityRanges"] = [];
+  for (const item of value) {
+    const r = asRecord(item);
+    if (
+      r !== null &&
+      typeof r.offset === "number" &&
+      typeof r.length === "number" &&
+      typeof r.key === "number"
+    ) {
+      ranges.push({
+        offset: r.offset,
+        length: r.length,
+        key: r.key,
+      });
+    }
+  }
+  return ranges;
 }
 
 interface ArticleEntityMediaResolved {
@@ -462,7 +470,7 @@ function extractArticle(tweet: UnknownRecord): ArticleContent | null {
     seen.add(node);
 
     const keys = Object.keys(node);
-    const hasArticleKey = keys.some((key) => key.toLowerCase().includes("article"));
+    const hasArticleKey = keys.some((key) => key.toLowerCase().indexOf("article") !== -1);
     const isLikelyArticleNode = current.articleHint || hasArticleKey;
     const coverImage = articleCoverImageFromNode(node);
     if (isLikelyArticleNode && coverImage && coverImage.length > bestCoverImage.length) {
@@ -510,7 +518,7 @@ function extractArticle(tweet: UnknownRecord): ArticleContent | null {
       queue.push({
         value: parseMaybeJson(child) ?? child,
         articleHint:
-          current.articleHint || hasArticleKey || lowerKey.includes("article"),
+          current.articleHint || hasArticleKey || /article/.test(lowerKey),
       });
     }
   }
@@ -1117,14 +1125,18 @@ function buildReplyChain(
 
   const chain: DetailTimelineTweet[] = [];
   const seen = new Set<string>();
+  const cursorByReplyTo = new Map<string, number>();
   let currentId = rootTweetId;
 
   while (true) {
-    const next = (byReplyTo.get(currentId) || []).find(
-      (item) => !seen.has(item.bookmark.tweetId),
-    );
+    const list = byReplyTo.get(currentId) || [];
+    let cursor = cursorByReplyTo.get(currentId) ?? 0;
+    while (cursor < list.length && seen.has(list[cursor].bookmark.tweetId)) {
+      cursor += 1;
+    }
+    cursorByReplyTo.set(currentId, cursor);
+    const next = list[cursor];
     if (!next) break;
-
     chain.push(next);
     seen.add(next.bookmark.tweetId);
     currentId = next.bookmark.tweetId;
@@ -1235,13 +1247,12 @@ export function parseTweetDetailPayload(
   const threadCandidates = collectThreadCandidates(timelineTweets, focal, tweetId);
 
   const seen = new Set<string>();
-  const thread = threadCandidates
-    .filter((item) => {
-      if (seen.has(item.bookmark.tweetId)) return false;
-      seen.add(item.bookmark.tweetId);
-      return true;
-    })
-    .map((item) => toThreadTweet(item.bookmark));
+  const thread: ThreadTweet[] = [];
+  for (const item of threadCandidates) {
+    if (seen.has(item.bookmark.tweetId)) continue;
+    seen.add(item.bookmark.tweetId);
+    thread.push(toThreadTweet(item.bookmark));
+  }
 
   const detail: TweetDetailContent = {
     focalTweet,

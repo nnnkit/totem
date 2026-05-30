@@ -55,12 +55,19 @@ export function Highlighted({
     return <Tag className={className}>{fallback ?? text}</Tag>;
   }
 
+  let offset = 0;
+  const segments = result.segments.map((seg) => {
+    const key = `${offset}-${seg.text}`;
+    offset += seg.text.length;
+    return { ...seg, key };
+  });
+
   return (
     <Tag className={className}>
-      {result.segments.map((seg, i) =>
+      {segments.map((seg) =>
         seg.isMatch ? (
           <mark
-            key={i}
+            key={seg.key}
             className={cn(
               "rounded-sm bg-amber-200/70 px-px text-foreground",
               "dark:bg-amber-400/30",
@@ -69,7 +76,7 @@ export function Highlighted({
             {seg.text}
           </mark>
         ) : (
-          <Fragment key={i}>{seg.text}</Fragment>
+          <Fragment key={seg.key}>{seg.text}</Fragment>
         ),
       )}
     </Tag>

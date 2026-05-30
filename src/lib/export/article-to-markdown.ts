@@ -51,10 +51,11 @@ function buildYamlFrontmatter(
 }
 
 function fenceCodeBlock(code: string): string {
-  let fence = "```";
-  while (code.includes(fence)) {
-    fence += "`";
-  }
+  const longestBacktickRun = Math.max(
+    0,
+    ...Array.from(code.matchAll(/`+/g), (match) => match[0].length),
+  );
+  const fence = "`".repeat(Math.max(3, longestBacktickRun + 1));
   return `${fence}\n${code}\n${fence}`;
 }
 
@@ -62,6 +63,18 @@ function stripMarkdownEntityCode(markdown: string): string {
   return markdown
     .replace(/^```\w*\n?/, "")
     .replace(/\n?```$/, "");
+}
+
+function markdownImageAlt(value: string): string {
+  return value
+    .replace(/[\r\n]+/g, " ")
+    .replace(/\\/g, "\\\\")
+    .replace(/]/g, "\\]")
+    .trim();
+}
+
+function markdownImage(url: string, alt: string): string {
+  return `![${markdownImageAlt(alt)}](${url})`;
 }
 
 function formatBlockquoteMarkdown(content: string): string {
@@ -110,7 +123,7 @@ function blocksToMarkdown(
           if (typeof videoUrl === "string" && videoUrl) {
             const parts: string[] = [];
             if (typeof imageUrl === "string" && imageUrl) {
-              parts.push(`![](${imageUrl})`);
+              parts.push(markdownImage(imageUrl, "Video preview"));
             }
             if (watchOnXUrl) {
               parts.push(`[Watch on X](${watchOnXUrl})`);
@@ -121,7 +134,14 @@ function blocksToMarkdown(
             break;
           }
           if (typeof imageUrl === "string" && imageUrl) {
-            out.push(`![](${imageUrl})`);
+            const alt =
+              String(
+                entity.data?.altText ||
+                  entity.data?.imageAlt ||
+                  entity.data?.alt ||
+                  "",
+              ).trim() || "Media attachment";
+            out.push(markdownImage(imageUrl, alt));
             break;
           }
         }
@@ -245,7 +265,12 @@ export function articleToMarkdown(
     ? `# ${article.title.trim()}\n\n`
     : "";
 
-  const coverPart = coverImageUrl ? `![](${coverImageUrl})\n\n` : "";
+  const coverAlt = article.title?.trim()
+    ? `Cover image for ${article.title.trim()}`
+    : "Cover image";
+  const coverPart = coverImageUrl
+    ? `${markdownImage(coverImageUrl, coverAlt)}\n\n`
+    : "";
 
   if (hasBlocks) {
     const body = blocksToMarkdown(
@@ -255,13 +280,13 @@ export function articleToMarkdown(
       meta?.postUrl,
     );
     const combined = `${metaBlock}${titlePart}${coverPart}${body}`.trimEnd();
-  return combined ? combined + "\n" : "";
+    return combined ? combined + "\n" : "";
   }
 
   if (headings.length === 0) {
     const body = richTextArticleMarkdown(plainText);
     const combined = `${metaBlock}${titlePart}${coverPart}${body}`.trimEnd();
-  return combined ? combined + "\n" : "";
+    return combined ? combined + "\n" : "";
   }
 
   const body = buildHeadingChunksMarkdown(

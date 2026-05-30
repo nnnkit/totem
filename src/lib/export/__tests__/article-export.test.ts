@@ -162,6 +162,27 @@ describe("resolveReaderExportArticle", () => {
     const ac = resolveReaderExportArticle(bm, []);
     expect(ac.plainText).toContain("Hello world");
     expect(ac.title).toBe("Hello world");
+    expect(ac.coverImageUrl).toBeUndefined();
+  });
+
+  it("uses media alt text in synthetic Markdown image output", () => {
+    const bm = minimalBookmark({
+      text: "Diagram",
+      urls: [],
+      media: [
+        {
+          type: "photo",
+          url: "https://example.com/diagram.jpg",
+          width: 1200,
+          height: 800,
+          altText: "A system diagram",
+        },
+      ],
+    });
+
+    const text = buildSyntheticExportPlainText(bm, []);
+
+    expect(text).toContain("![A system diagram](https://example.com/diagram.jpg)");
   });
 
   it("appends thread tweets after focal", () => {
@@ -233,6 +254,14 @@ describe("slugifyArticleBasename", () => {
     expect(suggestedArticleFilename(article, "pdf")).toBe(
       "guide-to-the-bloomberg-terminal.pdf",
     );
+  });
+
+  it("does not leave a trailing dash after truncating long titles", () => {
+    const article: ArticleContent = {
+      title: "a ".repeat(90),
+      plainText: "x",
+    };
+    expect(slugifyArticleBasename(article).endsWith("-")).toBe(false);
   });
 });
 

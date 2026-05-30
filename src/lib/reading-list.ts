@@ -105,7 +105,7 @@ export function sortUnreadBookmarks(
   sort: ReadingSort,
   counts?: ReadonlyMap<string, AnnotationCountsLike>,
 ): Bookmark[] {
-  return [...bookmarks].sort((left, right) =>
+  return bookmarks.toSorted((left, right) =>
     compareBySortMode(
       getBookmarkRecentAt(left),
       getBookmarkRecentAt(right),
@@ -121,7 +121,7 @@ export function sortContinueReadingItems(
   sort: ReadingSort,
   counts?: ReadonlyMap<string, AnnotationCountsLike>,
 ): ContinueReadingItem[] {
-  return [...items].sort((left, right) =>
+  return items.toSorted((left, right) =>
     compareBySortMode(
       left.progress.lastReadAt,
       right.progress.lastReadAt,

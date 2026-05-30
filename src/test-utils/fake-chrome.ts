@@ -83,8 +83,11 @@ export function createFakeChrome() {
 
   const runtime = {
     async sendMessage(message: unknown): Promise<unknown> {
-      for (const listener of messageListeners) {
-        const response = await new Promise<unknown>((resolve) => {
+      const sendToListener = (index: number): Promise<unknown> => {
+        const listener = messageListeners[index];
+        if (!listener) return Promise.resolve(undefined);
+
+        return new Promise<unknown>((resolve) => {
           const result = listener(
             message,
             { id: "fake-extension-id" },
@@ -95,10 +98,12 @@ export function createFakeChrome() {
           if (result !== true) {
             resolve(undefined);
           }
-        });
-        if (response !== undefined) return response;
-      }
-      return undefined;
+        }).then((response) =>
+          response !== undefined ? response : sendToListener(index + 1),
+        );
+      };
+
+      return sendToListener(0);
     },
 
     onMessage: {

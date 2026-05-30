@@ -107,7 +107,7 @@ async function seedAuth(storage: typeof chrome.storage.local) {
     totem_auth_headers: {
       authorization: "Bearer AAAA",
       "x-csrf-token": "csrf-token-123",
-      cookie: 'twid="u%3D12345"; auth_token=abc123',
+      cookie: 'twid="u%3D12345"; ct0=csrf-token-123; auth_token=abc123',
     },
     totem_auth_state: "authenticated",
     totem_auth_state_at: Date.now(),

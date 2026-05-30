@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import parse from "html-react-parser";
 import { paragraphizeText, paragraphHtml, textClassForMode } from "./utils";
 
 interface Props {
@@ -13,6 +14,18 @@ export function RichTextBlock({ text, compact = false, style = "tweet", sectionI
     () => paragraphizeText(text, style),
     [text, style],
   );
+  const keyedParagraphs = useMemo(() => {
+    const seen = new Map<string, number>();
+    return paragraphs.map((paragraph, order) => {
+      const count = seen.get(paragraph) ?? 0;
+      seen.set(paragraph, count + 1);
+      return {
+        paragraph,
+        key: count === 0 ? paragraph : `${paragraph}-${count}`,
+        sectionId: sectionIdPrefix ? `${sectionIdPrefix}-${order}` : undefined,
+      };
+    });
+  }, [paragraphs, sectionIdPrefix]);
   const textClass = textClassForMode(compact);
 
   if (paragraphs.length === 0) return null;
@@ -21,13 +34,14 @@ export function RichTextBlock({ text, compact = false, style = "tweet", sectionI
 
   return (
     <div className={spacingClass}>
-      {paragraphs.map((paragraph, index) => (
+      {keyedParagraphs.map(({ paragraph, key, sectionId }) => (
         <p
-          key={`${index}-${paragraph.slice(0, 24)}`}
-          id={sectionIdPrefix ? `${sectionIdPrefix}-${index}` : undefined}
+          key={key}
+          id={sectionId}
           className={textClass}
-          dangerouslySetInnerHTML={{ __html: paragraphHtml(paragraph) }}
-        />
+        >
+          {parse(paragraphHtml(paragraph))}
+        </p>
       ))}
     </div>
   );

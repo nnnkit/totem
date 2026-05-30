@@ -310,29 +310,28 @@ export function useHighlights({ tweetId, contentReady, containerRef }: Props) {
       ranges: SelectionRange[],
       options?: { note?: string | null; type?: "highlight" | "note"; color?: HighlightColor },
     ) => {
-      const created: Highlight[] = [];
       const note = options?.note ?? null;
       const type = options?.type ?? "highlight";
       const color = resolveHighlightColor(options?.color);
 
-      for (const range of ranges) {
-        const highlight: Highlight = {
-          id: crypto.randomUUID(),
-          tweetId,
-          sectionId: range.sectionId,
-          startOffset: range.startOffset,
-          endOffset: range.endOffset,
-          selectedText: range.selectedText,
-          note,
-          color,
-          createdAt: Date.now(),
-          type,
-        };
+      const created: Highlight[] = ranges.map((range) => ({
+        id: crypto.randomUUID(),
+        tweetId,
+        sectionId: range.sectionId,
+        startOffset: range.startOffset,
+        endOffset: range.endOffset,
+        selectedText: range.selectedText,
+        note,
+        color,
+        createdAt: Date.now(),
+        type,
+      }));
 
-        await upsertHighlight(highlight);
+      await Promise.all(created.map((highlight) => upsertHighlight(highlight)));
+
+      for (const highlight of created) {
         highlightsRef.current.set(highlight.id, highlight);
         flashIdsRef.current.add(highlight.id);
-        created.push(highlight);
       }
 
       window.getSelection()?.removeAllRanges();

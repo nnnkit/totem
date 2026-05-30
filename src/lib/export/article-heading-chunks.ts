@@ -7,23 +7,26 @@ export function splitPlainTextByHeadings(
   plainText: string,
   headings: { index: number; text: string }[],
 ): ArticleHeadingChunk[] {
-  const lines = plainText
-    .split(/\n/)
-    .map((l) => l.trim())
-    .filter(Boolean);
-  const headingLineIndices = new Set(headings.map((h) => h.index));
+  const lines: string[] = [];
+  for (const line of plainText.split(/\n/)) {
+    const trimmed = line.trim();
+    if (trimmed) lines.push(trimmed);
+  }
+  const headingByLineIndex = new Map(
+    headings.map((heading) => [heading.index, heading.text]),
+  );
 
   const chunks: ArticleHeadingChunk[] = [];
   let currentLines: string[] = [];
   let currentHeading: string | undefined;
 
   for (let i = 0; i < lines.length; i++) {
-    if (headingLineIndices.has(i)) {
+    const heading = headingByLineIndex.get(i);
+    if (heading) {
       if (currentLines.length > 0 || currentHeading !== undefined) {
         chunks.push({ heading: currentHeading, text: currentLines.join("\n") });
       }
-      const match = headings.find((h) => h.index === i);
-      currentHeading = match?.text;
+      currentHeading = heading;
       currentLines = [];
     } else {
       currentLines.push(lines[i]);

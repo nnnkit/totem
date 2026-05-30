@@ -5,154 +5,17 @@
  * truth for logic and are covered by unit tests.
  */
 
-// ---------------------------------------------------------------------------
-// Auth helpers
-// ---------------------------------------------------------------------------
+export {
+  extractGraphqlOperationName,
+  extractQueryIdForOperation,
+  getCookieHeaderValue,
+  isQueryIdStale,
+  normalizeAuthState,
+  parseGraphqlEndpoint,
+  parseTwidUserId,
+} from "@make/x-twitter-extension-core/pure";
 
-const AUTH_STATE_VALUES = new Set(["logged_out", "stale", "authenticated"]);
-
-export function parseTwidUserId(rawValue: unknown): string | null {
-  if (typeof rawValue !== "string" || !rawValue) return null;
-
-  const candidates = [rawValue];
-  try {
-    const decoded = decodeURIComponent(rawValue);
-    if (decoded && decoded !== rawValue) {
-      candidates.push(decoded);
-    }
-  } catch {
-    // ignore decode errors
-  }
-
-  for (const candidate of candidates) {
-    const trimmed = candidate.trim();
-    if (!trimmed) continue;
-
-    const userMatch = trimmed.match(/u=(\d+)/);
-    if (userMatch?.[1]) return userMatch[1];
-
-    const encodedMatch = trimmed.match(/u%3[Dd](\d+)/);
-    if (encodedMatch?.[1]) return encodedMatch[1];
-
-    if (/^\d+$/.test(trimmed)) return trimmed;
-  }
-
-  return null;
-}
-
-export function getCookieHeaderValue(cookieHeader: unknown, name: string): string {
-  if (typeof cookieHeader !== "string" || !cookieHeader) return "";
-  const prefix = `${name}=`;
-  const parts = cookieHeader.split(";");
-  for (const part of parts) {
-    const trimmed = part.trim();
-    if (trimmed.startsWith(prefix)) {
-      return trimmed.slice(prefix.length);
-    }
-  }
-  return "";
-}
-
-export function normalizeAuthState(
-  state: unknown,
-  hasAuthHeader: boolean,
-): "logged_out" | "stale" | "authenticated" {
-  if (typeof state === "string" && AUTH_STATE_VALUES.has(state)) {
-    return state as "logged_out" | "stale" | "authenticated";
-  }
-  return hasAuthHeader ? "stale" : "logged_out";
-}
-
-// ---------------------------------------------------------------------------
-// Query ID helpers
-// ---------------------------------------------------------------------------
-
-export function extractQueryIdForOperation(
-  text: string,
-  operationName: string,
-): string | null {
-  const escaped = operationName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  // Match queryId:"<id>",operationName:"<name>"
-  const pattern = new RegExp(
-    'queryId\\s*:\\s*["\']([A-Za-z0-9_\\-]{10,50})["\']\\s*,\\s*operationName\\s*:\\s*["\']' +
-      escaped +
-      '["\']',
-  );
-  const match = text.match(pattern);
-  if (match) return match[1];
-  // Also try reversed order: operationName:"<name>",...,queryId:"<id>"
-  const reversed = new RegExp(
-    'operationName\\s*:\\s*["\']' +
-      escaped +
-      '["\']\\s*,\\s*(?:queryId|operationId)\\s*:\\s*["\']([A-Za-z0-9_\\-]{10,50})["\']',
-  );
-  const revMatch = text.match(reversed);
-  return revMatch ? revMatch[1] : null;
-}
-
-export function isQueryIdStale(json: unknown): boolean {
-  if (!json || typeof json !== "object") return false;
-  const errors = (json as { errors?: unknown[] }).errors;
-  if (!Array.isArray(errors)) return false;
-  return errors.some(
-    (e) =>
-      e &&
-      typeof e === "object" &&
-      (e as { extensions?: { code?: string } }).extensions?.code ===
-        "GRAPHQL_VALIDATION_FAILED",
-  );
-}
-
-export function extractGraphqlOperationName(urlString: string): string {
-  const match = String(urlString || "").match(
-    /\/i\/api\/graphql\/[^/]+\/([^/?]+)/,
-  );
-  return match?.[1] || "";
-}
-
-// ---------------------------------------------------------------------------
-// GraphQL catalog helpers
-// ---------------------------------------------------------------------------
-
-export interface ParsedGraphqlEndpoint {
-  queryId: string;
-  operation: string;
-  variables: string | null;
-  features: string | null;
-  fieldToggles: string | null;
-  path: string;
-  fullUrl: string;
-}
-
-const MAX_CAPTURED_PARAM_LENGTH = 12000;
-
-function trimCapturedParam(value: string | null): string | null {
-  if (!value || typeof value !== "string") return null;
-  if (value.length <= MAX_CAPTURED_PARAM_LENGTH) return value;
-  const overflow = value.length - MAX_CAPTURED_PARAM_LENGTH;
-  return `${value.slice(0, MAX_CAPTURED_PARAM_LENGTH)}... [truncated ${overflow} chars]`;
-}
-
-export function parseGraphqlEndpoint(
-  urlString: string,
-): ParsedGraphqlEndpoint | null {
-  try {
-    const url = new URL(urlString);
-    const match = url.pathname.match(/\/i\/api\/graphql\/([^/]+)\/([^/]+)/);
-    if (!match) return null;
-    return {
-      queryId: decodeURIComponent(match[1]),
-      operation: decodeURIComponent(match[2]),
-      variables: trimCapturedParam(url.searchParams.get("variables")),
-      features: trimCapturedParam(url.searchParams.get("features")),
-      fieldToggles: trimCapturedParam(url.searchParams.get("fieldToggles")),
-      path: url.pathname,
-      fullUrl: url.toString(),
-    };
-  } catch {
-    return null;
-  }
-}
+export type { ParsedGraphqlEndpoint } from "@make/x-twitter-extension-core/pure";
 
 // ---------------------------------------------------------------------------
 // Bookmark mutation / tweet ID helpers

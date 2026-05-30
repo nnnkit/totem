@@ -124,10 +124,12 @@ export function toSearchableBookmark(
 ): SearchableBookmark {
   const { title, rest } = deriveTitleAndRest(b);
   const { hashtags, mentions } = extractEntities(b.text ?? "");
-  const mediaAlt = b.media
-    .map((m) => m.altText?.trim())
-    .filter((s): s is string => Boolean(s))
-    .join(" ");
+  const mediaAltParts: string[] = [];
+  for (const media of b.media) {
+    const altText = media.altText?.trim();
+    if (altText) mediaAltParts.push(altText);
+  }
+  const mediaAlt = mediaAltParts.join(" ");
   return {
     id: b.tweetId,
     screenName: b.author.screenName,

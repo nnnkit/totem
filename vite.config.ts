@@ -11,24 +11,26 @@ function contentScriptPlugin(): Plugin {
   return {
     name: "content-script-iife",
     async closeBundle() {
-      for (const [name, entry] of Object.entries(contentScripts)) {
-        await viteBuild({
-          configFile: false,
-          logLevel: "warn",
-          build: {
-            write: true,
-            emptyOutDir: false,
-            outDir: "dist",
-            rollupOptions: {
-              input: { [name]: entry },
-              output: {
-                format: "iife",
-                entryFileNames: "assets/[name].js",
+      await Promise.all(
+        Object.entries(contentScripts).map(([name, entry]) =>
+          viteBuild({
+            configFile: false,
+            logLevel: "warn",
+            build: {
+              write: true,
+              emptyOutDir: false,
+              outDir: "dist",
+              rollupOptions: {
+                input: { [name]: entry },
+                output: {
+                  format: "iife",
+                  entryFileNames: "assets/[name].js",
+                },
               },
             },
-          },
-        });
-      }
+          }),
+        ),
+      );
     },
   };
 }
