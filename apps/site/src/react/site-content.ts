@@ -112,8 +112,9 @@ export type TransitFlow = {
   steps: TransitFlowStep[];
 };
 
-const chromeWebStoreInstallUrl =
-  "https://chromewebstore.google.com/detail/acpkgdfhoaalmnhjifhneghcgfnjkglo?utm_source=usetotem.xyz&utm_medium=referral&utm_campaign=site_install";
+const chromeWebStoreListingUrl =
+  "https://chromewebstore.google.com/detail/acpkgdfhoaalmnhjifhneghcgfnjkglo";
+const chromeWebStoreInstallUrl = `${chromeWebStoreListingUrl}?utm_source=usetotem.xyz&utm_medium=referral&utm_campaign=site_install`;
 const demoVideoEmbedUrl =
   "https://www.youtube.com/embed/75RNtgMHsPA?rel=0&modestbranding=1";
 const githubReleaseUrl = "https://github.com/nnnkit/totem/releases/latest";
@@ -170,6 +171,7 @@ const featurePrivacy: PrivacyFeatureCard = {
 
 export const SITE_LINKS = {
   installUrl,
+  chromeWebStoreListingUrl,
   demoVideoEmbedUrl,
   demoPageUrl: "/demo/",
   howItWorksUrl: "/how-it-works/",
@@ -199,9 +201,9 @@ export const SITE_COPY = {
   landing: {
     hero: {
       eyebrow: "Chrome Extension",
-      title: "Read your X bookmarks, not the feed.",
+      title: "Twitter bookmarks on every new tab.",
       description:
-        "Open a new tab to read your saved posts. No feed, no algorithmic noise.",
+        "Your Twitter bookmarks show up on every new tab, ready to read — locally, without opening X.",
       installButtonLabel: installButtonLabel,
       videoTitle: "Totem quick walkthrough video",
       chips: ["No account", "No backend", "Local-first"],
@@ -403,6 +405,14 @@ export const SITE_COPY = {
           "Totem needs to read the auth headers already present in your own x.com session.",
         use:
           "Observes your x.com requests so Totem can capture the authorization, cookie, and CSRF headers required to load your own bookmarks locally.",
+        access: "Always on",
+      },
+      {
+        name: "cookies",
+        reason:
+          "Totem needs to identify your active X account without asking for your password.",
+        use:
+          "Reads x.com session/account cookies locally so Totem can scope the bookmark cache to the right account and notice login or logout changes.",
         access: "Always on",
       },
       {

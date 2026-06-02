@@ -1,0 +1,105 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { SUPPORT_EMAIL } from "../../../../src/lib/constants/support";
+
+const mailtoSubject = "Totem uninstall feedback";
+const mailtoBody = [
+  "1. What made you uninstall Totem?",
+  "",
+  "2. What did you expect Totem to do better?",
+  "",
+  "3. Can we follow up? If yes, what email should we use?",
+  "",
+].join("\n");
+const mailtoUrl = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(mailtoSubject)}&body=${encodeURIComponent(mailtoBody)}`;
+---
+
+<BaseLayout
+  title="Totem — Uninstall Feedback"
+  description="A short optional feedback form for people uninstalling the Totem Chrome extension."
+  canonical="https://usetotem.xyz/uninstall-feedback"
+  og={{
+    type: "website",
+    image: "https://usetotem.xyz/icons/icon-128.png",
+  }}
+  twitter={{
+    image: "https://usetotem.xyz/icons/icon-128.png",
+  }}
+>
+  <main class="mx-auto w-full max-w-2xl px-6 py-14 sm:py-20">
+    <p class="mb-3 text-xs font-semibold uppercase tracking-widest text-neutral-400">
+      Optional feedback
+    </p>
+    <h1 class="font-serif text-balance text-4xl leading-tight tracking-tight text-neutral-900">
+      What made Totem miss?
+    </h1>
+    <p class="mt-4 text-pretty text-base leading-7 text-neutral-600">
+      This is a local-first extension with no in-app analytics, so uninstall
+      feedback is one of the few ways to learn what went wrong. Three questions
+      is enough.
+    </p>
+
+    <form
+      class="mt-8 space-y-6 rounded border border-neutral-200 bg-white p-6 shadow-sm"
+      action={`mailto:${SUPPORT_EMAIL}`}
+      method="post"
+      enctype="text/plain"
+    >
+      <label class="block">
+        <span class="text-sm font-semibold text-neutral-900">
+          1. What made you uninstall?
+        </span>
+        <select
+          name="reason"
+          class="mt-2 w-full rounded border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-800"
+        >
+          <option value="setup-confusing">Setup was confusing</option>
+          <option value="sync-failed">Bookmark sync failed or stalled</option>
+          <option value="missing-feature">A feature I expected was missing</option>
+          <option value="new-tab">I did not want a new-tab replacement</option>
+          <option value="privacy-trust">I was unsure about privacy or permissions</option>
+          <option value="other">Something else</option>
+        </select>
+      </label>
+
+      <label class="block">
+        <span class="text-sm font-semibold text-neutral-900">
+          2. What did you expect Totem to do better?
+        </span>
+        <textarea
+          name="expected"
+          rows="4"
+          class="mt-2 w-full rounded border border-neutral-300 px-3 py-2 text-sm text-neutral-800"
+          placeholder="A sentence or two is enough."
+        ></textarea>
+      </label>
+
+      <label class="block">
+        <span class="text-sm font-semibold text-neutral-900">
+          3. Can we follow up?
+        </span>
+        <input
+          name="email"
+          type="email"
+          class="mt-2 w-full rounded border border-neutral-300 px-3 py-2 text-sm text-neutral-800"
+          placeholder="email@example.com (optional)"
+        />
+      </label>
+
+      <div class="flex flex-wrap items-center gap-3">
+        <button
+          type="submit"
+          class="inline-flex items-center justify-center rounded bg-neutral-900 px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+        >
+          Send feedback
+        </button>
+        <a
+          href={mailtoUrl}
+          class="text-sm font-medium text-neutral-600 underline-offset-4 hover:text-neutral-900 hover:underline"
+        >
+          Open email draft
+        </a>
+      </div>
+    </form>
+  </main>
+</BaseLayout>

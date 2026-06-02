@@ -2,6 +2,7 @@
 import { getCollection } from "astro:content";
 import BaseLayout from "../layouts/BaseLayout.astro";
 import { LandingPage } from "../react/SiteApp";
+import { SITE_LINKS } from "../react/site-content";
 
 const posts = (await getCollection("blog", ({ data }) => !data.draft)).sort(
   (a, b) => {
@@ -30,7 +31,7 @@ const recentPosts = posts.slice(0, 3).map((post) => {
 <BaseLayout
   page="landing"
   title="Totem — Twitter / X Bookmarks on Your New Tab"
-  description="Turn your Twitter / X bookmarks into a searchable read-later queue on every new tab. Save, search, export — local-first, no login."
+  description="Your Twitter bookmarks show up on every new tab, ready to read — locally, without opening X."
   canonical="https://usetotem.xyz/"
   og={{
     type: "website",
@@ -46,11 +47,19 @@ const recentPosts = posts.slice(0, 3).map((post) => {
       "@type": "SoftwareApplication",
       name: "Totem",
       description:
-        "Turn your Twitter / X bookmarks into a searchable read-later queue on every new tab. Save, search, export — local-first, no login or server.",
+        "Your Twitter bookmarks show up on every new tab, ready to read — locally, without opening X.",
       applicationCategory: "BrowserApplication",
+      applicationSubCategory: "Productivity",
       operatingSystem: "Google Chrome",
+      softwareVersion: "1.2.0",
       offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
       url: "https://usetotem.xyz",
+      downloadUrl: SITE_LINKS.chromeWebStoreListingUrl,
+      aggregateRating: {
+        "@type": "AggregateRating",
+        ratingValue: "5.0",
+        ratingCount: 1,
+      },
     })} />
   </Fragment>
   <LandingPage client:load recentPosts={recentPosts} />
