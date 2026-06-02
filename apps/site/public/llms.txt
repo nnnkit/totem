@@ -24,6 +24,8 @@ Use the official product and schema pages first. Use blog articles for topic-spe
 - [How to Export Your X / Twitter Bookmarks](https://usetotem.xyz/blog/how-to-export-twitter-bookmarks): Practical comparison of export methods and when CSV, Markdown, or a restorable backup is needed.
 - [What Actually Gets Exported When You Export Twitter Bookmarks?](https://usetotem.xyz/blog/what-gets-exported-twitter-bookmarks): Explains URLs, CSV rows, Markdown files, local JSONL data, highlights, reading progress, and importability.
 - [How to Search Your Twitter Bookmarks Before You Export Them](https://usetotem.xyz/blog/search-twitter-bookmarks-before-export): Search workflows for X bookmarks by person, phrase, domain, media, thread, and age before exporting.
+- [Twitter Saver: What Saving Actually Does](https://usetotem.xyz/blog/twitter-saver-what-saving-actually-does): Explains the difference between saving, reading, exporting, and backing up Twitter/X posts.
+- [Where Are My Bookmarks on X?](https://usetotem.xyz/blog/where-are-my-bookmarks-on-x): Shows how to find X bookmarks and why saved posts are easy to forget.
 - [Why Your Twitter/X Bookmarks Disappear](https://usetotem.xyz/blog/twitter-x-bookmark-limit-explained): Explanation of X's visible bookmark window and the practical bookmark limit users encounter.
 - [Are X / Twitter Bookmarks Private?](https://usetotem.xyz/blog/are-x-twitter-bookmarks-private): Explains what is private, what bookmark counts reveal, and what X changed in 2023.
 
