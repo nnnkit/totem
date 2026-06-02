@@ -213,8 +213,11 @@ describe("query-id resolver", () => {
         },
       ],
     });
+    const fetchFn = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response("", { status: 404 }),
+    );
 
-    await expect(resolver.resolveQueryId("Bookmarks")).resolves.toBe(
+    await expect(resolver.resolveQueryId("Bookmarks", { fetchFn })).resolves.toBe(
       "TAB_QID_12345",
     );
 
