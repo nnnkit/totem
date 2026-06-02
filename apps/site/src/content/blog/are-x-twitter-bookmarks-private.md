@@ -88,7 +88,7 @@ If a tweet you bookmarked is showing up unexpectedly in someone else's feed, the
 
 Bookmarks are private. That's the good news. The bad news, behaviorally, is that they're *also* invisible to **you** most of the time — buried behind the X bookmarks tab, which you have to remember to open, which means visiting X, which usually means twenty minutes of scrolling instead of reading.
 
-We built [**Totem**](https://usetotem.xyz) for that gap: a free Chrome extension that puts your X bookmarks on every new tab, so the things you saved sit in front of you instead of staying hidden. Local-first — your bookmarks never leave your browser. No login, no server, no privacy trade-off.
+We built [**Totem**](https://chromewebstore.google.com/detail/acpkgdfhoaalmnhjifhneghcgfnjkglo?utm_source=blog&utm_medium=inline_cta&utm_campaign=are-x-twitter-bookmarks-private) for that gap: a free Chrome extension that puts your X bookmarks on every new tab, so the things you saved sit in front of you instead of staying hidden. Local-first — your bookmarks never leave your browser. No login, no server, no privacy trade-off.
 
 If your concern is "I want my saves to *stay* private and *also* be useful," that's the right install.
 

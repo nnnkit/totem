@@ -41,6 +41,8 @@ That distinction is the real split. Pick accordingly.
 | Under ~200 bookmarks total | **Native Chrome** | The folder tree is fine. Don't add tools you don't need |
 | X/Twitter posts and threads | **Totem** *(we make this)* | The native X bookmark tab is buried four taps deep; we move it onto your new tab |
 
+If the last row is the one that sounds like your browser, [add Totem to Chrome](https://chromewebstore.google.com/detail/acpkgdfhoaalmnhjifhneghcgfnjkglo?utm_source=blog&utm_medium=inline_cta&utm_campaign=best-chrome-bookmark-managers-2026) and let your Twitter bookmarks show up on every new tab instead of another dashboard you have to remember to open.
+
 Now the picks, in detail.
 
 ---

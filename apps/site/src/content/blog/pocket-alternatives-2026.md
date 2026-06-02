@@ -106,6 +106,8 @@ This is the use case Pocket was *not* great at. Twitter thread compilation in Re
 
 That's the wedge our extension, **Totem**, fills. More on it below — and an honest disclaimer about who it's *not* right for.
 
+If your Pocket replacement problem is really a Twitter-thread problem, [add Totem to Chrome](https://chromewebstore.google.com/detail/acpkgdfhoaalmnhjifhneghcgfnjkglo?utm_source=blog&utm_medium=inline_cta&utm_campaign=pocket-alternatives-2026) so those saves appear on every new tab instead of another read-later inbox.
+
 <a id="comparison-table"></a>
 ## Honest comparison table
 

@@ -95,6 +95,8 @@ Totem's importer reads these JSONL files only. It ignores CSV and Markdown becau
 
 This is the difference between "I exported a nice file" and "I can rebuild the library."
 
+If you want the export to include a readable layer and an importable backup layer, [install Totem for Chrome](https://chromewebstore.google.com/detail/acpkgdfhoaalmnhjifhneghcgfnjkglo?utm_source=blog&utm_medium=inline_cta&utm_campaign=what-gets-exported-twitter-bookmarks) and export from the local library when you need the file.
+
 ## The manifest is the receipt
 
 A serious export should tell you what it is.

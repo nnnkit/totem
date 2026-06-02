@@ -43,6 +43,8 @@ So "export all bookmarks" usually means:
 
 For a normal account, that may be enough. For a large old archive, it may not be. The honest fix is not a better button. It is continuous local capture before you need the export.
 
+If you want that capture and export path to live locally, [install Totem for Chrome](https://chromewebstore.google.com/detail/acpkgdfhoaalmnhjifhneghcgfnjkglo?utm_source=blog&utm_medium=inline_cta&utm_campaign=how-to-export-twitter-bookmarks) before the next time you need a backup under pressure.
+
 ## Method 1: a userscript, if you want raw data
 
 Use this if you are comfortable with Tampermonkey and want a local, technical export.

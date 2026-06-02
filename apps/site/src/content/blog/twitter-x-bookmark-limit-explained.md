@@ -138,7 +138,7 @@ That last part — *in front of you* — is the part most third-party tools skip
 - Bulk-clear from desktop was removed in October 2025. Mobile bulk-clear may also be regressing.
 - If you've ever searched "twitter bookmarks disappeared," what you actually need is a third-party tool that captures bookmarks locally before they fall off the display window.
 
-We made one — [Totem](https://usetotem.xyz). Free, local-first, lives on your new tab. If you bookmark heavily and the disappearing-bookmark thing has bitten you even once, install it.
+We made one — [Totem](https://chromewebstore.google.com/detail/acpkgdfhoaalmnhjifhneghcgfnjkglo?utm_source=blog&utm_medium=inline_cta&utm_campaign=twitter-x-bookmark-limit-explained). Free, local-first, lives on your new tab. If you bookmark heavily and the disappearing-bookmark thing has bitten you even once, install it.
 
 [^xapi]: X Developer documentation, [Bookmarks integration guide](https://developer.twitter.com/en/docs/twitter-api/tweets/bookmarks/integrate). Also corroborated in dev forum thread [#169433](https://devcommunity.x.com/t/bookmark-retrieves-only-800-most-recent/169433).
 [^xapi-ref]: X API reference, [GET /2/users/{id}/bookmarks](https://docs.x.com/x-api/users/get-bookmarks). The reference page documents `max_results` (1–100 per request) and pagination tokens but does not restate the 800 total ceiling, which lives on the integration guide.

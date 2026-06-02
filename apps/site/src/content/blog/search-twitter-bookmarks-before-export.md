@@ -50,6 +50,8 @@ It also does not answer export questions:
 
 That is where a local bookmark reader is different. It can search the local library, then export the library as CSV, Markdown, and importable data.
 
+If you want to search before you export, [install Totem for Chrome](https://chromewebstore.google.com/detail/acpkgdfhoaalmnhjifhneghcgfnjkglo?utm_source=blog&utm_medium=inline_cta&utm_campaign=search-twitter-bookmarks-before-export) and use the local library as the place where Twitter bookmarks become searchable.
+
 ## Useful searches before export
 
 These examples use Totem's search syntax. Plain text works. Quoted phrases work. A handle like `@someone` works as shorthand for `from:someone`.
