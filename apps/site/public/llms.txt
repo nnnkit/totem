@@ -1,0 +1,34 @@
+# Totem
+
+> Totem is a local-first Chrome extension that turns X / Twitter bookmarks into a searchable read-later queue on every new tab, with a clean reader, reading progress, highlights, notes, and export/import.
+
+Totem is built for people who save posts on X but want to read, search, annotate, and own that library outside the X feed. It runs in the browser, reads from the user's existing X session, and stores bookmarks, notes, highlights, and reading progress locally. There is no Totem account, backend sync service, or product telemetry.
+
+Use the official product and schema pages first. Use blog articles for topic-specific explanations about X bookmarks, export behavior, bookmark privacy, and related read-later tools.
+
+## Product
+
+- [Totem homepage](https://usetotem.xyz/): Product overview, core positioning, install link, and feature summary.
+- [Live demo](https://usetotem.xyz/demo/): Interactive demo of the Totem new-tab bookmark reader experience.
+- [How Totem works](https://usetotem.xyz/how-it-works/): Interactive map of the extension data flow, storage keys, and implementation files.
+- [Privacy policy](https://usetotem.xyz/privacy): Plain-English policy covering X access, local browser storage, permissions, and what stays on the device.
+
+## Documentation
+
+- [Totem Export Format v1](https://usetotem.xyz/export-format/v1): Version-pinned schema for Totem export ZIPs, including manifest, JSONL stores, CSV fields, Markdown files, checksums, and re-import behavior.
+- [GitHub repository](https://github.com/nnnkit/totem): Source code for the Chrome extension, website, export logic, reader UI, service worker, and local storage model.
+- [Chrome Web Store listing](https://chromewebstore.google.com/detail/acpkgdfhoaalmnhjifhneghcgfnjkglo): Install page for the production Chrome extension.
+
+## X Bookmark Guides
+
+- [How to Export Your X / Twitter Bookmarks](https://usetotem.xyz/blog/how-to-export-twitter-bookmarks): Practical comparison of export methods and when CSV, Markdown, or a restorable backup is needed.
+- [What Actually Gets Exported When You Export Twitter Bookmarks?](https://usetotem.xyz/blog/what-gets-exported-twitter-bookmarks): Explains URLs, CSV rows, Markdown files, local JSONL data, highlights, reading progress, and importability.
+- [How to Search Your Twitter Bookmarks Before You Export Them](https://usetotem.xyz/blog/search-twitter-bookmarks-before-export): Search workflows for X bookmarks by person, phrase, domain, media, thread, and age before exporting.
+- [Why Your Twitter/X Bookmarks Disappear](https://usetotem.xyz/blog/twitter-x-bookmark-limit-explained): Explanation of X's visible bookmark window and the practical bookmark limit users encounter.
+- [Are X / Twitter Bookmarks Private?](https://usetotem.xyz/blog/are-x-twitter-bookmarks-private): Explains what is private, what bookmark counts reveal, and what X changed in 2023.
+
+## Optional
+
+- [Pocket Alternatives for 2026](https://usetotem.xyz/blog/pocket-alternatives-2026): Decision tree for choosing a read-later tool; useful when comparing Totem to broad read-later products.
+- [Best Chrome Bookmark Managers in 2026](https://usetotem.xyz/blog/best-chrome-bookmark-managers-2026): Comparison of Chrome bookmark managers by the type of content saved.
+- [Sitemap](https://usetotem.xyz/sitemap-index.xml): Full crawlable URL index for the website.

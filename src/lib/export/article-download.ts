@@ -1,5 +1,6 @@
 import type { ArticleContent } from "../../types";
 import {
+  articleToAgentMarkdown,
   articleToMarkdown,
   type ArticleMarkdownMetadata,
 } from "./article-to-markdown";
@@ -33,6 +34,31 @@ export function getArticleMarkdownString(
   });
 }
 
+export function getArticleAgentMarkdownString(
+  article: ArticleContent,
+  options?: {
+    authorProfileImageUrl?: string;
+    metadata?: ArticleMarkdownMetadata;
+  },
+): string {
+  return articleToAgentMarkdown(article, {
+    authorProfileImageUrl: options?.authorProfileImageUrl,
+    metadata: options?.metadata,
+  });
+}
+
+async function copyTextToClipboard(text: string): Promise<boolean> {
+  if (!navigator.clipboard?.writeText) {
+    return false;
+  }
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function copyArticleMarkdownToClipboard(
   article: ArticleContent,
   options?: {
@@ -40,16 +66,17 @@ export async function copyArticleMarkdownToClipboard(
     metadata?: ArticleMarkdownMetadata;
   },
 ): Promise<boolean> {
-  const md = getArticleMarkdownString(article, options);
-  if (!navigator.clipboard?.writeText) {
-    return false;
-  }
-  try {
-    await navigator.clipboard.writeText(md);
-    return true;
-  } catch {
-    return false;
-  }
+  return copyTextToClipboard(getArticleMarkdownString(article, options));
+}
+
+export async function copyArticleForAgentToClipboard(
+  article: ArticleContent,
+  options?: {
+    authorProfileImageUrl?: string;
+    metadata?: ArticleMarkdownMetadata;
+  },
+): Promise<boolean> {
+  return copyTextToClipboard(getArticleAgentMarkdownString(article, options));
 }
 
 export function downloadMarkdownFile(body: string, filename: string): void {

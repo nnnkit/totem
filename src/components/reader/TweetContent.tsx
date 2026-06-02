@@ -190,6 +190,7 @@ interface ActionBarProps {
     pending?: boolean;
   };
   articleExport?: {
+    onCopyForAgent: () => Promise<boolean>;
     onCopyMarkdown: () => Promise<boolean>;
     onDownloadMarkdown: () => void;
     onPrintPdf: () => void;
@@ -219,6 +220,7 @@ function ActionBar({
 
       {articleExport && (
         <ArticleExportMenu
+          onCopyForAgent={articleExport.onCopyForAgent}
           onCopyMarkdown={articleExport.onCopyMarkdown}
           onDownloadMarkdown={articleExport.onDownloadMarkdown}
           onPrintPdf={articleExport.onPrintPdf}

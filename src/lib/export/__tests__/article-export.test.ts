@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { ArticleContent, ArticleContentEntity } from "../../../types";
 import {
+  articleToAgentMarkdown,
   articleToMarkdown,
   hasExportableArticle,
 } from "../article-to-markdown";
@@ -114,6 +115,62 @@ describe("articleToMarkdown", () => {
     expect(md).toContain("exported:");
     expect(md).toContain("author:");
     expect(md).toContain("A (@b)");
+  });
+});
+
+describe("articleToAgentMarkdown", () => {
+  it("keeps source metadata but skips exported timestamp and cover image", () => {
+    const md = articleToAgentMarkdown(
+      {
+        title: "Agent context",
+        plainText: "Body",
+        coverImageUrl: "https://example.com/cover.jpg",
+      },
+      {
+        metadata: {
+          postUrl: "https://x.com/u/status/1",
+          exportedAtLabel: "Jan 1",
+          authorName: "A",
+          authorHandle: "b",
+        },
+      },
+    );
+
+    expect(md).toContain("# Agent context");
+    expect(md).toContain("Source: https://x.com/u/status/1");
+    expect(md).toContain("Author: A (@b)");
+    expect(md).not.toContain("exported:");
+    expect(md).not.toContain("---");
+    expect(md).not.toContain("cover.jpg");
+  });
+
+  it("reduces media and repeated source links to agent-useful text", () => {
+    const md = articleToAgentMarkdown(
+      {
+        plainText:
+          "Diagram\n\n![A system diagram](https://example.com/diagram.jpg)\n\n![Image attached to @a's post](https://example.com/photo.jpg)\n\n[Watch on X](https://x.com/a/status/1)",
+      },
+      {
+        metadata: {
+          postUrl: "https://x.com/a/status/1",
+          authorName: "A",
+          authorHandle: "a",
+        },
+      },
+    );
+
+    expect(md).toContain("Media: A system diagram");
+    expect(md).not.toContain("diagram.jpg");
+    expect(md).not.toContain("photo.jpg");
+    expect(md).not.toContain("[Watch on X]");
+  });
+
+  it("simplifies markdown links whose label is the same URL", () => {
+    const md = articleToAgentMarkdown({
+      plainText: "Read [https://example.com](https://example.com) today.",
+    });
+
+    expect(md).toContain("Read https://example.com today.");
   });
 });
 

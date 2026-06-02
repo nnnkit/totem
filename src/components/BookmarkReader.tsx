@@ -28,6 +28,7 @@ import {
 } from "../lib/highlight-colors";
 import { Button } from "./ui/Button";
 import {
+  copyArticleForAgentToClipboard,
   copyArticleMarkdownToClipboard,
   downloadArticleMarkdown,
   printArticleAsPdf,
@@ -322,6 +323,17 @@ function useBookmarkReaderModel({
     exportMetadata,
   ]);
 
+  const handleCopyArticleForAgent = useCallback(async () => {
+    return copyArticleForAgentToClipboard(exportArticle, {
+      authorProfileImageUrl: displayBookmark.author.profileImageUrl,
+      metadata: exportMetadata,
+    });
+  }, [
+    exportArticle,
+    displayBookmark.author.profileImageUrl,
+    exportMetadata,
+  ]);
+
   const handleDownloadArticleMarkdown = useCallback(() => {
     downloadArticleMarkdown(exportArticle, {
       authorProfileImageUrl: displayBookmark.author.profileImageUrl,
@@ -364,6 +376,7 @@ function useBookmarkReaderModel({
     getBookmarkHref,
     getHighlight,
     handleAddNoteFromToolbar,
+    handleCopyArticleForAgent,
     handleCopyArticleMarkdown,
     handleDeleteNote,
     handleDownloadArticleMarkdown,
@@ -408,6 +421,7 @@ function renderBookmarkReader({
   getBookmarkHref,
   getHighlight,
   handleAddNoteFromToolbar,
+  handleCopyArticleForAgent,
   handleCopyArticleMarkdown,
   handleDeleteNote,
   handleDownloadArticleMarkdown,
@@ -497,6 +511,7 @@ function renderBookmarkReader({
           articleExport={
             canExportPost
               ? {
+                  onCopyForAgent: handleCopyArticleForAgent,
                   onCopyMarkdown: handleCopyArticleMarkdown,
                   onDownloadMarkdown: handleDownloadArticleMarkdown,
                   onPrintPdf: handlePrintArticlePdf,

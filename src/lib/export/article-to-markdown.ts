@@ -8,12 +8,19 @@ import { resolveArticleCoverImageUrl } from "./article-cover";
 import { renderBlockInlineMarkdown } from "./block-inline-markdown";
 import { richTextArticleMarkdown } from "./article-plain-markdown";
 import { splitPlainTextByHeadings } from "./article-heading-chunks";
+import { optimizeMarkdownForAgent } from "./agent-markdown-optimizer";
 
 export interface ArticleMarkdownMetadata {
   postUrl?: string;
   exportedAtLabel?: string;
   authorName?: string;
   authorHandle?: string;
+}
+
+interface ArticleMarkdownOptions {
+  authorProfileImageUrl?: string;
+  metadata?: ArticleMarkdownMetadata;
+  includeCoverImage?: boolean;
 }
 
 function yamlScalar(s: string): string {
@@ -234,16 +241,16 @@ export function hasExportableArticle(article: ArticleContent | null | undefined)
 
 export function articleToMarkdown(
   article: ArticleContent,
-  options?: {
-    authorProfileImageUrl?: string;
-    metadata?: ArticleMarkdownMetadata;
-  },
+  options?: ArticleMarkdownOptions,
 ): string {
   const plainText = article.plainText?.trim() || "";
-  const coverImageUrl = resolveArticleCoverImageUrl(
-    article.coverImageUrl,
-    options?.authorProfileImageUrl,
-  );
+  const coverImageUrl =
+    options?.includeCoverImage === false
+      ? ""
+      : resolveArticleCoverImageUrl(
+          article.coverImageUrl,
+          options?.authorProfileImageUrl,
+        );
 
   const hasBlocks =
     article.contentBlocks !== undefined && article.contentBlocks.length > 0;
@@ -296,4 +303,25 @@ export function articleToMarkdown(
   );
   const combined = `${metaBlock}${titlePart}${coverPart}${body}`.trimEnd();
   return combined ? combined + "\n" : "";
+}
+
+export function articleToAgentMarkdown(
+  article: ArticleContent,
+  options?: ArticleMarkdownOptions,
+): string {
+  const metadata = options?.metadata
+    ? {
+        postUrl: options.metadata.postUrl,
+        authorName: options.metadata.authorName,
+        authorHandle: options.metadata.authorHandle,
+      }
+    : undefined;
+
+  return optimizeMarkdownForAgent(
+    articleToMarkdown(article, {
+      authorProfileImageUrl: options?.authorProfileImageUrl,
+      metadata,
+      includeCoverImage: false,
+    }),
+  );
 }
