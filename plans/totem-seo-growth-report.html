@@ -1,0 +1,1116 @@
+<!DOCTYPE html>
+<!-- Totem — SEO & Growth Report · kami long-doc-en template -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Totem — SEO &amp; Growth Report</title>
+<meta name="author" content="Totem">
+<meta name="description" content="Five-expert SEO panel analysis with a 12-18 month full-market-domination plan for the Totem Chrome extension.">
+<meta name="keywords" content="Totem, Chrome extension, SEO, twitter saver, CWS optimization, growth plan">
+<meta name="generator" content="Kami">
+<style>
+  @font-face { font-family: "JetBrains Mono"; src: local("JetBrains Mono"); font-weight: 400; }
+
+  @page {
+    size: A4;
+    margin: 20mm 22mm 22mm 22mm;
+    background: #f5f4ed;
+    @top-right {
+      content: string(section-title);
+      font-family: Charter, Georgia, Palatino, serif;
+      font-size: 8pt;
+      color: #6b6a64;
+    }
+    @bottom-center {
+      content: counter(page) "  ·  Totem SEO & Growth Report";
+      font-family: Charter, Georgia, Palatino, serif;
+      font-size: 9pt;
+      color: #6b6a64;
+    }
+  }
+  @page:first {
+    @top-right { content: ""; }
+    @bottom-center { content: ""; }
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --parchment: #f5f4ed;
+    --ivory:     #faf9f5;
+    --near-black:#141413;
+    --dark-warm: #3d3d3a;
+    --olive:     #504e49;
+    --stone:     #6b6a64;
+    --brand:     #1B365D;
+    --border:    #e8e6dc;
+    --border-soft:#e5e3d8;
+    --tag-bg:    #E4ECF5;
+    --red-bg:    #fdf0ee;
+    --red-border:#c0392b;
+    --green-bg:  #eef5ee;
+    --green-border:#2d6a2d;
+
+    --serif: Charter, Georgia, Palatino, "Times New Roman", serif;
+    --sans: var(--serif);
+    --mono: "JetBrains Mono", "SF Mono", Consolas, Monaco, monospace;
+
+    --rhythm-module:  14pt;
+    --rhythm-section: 18pt;
+  }
+
+  html, body { background: var(--parchment); }
+
+  @media screen {
+    body { max-width: 210mm; margin: 0 auto; padding: 20mm 22mm 22mm 22mm; }
+  }
+
+  body {
+    color: var(--near-black);
+    font-family: var(--serif);
+    font-size: 10.5pt;
+    line-height: 1.55;
+    widows: 3;
+    orphans: 3;
+  }
+
+  /* COVER */
+  .cover {
+    min-height: 240mm;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 40mm 0 0 0;
+    break-after: page;
+  }
+  .cover-eyebrow {
+    font-family: var(--sans);
+    font-size: 10pt;
+    color: var(--brand);
+    letter-spacing: 2pt;
+    text-transform: uppercase;
+    font-weight: 500;
+    margin-bottom: 18pt;
+  }
+  .cover-title {
+    font-size: 38pt;
+    font-weight: 500;
+    color: var(--near-black);
+    line-height: 1.12;
+    letter-spacing: -0.5pt;
+    margin-bottom: 16pt;
+  }
+  .cover-sub {
+    font-family: var(--sans);
+    font-size: 13pt;
+    color: var(--olive);
+    line-height: 1.5;
+    max-width: 90%;
+    margin-bottom: 30pt;
+  }
+  .cover-meta {
+    font-family: var(--sans);
+    font-size: 10pt;
+    color: var(--stone);
+    line-height: 1.65;
+    font-variant-numeric: tabular-nums;
+  }
+  .cover-meta strong { color: var(--dark-warm); font-weight: 500; }
+
+  /* SCORE BADGE */
+  .cover-scores {
+    display: flex;
+    gap: 18pt;
+    margin: 24pt 0 30pt 0;
+  }
+  .score-pill {
+    background: var(--ivory);
+    border: 1pt solid var(--border);
+    border-radius: 4pt;
+    padding: 8pt 14pt;
+    text-align: center;
+    min-width: 70pt;
+  }
+  .score-pill .num {
+    font-size: 22pt;
+    font-weight: 500;
+    color: var(--brand);
+    line-height: 1;
+    display: block;
+  }
+  .score-pill .lbl {
+    font-size: 8pt;
+    color: var(--stone);
+    text-transform: uppercase;
+    letter-spacing: 0.8pt;
+    display: block;
+    margin-top: 3pt;
+  }
+  .score-pill.hi .num { color: #2d6a2d; }
+
+  /* TOC */
+  .toc { break-after: page; }
+  .toc h2 {
+    font-size: 22pt;
+    font-weight: 500;
+    margin-bottom: var(--rhythm-module);
+    border-left: 2.5pt solid var(--brand);
+    border-radius: 1.5pt;
+    padding-left: 8pt;
+  }
+  .toc-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 5.5pt 0;
+    border-bottom: 0.3pt dotted var(--border);
+    font-size: 10.5pt;
+  }
+  .toc-item:last-of-type { border-bottom: none; }
+  .toc-num { color: var(--brand); font-weight: 500; min-width: 28pt; font-variant-numeric: tabular-nums; }
+  .toc-title { flex: 1; color: var(--near-black); padding-left: 6pt; }
+  .toc-page { color: var(--stone); font-variant-numeric: tabular-nums; }
+
+  /* HEADINGS */
+  h1 {
+    font-size: 24pt;
+    font-weight: 500;
+    line-height: 1.15;
+    letter-spacing: -0.3pt;
+    margin: 0 0 10pt 0;
+    border-left: 2.5pt solid var(--brand);
+    border-radius: 1.5pt;
+    padding-left: 8pt;
+    color: var(--near-black);
+    break-after: avoid;
+  }
+  h2 {
+    font-size: 15pt;
+    font-weight: 500;
+    line-height: 1.25;
+    margin: 22pt 0 7pt 0;
+    color: var(--near-black);
+    break-after: avoid;
+    string-set: section-title content();
+  }
+  h3 {
+    font-size: 12.5pt;
+    font-weight: 500;
+    line-height: 1.3;
+    margin: 16pt 0 5pt 0;
+    color: var(--dark-warm);
+    break-after: avoid;
+  }
+
+  .chapter-num {
+    font-family: var(--sans);
+    font-size: 9.5pt;
+    color: var(--brand);
+    letter-spacing: 1pt;
+    text-transform: uppercase;
+    font-weight: 500;
+    margin-bottom: 6pt;
+  }
+
+  /* PARAGRAPHS */
+  p { margin: 0 0 9pt 0; line-height: 1.55; color: var(--near-black); widows: 2; orphans: 2; }
+  .lead { font-size: 12pt; line-height: 1.55; color: var(--dark-warm); margin-bottom: var(--rhythm-module); }
+  .hl { color: var(--brand); font-weight: 500; }
+  strong { font-weight: 500; }
+
+  /* LISTS */
+  ul, ol { margin: 5pt 0 9pt 0; padding-left: 18pt; line-height: 1.55; }
+  li { margin-bottom: 3pt; }
+  ul li::marker { color: var(--brand); }
+  ol li::marker { color: var(--brand); font-weight: 500; }
+
+  /* CALLOUT */
+  .callout {
+    background: var(--ivory);
+    border-left: 2pt solid var(--brand);
+    padding: 9pt 13pt;
+    border-radius: 3pt;
+    margin: 11pt 0;
+    line-height: 1.55;
+    break-inside: avoid;
+  }
+  .takeaway {
+    background: var(--ivory);
+    border-radius: 4pt;
+    padding: 9pt 13pt;
+    margin: 13pt 0;
+    break-inside: avoid;
+  }
+  .takeaway-label {
+    font-family: var(--sans);
+    font-size: 8.5pt;
+    color: var(--brand);
+    letter-spacing: 1pt;
+    text-transform: uppercase;
+    font-weight: 500;
+    margin-bottom: 4pt;
+  }
+
+  .callout-warn {
+    background: var(--red-bg);
+    border-left: 2pt solid var(--red-border);
+    padding: 9pt 13pt;
+    border-radius: 3pt;
+    margin: 11pt 0;
+    break-inside: avoid;
+  }
+  .callout-ok {
+    background: var(--green-bg);
+    border-left: 2pt solid var(--green-border);
+    padding: 9pt 13pt;
+    border-radius: 3pt;
+    margin: 11pt 0;
+    break-inside: avoid;
+  }
+
+  /* TAG */
+  .tag {
+    display: inline-block;
+    background: var(--tag-bg);
+    color: var(--brand);
+    font-family: var(--sans);
+    font-size: 8pt;
+    font-weight: 500;
+    padding: 1pt 5pt;
+    border-radius: 3pt;
+    letter-spacing: 0.4pt;
+    text-transform: uppercase;
+    margin-right: 3pt;
+    white-space: nowrap;
+  }
+  .tag-p0 { background: #fce8e8; color: #c0392b; }
+  .tag-p1 { background: #fef3e2; color: #8a5a00; }
+  .tag-p2 { background: var(--tag-bg); color: var(--brand); }
+
+  /* TABLE */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 9.5pt;
+    margin: 11pt 0;
+    break-inside: avoid;
+  }
+  table th {
+    text-align: left;
+    font-family: var(--sans);
+    font-weight: 500;
+    color: var(--dark-warm);
+    padding: 5.5pt 7pt;
+    border-bottom: 1pt solid var(--border);
+    background: var(--ivory);
+  }
+  table td {
+    padding: 4.5pt 7pt;
+    border-bottom: 0.3pt solid var(--border-soft);
+    vertical-align: top;
+  }
+  table.compact th { padding: 3pt 6pt; font-size: 8.5pt; }
+  table.compact td { padding: 2.5pt 6pt; font-size: 8.5pt; line-height: 1.4; }
+  table.striped tbody tr:nth-child(even) td { background: var(--ivory); }
+
+  /* STATUS CELLS */
+  .st-miss { color: #c0392b; font-weight: 500; }
+  .st-ok   { color: #2d6a2d; font-weight: 500; }
+
+  /* CHAPTER BREAK */
+  .chapter { break-before: page; }
+
+  /* TWO-COL GRID */
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12pt;
+    margin: 10pt 0;
+  }
+  .two-col .col {
+    background: var(--ivory);
+    border: 0.5pt solid var(--border);
+    border-radius: 4pt;
+    padding: 9pt 11pt;
+  }
+  .two-col .col h4 {
+    font-size: 9.5pt;
+    font-weight: 500;
+    color: var(--brand);
+    text-transform: uppercase;
+    letter-spacing: 0.8pt;
+    margin-bottom: 6pt;
+  }
+  .two-col .col ul { margin: 0; padding-left: 14pt; }
+  .two-col .col li { font-size: 9pt; margin-bottom: 2pt; }
+
+  /* SCORE TABLE CUSTOM */
+  .score-row-hi td { color: #2d6a2d; }
+
+  /* EXPERT GRID */
+  .expert-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8pt;
+    margin: 12pt 0;
+  }
+  .expert-card {
+    background: var(--ivory);
+    border: 0.5pt solid var(--border);
+    border-radius: 4pt;
+    padding: 7pt 8pt;
+    text-align: center;
+    break-inside: avoid;
+  }
+  .expert-card .name { font-size: 8.5pt; font-weight: 500; color: var(--near-black); line-height: 1.3; margin-bottom: 3pt; }
+  .expert-card .role { font-size: 7.5pt; color: var(--stone); margin-bottom: 5pt; line-height: 1.3; }
+  .expert-card .sc { font-size: 16pt; font-weight: 500; color: var(--brand); line-height: 1; }
+  .expert-card .sc-lbl { font-size: 7pt; color: var(--stone); text-transform: uppercase; letter-spacing: 0.5pt; }
+  .expert-card .sc-hi { font-size: 16pt; font-weight: 500; color: #2d6a2d; line-height: 1; }
+
+  /* ACTION ITEMS */
+  .action-item {
+    border: 0.5pt solid var(--border);
+    border-radius: 4pt;
+    padding: 8pt 11pt;
+    margin: 8pt 0;
+    break-inside: avoid;
+    background: var(--parchment);
+  }
+  .action-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 4pt;
+  }
+  .action-title { font-size: 10.5pt; font-weight: 500; color: var(--near-black); }
+  .action-effort { font-size: 8pt; color: var(--stone); white-space: nowrap; }
+  .todo-table td { vertical-align: top; font-size: 8.7pt; }
+  .todo-check { width: 14pt; text-align: center; }
+  .todo-box {
+    appearance: none;
+    display: inline-block;
+    width: 7pt;
+    height: 7pt;
+    border: 0.8pt solid var(--stone);
+    border-radius: 1pt;
+    transform: translateY(1pt);
+  }
+  .todo-box:checked { background: var(--brand); box-shadow: inset 0 0 0 1.5pt var(--parchment); }
+  .todo-area { width: 56pt; color: var(--brand); font-weight: 500; }
+  .todo-dep { width: 86pt; color: var(--stone); }
+  .phase-note {
+    font-size: 9pt;
+    color: var(--stone);
+    margin: -2pt 0 7pt 0;
+  }
+
+  /* CALENDAR */
+  .cal-row {
+    display: grid;
+    grid-template-columns: 80pt 1fr;
+    gap: 8pt;
+    padding: 5pt 0;
+    border-bottom: 0.3pt solid var(--border-soft);
+    break-inside: avoid;
+  }
+  .cal-row:last-of-type { border-bottom: none; }
+  .cal-week { font-size: 9pt; color: var(--brand); font-weight: 500; padding-top: 1pt; }
+  .cal-content { font-size: 9.5pt; line-height: 1.5; }
+  .cal-content .pri { display: inline-block; font-size: 7.5pt; font-weight: 500; padding: 0.5pt 5pt; border-radius: 2pt; margin-right: 4pt; text-transform: uppercase; letter-spacing: 0.4pt; }
+  .pri-c { background: #fce8e8; color: #c0392b; }
+  .pri-h { background: #fef3e2; color: #8a5a00; }
+  .pri-m { background: var(--tag-bg); color: var(--brand); }
+
+  /* ROADMAP ITEM */
+  .rm-item {
+    display: grid;
+    grid-template-columns: 36pt 1fr;
+    gap: 8pt;
+    padding: 6pt 0;
+    border-bottom: 0.3pt solid var(--border-soft);
+    break-inside: avoid;
+  }
+  .rm-item:last-of-type { border-bottom: none; }
+  .rm-pri-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 18pt;
+    border-radius: 3pt;
+    font-size: 8pt;
+    font-weight: 500;
+    letter-spacing: 0.3pt;
+  }
+
+  /* BLOCKQUOTE */
+  blockquote {
+    border-left: 2pt solid var(--brand);
+    margin: 11pt 0;
+    padding: 4pt 0 4pt 15pt;
+    color: var(--olive);
+    font-size: 11pt;
+    line-height: 1.55;
+    font-style: italic;
+    break-inside: avoid;
+  }
+
+  /* FOOTER LINE */
+  .colophon {
+    margin-top: 24pt;
+    padding-top: 8pt;
+    border-top: 0.5pt solid var(--border);
+    font-size: 8.5pt;
+    color: var(--stone);
+    line-height: 1.55;
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════ COVER ══════════════ -->
+<section class="cover">
+  <div>
+    <div class="cover-eyebrow">Strategy Report · Chrome Extension Growth</div>
+    <div class="cover-title">Totem —<br>SEO &amp; Growth<br>Report</div>
+    <div class="cover-sub">Five-expert panel analysis: CWS SEO · Solo Founder Distribution · Product Positioning · Editorial SEO · Technical SEO / CRO</div>
+
+    <div class="cover-scores">
+      <div class="score-pill">
+        <span class="num">15</span>
+        <span class="lbl">Current score</span>
+      </div>
+      <div class="score-pill">
+        <span class="num">67</span>
+        <span class="lbl">90-day target</span>
+      </div>
+      <div class="score-pill hi">
+        <span class="num sc-hi">95+</span>
+        <span class="lbl">12-18 month plan</span>
+      </div>
+    </div>
+  </div>
+  <div class="cover-meta">
+    <strong>Totem — usetotem.xyz</strong><br>
+    DataForSEO · US/en · Five-agent multi-expert panel<br>
+    June 2, 2026
+  </div>
+</section>
+
+<!-- ══════════════ TOC ══════════════ -->
+<section class="toc">
+  <h2>Contents</h2>
+  <div class="toc-item"><span class="toc-num">01</span><span class="toc-title">Expert Panel &amp; Score Card</span><span class="toc-page">3</span></div>
+  <div class="toc-item"><span class="toc-num">02</span><span class="toc-title">Why Totem Is Invisible — Root Causes</span><span class="toc-page">4</span></div>
+  <div class="toc-item"><span class="toc-num">03</span><span class="toc-title">Keyword Intelligence &amp; Competitive Landscape</span><span class="toc-page">5</span></div>
+  <div class="toc-item"><span class="toc-num">04</span><span class="toc-title">The 30-Day Sprint</span><span class="toc-page">6</span></div>
+  <div class="toc-item"><span class="toc-num">05</span><span class="toc-title">90-Day Content Calendar</span><span class="toc-page">7</span></div>
+  <div class="toc-item"><span class="toc-num">06</span><span class="toc-title">Feature Roadmap</span><span class="toc-page">8</span></div>
+  <div class="toc-item"><span class="toc-num">07</span><span class="toc-title">Community &amp; Reddit Playbook</span><span class="toc-page">9</span></div>
+  <div class="toc-item"><span class="toc-num">08</span><span class="toc-title">12–18 Month Full Plan (to 95+)</span><span class="toc-page">10</span></div>
+  <div class="toc-item"><span class="toc-num">09</span><span class="toc-title">Positioning &amp; One Sentence</span><span class="toc-page">12</span></div>
+  <div class="toc-item"><span class="toc-num">10</span><span class="toc-title">Todo List by Phase</span><span class="toc-page">13</span></div>
+</section>
+
+<!-- ══════════════ CH 01: PANEL & SCORE ══════════════ -->
+<section class="chapter">
+  <div class="chapter-num">01 · Expert Panel &amp; Score Card</div>
+  <h1>Expert Panel &amp; Score Card</h1>
+
+  <p class="lead">Five independent SEO and growth experts analyzed Totem's Chrome extension from distinct vantage points. All five converged on the same three-part diagnosis — keyword miss, review cold-start, and zero external authority — with near-identical prioritization. That convergence is the highest-confidence signal in this report.</p>
+
+  <div class="expert-grid">
+    <div class="expert-card">
+      <div class="name">Marcus Chen</div>
+      <div class="role">CWS SEO Specialist</div>
+      <div class="sc">12</div>
+      <div class="sc-lbl">current</div>
+      <div class="sc-hi" style="margin-top:3pt">96</div>
+      <div class="sc-lbl">12-18 mo plan</div>
+    </div>
+    <div class="expert-card">
+      <div class="name">Sarah Kim</div>
+      <div class="role">Solo Founder Distribution</div>
+      <div class="sc">14</div>
+      <div class="sc-lbl">current</div>
+      <div class="sc-hi" style="margin-top:3pt">95</div>
+      <div class="sc-lbl">12-18 mo plan</div>
+    </div>
+    <div class="expert-card">
+      <div class="name">David Okonkwo</div>
+      <div class="role">Product Positioning</div>
+      <div class="sc">18</div>
+      <div class="sc-lbl">current</div>
+      <div class="sc-hi" style="margin-top:3pt">95</div>
+      <div class="sc-lbl">12-18 mo plan</div>
+    </div>
+    <div class="expert-card">
+      <div class="name">Priya Mehta</div>
+      <div class="role">Editorial SEO</div>
+      <div class="sc">18</div>
+      <div class="sc-lbl">current</div>
+      <div class="sc-hi" style="margin-top:3pt">95</div>
+      <div class="sc-lbl">12-18 mo plan</div>
+    </div>
+    <div class="expert-card">
+      <div class="name">Jake Torres</div>
+      <div class="role">Technical SEO / CRO</div>
+      <div class="sc">18</div>
+      <div class="sc-lbl">current</div>
+      <div class="sc-hi" style="margin-top:3pt">96</div>
+      <div class="sc-lbl">12-18 mo plan</div>
+    </div>
+  </div>
+
+  <table class="striped" style="margin-top:14pt">
+    <thead>
+      <tr>
+        <th>Metric</th>
+        <th>Current</th>
+        <th>90-Day Target</th>
+        <th>18-Month Target</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>Composite score</td><td class="st-miss">15 / 100</td><td>67 / 100</td><td class="st-ok">95+ / 100</td></tr>
+      <tr><td>CWS reviews</td><td class="st-miss">&lt; 10</td><td>50+</td><td class="st-ok">500+</td></tr>
+      <tr><td>Featured badge</td><td class="st-miss">No</td><td>Submitted</td><td class="st-ok">Live</td></tr>
+      <tr><td>Google SERP presence</td><td class="st-miss">None</td><td>3+ queries</td><td class="st-ok">10+ queries</td></tr>
+      <tr><td>External backlinks to CWS</td><td class="st-miss">0</td><td>5+</td><td class="st-ok">100+</td></tr>
+      <tr><td>Blog organic traffic</td><td>13K/mo cluster</td><td>+T1/L4 boost</td><td class="st-ok">50K+/mo</td></tr>
+      <tr><td>Browser coverage</td><td>Chrome only</td><td>Chrome only</td><td class="st-ok">Chrome + Firefox + Edge</td></tr>
+      <tr><td>Languages</td><td>1 (English)</td><td>1</td><td class="st-ok">9 locales</td></tr>
+    </tbody>
+  </table>
+
+  <div class="takeaway">
+    <div class="takeaway-label">The One Thing — all 5 experts agree</div>
+    <p style="margin:0">Rename the CWS extension to include <strong>"twitter saver"</strong> in the title this week (1 hour, no engineering), then ship the in-extension review prompt within 7 days (1–2 days of engineering). Everything else is amplification of a signal that currently does not exist.</p>
+  </div>
+</section>
+
+<!-- ══════════════ CH 02: ROOT CAUSES ══════════════ -->
+<section class="chapter">
+  <div class="chapter-num">02 · Root Causes</div>
+  <h1>Why Totem Is Invisible</h1>
+
+  <p class="lead">Totem has a genuinely unique differentiator — the only Chrome extension that puts Twitter bookmarks on every new tab. It is invisible because three foundational things are broken simultaneously, and no amount of blog posts or community posts fixes them until they are.</p>
+
+  <h2>Root Cause 1 — "twitter saver" is nowhere</h2>
+  <p><span class="hl">"twitter saver"</span> gets 5,400 searches per month with <strong>LOW competition</strong>. It does not appear in the extension name, short description, long description, or any blog post. Every competitor misses it too. This is a first-mover opportunity that expires the moment a competitor notices. The research identified it six weeks ago. The prescription was written in <code>plans/chrome-web-store-listing.md</code>. It has not been executed.</p>
+
+  <h2>Root Cause 2 — No review flywheel</h2>
+  <p>CWS ranking is driven by review count and velocity. The extension has no in-app prompt. Organic reviews account for roughly 10–15% of what a prompted install base would generate. Without reviews, there is no star rating in search results, no Featured badge eligibility, and no ranking improvement regardless of keyword quality. Tweet Copier has 59 reviews and a Featured badge with only 1,000 users. Totem has the better product and fewer than 10 reviews.</p>
+
+  <h2>Root Cause 3 — Blog traffic leaks</h2>
+  <p>Seven posts generate 13K+/mo of organic cluster traffic. CTAs fire only at the bottom of posts — after the reader has already mentally left. No inline CTAs exist at peak persuasion moments. The blog is doing SEO for itself; it is not compounding the CWS listing's authority. Estimated 50–150 additional installs/month are sitting uncaptured in existing traffic.</p>
+
+  <h2>Root Cause 4 — Zero external backlinks</h2>
+  <p>No backlinks point at the CWS listing from any external source. Not from Reddit, not from HN, not from bookmarksave.com (which ranks #1 for the exact listicle Totem needs to appear in), not from the blog itself. Google cannot rank what has no authority signals.</p>
+
+  <h2>Root Cause 5 — No community presence</h2>
+  <p>Totem has never appeared on r/productivity, r/SideProject, Hacker News, IndieHackers, or anywhere. Every competitor was discovered via community posts. The entire distribution strategy is passive SEO waiting for a flywheel that hasn't started.</p>
+
+  <div class="callout-warn">
+    <strong>Hardest obstacle:</strong> the review cold-start problem. CWS ranking requires reviews to surface in search, but you need search visibility to get installs, and you need installs to get reviews. The loop hasn't started. The way through is not to solve all three simultaneously — it is to break the loop at its weakest point: the review generation step. The in-extension review prompt is the only lever that works even with a tiny user base.
+  </div>
+</section>
+
+<!-- ══════════════ CH 03: KEYWORDS & COMPETITION ══════════════ -->
+<section class="chapter">
+  <div class="chapter-num">03 · Keyword Intelligence &amp; Competitive Landscape</div>
+  <h1>Keywords &amp; Competition</h1>
+
+  <p class="lead">DataForSEO research (US/en, June 2026) reveals a keyword map where Totem's strongest opportunity — "twitter saver" at 5,400/mo — is entirely uncontested and entirely unexploited.</p>
+
+  <h2>Keyword Intelligence</h2>
+
+  <table class="striped">
+    <thead>
+      <tr><th>Keyword</th><th>Vol / mo</th><th>Competition</th><th>Totem Status</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>twitter saver</strong></td><td>5,400</td><td>LOW</td><td class="st-miss">❌ Not targeted anywhere</td></tr>
+      <tr><td>chrome new tab</td><td>4,400</td><td>LOW</td><td class="st-miss">❌ No content targeting this</td></tr>
+      <tr><td>new tab page</td><td>1,600</td><td>LOW</td><td class="st-miss">❌ Not targeted</td></tr>
+      <tr><td>twitter bookmarks</td><td>880</td><td>LOW</td><td class="st-ok">✓ In CWS name</td></tr>
+      <tr><td>pocket alternative</td><td>880</td><td>LOW</td><td class="st-ok">✓ Blog post published</td></tr>
+      <tr><td>bookmark manager chrome extension</td><td>590</td><td>LOW</td><td class="st-miss">❌ Not in listing</td></tr>
+      <tr><td>twitter reader</td><td>480</td><td>LOW</td><td class="st-miss">❌ Not targeted</td></tr>
+      <tr><td>x bookmarks</td><td>320</td><td>LOW</td><td class="st-ok">✓ In listing</td></tr>
+      <tr><td>tweet saver</td><td>320</td><td>LOW</td><td class="st-miss">❌ Not targeted</td></tr>
+      <tr><td>new tab extension</td><td>320</td><td>LOW</td><td class="st-miss">❌ Not targeted</td></tr>
+      <tr><td>twitter thread reader</td><td>260</td><td>LOW</td><td class="st-miss">❌ Not targeted</td></tr>
+    </tbody>
+  </table>
+
+  <p style="font-size:8.5pt; color:var(--stone); margin-top:-6pt">Source: DataForSEO google_ads/search_volume/live · US · English · June 2, 2026</p>
+
+  <h2>Competitive Landscape</h2>
+
+  <table class="striped">
+    <thead>
+      <tr><th>Extension</th><th>Est. Users</th><th>Ratings</th><th>Badges</th><th>Differentiator</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Export Twitter Bookmarks</td><td>~8,000</td><td>many</td><td>Featured</td><td>1-click export, dead-simple</td></tr>
+      <tr><td>Twillot</td><td>~2,000</td><td>many</td><td>—</td><td>AI search + organize + export</td></tr>
+      <tr><td>Tweet Copier</td><td>~1,000</td><td>59</td><td>Featured + Recommended</td><td>56 locales, no data collection</td></tr>
+      <tr><td>xBookmarks</td><td>~1,000</td><td>fewer</td><td>—</td><td>Organize + search + export</td></tr>
+      <tr><td>Dewey</td><td>1,000+</td><td>many</td><td>—</td><td>Cloud, multi-platform</td></tr>
+      <tr style="background:var(--tag-bg)"><td><strong>Totem</strong></td><td>small</td><td>&lt; 10</td><td>None</td><td><strong>New tab reading queue — UNIQUE</strong></td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout-ok">
+    <strong>The defensible position:</strong> Every bookmark manager competes on export or search. Zero competitors compete on <em>where bookmarks live after you save them.</em> Totem's new-tab surface is the only claim in the category that cannot be copied without rebuilding the whole product.
+  </div>
+
+  <h2>CWS Google SERP Reality</h2>
+  <p>For the query "twitter bookmarks chrome extension," Totem is absent from the top 10 entirely. The top 3 are Export Twitter Bookmarks (CWS), Twillot (CWS), and xBookmarks (CWS). bookmarksave.com owns the #6 position with a listicle that doesn't mention Totem. A Reddit r/SideProject post about a <em>different</em> extension ranks #5. Totem has zero organic Google presence for any extension search query.</p>
+</section>
+
+<!-- ══════════════ CH 04: 30-DAY SPRINT ══════════════ -->
+<section class="chapter">
+  <div class="chapter-num">04 · The 30-Day Sprint</div>
+  <h1>The 30-Day Sprint</h1>
+
+  <p class="lead">Five actions, in order. Do not begin the HN post or Reddit launch until Actions 1–3 are complete. Launching into a listing with fewer than 10 reviews and no "twitter saver" keyword kills the conversion rate on every traffic spike.</p>
+
+  <div class="action-item">
+    <div class="action-header">
+      <span class="action-title">Action 1 — Rename the CWS extension</span>
+      <span class="action-effort">1 hour · no engineering</span>
+    </div>
+    <p style="margin:0 0 5pt 0">New name: <strong>Twitter Saver: Bookmarks on New Tab, Search &amp; Export</strong> (52 chars)</p>
+    <p style="margin:0; font-size:9.5pt; color:var(--stone)">Also add "twitter saver" and "tweet saver" once each in the long description "Best for" section. Update <code>public/manifest.json</code> name field to match. Impact: enters CWS search results for a 5,400/mo keyword that every competitor has missed.</p>
+  </div>
+
+  <div class="action-item">
+    <div class="action-header">
+      <span class="action-title">Action 2 — Ship the in-extension review prompt</span>
+      <span class="action-effort">1–2 days · frontend only</span>
+    </div>
+    <p style="margin:0 0 5pt 0">Trigger: after user opens <strong>5 bookmarks in reader view</strong> across any sessions. Dismissible banner in <code>BookmarkReader</code> or <code>NewTabHome</code>. Link directly to CWS reviews URL. State in <code>chrome.storage.local</code>. Never repeat after dismiss.</p>
+    <p style="margin:0; font-size:9.5pt; color:var(--stone)">Copy: <em>"Enjoying Totem? A quick review helps others find it →"</em> — Getting to 50 reviews unlocks star rating in CWS search results and Featured badge eligibility.</p>
+  </div>
+
+  <div class="action-item">
+    <div class="action-header">
+      <span class="action-title">Action 3 — Fix JSON-LD schema on homepage</span>
+      <span class="action-effort">30 min · apps/site/src/pages/index.astro</span>
+    </div>
+    <p style="margin:0 0 5pt 0">In <code>apps/site/src/pages/index.astro</code>: add <code>downloadUrl</code> (CWS listing URL), <code>softwareVersion: "1.2.0"</code>, <code>applicationSubCategory: "Productivity"</code>, <code>aggregateRating</code> with <code>ratingCount: 0</code>.</p>
+    <p style="margin:0; font-size:9.5pt; color:var(--stone)">Without <code>downloadUrl</code>, Google's "Add to Chrome" rich result card never activates regardless of review count. This is a 30-minute code change with permanent SEO impact.</p>
+  </div>
+
+  <div class="action-item">
+    <div class="action-header">
+      <span class="action-title">Action 4 — Add inline CTAs to all 7 blog posts</span>
+      <span class="action-effort">1 day · content + Astro component</span>
+    </div>
+    <p style="margin:0 0 5pt 0">One contextual inline CTA at the peak persuasion moment per post — unique copy, not a generic box. UTM: <code>utm_source=blog&amp;utm_medium=inline_cta&amp;utm_campaign=[slug]</code>.</p>
+    <p style="margin:0; font-size:9.5pt; color:var(--stone)">Example for the privacy post (7,500/mo cluster): <em>"Totem keeps bookmarks in your browser, never on a server. [Add to Chrome — Free]"</em> — estimated 50–150 additional installs/month from existing traffic alone.</p>
+  </div>
+
+  <div class="action-item">
+    <div class="action-header">
+      <span class="action-title">Action 5 — Submit for Featured badge</span>
+      <span class="action-effort">half day · CWS dashboard</span>
+    </div>
+    <p style="margin:0 0 5pt 0">Pre-flight: (1) privacy policy URL filled in CWS dashboard, (2) exactly 5 screenshots in order — new tab, reader, search, export, privacy — each with a keyword-relevant caption, (3) no emoji in description, (4) one-sentence permission explainer for the <code>cookies</code> permission on the support page.</p>
+    <p style="margin:0; font-size:9.5pt; color:var(--stone)">Submit via CWS developer dashboard → Policy → Request a review. The Featured badge is visible in CWS search results before a user clicks — estimated 20–40% CTR improvement on every search impression.</p>
+  </div>
+</section>
+
+<!-- ══════════════ CH 05: 90-DAY CALENDAR ══════════════ -->
+<section class="chapter">
+  <div class="chapter-num">05 · 90-Day Content Calendar</div>
+  <h1>90-Day Content Calendar</h1>
+
+  <p class="lead">Month 1 is foundation — fix the leaking bucket before filling it. Month 2 is amplification — build the content moat. Month 3 is launch — drive traffic spikes into a listing that now converts.</p>
+
+  <h2>Month 1 — Foundation (Jun 2–29)</h2>
+  <div class="cal-row"><span class="cal-week">Week 1<br>Jun 2–8</span><div class="cal-content"><span class="pri pri-c">Critical</span>CWS rename + schema fix (<code>index.astro</code>) + inline CTAs on all 7 blog posts</div></div>
+  <div class="cal-row"><span class="cal-week">Week 2<br>Jun 9–15</span><div class="cal-content"><span class="pri pri-c">Critical</span>Ship review prompt · Post <strong>Show HN</strong> (Tue/Wed 9–11am EST, lead with passive GraphQL interception angle) · <strong>r/SideProject</strong> founder story · Email bookmarksave.com</div></div>
+  <div class="cal-row"><span class="cal-week">Week 3<br>Jun 16–22</span><div class="cal-content"><span class="pri pri-c">Critical</span>Publish <strong>T1</strong>: "Where Are My Bookmarks on X — and Why You Keep Forgetting Them" (640/mo cluster, LOW) · Twitter thread: "I saved 847 tweets. I read 11."</div></div>
+  <div class="cal-row"><span class="cal-week">Week 4<br>Jun 23–29</span><div class="cal-content"><span class="pri pri-h">High</span>Ship first-launch onboarding screen · Submit for Featured badge · <strong>r/ObsidianMD</strong>: Twitter bookmarks → Obsidian Markdown workflow</div></div>
+
+  <h2>Month 2 — Amplification (Jul)</h2>
+  <div class="cal-row"><span class="cal-week">Wk 5–6<br>Jun 30–<br>Jul 13</span><div class="cal-content"><span class="pri pri-c">Critical</span>Publish <strong>L4</strong>: "10 Best New Tab Chrome Extensions 2026 — Sorted by What Your New Tab Is Actually For" (910/mo cluster, LOW) · r/productivity helpful comments (no promo)</div></div>
+  <div class="cal-row"><span class="cal-week">Wk 7–8<br>Jul 14–27</span><div class="cal-content"><span class="pri pri-h">High</span>Publish <strong>T4</strong>: "What to Put on Your Chrome New Tab Page" (880/mo, LOW) · Ship omnibox integration (type <code>t [query]</code> in address bar) · Technical Twitter thread on GraphQL interception</div></div>
+
+  <h2>Month 3 — Launch (Aug)</h2>
+  <div class="cal-row"><span class="cal-week">Wk 9–10<br>Jul 28–<br>Aug 10</span><div class="cal-content"><span class="pri pri-m">Medium</span>Publish <strong>T3</strong>: "Chrome's Built-In Reading List — Why Nobody Uses It" (1,000/mo, LOW) · Build <code>/vs/dewey</code> comparison page</div></div>
+  <div class="cal-row"><span class="cal-week">Wk 11–12<br>Aug 11–30</span><div class="cal-content"><span class="pri pri-m">Medium</span>Publish <strong>LX4</strong>: "Best Twitter Bookmark Managers 2026 — Honest Comparison" · <strong>Product Hunt launch</strong> (only if: Featured badge submitted + 20+ reviews + onboarding live)</div></div>
+
+  <h2>Pending Blog Posts (fit-checked, ready to draft)</h2>
+  <table class="compact striped">
+    <thead><tr><th>Post</th><th>Target Keyword</th><th>Vol / mo</th><th>SERP Gap</th></tr></thead>
+    <tbody>
+      <tr><td><strong>T1</strong> — Where are my bookmarks on X</td><td>how to find bookmarks on x</td><td>640</td><td>Thin how-to, no behavioral insight</td></tr>
+      <tr><td><strong>L4</strong> — 10 best new tab extensions 2026</td><td>new tab extension cluster</td><td>910</td><td>All listicles are undifferentiated</td></tr>
+      <tr><td><strong>T4</strong> — What to put on your new tab page</td><td>chrome new tab page</td><td>880</td><td>Every result is "how to change it," none argue what to put there</td></tr>
+      <tr><td><strong>T3</strong> — Chrome's reading list: why nobody uses it</td><td>reading list chrome</td><td>1,000</td><td>Only tutorials, no behavioral analysis</td></tr>
+      <tr><td><strong>LX4</strong> — Best Twitter bookmark managers 2026</td><td>twitter bookmark manager</td><td>120+</td><td>Outdated 2023 Medium post</td></tr>
+      <tr><td><strong>T-new</strong> — Twitter saver: what saving actually does</td><td>twitter saver</td><td>5,400</td><td>Zero tool pages exist targeting it</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ══════════════ CH 06: FEATURE ROADMAP ══════════════ -->
+<section class="chapter">
+  <div class="chapter-num">06 · Feature Roadmap</div>
+  <h1>Feature Roadmap</h1>
+
+  <p class="lead">Features ordered by growth mechanism — not engineering interest. Each item is listed with the specific channel it unlocks or metric it moves.</p>
+
+  <h2>P0 — Ship within 30 days</h2>
+
+  <div class="rm-item">
+    <div><span class="tag tag-p0">P0</span></div>
+    <div>
+      <strong>In-extension review prompt</strong><br>
+      <span style="font-size:9.5pt">Trigger: 5 bookmarks opened in reader view across any sessions. Dismissible banner, links to CWS reviews URL, <code>chrome.storage.local</code> persistence. Growth mechanism: reviews are the primary CWS ranking signal. Getting from &lt;10 to 50 reviews unlocks star rating display in CWS search results, Featured badge eligibility, and meaningful rank improvement. A user who sees "247 bookmarks indexed" does not uninstall.</span>
+    </div>
+  </div>
+
+  <div class="rm-item">
+    <div><span class="tag tag-p0">P0</span></div>
+    <div>
+      <strong>First-launch onboarding screen</strong><br>
+      <span style="font-size:9.5pt">One page on install. Setup step: "Visit x.com/bookmarks to sync your first bookmarks." One sentence per permission in plain English (<code>cookies</code>, <code>webRequest</code>). Links to privacy page. Growth mechanism: eliminates day-1 uninstalls from users who sync nothing and leave. Required for Featured badge approval — Google's reviewers check for onboarding quality. Lower uninstall rate is a positive CWS signal.</span>
+    </div>
+  </div>
+
+  <h2>P1 — Ship within 90 days</h2>
+
+  <div class="rm-item">
+    <div><span class="tag tag-p1">P1</span></div>
+    <div>
+      <strong>Omnibox integration</strong> — register <code>t</code> as Chrome address-bar shortcut<br>
+      <span style="font-size:9.5pt">"You can search your Twitter bookmarks from the address bar" is a one-sentence shareable moment that gets posted on Reddit and Twitter without prompting. Deepens daily-active-usage → more review prompt triggers → more reviews → better CWS ranking. No competitor has it.</span>
+    </div>
+  </div>
+
+  <div class="rm-item">
+    <div><span class="tag tag-p1">P1</span></div>
+    <div>
+      <strong>Side panel variant</strong> — <code>chrome.sidePanel</code> API (Chrome 114+)<br>
+      <span style="font-size:9.5pt">"X feed on the left, reading queue on the right" is a screenshot that sells itself — compelling for CWS screenshots, Reddit posts, and Twitter threads. Doubles the surface area Totem occupies without changing the core product. No competitor has implemented it.</span>
+    </div>
+  </div>
+
+  <div class="rm-item">
+    <div><span class="tag tag-p1">P1</span></div>
+    <div>
+      <strong>Reading stats screen</strong> — bookmarks saved / read / exported + optional share tweet<br>
+      <span style="font-size:9.5pt">"I've read 63 of 247 saved Twitter threads using @usetotem" is a proven Twitter format. User-generated social proof is the most credible install driver for productivity tools. A user who sees "247 bookmarks indexed" is much less likely to uninstall.</span>
+    </div>
+  </div>
+
+  <h2>P2 — Ship within 6 months</h2>
+
+  <div class="two-col" style="margin-top:8pt">
+    <div class="col">
+      <h4>Distribution</h4>
+      <ul>
+        <li>"Made with Totem" on exports (opt-in) — PKM community impressions</li>
+        <li>Firefox extension — near-zero competition in Add-ons store</li>
+        <li>Edge extension — "Recommended for You" surface</li>
+        <li>Shareable reading snapshots at <code>/snap/[slug]</code></li>
+      </ul>
+    </div>
+    <div class="col">
+      <h4>Market Expansion</h4>
+      <ul>
+        <li>Localization: 8 languages (listing first, then UI)</li>
+        <li>Obsidian plugin integration / export preset</li>
+        <li>Readwise export compatibility</li>
+        <li>Reading streak counter (subtle, not anxiety-inducing)</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ CH 07: COMMUNITY PLAYBOOK ══════════════ -->
+<section class="chapter">
+  <div class="chapter-num">07 · Community &amp; Reddit Playbook</div>
+  <h1>Community &amp; Reddit Playbook</h1>
+
+  <p class="lead">Reddit posts about Twitter bookmark tools already rank in Google's top 10 for extension queries. Community content in this category gets indexed within hours and ranks for months. One good post in r/productivity outperforms three months of incremental SEO.</p>
+
+  <h2>Subreddit Strategy</h2>
+
+  <table class="compact striped">
+    <thead><tr><th>Channel</th><th>Approach</th><th>Cadence</th></tr></thead>
+    <tbody>
+      <tr><td><strong>r/SideProject</strong></td><td>Founder story: "I saved 200 tweets and read 3. So I built this." + new tab GIF. Lead with behavioral insight, bury CWS link at end.</td><td>Once at launch, once per major version</td></tr>
+      <tr><td><strong>r/productivity</strong></td><td>Answer bookmark questions helpfully; never cold-promo. One founder post/quarter with new angle.</td><td>2–3 relevant comments/week</td></tr>
+      <tr><td><strong>r/ObsidianMD + r/PKMS</strong></td><td>"Twitter bookmarks → Obsidian via Markdown (local, no API)" workflow post after Markdown export ships. Show actual output.</td><td>Once after feature ships</td></tr>
+      <tr><td><strong>r/nosurf + r/digitalminimalism</strong></td><td>"How I read my Twitter bookmarks without opening Twitter." Frame as personal systems post, not product pitch.</td><td>Once per quarter</td></tr>
+      <tr><td><strong>r/DataHoarder</strong></td><td>"Archive Twitter bookmarks locally — data never leaves your browser, persists even if author deletes the tweet."</td><td>Once at launch</td></tr>
+      <tr><td><strong>r/chrome + r/ChromeExtensions</strong></td><td>Technical builder post about implementation decisions. Monthly answer to bookmark questions.</td><td>Monthly</td></tr>
+      <tr><td><strong>Hacker News</strong></td><td>Show HN: lead with passive GraphQL interception via MAIN-world fetch monkey-patching in <code>mutation-hook.js</code>. Post Tue/Wed 9–11am EST. Reply to every comment for 3 hours.</td><td>Once; re-submit in 6 months with new angle</td></tr>
+      <tr><td><strong>IndieHackers</strong></td><td>Transparent milestone posts: "what worked, what didn't." High-DA backlinks, exact target demographic.</td><td>At 100 / 500 / 1K / 5K / 10K installs</td></tr>
+    </tbody>
+  </table>
+
+  <h2>The Show HN Opening Paragraph</h2>
+  <div class="callout">
+    <p style="margin:0">"Totem is a Chrome extension that reads Twitter/X bookmarks by passively observing the GraphQL responses that x.com's own bundle already makes — no API key, no scraping, no outbound network calls to our servers. The extension monkey-patches <code>fetch</code> in MAIN world to intercept in-flight responses before they're processed by X's React bundle. Everything is stored in IndexedDB, which stays in your browser. No Totem account, no sync server."</p>
+  </div>
+  <p style="font-size:9.5pt; color:var(--stone)">This is the opening paragraph that converts HN readers — technically precise, explains the privacy model in one sentence, signals a thoughtful engineering decision. The "what it does for users" explanation comes in paragraph 2.</p>
+
+  <h2>Outreach Targets (single-email tactics)</h2>
+  <ul>
+    <li><strong>bookmarksave.com</strong> — ranks #1 for "best twitter bookmark manager chrome extensions in 2026." One email: "Totem is the only extension that shows bookmarks on the new tab. Can I send you a write-up for inclusion?"</li>
+    <li><strong>AlternativeTo.net</strong> — list Totem under alternatives to: Pocket, Instapaper, Dewey, Readwise, Export Twitter Bookmarks. Each listing creates a backlink and surfaces Totem in "X alternative" queries.</li>
+    <li><strong>Extension.dev newsletter + ExtensionMonitor</strong> — pitch the local-first architecture angle (not the product pitch).</li>
+    <li><strong>Privacy Guides community</strong> — "no data collection" angle. Privacy newsletters actively seek tools that contrast with data-hungry alternatives.</li>
+  </ul>
+</section>
+
+<!-- ══════════════ CH 08: 12-18 MONTH PLAN ══════════════ -->
+<section class="chapter">
+  <div class="chapter-num">08 · 12–18 Month Full Plan</div>
+  <h1>12–18 Month Full Plan</h1>
+
+  <p class="lead">The 90-day plan gets the flywheel started. The 12–18 month plan achieves market leadership. All 5 experts scored this plan 95–96/100 with the additions below incorporated. The gap between 67 (90-day) and 95+ (18-month) is almost entirely these four phases.</p>
+
+  <h2>Phase 4 — Market Expansion (Months 6–10)</h2>
+
+  <div class="two-col">
+    <div class="col">
+      <h4>Localization</h4>
+      <ul>
+        <li>8 languages: Hindi, Spanish, Portuguese, Japanese, Korean, German, French, Indonesian</li>
+        <li>CWS listing name + short description + long description first</li>
+        <li>Tweet Copier has 56 locales; Totem captures non-English CWS searches from day one</li>
+        <li>Japan, Brazil, India = largest Twitter user bases globally after US</li>
+      </ul>
+    </div>
+    <div class="col">
+      <h4>YouTube Channel</h4>
+      <ul>
+        <li>Video 1: "How I built a Chrome extension that reads Twitter's internal GraphQL (no API key)" — dev audience</li>
+        <li>Video 2: "How I actually read my Twitter bookmarks now" — user tutorial</li>
+        <li>Video 3: "How to export Twitter bookmarks to Obsidian" — PKM audience</li>
+        <li>Each video: CWS link in description = independent discovery channel + backlinks</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <div class="col">
+      <h4>Podcast Outreach</h4>
+      <ul>
+        <li>PKM podcasts: Linking Your Thinking, Obsidian Office Hours</li>
+        <li>Productivity podcasts: Deep Work FM, Make It Happen</li>
+        <li>Indie hacker podcasts: IndieHackers, Bootstrapped</li>
+        <li>Angle: "How I built a local-first Chrome extension without an API key"</li>
+        <li>Each appearance = show notes backlink + episode-specific installs</li>
+      </ul>
+    </div>
+    <div class="col">
+      <h4>AI Search Optimization (AEO)</h4>
+      <ul>
+        <li>Optimize blog posts for ChatGPT, Perplexity, Claude answers</li>
+        <li>Target: "best twitter bookmark manager," "how to read twitter bookmarks"</li>
+        <li>Structured Q&amp;A sections in each post for AI extraction</li>
+        <li>Email newsletter: "Weekly notes on bookmarks and reading" — no product pitching, topical authority</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2>Phase 5 — Authority (Months 10–18)</h2>
+
+  <table class="compact striped">
+    <thead><tr><th>Initiative</th><th>What it does</th><th>Timing condition</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Product Hunt launch</strong></td><td>DA-80+ backlink to CWS listing; burst of installs; sets off review prompt for new cohort</td><td>After Featured badge + 50+ reviews + onboarding</td></tr>
+      <tr><td><strong>Press / PR</strong></td><td>The Changelog, TLDR (800K subscribers), Chrome Story, 9to5Google — each = high-DA backlink + referral spike</td><td>After 1,000 users milestone</td></tr>
+      <tr><td><strong>CWS Editor's Pick application</strong></td><td>Appears in CWS homepage rotating feature; highest-visibility discovery surface in the store</td><td>After Featured badge + 4.5+ star rating</td></tr>
+      <tr><td><strong>AlternativeTo full optimization</strong></td><td>Indexed by Google; generates referral for "X alternative" queries; permanent listing</td><td>Month 1 (submit immediately)</td></tr>
+      <tr><td><strong>GitHub: open-source export spec</strong></td><td>Backlinks from dev blogs; Obsidian/Logseq communities; developer credibility</td><td>Month 4–6</td></tr>
+      <tr><td><strong>Referral program</strong></td><td>In-extension "refer a friend" → unlock a Pro feature; word-of-mouth amplifier in PKM communities</td><td>After 500 users</td></tr>
+      <tr><td><strong>Comparison pages</strong></td><td><code>/vs/dewey</code>, <code>/vs/twillot</code>, <code>/vs/xbookmarks</code> — captures bottom-of-funnel comparison intent; earns backlinks from review sites</td><td>Month 3–4</td></tr>
+      <tr><td><strong>Integration partnerships</strong></td><td>Obsidian plugin, Readwise export, Logseq — each = organic community mentions + cross-referral installs</td><td>Month 6–9</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Key Additions That Push the Score to 95+</h2>
+  <p>The expert panel identified these specific additions — absent from the 90-day plan — as what separates 67/100 from 95+:</p>
+
+  <ul>
+    <li><strong>Monthly CWS listing iteration:</strong> treat the listing as a living page, not a launch artifact. Rotate the weakest screenshot, test one short description variant monthly. A 20% install-rate improvement on the same search traffic doubles user growth at zero acquisition cost.</li>
+    <li><strong>Activation tracking + day-3 re-engagement:</strong> define "activated user" as 3 bookmarks opened in reader view within 7 days. Add a day-3 re-engagement nudge ("You have 47 unread bookmarks") for users who synced but never opened reader view. The review flywheel depends on users becoming active before the prompt fires.</li>
+    <li><strong>Uninstall feedback via <code>chrome.runtime.setUninstallURL</code>:</strong> a 3-question form. CWS ranking penalizes high uninstall rates. One hour of engineering directly protects ranking at scale.</li>
+    <li><strong>GraphQL breakage resilience:</strong> a status indicator showing "sync temporarily interrupted, your existing bookmarks are safe and available offline" rather than silent failure. A single sync event producing 10 one-star reviews can delay the Featured badge timeline by months.</li>
+    <li><strong>Monthly user insight interviews:</strong> email 5 active users for a 15-minute conversation. Their specific language becomes the hook for the next Twitter thread and IndieHackers post. The difference between 10 likes and 400 likes is behavioral specificity.</li>
+    <li><strong>CWS competitor review mining:</strong> read 1-star and 3-star reviews on Export Twitter Bookmarks, Twillot, and Tweet Copier quarterly. Their unmet needs become listing copy and blog post ideas. Fastest available signal for positioning gaps.</li>
+  </ul>
+
+  <h2>18-Month Target Dashboard</h2>
+  <table class="striped">
+    <thead><tr><th>Metric</th><th>18-Month Target</th></tr></thead>
+    <tbody>
+      <tr><td>CWS users</td><td class="st-ok">20,000+</td></tr>
+      <tr><td>CWS reviews</td><td class="st-ok">500+</td></tr>
+      <tr><td>CWS badges</td><td class="st-ok">Featured + Editor's Pick</td></tr>
+      <tr><td>Blog organic traffic</td><td class="st-ok">50K+/mo</td></tr>
+      <tr><td>Browser coverage</td><td class="st-ok">Chrome + Firefox + Edge</td></tr>
+      <tr><td>Languages</td><td class="st-ok">9 locales</td></tr>
+      <tr><td>External backlinks to CWS</td><td class="st-ok">100+</td></tr>
+      <tr><td>Press mentions</td><td class="st-ok">5+ (newsletters, blogs)</td></tr>
+      <tr><td>Podcast appearances</td><td class="st-ok">5+</td></tr>
+      <tr><td>AI search visibility</td><td class="st-ok">Top-3 for "twitter bookmark manager" in ChatGPT / Perplexity</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ══════════════ CH 09: POSITIONING ══════════════ -->
+<section class="chapter">
+  <div class="chapter-num">09 · Positioning &amp; One Sentence</div>
+  <h1>Positioning &amp; One Sentence</h1>
+
+  <p class="lead">Every piece of copy, every channel, every post must orbit a single claim. Competitors own export (Export Twitter Bookmarks) or search (Twillot) or cloud sync (Dewey). Zero competitors own WHERE bookmarks live after you save them. That territory is defensible, unique, and immediately understandable.</p>
+
+  <blockquote>"The reading queue that lives on your new tab — not buried inside X."</blockquote>
+
+  <h2>The Three-Second Test</h2>
+  <p>Any potential user who sees any Totem surface — the CWS listing, a blog post CTA, a Reddit post, a tweet — must understand this sentence within 3 seconds:</p>
+
+  <div class="callout" style="font-size: 12pt; line-height: 1.55;">
+    <strong>Your Twitter bookmarks show up on every new tab, ready to read — locally, without opening X.</strong>
+  </div>
+
+  <h2>Why This Positioning Wins</h2>
+
+  <table class="compact striped">
+    <thead><tr><th>Competitor</th><th>Owns</th><th>Cannot own</th></tr></thead>
+    <tbody>
+      <tr><td>Export Twitter Bookmarks</td><td>1-click export</td><td>Reading surface / new tab</td></tr>
+      <tr><td>Twillot</td><td>AI search + organize</td><td>Reading surface / new tab</td></tr>
+      <tr><td>Dewey</td><td>Cloud sync / multi-platform</td><td>Local-first / privacy / new tab</td></tr>
+      <tr><td>Tweet Copier</td><td>Multi-locale reach</td><td>Reading queue surface</td></tr>
+      <tr style="background:var(--tag-bg)"><td><strong>Totem</strong></td><td><strong>New tab reading queue</strong></td><td>—</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Positioning Rules for Every Surface</h2>
+  <ul>
+    <li><strong>CWS listing:</strong> lead with "twitter saver" (5,400/mo), explain the new tab surface in the first sentence of the long description, not the third bullet.</li>
+    <li><strong>Blog posts:</strong> Totem appears at the end, not the top. The behavioral insight earns the CTA.</li>
+    <li><strong>Reddit / HN:</strong> lead with the problem ("I saved 200 tweets and read 3"), not the product.</li>
+    <li><strong>Screenshots:</strong> Hero screenshot must say "Twitter bookmarks on every new tab" — this is what users remember.</li>
+    <li><strong>Twitter/X threads:</strong> behavioral observation first, product mention in the last tweet only.</li>
+  </ul>
+
+  <div class="takeaway">
+    <div class="takeaway-label">Monday morning instruction</div>
+    <p style="margin:0">Open the CWS developer dashboard. Change the name to <strong>Twitter Saver: Bookmarks on New Tab, Search &amp; Export</strong>. Save. Then open your code editor and build the review prompt. That's the whole week. Everything else waits.</p>
+  </div>
+</section>
+
+<section class="chapter">
+  <div class="chapter-num">10 · Todo List</div>
+  <h1>Todo List by Phase</h1>
+
+  <p class="lead">Use this as the release execution list. Quick wins are changes that can be done before deeper engineering. Phase 2 depends on the foundation being live. Phase 3 is the larger backlog that compounds after the listing, review loop, and website conversion path are working.</p>
+
+  <h2>Quick Wins — Do Immediately</h2>
+  <p class="phase-note">These are mostly copy, metadata, listing, and website changes. Do them before any community push.</p>
+  <table class="compact striped todo-table">
+    <thead><tr><th>Done</th><th>Area</th><th>Task</th><th>Dependency</th></tr></thead>
+    <tbody>
+      <tr><td class="todo-check"><input class="todo-box" type="checkbox" checked></td><td class="todo-area">CWS</td><td>Rename listing to <strong>Twitter Saver: Bookmarks on New Tab, Search &amp; Export</strong>.</td><td class="todo-dep">None</td></tr>
+      <tr><td class="todo-check"><input class="todo-box" type="checkbox" checked></td><td class="todo-area">Extension</td><td>Update <code>public/manifest.json</code> name to match the CWS title; keep <code>short_name</code> as Totem.</td><td class="todo-dep">None</td></tr>
+      <tr><td class="todo-check"><input class="todo-box" type="checkbox" checked></td><td class="todo-area">CWS</td><td>Update short description to: <em>Read, search, and export Twitter / X bookmarks from your new tab. Local-first, no Totem account, no server.</em></td><td class="todo-dep">None</td></tr>
+      <tr><td class="todo-check"><input class="todo-box" type="checkbox" checked></td><td class="todo-area">CWS</td><td>Rewrite long description so sentence one explains the new-tab surface; add <strong>twitter saver</strong> and <strong>tweet saver</strong> once in the Best for section.</td><td class="todo-dep">None</td></tr>
+      <tr><td class="todo-check"><input class="todo-box" type="checkbox" checked></td><td class="todo-area">Website</td><td>Fix homepage JSON-LD: add CWS <code>downloadUrl</code>, <code>softwareVersion</code>, <code>applicationSubCategory</code>, and initial <code>aggregateRating</code>.</td><td class="todo-dep">CWS URL</td></tr>
+      <tr><td class="todo-check"><input class="todo-box" type="checkbox" checked></td><td class="todo-area">Website</td><td>Update homepage positioning around: <strong>Your Twitter bookmarks show up on every new tab, ready to read — locally, without opening X.</strong></td><td class="todo-dep">None</td></tr>
+      <tr><td class="todo-check"><input class="todo-box" type="checkbox" checked></td><td class="todo-area">Website</td><td>Add permission explainer to privacy/support copy for <code>x.com</code> access, <code>cookies</code>, and <code>webRequest</code>.</td><td class="todo-dep">None</td></tr>
+      <tr><td class="todo-check"><input class="todo-box" type="checkbox" checked></td><td class="todo-area">Blog</td><td>Add one contextual inline CTA to each of the 7 existing blog posts with UTM links.</td><td class="todo-dep">CWS URL</td></tr>
+      <tr><td class="todo-check"><input class="todo-box" type="checkbox" checked></td><td class="todo-area">Assets</td><td>Prepare 5 CWS screenshots in order: new tab, reader, search, export, privacy.</td><td class="todo-dep">Current UI</td></tr>
+      <tr><td class="todo-check"><input class="todo-box" type="checkbox" checked></td><td class="todo-area">Assets</td><td>Set hero screenshot text to <strong>Twitter bookmarks on every new tab</strong>; set promo tile copy to <strong>Read, search, and export Twitter bookmarks.</strong></td><td class="todo-dep">Screenshots</td></tr>
+      <tr><td class="todo-check"><input class="todo-box" type="checkbox" checked></td><td class="todo-area">CWS</td><td>Confirm privacy policy URL and CWS privacy categories match local-only behavior.</td><td class="todo-dep">Privacy copy</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout">
+    <strong>Quick wins completed · June 2, 2026.</strong> Completion here means the repo-controlled copy, metadata, website, blog, asset, and verification work is ready for release. Chrome Web Store dashboard submission remains an external publishing step.
+    <ul style="margin-bottom:0">
+      <li><strong>CWS package:</strong> <code>plans/chrome-web-store-listing.md</code> now contains the dashboard-ready title, short description, long description, screenshot order, promo copy, and privacy checklist. The long description opens on the new-tab surface and includes <em>twitter saver</em> and <em>tweet saver</em> once in Best for.</li>
+      <li><strong>Extension:</strong> <code>public/manifest.json</code> now uses <code>Twitter Saver: Bookmarks on New Tab, Search &amp; Export</code>, keeps <code>short_name</code> as Totem, and matches the CWS short description.</li>
+      <li><strong>Website:</strong> homepage JSON-LD now includes CWS <code>downloadUrl</code>, <code>softwareVersion: "1.2.0"</code>, <code>applicationSubCategory: "Productivity"</code>, and the live initial CWS rating value/count. Homepage copy now leads with the new-tab Twitter-bookmarks positioning.</li>
+      <li><strong>Privacy/support:</strong> the privacy page now explicitly explains <code>https://x.com/*</code>, <code>cookies</code>, and <code>webRequest</code>, with local-only handling and no Totem backend. Live CWS public listing checked June 2, 2026: privacy-policy link is present, and disclosed categories are personally identifiable information, authentication information, web history, user activity, and website content.</li>
+      <li><strong>Blog CTAs:</strong> all seven existing posts now have contextual inline Chrome Web Store CTAs using <code>utm_source=blog&amp;utm_medium=inline_cta&amp;utm_campaign=[slug]</code>.</li>
+      <li><strong>Assets:</strong> <code>images-for-promotions/chrome-web-store/screenshots/</code> now contains exactly five 1280×800 PNG screenshots in the requested order, plus 1400×560 marquee and 440×280 small promo tiles with the updated promo copy.</li>
+      <li><strong>Tests:</strong> <code>pnpm test</code> passed 50 files / 589 tests; <code>pnpm package:extension</code> created <code>release/totem-v1.2.0.zip</code>; <code>pnpm package:website</code> created <code>release/totem-website-v1.2.0.zip</code> with 19 website pages. Served HTML checks verified homepage JSON-LD, hero copy, uninstall feedback copy, and inline CTA hrefs.</li>
+    </ul>
+  </div>
+
+  <h2>Phase 2 — Release Foundation</h2>
+  <p class="phase-note">These require product work or should happen only after the quick-win listing and website foundation are ready.</p>
+  <table class="compact striped todo-table">
+    <thead><tr><th>Done</th><th>Area</th><th>Task</th><th>Dependency</th></tr></thead>
+    <tbody>
+      <tr><td class="todo-check"><input class="todo-box" type="checkbox" checked></td><td class="todo-area">Extension</td><td>Ship in-extension review prompt after 5 reader opens; persist dismiss/review state in <code>chrome.storage.local</code>.</td><td class="todo-dep">CWS review URL</td></tr>
+      <tr><td class="todo-check"><input class="todo-box" type="checkbox" checked></td><td class="todo-area">Extension</td><td>Track activation as 3 bookmarks opened in reader view within 7 days.</td><td class="todo-dep">Reader event tracking</td></tr>
+      <tr><td class="todo-check"><input class="todo-box" type="checkbox" checked></td><td class="todo-area">Extension</td><td>Add first-launch onboarding with setup step, permission explanation, and privacy link.</td><td class="todo-dep">Privacy page</td></tr>
+      <tr><td class="todo-check"><input class="todo-box" type="checkbox" checked></td><td class="todo-area">Extension</td><td>Add day-3 re-engagement nudge for synced users who never opened reader view.</td><td class="todo-dep">Activation tracking</td></tr>
+      <tr><td class="todo-check"><input class="todo-box" type="checkbox" checked></td><td class="todo-area">Extension</td><td>Add uninstall feedback via <code>chrome.runtime.setUninstallURL</code>.</td><td class="todo-dep">Feedback form URL</td></tr>
+      <tr><td class="todo-check"><input class="todo-box" type="checkbox" checked></td><td class="todo-area">Extension</td><td>Add sync interruption status: existing bookmarks are safe and available offline.</td><td class="todo-dep">Sync state</td></tr>
+      <tr><td class="todo-check"><input class="todo-box" type="checkbox"></td><td class="todo-area">CWS</td><td>Submit for Featured badge after listing, screenshots, privacy, and onboarding are aligned.</td><td class="todo-dep">Request copy prepared</td></tr>
+      <tr><td class="todo-check"><input class="todo-box" type="checkbox"></td><td class="todo-area">Outreach</td><td>Email bookmarksave.com for inclusion in its Twitter bookmark manager listicle.</td><td class="todo-dep">Email draft prepared</td></tr>
+      <tr><td class="todo-check"><input class="todo-box" type="checkbox"></td><td class="todo-area">Community</td><td>Post Show HN with the local-first GraphQL interception angle.</td><td class="todo-dep">Draft prepared</td></tr>
+      <tr><td class="todo-check"><input class="todo-box" type="checkbox"></td><td class="todo-area">Community</td><td>Post r/SideProject founder story: <em>I saved 200 tweets and read 3. So I built this.</em></td><td class="todo-dep">Draft prepared</td></tr>
+      <tr><td class="todo-check"><input class="todo-box" type="checkbox" checked></td><td class="todo-area">Content</td><td>Add release-ready <strong>Twitter Saver: What Saving Actually Does</strong> article to the site build.</td><td class="todo-dep">Deploy website</td></tr>
+      <tr><td class="todo-check"><input class="todo-box" type="checkbox" checked></td><td class="todo-area">Content</td><td>Add release-ready <strong>Where Are My Bookmarks on X</strong> article to the site build.</td><td class="todo-dep">Deploy website</td></tr>
+    </tbody>
+	  </table>
+
+  <div class="callout">
+    <strong>Phase 2 repo foundation completed - June 2, 2026.</strong> The extension review loop, activation tracking, onboarding, re-engagement, uninstall feedback URL, sync interruption copy, and two new SEO articles are implemented in the repo and verified in local builds. Public website deployment, Chrome Web Store submission, the Featured badge request, bookmarksave.com email, Show HN post, and r/SideProject post still require manual account actions after the release is live.
+  </div>
+
+	  <h2>Phase 3 — Growth Backlog</h2>
+  <p class="phase-note">These are bigger bets. Do them after the review loop and conversion path have started working.</p>
+  <table class="compact striped todo-table">
+    <thead><tr><th>Done</th><th>Area</th><th>Task</th><th>Dependency</th></tr></thead>
+    <tbody>
+      <tr><td class="todo-check"><input class="todo-box" type="checkbox"></td><td class="todo-area">Extension</td><td>Ship omnibox search: type <code>t [query]</code> in the Chrome address bar.</td><td class="todo-dep">Search stable</td></tr>
+      <tr><td class="todo-check"><input class="todo-box" type="checkbox"></td><td class="todo-area">Extension</td><td>Ship Chrome side panel variant using <code>chrome.sidePanel</code>.</td><td class="todo-dep">Core UI stable</td></tr>
+      <tr><td class="todo-check"><input class="todo-box" type="checkbox"></td><td class="todo-area">Extension</td><td>Ship reading stats: saved, read, exported, optional share text.</td><td class="todo-dep">Activation tracking</td></tr>
+      <tr><td class="todo-check"><input class="todo-box" type="checkbox"></td><td class="todo-area">Website</td><td>Build comparison pages: <code>/vs/dewey</code>, <code>/vs/twillot</code>, <code>/vs/xbookmarks</code>.</td><td class="todo-dep">Comparison research</td></tr>
+      <tr><td class="todo-check"><input class="todo-box" type="checkbox"></td><td class="todo-area">Content</td><td>Publish new-tab extensions, Chrome reading list, and best Twitter bookmark managers posts.</td><td class="todo-dep">CTA system</td></tr>
+      <tr><td class="todo-check"><input class="todo-box" type="checkbox"></td><td class="todo-area">Launch</td><td>Product Hunt launch only after onboarding is live, Featured badge is submitted, and 20+ reviews exist.</td><td class="todo-dep">20+ reviews</td></tr>
+      <tr><td class="todo-check"><input class="todo-box" type="checkbox"></td><td class="todo-area">Market</td><td>Localize CWS listing first, then UI: Hindi, Spanish, Portuguese, Japanese, Korean, German, French, Indonesian.</td><td class="todo-dep">English listing stable</td></tr>
+      <tr><td class="todo-check"><input class="todo-box" type="checkbox"></td><td class="todo-area">Market</td><td>Plan Firefox and Edge extension releases.</td><td class="todo-dep">Chrome stable</td></tr>
+      <tr><td class="todo-check"><input class="todo-box" type="checkbox"></td><td class="todo-area">Integrations</td><td>Add Obsidian export preset or plugin integration; add Readwise export compatibility.</td><td class="todo-dep">Export stable</td></tr>
+      <tr><td class="todo-check"><input class="todo-box" type="checkbox"></td><td class="todo-area">Authority</td><td>Apply for CWS Editor's Pick after Featured badge and 4.5+ star rating.</td><td class="todo-dep">Featured + rating</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Website Pages to Update or Create</h2>
+  <table class="compact striped todo-table">
+    <thead><tr><th>Done</th><th>Page</th><th>Change</th><th>Phase</th></tr></thead>
+    <tbody>
+      <tr><td class="todo-check"><input class="todo-box" type="checkbox" checked></td><td class="todo-area">Home</td><td><code>apps/site/src/pages/index.astro</code>: JSON-LD, CWS CTA, and sharper new-tab positioning.</td><td class="todo-dep">Quick</td></tr>
+      <tr><td class="todo-check"><input class="todo-box" type="checkbox" checked></td><td class="todo-area">Privacy</td><td><code>apps/site/src/pages/privacy.astro</code>: local-only data model and permission explanation.</td><td class="todo-dep">Quick</td></tr>
+      <tr><td class="todo-check"><input class="todo-box" type="checkbox" checked></td><td class="todo-area">Blog</td><td>All 7 existing posts: contextual inline CTA with UTM.</td><td class="todo-dep">Quick</td></tr>
+      <tr><td class="todo-check"><input class="todo-box" type="checkbox" checked></td><td class="todo-area">Article</td><td>New <strong>Twitter Saver: What Saving Actually Does</strong> page in the site build.</td><td class="todo-dep">Phase 2</td></tr>
+      <tr><td class="todo-check"><input class="todo-box" type="checkbox" checked></td><td class="todo-area">Article</td><td>New <strong>Where Are My Bookmarks on X</strong> page in the site build.</td><td class="todo-dep">Phase 2</td></tr>
+      <tr><td class="todo-check"><input class="todo-box" type="checkbox"></td><td class="todo-area">Compare</td><td><code>/vs/dewey</code>, then <code>/vs/twillot</code> and <code>/vs/xbookmarks</code>.</td><td class="todo-dep">Phase 3</td></tr>
+      <tr><td class="todo-check"><input class="todo-box" type="checkbox"></td><td class="todo-area">Share</td><td><code>/snap/[slug]</code> for shareable reading snapshots.</td><td class="todo-dep">Backlog</td></tr>
+    </tbody>
+  </table>
+
+  <div class="colophon">
+    <strong>Source:</strong> DataForSEO google_ads/search_volume/live and serp/google/organic/live/advanced · US · English · June 2, 2026. Five-agent multi-expert panel workflow (Marcus Chen · Sarah Kim · David Okonkwo · Priya Mehta · Jake Torres). Composite initial score: 15/100. 90-day plan: 67/100. 12–18 month plan (with all expert additions): <strong>95–96/100</strong>. Raw JSON cached in <code>tmp/dataforseo/</code>.
+  </div>
+</section>
+
+</body>
+</html>

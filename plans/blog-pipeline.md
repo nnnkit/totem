@@ -199,6 +199,8 @@ a third-party screenshot we don't have the right to use.
 | 2026-04-27 | Best Chrome Bookmark Managers in 2026 — Sorted by What You Actually Save | [best-chrome-bookmark-managers-2026](/blog/best-chrome-bookmark-managers-2026) | chrome bookmark manager | ~3,500 |
 | 2026-05-28 | What Actually Gets Exported When You Export Twitter Bookmarks? | [what-gets-exported-twitter-bookmarks](/blog/what-gets-exported-twitter-bookmarks) | twitter bookmarks export | ~250 supported |
 | 2026-05-28 | How to Search Your Twitter Bookmarks Before You Export Them | [search-twitter-bookmarks-before-export](/blog/search-twitter-bookmarks-before-export) | twitter bookmarks search | ~110 |
+| 2026-06-02 | Twitter Saver: What Saving Actually Does | [twitter-saver-what-saving-actually-does](/blog/twitter-saver-what-saving-actually-does) | twitter saver | 5,400 |
+| 2026-06-02 | Where Are My Bookmarks on X? | [where-are-my-bookmarks-on-x](/blog/where-are-my-bookmarks-on-x) | where are my bookmarks on x | ~640 |
 
 ---
 
@@ -225,6 +227,8 @@ Published from this batch:
 - Refreshed `/blog/how-to-export-twitter-bookmarks` for `export twitter bookmarks`.
 - Published `/blog/what-gets-exported-twitter-bookmarks` for `twitter bookmarks export`.
 - Published `/blog/search-twitter-bookmarks-before-export` for `twitter bookmarks search`.
+- Published `/blog/twitter-saver-what-saving-actually-does` for `twitter saver`.
+- Published `/blog/where-are-my-bookmarks-on-x` for the X bookmark location cluster.
 
 #### LX4. "Best Twitter bookmark managers for search, export, and actually reading"
 - **Canonical kw**: `twitter bookmark manager`
@@ -242,11 +246,21 @@ Published from this batch:
 - **Angle**: Use Pocket/Omnivore shutdown anxiety as the reader pain. A saved queue is not trustworthy unless saved items, reading progress, highlights, notes, and enough readable content can leave and come back.
 - **Fit**: ★★★ — good launch narrative, but publish after the search-led pieces.
 
+#### LX6. "What most Twitter bookmark exporters actually give you (and what's missing)"
+- **Canonical kw**: `export twitter bookmarks` (50/mo) — low volume but high intent; the real value is trust/conversion for people already evaluating Totem.
+- **Cluster vol**: ~50/mo direct + long-tail from "download twitter bookmarks," "save twitter threads," "backup twitter bookmarks."
+- **Competition**: LOW. Existing posts are how-to walkthroughs. None explain the depth difference between export types.
+- **SERP gap**: No post in the top 10 explains WHY exports from different tools look different — URL list vs. metadata CSV vs. full thread content. This is a gap Totem is uniquely qualified to fill honestly.
+- **Angle**: Most one-click exporters scrape X's API response which gives tweet metadata (URL, truncated text, author, date). For threads, you get disconnected fragments — individual tweets with no thread context. Totem exports what the reader view already parsed: the full thread as a coherent document (all tweets in order, full text, inline formatting, linked article content where available, YAML frontmatter). The Markdown file you get from Totem is the reading experience, not the raw data. Honest scope: this only applies to bookmarks that Totem has synced and rendered in reader view — exports of un-read bookmarks are metadata only.
+- **Tracking goal**: Install CTA click-through from people already searching "export twitter bookmarks." This post exists to convert comparison-stage readers, not top-of-funnel searchers.
+- **Fit**: ★★★ — not a volume play, a conversion and trust play. Publish after LX4.
+
 #### Deprioritized: "Tweet saver — what 'save a tweet' actually does"
 - **Canonical kw tested**: `tweet saver`
 - **Volume**: 320/mo, LOW.
 - **Problem**: SERP intent is almost entirely Twitter/X video downloader tools, not bookmark/read-later intent. Targeting it would attract the wrong reader.
 - **Use instead**: Mention "save tweets" language inside LX3/LX4, but do not make `tweet saver` the primary keyword.
+- **Update 2026-06-02**: Published the adjacent `twitter saver` version as `/blog/twitter-saver-what-saving-actually-does` because the SEO growth report identified `twitter saver` as the higher-volume, better-fit query.
 
 #### Deprioritized: "Twitter thread reader"
 - **Canonical kw tested**: `twitter thread reader`
@@ -286,6 +300,7 @@ Published from this batch:
 ### Thesis & explainer
 
 #### T1. "Where are my bookmarks on X — and why you keep forgetting them"
+- **Status 2026-06-02**: Published as `/blog/where-are-my-bookmarks-on-x`.
 - **Cluster vol**: ~640/mo (`how to see bookmarks on x` 260, `how to find bookmarks on x` 210, `how to check bookmarks on twitter` 170)
 - **Competition**: LOW
 - **SERP gap**: Top is help.x.com + thin third-party "click here, click there" walkthroughs. Nobody connects "the bookmark tab is buried four taps deep" to "that's why you never read what you saved."

@@ -2,6 +2,10 @@
 
 This project uses `@base-ui/react` (v1.2.0) for base UI primitives. Always prefer Base UI components over raw HTML elements when a corresponding component is available. Check `node_modules/@base-ui/react/` for the full list of available components.
 
+## Extension screenshots
+
+Before capturing, regenerating, editing, or reviewing extension screenshots, read [`docs/extension-screenshot-workflow.md`](docs/extension-screenshot-workflow.md). It is the source of truth for Chrome Web Store screenshot order, dimensions, required copy, asset paths, `agent-browser` capture, and verification.
+
 ## Blog pipeline
 
 All blog work is managed in [`plans/blog-pipeline.md`](plans/blog-pipeline.md). It is the single source of truth for ideas, in-progress drafts, and published posts. Before doing any blog-related work — pitching topics, researching keywords, drafting, publishing — read it.
