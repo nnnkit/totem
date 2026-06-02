@@ -128,6 +128,7 @@ function newTabHomeReducer(
 
 interface FooterCardProps {
   footerState: FooterState;
+  bookmarkCount: number;
   currentItem: DecoratedBookmark | null;
   getBookmarkHref: (bookmark: Bookmark) => string;
   cardBase: string;
@@ -145,6 +146,7 @@ interface FooterCardProps {
 
 function FooterCard({
   footerState,
+  bookmarkCount,
   currentItem,
   getBookmarkHref,
   cardBase,
@@ -290,10 +292,12 @@ function FooterCard({
       return (
         <article className={cardCentered}>
           <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
-            Something went wrong
+            Sync is interrupted
           </p>
           <p className="mt-4 text-pretty text-base text-home-empty">
-            Could not sync your bookmarks. Check your connection and try again.
+            {bookmarkCount > 0
+              ? "Your existing bookmarks are safe and available offline. Try again when X is reachable."
+              : "Could not sync your bookmarks. Check your connection and try again."}
           </p>
           <Button
             type="button"
@@ -789,6 +793,7 @@ function renderNewTabHome({
         <footer className="mx-auto w-full max-w-lg space-y-6 pb-6">
           <FooterCard
             footerState={footerState}
+            bookmarkCount={bookmarks.length}
             currentItem={currentItem}
             getBookmarkHref={getBookmarkHref}
             cardBase={cardBase}

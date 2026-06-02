@@ -1,4 +1,4 @@
-import { useReducer, useMemo, useCallback, useEffect } from "react";
+import { useReducer, useMemo, useCallback, useEffect, useState } from "react";
 import { useTheme } from "./hooks/useTheme";
 import { useSettings } from "./hooks/useSettings";
 import {
@@ -28,6 +28,9 @@ import { BookmarksList } from "./components/BookmarksList";
 import { SettingsModal } from "./components/SettingsModal";
 import { ExportModal } from "./components/ExportModal";
 import { ImportModal } from "./components/ImportModal";
+import { OnboardingModal } from "./components/OnboardingModal";
+import { ReengagementNudge } from "./components/ReengagementNudge";
+import { ReviewPrompt } from "./components/ReviewPrompt";
 import { Toast } from "./components/ui/Toast";
 import { Button } from "./components/ui/Button";
 import { OfflineBanner } from "./components/ui/OfflineBanner";
@@ -48,6 +51,21 @@ import {
   useRuntimeActions,
 } from "./stores/selectors";
 import { setHydrationAuthReady } from "./stores/hydration-store";
+import {
+  markOnboardingCompleted,
+  markOnboardingShown,
+  markReengagementDismissed,
+  markReengagementPrompted,
+  markReviewClicked,
+  markReviewDismissed,
+  markReviewPrompted,
+  readGrowthState,
+  recordBookmarksSynced,
+  recordReaderOpen,
+  shouldShowOnboarding,
+  shouldShowReengagementNudge,
+  shouldShowReviewPrompt,
+} from "./lib/growth-state";
 import type { Bookmark, SyncBlockedReason, ThreadTweet } from "./types";
 
 interface DemoExportPayload {
@@ -136,6 +154,7 @@ function newTabRouteReducer(
 
 interface ReaderRouteState {
   toast: ToastState | null;
+  reviewPromptVisible: boolean;
   shuffleSeed: number;
   localMutation: "idle" | "unbookmarking";
   localBookmarkSnapshot: Bookmark | null;
@@ -149,6 +168,7 @@ type ReaderRoutePatch =
 
 const initialReaderRouteState: ReaderRouteState = {
   toast: null,
+  reviewPromptVisible: false,
   shuffleSeed: 0,
   localMutation: "idle",
   localBookmarkSnapshot: null,
@@ -400,6 +420,11 @@ function NewTabRouteApp() {
     isResetting,
   } = routeState;
   const viewerProfile = useViewerProfile();
+  const [onboardingOpen, setOnboardingOpen] = useState(false);
+  const [reengagementNudgeVisible, setReengagementNudgeVisible] = useState(false);
+  const onboardingRequestedByUrl = useMemo(() => {
+    return new URLSearchParams(window.location.search).has("onboarding");
+  }, []);
 
   const {
     continueReading,
@@ -561,6 +586,63 @@ function NewTabRouteApp() {
 
   useDemoDataExporter({ bookmarks, settings, themePreference });
 
+  useEffect(() => {
+    if (typeof chrome === "undefined" || !chrome.storage?.local) return;
+
+    let cancelled = false;
+    const bookmarkCount = bookmarks.length;
+    const unreadCount = visibleUnread.length || bookmarkCount;
+
+    (async () => {
+      let growthState = bookmarkCount > 0
+        ? await recordBookmarksSynced(bookmarkCount)
+        : await readGrowthState();
+
+      if (cancelled) return;
+
+      if (
+        shouldShowOnboarding(growthState, {
+          requestedByUrl: onboardingRequestedByUrl,
+          bookmarkCount,
+        })
+      ) {
+        await markOnboardingShown();
+        if (cancelled) return;
+        setOnboardingOpen(true);
+        setReengagementNudgeVisible(false);
+        return;
+      }
+
+      if (
+        unreadCount > 0 &&
+        shouldShowReengagementNudge(growthState, bookmarkCount)
+      ) {
+        await markReengagementPrompted();
+        if (!cancelled) setReengagementNudgeVisible(true);
+      }
+    })().catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, [bookmarks.length, onboardingRequestedByUrl, visibleUnread.length]);
+
+  const handleCloseOnboarding = useCallback(() => {
+    setOnboardingOpen(false);
+    void markOnboardingCompleted();
+  }, []);
+
+  const handleDismissReengagement = useCallback(() => {
+    setReengagementNudgeVisible(false);
+    void markReengagementDismissed();
+  }, []);
+
+  const handleOpenReadingFromReengagement = useCallback(() => {
+    handleDismissReengagement();
+    restoreReadingTab();
+    updateRouteState({ view: "reading" });
+  }, [handleDismissReengagement, restoreReadingTab]);
+
   const mainContent = view === "reading"
     ? (
       <BookmarksList
@@ -636,6 +718,19 @@ function NewTabRouteApp() {
         activeAccountUserId={viewerProfile?.userId ?? null}
         onRefreshAfterImport={handleRefreshAfterImport}
       />
+      <OnboardingModal
+        open={onboardingOpen}
+        bookmarkCount={bookmarks.length}
+        onClose={handleCloseOnboarding}
+        onSync={handleSync}
+      />
+      {reengagementNudgeVisible && !onboardingOpen && (
+        <ReengagementNudge
+          unreadCount={visibleUnread.length || bookmarks.length}
+          onOpenReading={handleOpenReadingFromReengagement}
+          onDismiss={handleDismissReengagement}
+        />
+      )}
       {toast && (
         <Toast
           message={toast.message}
@@ -663,6 +758,7 @@ function ReaderRouteApp() {
   );
   const {
     toast,
+    reviewPromptVisible,
     shuffleSeed,
     localMutation,
     localBookmarkSnapshot,
@@ -707,7 +803,15 @@ function ReaderRouteApp() {
       goToNewTab(returnSurface);
       return;
     }
-    ensureReadingProgressExists(readTweetId).catch(() => {});
+    ensureReadingProgressExists(readTweetId)
+      .then(() => recordReaderOpen(readTweetId))
+      .then(async (growthState) => {
+        if (shouldShowReviewPrompt(growthState)) {
+          await markReviewPrompted();
+          updateReaderRouteState({ reviewPromptVisible: true });
+        }
+      })
+      .catch(() => {});
   }, [bookmarksLoaded, hiddenBookmark, readTweetId, returnSurface]);
 
   useEffect(() => {
@@ -811,6 +915,16 @@ function ReaderRouteApp() {
     }
     : undefined;
 
+  const handleDismissReviewPrompt = useCallback(() => {
+    updateReaderRouteState({ reviewPromptVisible: false });
+    void markReviewDismissed();
+  }, []);
+
+  const handleReviewClick = useCallback(() => {
+    updateReaderRouteState({ reviewPromptVisible: false });
+    void markReviewClicked();
+  }, []);
+
   if (!readTweetId) {
     return null;
   }
@@ -858,6 +972,12 @@ function ReaderRouteApp() {
             linkUrl={toast.linkUrl}
             linkLabel={toast.linkLabel}
             onDismiss={() => updateReaderRouteState({ toast: null })}
+          />
+        )}
+        {reviewPromptVisible && (
+          <ReviewPrompt
+            onDismiss={handleDismissReviewPrompt}
+            onReview={handleReviewClick}
           />
         )}
       </>

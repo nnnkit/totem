@@ -28,6 +28,8 @@ import {
   extractGraphqlOperationName,
 } from "../lib/sw-pure";
 import { CS_ACCOUNT_CONTEXT_ID, CS_RESET_EPOCH, SYNC_SETTINGS } from "../lib/storage-keys";
+import { UNINSTALL_FEEDBACK_URL } from "../lib/constants/growth";
+import { requestOnboardingForInstall } from "../lib/growth-state";
 import { closeDb } from "../db";
 
 // ── Types ────────────────────────────────────────────────────
@@ -254,12 +256,68 @@ function extractTweetIdFromRequestBody(
 // Guard: only run in real service worker environment (not tests)
 // ══════════════════════════════════════════════════════════════
 
+type ReleaseRuntime = {
+  getURL(path: string): string;
+  lastError?: chrome.runtime.LastError;
+  setUninstallURL?: (url: string, callback?: () => void) => void;
+  onInstalled?: {
+    addListener(listener: (details: chrome.runtime.InstalledDetails) => void): void;
+  };
+};
+
+type ReleaseTabs = {
+  create?: (props: { url: string; active?: boolean }) => Promise<unknown> | void;
+};
+
+export function configureUninstallFeedback(runtime: ReleaseRuntime): void {
+  if (typeof runtime.setUninstallURL !== "function") return;
+  try {
+    runtime.setUninstallURL(UNINSTALL_FEEDBACK_URL, () => {
+      void runtime.lastError;
+    });
+  } catch {
+  }
+}
+
+export function openFirstLaunchOnboarding(
+  runtime: Pick<ReleaseRuntime, "getURL">,
+  tabs?: ReleaseTabs,
+): void {
+  const onboardingUrl = runtime.getURL(
+    "newtab.html?onboarding=1&utm_source=extension&utm_medium=oninstall&utm_campaign=first_launch",
+  );
+  const created = tabs?.create?.({ url: onboardingUrl, active: true });
+  created?.catch(() => {});
+}
+
+export function registerReleaseFoundationHooks(
+  runtime: ReleaseRuntime,
+  tabs: ReleaseTabs | undefined,
+  requestOnboarding: () => Promise<unknown> = requestOnboardingForInstall,
+): void {
+  configureUninstallFeedback(runtime);
+
+  runtime.onInstalled?.addListener((details) => {
+    configureUninstallFeedback(runtime);
+    if (details.reason !== "install") return;
+    requestOnboarding()
+      .then(() => {
+        openFirstLaunchOnboarding(runtime, tabs);
+      })
+      .catch(() => {
+        openFirstLaunchOnboarding(runtime, tabs);
+      });
+  });
+}
+
 const hasChromeRuntime =
   typeof chrome !== "undefined" &&
   chrome.runtime &&
   typeof chrome.runtime.onMessage?.addListener === "function";
 
 if (hasChromeRuntime) {
+
+registerReleaseFoundationHooks(chrome.runtime, chrome.tabs);
 
 // ── Message router ───────────────────────────────────────────
 
