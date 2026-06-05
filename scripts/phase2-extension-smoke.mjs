@@ -9,16 +9,10 @@ const EXPECTED_EXTENSION_NAME =
   "Twitter Saver: Bookmarks on New Tab, Search & Export";
 const EXPECTED_HOST_PERMISSION = "https://x.com/*";
 const EXPECTED_NEW_TAB = "newtab.html";
-const EXPECTED_ONBOARDING_TEXT = [
-  "Set up Totem",
-  "Visit x.com/bookmarks once",
-  "cookies",
-  "webRequest",
-  "Privacy policy",
-];
-const EXPECTED_LINKS = [
-  "https://x.com/i/bookmarks",
-  "https://usetotem.xyz/privacy",
+const EXPECTED_STARTUP_TEXT = [
+  "LOG IN TO START READING",
+  "Sign in to your X account",
+  "Log in to X",
 ];
 
 class CdpClient {
@@ -205,8 +199,14 @@ try {
   await pageClient.send("Page.enable");
   await pageClient.send("Runtime.enable");
 
-  const onboardingUrl = `chrome-extension://${extensionId}/newtab.html?onboarding=1`;
-  await pageClient.send("Page.navigate", { url: onboardingUrl });
+  const newTabUrl = `chrome-extension://${extensionId}/newtab.html`;
+  await pageClient.send("Page.navigate", { url: newTabUrl });
+  await waitForEval(
+    pageClient,
+    "location.href",
+    (value) => value === newTabUrl,
+    "new tab navigation",
+  );
   await waitForEval(
     pageClient,
     "document.readyState",
@@ -243,19 +243,13 @@ try {
     pageClient,
     "document.body ? document.body.innerText : ''",
     (value) =>
-      EXPECTED_ONBOARDING_TEXT.every((fragment) => value.includes(fragment)),
-    "first-launch onboarding copy",
+      EXPECTED_STARTUP_TEXT.every((fragment) => value.includes(fragment)) &&
+      !value.includes("Set up Totem"),
+    "startup login copy",
   );
-  assertTextIncludes(bodyText, EXPECTED_ONBOARDING_TEXT);
-
-  const links = await evaluate(
-    pageClient,
-    "[...document.querySelectorAll('a')].map((link) => link.href)",
-  );
-  for (const href of EXPECTED_LINKS) {
-    assertIncludes(links, href, "onboarding links");
-  }
-  console.log("Verified first-launch onboarding copy and links.");
+  assertTextIncludes(bodyText, EXPECTED_STARTUP_TEXT, "startup text");
+  assertTextExcludes(bodyText, ["Set up Totem"], "startup text");
+  console.log("Verified startup login copy without onboarding modal.");
 
   const storageWorks = await evaluate(
     pageClient,
@@ -468,10 +462,17 @@ function assertIncludes(values, expected, label) {
   }
 }
 
-function assertTextIncludes(text, fragments) {
+function assertTextIncludes(text, fragments, label = "text") {
   const missing = fragments.filter((fragment) => !text.includes(fragment));
   if (missing.length > 0) {
-    throw new Error(`onboarding text missing: ${missing.join(", ")}`);
+    throw new Error(`${label} missing: ${missing.join(", ")}`);
+  }
+}
+
+function assertTextExcludes(text, fragments, label = "text") {
+  const present = fragments.filter((fragment) => text.includes(fragment));
+  if (present.length > 0) {
+    throw new Error(`${label} unexpectedly included: ${present.join(", ")}`);
   }
 }
 
