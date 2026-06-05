@@ -2,15 +2,15 @@
 
 Source: `plans/totem-seo-growth-report.html` and `plans/chrome-web-store-listing.md`.
 
-Goal for this release: enter Chrome Web Store search for `twitter saver`, start the review flywheel, stop leaking existing blog traffic, and prepare the listing for a Featured badge request.
+Goal for this release: resubmit the Chrome Web Store draft with compliant metadata, keep the review flywheel, stop leaking existing blog traffic, and prepare the listing for a Featured badge request.
 
 ## P0 - Release Scope
 
 ### Extension
 
-- [x] Update `public/manifest.json` `name` to `Twitter Saver: Bookmarks on New Tab, Search & Export`.
+- [x] Update `public/manifest.json` `name` to `Totem - Twitter / X Bookmarks`.
 - [x] Keep `short_name` as `Totem` so the product still has a compact brand in constrained Chrome UI.
-- [x] Keep the manifest/CWS description aligned with: `Read, search, and export Twitter / X bookmarks from your new tab. Local-first, no Totem account, no server.`
+- [x] Keep the manifest/CWS description aligned with: `Read your Twitter / X bookmarks on a calm new tab. Search, highlight, and export your library locally.`
 - [x] Add an in-extension review prompt.
   - Trigger after a user opens 5 bookmarks in reader view across any sessions.
   - Placed as a reader-route banner after `recordReaderOpen()`.
@@ -38,7 +38,7 @@ Goal for this release: enter Chrome Web Store search for `twitter saver`, start 
 
 - [x] Fix homepage JSON-LD in `apps/site/src/pages/index.astro`.
   - Added `downloadUrl` with the Chrome Web Store listing URL.
-  - Added `softwareVersion: "1.2.0"`.
+  - Added `softwareVersion: "1.2.1"`.
   - Added `applicationSubCategory: "Productivity"`.
   - Added `aggregateRating` from the live initial CWS rating.
 - [x] Update homepage positioning around the 3-second claim: `Your Twitter bookmarks show up on every new tab, ready to read - locally, without opening X.`
@@ -63,16 +63,16 @@ Goal for this release: enter Chrome Web Store search for `twitter saver`, start 
 
 ### Chrome Web Store Listing
 
-Repo status: listing copy/assets are ready for the dashboard; public Chrome Web Store submission remains in `P0 - After Release`.
+Repo status: resubmission-safe listing copy/assets are ready for the dashboard; public Chrome Web Store submission remains in `P0 - After Release`.
 
-- [x] Rename the listing to `Twitter Saver: Bookmarks on New Tab, Search & Export`.
-- [x] Keep Totem visible in publisher name, icon, screenshots, and product UI rather than the listing title prefix.
+- [x] Rename the listing to `Totem - Twitter / X Bookmarks`.
+- [x] Keep Totem visible in the listing title, publisher name, icon, screenshots, and product UI.
 - [x] Update short description to match the manifest description.
 - [x] Update long description so the first sentence explains the new-tab surface.
-- [x] Add `twitter saver` once in the long description `Best for` section.
-- [x] Add `tweet saver` once in the long description `Best for` section.
+- [x] Remove the rejected keyword list and standalone SEO phrases from the long description.
+- [x] Avoid `twitter saver`, `tweet saver`, `bookmark manager`, `pocket alternative`, `instapaper alternative`, and similar phrases as standalone metadata.
 - [x] Keep `Twitter` first and `X` secondary in listing copy.
-- [x] Avoid emoji, keyword blocks, and unsupported claims.
+- [x] Avoid emoji, keyword blocks, repeated keyword phrases, and unsupported claims.
 - [x] Add a concise permission explainer to the listing or support page: `x.com access is used only to sync bookmarks from your active X session.`
 - [x] Re-check CWS privacy data categories against actual local-only behavior.
 - [x] Confirm the CWS dashboard privacy policy URL is filled.
@@ -93,7 +93,7 @@ Repo status: listing copy/assets are ready for the dashboard; public Chrome Web 
 
 - [x] Confirm the extension name is under Chrome's 75-character limit.
 - [x] Build the extension package.
-  - Created `release/totem-v1.2.0.zip` with `pnpm package:extension`.
+  - Created `release/totem-v1.2.1.zip` with `pnpm package:extension`.
 - [ ] Test install/update flow locally.
 - [x] Test first-launch onboarding.
   - Covered install hook with `src/service-worker/__tests__/release-foundation.test.ts`.
@@ -108,7 +108,7 @@ Repo status: listing copy/assets are ready for the dashboard; public Chrome Web 
 - [x] Test uninstall URL.
   - Covered with `src/service-worker/__tests__/release-foundation.test.ts`.
 - [x] Build the website.
-  - Created `release/totem-website-v1.2.0.zip` with `pnpm package:website`.
+  - Created `release/totem-website-v1.2.1.zip` with `pnpm package:website`.
 - [x] Verify homepage JSON-LD.
 - [x] Verify blog CTA links and UTM values.
 - [ ] Check desktop and mobile website screenshots before deploy.
@@ -117,7 +117,7 @@ Repo status: listing copy/assets are ready for the dashboard; public Chrome Web 
 ## P0 - After Release
 
 - [ ] Deploy the website update.
-  - Deployable artifact: `release/totem-website-v1.2.0.zip`.
+  - Deployable artifact: `release/totem-website-v1.2.1.zip`.
   - Verify `/uninstall-feedback/` is public before shipping the extension uninstall URL.
   - Verify both new Phase 2 article URLs are public.
 - [ ] Submit the Chrome Web Store listing update.

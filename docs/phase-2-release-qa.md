@@ -7,11 +7,11 @@ Use this runbook after `pnpm package:extension` and `pnpm --filter @totem/site b
 1. Open `chrome://extensions`, enable Developer mode, and load the unpacked `dist/` folder.
 2. Confirm the installed extension name is `Twitter Saver: Bookmarks on New Tab, Search & Export`.
 3. Open a new tab with a fresh profile or after clearing Totem local storage.
-   - Expected: first-launch onboarding opens.
-   - Expected copy: setup step references `x.com/bookmarks`; `cookies` and `webRequest` are explained; Privacy policy link opens `https://usetotem.xyz/privacy`.
-4. Click `Open X bookmarks`.
-   - Expected: opens `https://x.com/i/bookmarks`.
-5. Return to Totem and click `Sync bookmarks`.
+   - Expected: no setup modal opens.
+   - Expected copy: the login card shows `Log in to start reading`, `Sign in to your X account`, and `Log in to X`.
+4. Click `Log in to X`.
+   - Expected: opens the normal X login/bookmarks flow for the current browser profile.
+5. Return to Totem and sync bookmarks once X is ready.
    - Expected: sync starts or shows the normal auth/sync state for the current profile.
 6. Open three distinct bookmarks in reader view within one test session.
    - Expected: activation state records three reader opens within seven days in `chrome.storage.local.totem_growth_state`.
@@ -46,7 +46,7 @@ Use this runbook after `pnpm package:extension` and `pnpm --filter @totem/site b
 
 ## Chrome Web Store QA
 
-1. Upload `release/totem-v1.2.0.zip`.
+1. Upload `release/totem-v1.2.1.zip`.
 2. Update listing title, short description, long description, screenshots, promo tiles, privacy policy URL, and privacy disclosures from `plans/chrome-web-store-listing.md`.
 3. Confirm the public listing shows the new title after approval.
 4. Confirm the `/reviews` URL works for the public listing.
