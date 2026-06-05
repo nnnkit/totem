@@ -281,9 +281,21 @@ export const SITE_COPY = {
           name: "Setup",
           items: [
             {
+              question:
+                "Why did my browser ask “Did you mean to change this page?”",
+              answer:
+                "That is Chrome or Brave confirming that Totem is allowed to replace your new tab page. It is a browser safety prompt for new-tab extensions, not a Totem warning. Choose Keep it if you want Totem on new tabs. Choose Change it back only if you want the browser's default new tab restored.",
+            },
+            {
               question: "Why isn’t Totem opening on every new tab?",
               answer:
                 "Another extension, another browser profile, or a managed browser setting may be taking over your new tab page. Make sure the extension is enabled in this profile and disable any other new-tab extensions.",
+            },
+            {
+              question:
+                "Why do I still see Brave’s background or Customize Brave bar?",
+              answer:
+                "Some Brave setups keep browser-owned new-tab UI around extension pages, including background attribution, sponsored-image controls, or the Customize Brave bar. Totem is still running; that footer is controlled by Brave. Use Customize Brave to turn off background images, sponsored images, or dashboard widgets for a cleaner new tab.",
             },
             {
               question:
