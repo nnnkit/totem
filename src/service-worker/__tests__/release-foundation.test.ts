@@ -14,7 +14,7 @@ describe("release foundation hooks", () => {
       setUninstallURL,
     };
 
-    registerReleaseFoundationHooks(runtime, undefined, vi.fn());
+    registerReleaseFoundationHooks(runtime, undefined);
 
     expect(setUninstallURL).toHaveBeenCalledWith(
       UNINSTALL_FEEDBACK_URL,
@@ -22,7 +22,7 @@ describe("release foundation hooks", () => {
     );
   });
 
-  it("requests onboarding and opens the first-launch tab only on install", async () => {
+  it("opens the first-launch tab only on install", async () => {
     let installListener:
       | ((details: chrome.runtime.InstalledDetails) => void)
       | null = null;
@@ -43,9 +43,7 @@ describe("release foundation hooks", () => {
     const tabs = {
       create: vi.fn(() => Promise.resolve({ id: 1 })),
     };
-    const requestOnboarding = vi.fn(() => Promise.resolve());
-
-    registerReleaseFoundationHooks(runtime, tabs, requestOnboarding);
+    registerReleaseFoundationHooks(runtime, tabs);
 
     const listener = installListener as
       | ((details: chrome.runtime.InstalledDetails) => void)
@@ -54,16 +52,14 @@ describe("release foundation hooks", () => {
     listener({ reason: "update" } as chrome.runtime.InstalledDetails);
     await Promise.resolve();
 
-    expect(requestOnboarding).not.toHaveBeenCalled();
     expect(tabs.create).not.toHaveBeenCalled();
 
     listener({ reason: "install" } as chrome.runtime.InstalledDetails);
     await Promise.resolve();
     await Promise.resolve();
 
-    expect(requestOnboarding).toHaveBeenCalledTimes(1);
     expect(tabs.create).toHaveBeenCalledWith({
-      url: "chrome-extension://fake/newtab.html?onboarding=1&utm_source=extension&utm_medium=oninstall&utm_campaign=first_launch",
+      url: "chrome-extension://fake/newtab.html?utm_source=extension&utm_medium=oninstall&utm_campaign=first_launch",
       active: true,
     });
     expect(setUninstallURL).toHaveBeenCalledTimes(3);

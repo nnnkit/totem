@@ -28,7 +28,6 @@ import { BookmarksList } from "./components/BookmarksList";
 import { SettingsModal } from "./components/SettingsModal";
 import { ExportModal } from "./components/ExportModal";
 import { ImportModal } from "./components/ImportModal";
-import { OnboardingModal } from "./components/OnboardingModal";
 import { ReengagementNudge } from "./components/ReengagementNudge";
 import { ReviewPrompt } from "./components/ReviewPrompt";
 import { Toast } from "./components/ui/Toast";
@@ -52,17 +51,13 @@ import {
 } from "./stores/selectors";
 import { setHydrationAuthReady } from "./stores/hydration-store";
 import {
-  markOnboardingCompleted,
-  markOnboardingShown,
   markReengagementDismissed,
   markReengagementPrompted,
   markReviewClicked,
   markReviewDismissed,
   markReviewPrompted,
-  readGrowthState,
   recordBookmarksSynced,
   recordReaderOpen,
-  shouldShowOnboarding,
   shouldShowReengagementNudge,
   shouldShowReviewPrompt,
 } from "./lib/growth-state";
@@ -420,11 +415,7 @@ function NewTabRouteApp() {
     isResetting,
   } = routeState;
   const viewerProfile = useViewerProfile();
-  const [onboardingOpen, setOnboardingOpen] = useState(false);
   const [reengagementNudgeVisible, setReengagementNudgeVisible] = useState(false);
-  const onboardingRequestedByUrl = useMemo(() => {
-    return new URLSearchParams(window.location.search).has("onboarding");
-  }, []);
 
   const {
     continueReading,
@@ -591,27 +582,13 @@ function NewTabRouteApp() {
 
     let cancelled = false;
     const bookmarkCount = bookmarks.length;
-    const unreadCount = visibleUnread.length || bookmarkCount;
+    if (bookmarkCount <= 0) return;
 
     (async () => {
-      let growthState = bookmarkCount > 0
-        ? await recordBookmarksSynced(bookmarkCount)
-        : await readGrowthState();
+      const growthState = await recordBookmarksSynced(bookmarkCount);
+      const unreadCount = visibleUnread.length || bookmarkCount;
 
       if (cancelled) return;
-
-      if (
-        shouldShowOnboarding(growthState, {
-          requestedByUrl: onboardingRequestedByUrl,
-          bookmarkCount,
-        })
-      ) {
-        await markOnboardingShown();
-        if (cancelled) return;
-        setOnboardingOpen(true);
-        setReengagementNudgeVisible(false);
-        return;
-      }
 
       if (
         unreadCount > 0 &&
@@ -625,12 +602,7 @@ function NewTabRouteApp() {
     return () => {
       cancelled = true;
     };
-  }, [bookmarks.length, onboardingRequestedByUrl, visibleUnread.length]);
-
-  const handleCloseOnboarding = useCallback(() => {
-    setOnboardingOpen(false);
-    void markOnboardingCompleted();
-  }, []);
+  }, [bookmarks.length, visibleUnread.length]);
 
   const handleDismissReengagement = useCallback(() => {
     setReengagementNudgeVisible(false);
@@ -718,13 +690,7 @@ function NewTabRouteApp() {
         activeAccountUserId={viewerProfile?.userId ?? null}
         onRefreshAfterImport={handleRefreshAfterImport}
       />
-      <OnboardingModal
-        open={onboardingOpen}
-        bookmarkCount={bookmarks.length}
-        onClose={handleCloseOnboarding}
-        onSync={handleSync}
-      />
-      {reengagementNudgeVisible && !onboardingOpen && (
+      {reengagementNudgeVisible && (
         <ReengagementNudge
           unreadCount={visibleUnread.length || bookmarks.length}
           onOpenReading={handleOpenReadingFromReengagement}

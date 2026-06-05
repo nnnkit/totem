@@ -29,7 +29,6 @@ import {
 } from "../lib/sw-pure";
 import { CS_ACCOUNT_CONTEXT_ID, CS_RESET_EPOCH, SYNC_SETTINGS } from "../lib/storage-keys";
 import { UNINSTALL_FEEDBACK_URL } from "../lib/constants/growth";
-import { requestOnboardingForInstall } from "../lib/growth-state";
 import { closeDb } from "../db";
 
 // ── Types ────────────────────────────────────────────────────
@@ -279,34 +278,27 @@ export function configureUninstallFeedback(runtime: ReleaseRuntime): void {
   }
 }
 
-export function openFirstLaunchOnboarding(
+export function openFirstLaunchTab(
   runtime: Pick<ReleaseRuntime, "getURL">,
   tabs?: ReleaseTabs,
 ): void {
-  const onboardingUrl = runtime.getURL(
-    "newtab.html?onboarding=1&utm_source=extension&utm_medium=oninstall&utm_campaign=first_launch",
+  const firstLaunchUrl = runtime.getURL(
+    "newtab.html?utm_source=extension&utm_medium=oninstall&utm_campaign=first_launch",
   );
-  const created = tabs?.create?.({ url: onboardingUrl, active: true });
+  const created = tabs?.create?.({ url: firstLaunchUrl, active: true });
   created?.catch(() => {});
 }
 
 export function registerReleaseFoundationHooks(
   runtime: ReleaseRuntime,
   tabs: ReleaseTabs | undefined,
-  requestOnboarding: () => Promise<unknown> = requestOnboardingForInstall,
 ): void {
   configureUninstallFeedback(runtime);
 
   runtime.onInstalled?.addListener((details) => {
     configureUninstallFeedback(runtime);
     if (details.reason !== "install") return;
-    requestOnboarding()
-      .then(() => {
-        openFirstLaunchOnboarding(runtime, tabs);
-      })
-      .catch(() => {
-        openFirstLaunchOnboarding(runtime, tabs);
-      });
+    openFirstLaunchTab(runtime, tabs);
   });
 }
 
