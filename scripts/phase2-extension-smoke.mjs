@@ -5,7 +5,8 @@ import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
-const EXPECTED_EXTENSION_NAME = "Totem - Twitter / X Bookmarks";
+const EXPECTED_EXTENSION_NAME =
+  "Twitter Saver: Bookmarks on New Tab, Search & Export";
 const EXPECTED_HOST_PERMISSION = "https://x.com/*";
 const EXPECTED_NEW_TAB = "newtab.html";
 const EXPECTED_STARTUP_TEXT = [
