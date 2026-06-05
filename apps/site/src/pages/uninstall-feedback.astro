@@ -40,6 +40,9 @@ const mailtoUrl = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(mailtoSu
     </p>
 
     <form
+      data-uninstall-feedback-form
+      data-support-email={SUPPORT_EMAIL}
+      data-mail-subject={mailtoSubject}
       class="mt-8 space-y-6 rounded border border-neutral-200 bg-white p-6 shadow-sm"
       action={`mailto:${SUPPORT_EMAIL}`}
       method="post"
@@ -91,15 +94,85 @@ const mailtoUrl = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(mailtoSu
           type="submit"
           class="inline-flex items-center justify-center rounded bg-neutral-900 px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
         >
-          Send feedback
+          Send with Gmail
         </button>
         <a
           href={mailtoUrl}
+          data-uninstall-feedback-mailto
           class="text-sm font-medium text-neutral-600 underline-offset-4 hover:text-neutral-900 hover:underline"
         >
-          Open email draft
+          Use default mail app
         </a>
       </div>
     </form>
   </main>
 </BaseLayout>
+
+<script>
+  const form = document.querySelector<HTMLFormElement>(
+    "[data-uninstall-feedback-form]",
+  );
+  const mailtoLink = document.querySelector<HTMLAnchorElement>(
+    "[data-uninstall-feedback-mailto]",
+  );
+
+  function getFeedbackEmail() {
+    if (!form) return null;
+
+    const supportEmail = form.dataset.supportEmail;
+    const subject = form.dataset.mailSubject || "Totem uninstall feedback";
+    if (!supportEmail) return null;
+
+    const data = new FormData(form);
+    const reasonSelect = form.elements.namedItem("reason") as HTMLSelectElement | null;
+    const reason =
+      reasonSelect?.selectedOptions[0]?.textContent?.trim() ||
+      String(data.get("reason") || "").trim();
+    const expected = String(data.get("expected") || "").trim();
+    const email = String(data.get("email") || "").trim();
+    const body = [
+      "1. What made you uninstall Totem?",
+      reason || "-",
+      "",
+      "2. What did you expect Totem to do better?",
+      expected || "-",
+      "",
+      "3. Can we follow up?",
+      email || "No email provided.",
+    ].join("\n");
+
+    return { supportEmail, subject, body };
+  }
+
+  function buildMailtoUrl(email: ReturnType<typeof getFeedbackEmail>) {
+    if (!email) return "";
+    const params = new URLSearchParams({
+      subject: email.subject,
+      body: email.body,
+    });
+    return `mailto:${email.supportEmail}?${params.toString()}`;
+  }
+
+  function buildGmailUrl(email: ReturnType<typeof getFeedbackEmail>) {
+    if (!email) return "";
+    const params = new URLSearchParams({
+      view: "cm",
+      fs: "1",
+      to: email.supportEmail,
+      su: email.subject,
+      body: email.body,
+    });
+    return `https://mail.google.com/mail/?${params.toString()}`;
+  }
+
+  mailtoLink?.addEventListener("click", () => {
+    const url = buildMailtoUrl(getFeedbackEmail());
+    if (url) mailtoLink.href = url;
+  });
+
+  form?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const url = buildGmailUrl(getFeedbackEmail());
+    if (url) window.open(url, "_blank", "noopener,noreferrer");
+  });
+</script>
