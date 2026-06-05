@@ -585,7 +585,7 @@
 
   <div class="takeaway">
     <div class="takeaway-label">The One Thing — all 5 experts agree</div>
-    <p style="margin:0">Rename the CWS extension to include <strong>"twitter saver"</strong> in the title this week (1 hour, no engineering), then ship the in-extension review prompt within 7 days (1–2 days of engineering). Everything else is amplification of a signal that currently does not exist.</p>
+    <p style="margin:0">Jun 5 resubmission update: do not use keyword-led CWS metadata. The compliant listing title is <strong>Totem - Twitter / X Bookmarks</strong>, and the dashboard description must use the resubmission-safe copy in <code>plans/chrome-web-store-listing.md</code>.</p>
   </div>
 </section>
 
@@ -596,8 +596,8 @@
 
   <p class="lead">Totem has a genuinely unique differentiator — the only Chrome extension that puts Twitter bookmarks on every new tab. It is invisible because three foundational things are broken simultaneously, and no amount of blog posts or community posts fixes them until they are.</p>
 
-  <h2>Root Cause 1 — "twitter saver" is nowhere</h2>
-  <p><span class="hl">"twitter saver"</span> gets 5,400 searches per month with <strong>LOW competition</strong>. It does not appear in the extension name, short description, long description, or any blog post. Every competitor misses it too. This is a first-mover opportunity that expires the moment a competitor notices. The research identified it six weeks ago. The prescription was written in <code>plans/chrome-web-store-listing.md</code>. It has not been executed.</p>
+  <h2>Root Cause 1 — Keyword opportunity needs safer placement</h2>
+  <p><span class="hl">"twitter saver"</span> gets 5,400 searches per month with <strong>LOW competition</strong>, but the Jun 3, 2026 CWS rejection showed that standalone keyword placement in store metadata is too risky. Keep that phrase in real editorial content, and keep the store listing focused on the concise product copy in <code>plans/chrome-web-store-listing.md</code>.</p>
 
   <h2>Root Cause 2 — No review flywheel</h2>
   <p>CWS ranking is driven by review count and velocity. The extension has no in-app prompt. Organic reviews account for roughly 10–15% of what a prompted install base would generate. Without reviews, there is no star rating in search results, no Featured badge eligibility, and no ranking improvement regardless of keyword quality. Tweet Copier has 59 reviews and a Featured badge with only 1,000 users. Totem has the better product and fewer than 10 reviews.</p>
@@ -675,15 +675,15 @@
   <div class="chapter-num">04 · The 30-Day Sprint</div>
   <h1>The 30-Day Sprint</h1>
 
-  <p class="lead">Five actions, in order. Do not begin the HN post or Reddit launch until Actions 1–3 are complete. Launching into a listing with fewer than 10 reviews and no "twitter saver" keyword kills the conversion rate on every traffic spike.</p>
+  <p class="lead">Five actions, in order. Do not begin the HN post or Reddit launch until Actions 1–3 are complete. The CWS metadata guidance below was revised after the Jun 3, 2026 rejection: keep search phrases in blog/content surfaces, not as standalone store metadata.</p>
 
   <div class="action-item">
     <div class="action-header">
-      <span class="action-title">Action 1 — Rename the CWS extension</span>
+      <span class="action-title">Action 1 — Resubmit compliant CWS metadata</span>
       <span class="action-effort">1 hour · no engineering</span>
     </div>
-    <p style="margin:0 0 5pt 0">New name: <strong>Twitter Saver: Bookmarks on New Tab, Search &amp; Export</strong> (52 chars)</p>
-    <p style="margin:0; font-size:9.5pt; color:var(--stone)">Also add "twitter saver" and "tweet saver" once each in the long description "Best for" section. Update <code>public/manifest.json</code> name field to match. Impact: enters CWS search results for a 5,400/mo keyword that every competitor has missed.</p>
+    <p style="margin:0 0 5pt 0">New name: <strong>Totem - Twitter / X Bookmarks</strong> (29 chars)</p>
+    <p style="margin:0; font-size:9.5pt; color:var(--stone)">Use the exact short and detailed descriptions in <code>plans/chrome-web-store-listing.md</code>. Do not include a keyword list, "Best for" SEO list, or standalone alternative terms.</p>
   </div>
 
   <div class="action-item">
@@ -700,7 +700,7 @@
       <span class="action-title">Action 3 — Fix JSON-LD schema on homepage</span>
       <span class="action-effort">30 min · apps/site/src/pages/index.astro</span>
     </div>
-    <p style="margin:0 0 5pt 0">In <code>apps/site/src/pages/index.astro</code>: add <code>downloadUrl</code> (CWS listing URL), <code>softwareVersion: "1.2.0"</code>, <code>applicationSubCategory: "Productivity"</code>, <code>aggregateRating</code> with <code>ratingCount: 0</code>.</p>
+    <p style="margin:0 0 5pt 0">In <code>apps/site/src/pages/index.astro</code>: add <code>downloadUrl</code> (CWS listing URL), <code>softwareVersion: "1.2.1"</code>, <code>applicationSubCategory: "Productivity"</code>, <code>aggregateRating</code> with <code>ratingCount: 0</code>.</p>
     <p style="margin:0; font-size:9.5pt; color:var(--stone)">Without <code>downloadUrl</code>, Google's "Add to Chrome" rich result card never activates regardless of review count. This is a 30-minute code change with permanent SEO impact.</p>
   </div>
 
@@ -1000,16 +1000,17 @@
 
   <h2>Positioning Rules for Every Surface</h2>
   <ul>
-    <li><strong>CWS listing:</strong> lead with "twitter saver" (5,400/mo), explain the new tab surface in the first sentence of the long description, not the third bullet.</li>
+    <li><strong>CWS listing:</strong> use brand-first, natural metadata from <code>plans/chrome-web-store-listing.md</code>; no keyword list, SEO phrase list, or standalone alternative terms.</li>
     <li><strong>Blog posts:</strong> Totem appears at the end, not the top. The behavioral insight earns the CTA.</li>
     <li><strong>Reddit / HN:</strong> lead with the problem ("I saved 200 tweets and read 3"), not the product.</li>
     <li><strong>Screenshots:</strong> Hero screenshot must say "Twitter bookmarks on every new tab" — this is what users remember.</li>
+    <li><strong>Support / FAQ:</strong> explain browser-owned new-tab UI directly. Chrome/Brave may ask users to confirm Totem's new-tab override; they should click <em>Keep it</em> to use Totem. The <em>Customize Brave</em> bar and image attribution are controlled by Brave, not Totem; users can disable Brave backgrounds, sponsored images, or widgets if they want a cleaner page.</li>
     <li><strong>Twitter/X threads:</strong> behavioral observation first, product mention in the last tweet only.</li>
   </ul>
 
   <div class="takeaway">
     <div class="takeaway-label">Monday morning instruction</div>
-    <p style="margin:0">Open the CWS developer dashboard. Change the name to <strong>Twitter Saver: Bookmarks on New Tab, Search &amp; Export</strong>. Save. Then open your code editor and build the review prompt. That's the whole week. Everything else waits.</p>
+    <p style="margin:0">Open the CWS developer dashboard. Change the name to <strong>Totem - Twitter / X Bookmarks</strong>, paste the resubmission-safe description from <code>plans/chrome-web-store-listing.md</code>, and submit the <code>1.2.1</code> draft.</p>
   </div>
 </section>
 
@@ -1024,13 +1025,14 @@
   <table class="compact striped todo-table">
     <thead><tr><th>Done</th><th>Area</th><th>Task</th><th>Dependency</th></tr></thead>
     <tbody>
-      <tr><td class="todo-check"><input class="todo-box" type="checkbox" checked></td><td class="todo-area">CWS</td><td>Rename listing to <strong>Twitter Saver: Bookmarks on New Tab, Search &amp; Export</strong>.</td><td class="todo-dep">None</td></tr>
+      <tr><td class="todo-check"><input class="todo-box" type="checkbox" checked></td><td class="todo-area">CWS</td><td>Rename listing to <strong>Totem - Twitter / X Bookmarks</strong>.</td><td class="todo-dep">None</td></tr>
       <tr><td class="todo-check"><input class="todo-box" type="checkbox" checked></td><td class="todo-area">Extension</td><td>Update <code>public/manifest.json</code> name to match the CWS title; keep <code>short_name</code> as Totem.</td><td class="todo-dep">None</td></tr>
-      <tr><td class="todo-check"><input class="todo-box" type="checkbox" checked></td><td class="todo-area">CWS</td><td>Update short description to: <em>Read, search, and export Twitter / X bookmarks from your new tab. Local-first, no Totem account, no server.</em></td><td class="todo-dep">None</td></tr>
-      <tr><td class="todo-check"><input class="todo-box" type="checkbox" checked></td><td class="todo-area">CWS</td><td>Rewrite long description so sentence one explains the new-tab surface; add <strong>twitter saver</strong> and <strong>tweet saver</strong> once in the Best for section.</td><td class="todo-dep">None</td></tr>
+      <tr><td class="todo-check"><input class="todo-box" type="checkbox" checked></td><td class="todo-area">CWS</td><td>Update short description to: <em>Read your Twitter / X bookmarks on a calm new tab. Search, highlight, and export your library locally.</em></td><td class="todo-dep">None</td></tr>
+      <tr><td class="todo-check"><input class="todo-box" type="checkbox" checked></td><td class="todo-area">CWS</td><td>Replace the rejected detailed description with the compliant copy in <code>plans/chrome-web-store-listing.md</code>.</td><td class="todo-dep">None</td></tr>
       <tr><td class="todo-check"><input class="todo-box" type="checkbox" checked></td><td class="todo-area">Website</td><td>Fix homepage JSON-LD: add CWS <code>downloadUrl</code>, <code>softwareVersion</code>, <code>applicationSubCategory</code>, and initial <code>aggregateRating</code>.</td><td class="todo-dep">CWS URL</td></tr>
       <tr><td class="todo-check"><input class="todo-box" type="checkbox" checked></td><td class="todo-area">Website</td><td>Update homepage positioning around: <strong>Your Twitter bookmarks show up on every new tab, ready to read — locally, without opening X.</strong></td><td class="todo-dep">None</td></tr>
       <tr><td class="todo-check"><input class="todo-box" type="checkbox" checked></td><td class="todo-area">Website</td><td>Add permission explainer to privacy/support copy for <code>x.com</code> access, <code>cookies</code>, and <code>webRequest</code>.</td><td class="todo-dep">None</td></tr>
+      <tr><td class="todo-check"><input class="todo-box" type="checkbox" checked></td><td class="todo-area">Website</td><td>Add homepage FAQ answers for browser-owned new-tab UI: the Chrome/Brave <em>Keep it</em> confirmation prompt and Brave's <em>Customize Brave</em> footer.</td><td class="todo-dep">FAQ copy</td></tr>
       <tr><td class="todo-check"><input class="todo-box" type="checkbox" checked></td><td class="todo-area">Blog</td><td>Add one contextual inline CTA to each of the 7 existing blog posts with UTM links.</td><td class="todo-dep">CWS URL</td></tr>
       <tr><td class="todo-check"><input class="todo-box" type="checkbox" checked></td><td class="todo-area">Assets</td><td>Prepare 5 CWS screenshots in order: new tab, reader, search, export, privacy.</td><td class="todo-dep">Current UI</td></tr>
       <tr><td class="todo-check"><input class="todo-box" type="checkbox" checked></td><td class="todo-area">Assets</td><td>Set hero screenshot text to <strong>Twitter bookmarks on every new tab</strong>; set promo tile copy to <strong>Read, search, and export Twitter bookmarks.</strong></td><td class="todo-dep">Screenshots</td></tr>
@@ -1041,13 +1043,13 @@
   <div class="callout">
     <strong>Quick wins completed · June 2, 2026.</strong> Completion here means the repo-controlled copy, metadata, website, blog, asset, and verification work is ready for release. Chrome Web Store dashboard submission remains an external publishing step.
     <ul style="margin-bottom:0">
-      <li><strong>CWS package:</strong> <code>plans/chrome-web-store-listing.md</code> now contains the dashboard-ready title, short description, long description, screenshot order, promo copy, and privacy checklist. The long description opens on the new-tab surface and includes <em>twitter saver</em> and <em>tweet saver</em> once in Best for.</li>
-      <li><strong>Extension:</strong> <code>public/manifest.json</code> now uses <code>Twitter Saver: Bookmarks on New Tab, Search &amp; Export</code>, keeps <code>short_name</code> as Totem, and matches the CWS short description.</li>
-      <li><strong>Website:</strong> homepage JSON-LD now includes CWS <code>downloadUrl</code>, <code>softwareVersion: "1.2.0"</code>, <code>applicationSubCategory: "Productivity"</code>, and the live initial CWS rating value/count. Homepage copy now leads with the new-tab Twitter-bookmarks positioning.</li>
+      <li><strong>CWS package:</strong> <code>plans/chrome-web-store-listing.md</code> now contains the resubmission-safe title, short description, long description, screenshot order, promo copy, and privacy checklist. The long description avoids keyword lists and standalone SEO phrases.</li>
+      <li><strong>Extension:</strong> <code>public/manifest.json</code> now uses <code>Totem - Twitter / X Bookmarks</code>, keeps <code>short_name</code> as Totem, and matches the CWS short description.</li>
+      <li><strong>Website:</strong> homepage JSON-LD now includes CWS <code>downloadUrl</code>, <code>softwareVersion: "1.2.1"</code>, <code>applicationSubCategory: "Productivity"</code>, and the live initial CWS rating value/count. Homepage copy now leads with the new-tab Twitter-bookmarks positioning.</li>
       <li><strong>Privacy/support:</strong> the privacy page now explicitly explains <code>https://x.com/*</code>, <code>cookies</code>, and <code>webRequest</code>, with local-only handling and no Totem backend. Live CWS public listing checked June 2, 2026: privacy-policy link is present, and disclosed categories are personally identifiable information, authentication information, web history, user activity, and website content.</li>
       <li><strong>Blog CTAs:</strong> all seven existing posts now have contextual inline Chrome Web Store CTAs using <code>utm_source=blog&amp;utm_medium=inline_cta&amp;utm_campaign=[slug]</code>.</li>
       <li><strong>Assets:</strong> <code>images-for-promotions/chrome-web-store/screenshots/</code> now contains exactly five 1280×800 PNG screenshots in the requested order, plus 1400×560 marquee and 440×280 small promo tiles with the updated promo copy.</li>
-      <li><strong>Tests:</strong> <code>pnpm test</code> passed 50 files / 589 tests; <code>pnpm package:extension</code> created <code>release/totem-v1.2.0.zip</code>; <code>pnpm package:website</code> created <code>release/totem-website-v1.2.0.zip</code> with 19 website pages. Served HTML checks verified homepage JSON-LD, hero copy, uninstall feedback copy, and inline CTA hrefs.</li>
+      <li><strong>Tests:</strong> the previous <code>1.2.0</code> package was rejected for metadata; the resubmission package should be <code>release/totem-v1.2.1.zip</code> after rebuilding.</li>
     </ul>
   </div>
 
