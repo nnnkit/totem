@@ -15,7 +15,7 @@ Everything needed to get Totem published on the Chrome Web Store.
 
 ## Store Listing Assets
 
-- [ ] **Detailed description** — longer store listing description explaining all features (bookmark sync, offline reading, new tab, highlights, reading progress). 132-char short description already exists.
+- [ ] **Detailed description** — use the compliant copy in `plans/chrome-web-store-listing.md`; keep it concise, natural, and free of keyword lists.
 - [ ] **Screenshots** — at least 1, ideally 5 (1280x800 or 640x400)
   - New tab home page (with wallpaper, top sites, search)
   - Bookmark list view (unread / continue / read tabs)

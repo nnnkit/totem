@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.1] - 2026-06-05
+
+- Use safer Chrome Web Store listing metadata after keyword-stuffing rejection.
+
 ## [1.2.0] - 2026-05-30
 
 - Commit promotion source images
