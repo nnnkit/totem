@@ -3,7 +3,7 @@ import type { Bookmark } from "../types";
 import { LS_READING_SORTS } from "./storage-keys";
 import { sortIndexToTimestamp } from "./time";
 
-export type ReadingTab = "continue" | "read" | "unread";
+export type ReadingTab = "today" | "continue" | "read" | "unread";
 export type ReadingSort = "recent" | "oldest" | "annotated";
 
 export interface AnnotationCountsLike {

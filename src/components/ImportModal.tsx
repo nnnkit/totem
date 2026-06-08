@@ -433,9 +433,20 @@ const STORE_LABELS: Record<string, string> = {
   details: "Thread details",
   highlights: "Highlights",
   reading_progress: "Reading progress",
+  today_queue_snapshots: "Today's queues",
+  bookmark_queue_metadata: "Queue feedback",
+  today_queue_exposures: "Queue activity",
 };
 
-const STORE_ORDER = ["bookmarks", "details", "highlights", "reading_progress"] as const;
+const STORE_ORDER = [
+  "bookmarks",
+  "details",
+  "highlights",
+  "reading_progress",
+  "today_queue_snapshots",
+  "bookmark_queue_metadata",
+  "today_queue_exposures",
+] as const;
 
 function ImportingView({ progress }: { progress: ImportStoreProgress | null }) {
   const currentStore = progress?.store;
@@ -486,6 +497,9 @@ function DoneView({
     { label: "Thread details", counts: result.details },
     { label: "Highlights", counts: result.highlights },
     { label: "Reading progress", counts: result.readingProgress },
+    { label: "Today's queues", counts: result.todayQueueSnapshots },
+    { label: "Queue feedback", counts: result.queueMetadata },
+    { label: "Queue activity", counts: result.todayQueueExposures },
   ].filter((s) =>
     s.counts.status === "failed" ||
     s.counts.added > 0 ||

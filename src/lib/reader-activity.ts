@@ -19,7 +19,7 @@ export function emitReaderActivity(): void {
       localStorage.setItem(STORAGE_KEY, stamp);
     } catch {}
 
-    if (typeof window !== "undefined") {
+    if (typeof window !== "undefined" && typeof window.dispatchEvent === "function") {
       window.dispatchEvent(new CustomEvent(EVENT_NAME, { detail: stamp }));
     }
   }, DEBOUNCE_MS);

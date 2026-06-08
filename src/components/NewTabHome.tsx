@@ -18,6 +18,8 @@ import type {
   RecommendationSource,
   SearchEngineId,
 } from "../types";
+import type { UseTodayQueueResult } from "../hooks/useTodayQueue";
+import type { ReadingTab } from "../lib/reading-list";
 import { getPinnedTweetIdsOrdered } from "../lib/pins";
 import { SEARCH_ENGINES } from "../lib/search-engines";
 import { hasChromeSearch } from "../lib/chrome";
@@ -78,7 +80,8 @@ interface Props {
   onOpenImport: () => void;
   onOpenExport: () => void;
   recommendationSource: RecommendationSource;
-  onOpenReading: () => void;
+  todayQueue?: UseTodayQueueResult;
+  onOpenReading: (tab?: ReadingTab) => void;
   isResetting?: boolean;
   footerStateOverride?: FooterState;
   syncButtonStateOverride?: SyncButtonState;
@@ -92,6 +95,22 @@ interface DecoratedBookmark {
   excerpt: string;
   minutes: number | null;
   isRead: boolean;
+}
+
+function decorateBookmark(
+  bookmark: Bookmark,
+  detailedTweetIds: ReadonlySet<string>,
+  openedTweetIds: ReadonlySet<string>,
+): DecoratedBookmark {
+  return {
+    bookmark,
+    title: pickTitle(bookmark),
+    excerpt: pickExcerpt(bookmark),
+    minutes: detailedTweetIds.has(bookmark.tweetId)
+      ? estimateReadingMinutes(bookmark)
+      : null,
+    isRead: openedTweetIds.has(bookmark.tweetId),
+  };
 }
 
 interface NewTabHomeState {
@@ -137,7 +156,9 @@ interface FooterCardProps {
   onCardEngagedChange: (engaged: boolean) => void;
   recommendationSource: RecommendationSource;
   offlineMode: boolean;
-  onOpenBookmark: (bookmark: Bookmark) => void;
+  onOpenBookmark: () => void;
+  onOpenReading: (tab?: ReadingTab) => void;
+  todayQueueDone: boolean;
   syncButton: SyncButtonState;
   onSync: () => void;
   handleLoginButton: () => void;
@@ -156,6 +177,8 @@ function FooterCard({
   recommendationSource,
   offlineMode,
   onOpenBookmark,
+  onOpenReading,
+  todayQueueDone,
   syncButton,
   onSync,
   handleLoginButton,
@@ -219,11 +242,24 @@ function FooterCard({
               onCardEngagedChange(false);
             }
           }}
+          onClick={(event) => {
+            if (
+              event.defaultPrevented ||
+              event.metaKey ||
+              event.ctrlKey ||
+              event.shiftKey ||
+              event.altKey
+            ) {
+              return;
+            }
+            event.preventDefault();
+            onOpenBookmark();
+          }}
           onKeyDown={(event) => {
             if (event.key === " ") {
               event.preventDefault();
               event.stopPropagation();
-              onOpenBookmark(currentItem.bookmark);
+              onOpenBookmark();
             }
           }}
           aria-label={`Read ${currentItem.title} by @${
@@ -236,7 +272,11 @@ function FooterCard({
             <div className="flex justify-between">
               <div className="flex items-center gap-1.5">
                 <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
-                  {recommendationSource === "pinned" ? "pinned" : "your next read"}
+                  {recommendationSource === "pinned"
+                    ? "pinned"
+                    : recommendationSource === "today"
+                      ? "today's read"
+                      : "your next read"}
                 </p>
                 {offlineMode && (
                   <span title="Not signed in — showing cached bookmarks">
@@ -273,6 +313,56 @@ function FooterCard({
             </div>
           </div>
         </a>
+      );
+    case "empty_can_sync":
+      if (todayQueueDone) {
+        return (
+          <article className={cardCentered}>
+            <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
+              Today&apos;s Read is clear
+            </p>
+            <p className="mt-4 text-pretty text-base text-home-empty">
+              You handled everything for today. We&apos;ll line up a fresh read tomorrow.
+            </p>
+            <Button
+              type="button"
+              onClick={() => onOpenReading("unread")}
+              className="mt-6 border-0 bg-home-accent text-white hover:opacity-90"
+            >
+              Browse unread
+            </Button>
+          </article>
+        );
+      }
+      return (
+        <>
+          <article className={cardCentered}>
+            <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
+              Your reading list is quiet
+            </p>
+            <p className="mt-4 text-pretty text-base text-home-empty">
+              No bookmarks yet. Bookmark posts on X, then sync to start reading.
+            </p>
+            <Button
+              type="button"
+              onClick={onSync}
+              disabled={syncButton.disabled}
+              className="mt-6 border-0 bg-home-accent text-white hover:opacity-90"
+            >
+              Sync bookmarks
+            </Button>
+          </article>
+          <p className="text-center text-xs text-on-bg-ghost">
+            Already have a Totem export?{" "}
+            <button
+              type="button"
+              onClick={onOpenImport}
+              className="underline hover:text-on-bg-muted"
+            >
+              Import &rarr;
+            </button>
+          </p>
+        </>
       );
     case "syncing_bootstrap":
       return (
@@ -327,7 +417,6 @@ function FooterCard({
           </Button>
         </article>
       );
-    case "empty_can_sync":
     default:
       return (
         <>
@@ -379,6 +468,7 @@ function useNewTabHomeModel({
   onOpenImport,
   onOpenExport,
   recommendationSource,
+  todayQueue,
   onOpenReading,
   isResetting,
   footerStateOverride,
@@ -407,20 +497,26 @@ function useNewTabHomeModel({
   const runtimeOfflineMode = useIsOffline();
 
   const { items, unreadItems } = useMemo(() => {
-    const allItems: DecoratedBookmark[] = bookmarks.map((bookmark) => ({
-      bookmark,
-      title: pickTitle(bookmark),
-      excerpt: pickExcerpt(bookmark),
-      minutes: detailedTweetIds.has(bookmark.tweetId)
-        ? estimateReadingMinutes(bookmark)
-        : null,
-      isRead: openedTweetIds.has(bookmark.tweetId),
-    }));
+    const allItems = bookmarks.map((bookmark) =>
+      decorateBookmark(bookmark, detailedTweetIds, openedTweetIds),
+    );
     const unread = allItems.filter((item) => !item.isRead);
     return { items: allItems, unreadItems: unread };
   }, [bookmarks, detailedTweetIds, openedTweetIds]);
 
+  const todayQueueItems = useMemo(
+    () =>
+      (todayQueue?.items ?? []).map((item) =>
+        decorateBookmark(item.bookmark, detailedTweetIds, openedTweetIds),
+      ),
+    [detailedTweetIds, openedTweetIds, todayQueue?.items],
+  );
+
   const currentItem = useMemo(() => {
+    if (recommendationSource === "today") {
+      return todayQueueItems[0] ?? null;
+    }
+
     // When pinned source is selected, pick from pinned bookmarks
     if (recommendationSource === "pinned") {
       const pinnedIds = getPinnedTweetIdsOrdered();
@@ -444,16 +540,31 @@ function useNewTabHomeModel({
     if (pool.length === 0) return null;
     const index = Math.floor(mountSeed * pool.length);
     return pool[index];
-  }, [items, unreadItems, mountSeed, recommendationSource]);
+  }, [items, unreadItems, mountSeed, recommendationSource, todayQueueItems]);
   const hydrationStatus = useHydrationStore((s) => s.status);
   const hydrationTotal = useHydrationStore((s) => s.total);
   const hydrationProcessed = useHydrationStore((s) => s.processed);
   const hydrationPauseUntil = useHydrationStore((s) => s.pauseUntil);
 
-  const runtimeFooterState = useFooterState(Boolean(currentItem), isResetting);
+  const todayQueueLoading =
+    recommendationSource === "today" && todayQueue?.status === "loading";
+  const todayQueueDone =
+    recommendationSource === "today" && Boolean(todayQueue?.isDone);
+  const runtimeFooterState = useFooterState(
+    Boolean(currentItem) || todayQueueLoading,
+    isResetting,
+  );
   const syncButton = syncButtonStateOverride ?? runtimeSyncButton;
   const offlineMode = offlineModeOverride ?? runtimeOfflineMode;
-  const footerState = footerStateOverride ?? runtimeFooterState;
+  const footerState =
+    footerStateOverride ??
+    (todayQueueLoading && !currentItem ? "loading" : runtimeFooterState);
+  const openReadingFromHome = useCallback(
+    (tab?: ReadingTab) => {
+      onOpenReading(tab ?? (todayQueueDone ? "unread" : undefined));
+    },
+    [onOpenReading, todayQueueDone],
+  );
 
   const showWallpaper = Boolean(wallpaperUrl && !imgError);
 
@@ -470,18 +581,26 @@ function useNewTabHomeModel({
   }, []);
 
   const openItem = useCallback(
-    (item: DecoratedBookmark | null) => {
+    (item: DecoratedBookmark | null, recordTodayQueueOpen = true) => {
       if (!item) return;
+      if (recordTodayQueueOpen && recommendationSource === "today") {
+        const trackedOpen =
+          todayQueue?.recordOpen(item.bookmark.tweetId) ?? Promise.resolve();
+        void trackedOpen.catch(() => {}).finally(() => {
+          onOpenBookmark(item.bookmark);
+        });
+        return;
+      }
       onOpenBookmark(item.bookmark);
     },
-    [onOpenBookmark],
+    [onOpenBookmark, recommendationSource, todayQueue],
   );
 
   const surpriseMe = useCallback(() => {
     if (items.length === 0) return;
     const pool = unreadItems.length > 0 ? unreadItems : items;
     const pick = pool[Math.floor(Math.random() * pool.length)];
-    openItem(pick);
+    openItem(pick, false);
   }, [items, unreadItems, openItem]);
 
   useHotkeys("/", () => searchRef.current?.focus(), {
@@ -499,11 +618,11 @@ function useNewTabHomeModel({
 
   useHotkeys(
     "l",
-    () => onOpenReading(),
+    () => openReadingFromHome(),
     {
       preventDefault: true,
     },
-    [onOpenReading],
+    [openReadingFromHome],
   );
 
   useHotkeys(
@@ -558,10 +677,10 @@ function useNewTabHomeModel({
     imgLoaded,
     now,
     offlineMode,
-    onOpenBookmark,
+    openItem,
     onOpenExport,
     onOpenImport,
-    onOpenReading,
+    onOpenReading: openReadingFromHome,
     onOpenSettings,
     onSearchEngineChange,
     onSync,
@@ -574,6 +693,7 @@ function useNewTabHomeModel({
     showTopSites,
     surpriseMe,
     syncButton,
+    todayQueueDone,
     topSites,
     updateHomeState,
     wallpaperCredit,
@@ -605,7 +725,7 @@ function renderNewTabHome({
   imgLoaded,
   now,
   offlineMode,
-  onOpenBookmark,
+  openItem,
   onOpenExport,
   onOpenImport,
   onOpenReading,
@@ -621,6 +741,7 @@ function renderNewTabHome({
   showTopSites,
   surpriseMe,
   syncButton,
+  todayQueueDone,
   topSites,
   updateHomeState,
   wallpaperCredit,
@@ -802,7 +923,9 @@ function renderNewTabHome({
             onCardEngagedChange={(engaged) => updateHomeState({ cardEngaged: engaged })}
             recommendationSource={recommendationSource}
             offlineMode={offlineMode}
-            onOpenBookmark={onOpenBookmark}
+            onOpenBookmark={() => openItem(currentItem)}
+            onOpenReading={onOpenReading}
+            todayQueueDone={todayQueueDone}
             syncButton={syncButton}
             onSync={onSync}
             handleLoginButton={handleLoginButton}
@@ -819,7 +942,7 @@ function renderNewTabHome({
             <Button
               variant="secondary"
               className="bg-home-secondary-bg px-5 py-2.5 font-semibold leading-none text-home-secondary-text shadow-glass transition-colors duration-150 ease-hover hover:bg-main-bg-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
-              onClick={onOpenReading}
+              onClick={() => onOpenReading()}
             >
               Open reading list
               <kbd className="ml-2 border-home-secondary-border bg-accent-tint text-home-fg-muted shadow-kbd">

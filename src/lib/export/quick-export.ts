@@ -1,7 +1,10 @@
 import type {
   Bookmark,
+  BookmarkQueueMetadata,
   Highlight,
   ReadingProgress,
+  TodayQueueExposure,
+  TodayQueueSnapshot,
   TweetDetailCache,
 } from "../../types";
 import { getArticleMarkdownString } from "./article-download";
@@ -16,6 +19,9 @@ import {
   iterateTweetDetails,
   iterateHighlights,
   iterateReadingProgress,
+  iterateQueueBookmarkMetadata,
+  iterateTodayQueueExposures,
+  iterateTodayQueueSnapshots,
 } from "../../db";
 import { DB_VERSION } from "../constants/db";
 import { sha256hex } from "../crypto";
@@ -261,6 +267,9 @@ export interface QuickExportResult {
   detailCount: number;
   highlightCount: number;
   readingProgressCount: number;
+  todayQueueSnapshotCount: number;
+  queueMetadataCount: number;
+  todayQueueExposureCount: number;
 }
 
 function hasSaveFilePicker(): boolean {
@@ -534,6 +543,33 @@ async function* readingProgressByIdJsonl(
   }
 }
 
+async function* todayQueueSnapshotsJsonl(
+  counter: { n: number },
+): AsyncIterable<TodayQueueSnapshot> {
+  for await (const snapshot of iterateTodayQueueSnapshots()) {
+    counter.n++;
+    yield snapshot;
+  }
+}
+
+async function* queueMetadataJsonl(
+  counter: { n: number },
+): AsyncIterable<BookmarkQueueMetadata> {
+  for await (const row of iterateQueueBookmarkMetadata()) {
+    counter.n++;
+    yield row;
+  }
+}
+
+async function* todayQueueExposuresJsonl(
+  counter: { n: number },
+): AsyncIterable<TodayQueueExposure> {
+  for await (const exposure of iterateTodayQueueExposures()) {
+    counter.n++;
+    yield exposure;
+  }
+}
+
 export async function runQuickExport(
   account: ExportAccountInfo,
 ): Promise<QuickExportResult> {
@@ -567,6 +603,9 @@ export async function runQuickExport(
     const detailCounter = { n: 0 };
     const highlightCounter = { n: 0 };
     const progressCounter = { n: 0 };
+    const queueSnapshotCounter = { n: 0 };
+    const queueMetadataCounter = { n: 0 };
+    const queueExposureCounter = { n: 0 };
     const writtenMarkdownPaths: string[] = [];
 
     async function* entries(): AsyncIterable<StreamZipEntry> {
@@ -629,6 +668,33 @@ export async function runQuickExport(
       yield progress.entry;
       await progress.done;
 
+      const queueSnapshots = hashingTextEntry(
+        "data/today-queue-snapshots.jsonl",
+        jsonlLines(todayQueueSnapshotsJsonl(queueSnapshotCounter)),
+        checksums,
+        now,
+      );
+      yield queueSnapshots.entry;
+      await queueSnapshots.done;
+
+      const queueMetadata = hashingTextEntry(
+        "data/bookmark-queue-metadata.jsonl",
+        jsonlLines(queueMetadataJsonl(queueMetadataCounter)),
+        checksums,
+        now,
+      );
+      yield queueMetadata.entry;
+      await queueMetadata.done;
+
+      const queueExposures = hashingTextEntry(
+        "data/today-queue-exposures.jsonl",
+        jsonlLines(todayQueueExposuresJsonl(queueExposureCounter)),
+        checksums,
+        now,
+      );
+      yield queueExposures.entry;
+      await queueExposures.done;
+
       for (const file of bookmarkMarkdownFiles) {
         const bookmark = await getBookmarkById(file.bookmarkId);
         if (!bookmark) continue; // row removed mid-export; skip its markdown file
@@ -666,12 +732,18 @@ export async function runQuickExport(
           details: detailCounter.n,
           highlights: highlightCounter.n,
           reading_progress: progressCounter.n,
+          today_queue_snapshots: queueSnapshotCounter.n,
+          bookmark_queue_metadata: queueMetadataCounter.n,
+          today_queue_exposures: queueExposureCounter.n,
         },
         shards: {
           bookmarks: shardNames,
           details: ["data/details.jsonl"],
           highlights: ["data/highlights.jsonl"],
           reading_progress: ["data/reading-progress.jsonl"],
+          today_queue_snapshots: ["data/today-queue-snapshots.jsonl"],
+          bookmark_queue_metadata: ["data/bookmark-queue-metadata.jsonl"],
+          today_queue_exposures: ["data/today-queue-exposures.jsonl"],
         },
         derived: {
           csv: "bookmarks.csv",
@@ -701,6 +773,9 @@ export async function runQuickExport(
       detailCount: detailCounter.n,
       highlightCount: highlightCounter.n,
       readingProgressCount: progressCounter.n,
+      todayQueueSnapshotCount: queueSnapshotCounter.n,
+      queueMetadataCount: queueMetadataCounter.n,
+      todayQueueExposureCount: queueExposureCounter.n,
     };
   } catch (error) {
     if (target.kind === "fsa") {

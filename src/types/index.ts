@@ -243,7 +243,41 @@ export type SearchEngineId =
   | "ecosia"
   | "default";
 
-export type RecommendationSource = "random" | "pinned";
+export type RecommendationSource = "today" | "random" | "pinned";
+export type TodayQueueBudgetMinutes = 5 | 15 | 30;
+export type BookmarkIntent = "unset" | "read_soon" | "reference" | "act";
+export type TodayQueueExposureAction =
+  | "queued"
+  | "opened"
+  | "snoozed"
+  | "read"
+  | "reference"
+  | "act"
+  | "pinned";
+
+export interface BookmarkQueueMetadata {
+  tweetId: string;
+  intent: BookmarkIntent;
+  snoozedUntil: string | null;
+  updatedAt: number;
+}
+
+export interface TodayQueueSnapshot {
+  key: string;
+  localDate: string;
+  budgetMinutes: TodayQueueBudgetMinutes;
+  version: number;
+  tweetIds: string[];
+  generatedAt: number;
+}
+
+export interface TodayQueueExposure {
+  id: string;
+  tweetId: string;
+  action: TodayQueueExposureAction;
+  localDate: string;
+  createdAt: number;
+}
 
 export interface UserSettings {
   showTopSites: boolean;
@@ -253,6 +287,7 @@ export interface UserSettings {
   backgroundMode: BackgroundMode;
   searchEngine: SearchEngineId;
   recommendationSource: RecommendationSource;
+  todayQueueBudgetMinutes: TodayQueueBudgetMinutes;
   defaultHighlightColor: string;
 }
 

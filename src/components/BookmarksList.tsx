@@ -5,8 +5,12 @@ import { useHotkeys } from "react-hotkeys-hook";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import {
   ArrowLeftIcon,
+  ArrowCounterClockwiseIcon,
   ArrowsDownUpIcon,
+  CheckCircleIcon,
+  ClockCountdownIcon,
   ClockIcon,
+  ListChecksIcon,
   MagnifyingGlassIcon,
   PushPinIcon,
   SparkleIcon,
@@ -14,6 +18,11 @@ import {
 } from "@phosphor-icons/react";
 import type { Bookmark } from "../types";
 import type { ContinueReadingItem } from "../hooks/useContinueReading";
+import type { UseTodayQueueResult } from "../hooks/useTodayQueue";
+import type {
+  TodayQueueHandledItem,
+  TodayQueueHandledReason,
+} from "../lib/today-queue";
 import { useBookmarkSearch } from "../hooks/useBookmarkSearch";
 import { pickTitle, pickSearchSnippet, inferKindBadge } from "../lib/bookmark-utils";
 import { cn } from "../lib/cn";
@@ -59,6 +68,7 @@ export type { ReadingTab } from "../lib/reading-list";
 interface Props {
   continueReadingItems: ContinueReadingItem[];
   unreadBookmarks: Bookmark[];
+  todayQueue?: UseTodayQueueResult;
   activeTab: ReadingTab;
   onTabChange: (tab: ReadingTab) => void;
   onOpenBookmark: (bookmark: Bookmark) => void;
@@ -139,6 +149,27 @@ const SUGGESTED_OPERATORS: ReadonlyArray<{ label: string; insert: string }> = [
 
 const ITEM_HEIGHT = 64;
 
+const HANDLED_TODAY_LABELS: Record<TodayQueueHandledReason, string> = {
+  read: "Read",
+  snoozed: "Snoozed",
+  archived: "Removed",
+  action: "Follow-up",
+};
+
+const TODAY_COMPLETION_LABELS: Record<TodayQueueHandledReason, string> = {
+  read: "Read",
+  snoozed: "Snoozed",
+  archived: "Removed",
+  action: "Action needed",
+};
+
+const TODAY_COMPLETION_ORDER: TodayQueueHandledReason[] = [
+  "read",
+  "snoozed",
+  "action",
+  "archived",
+];
+
 function isReadingSort(value: string): value is ReadingSort {
   return value === "recent" || value === "oldest" || value === "annotated";
 }
@@ -158,9 +189,23 @@ function getBookmarkTimestamp(bookmark: Bookmark): number | null {
   }
 }
 
+function HandledTodayIcon({ reason }: { reason: TodayQueueHandledReason }) {
+  switch (reason) {
+    case "read":
+      return <CheckCircleIcon weight="fill" className="size-3.5" />;
+    case "snoozed":
+      return <ClockCountdownIcon className="size-3.5" />;
+    case "archived":
+      return <XIcon className="size-3.5" />;
+    case "action":
+      return <ListChecksIcon className="size-3.5" />;
+  }
+}
+
 function useBookmarksListModel({
   continueReadingItems,
   unreadBookmarks,
+  todayQueue,
   activeTab,
   onTabChange,
   onOpenBookmark,
@@ -238,8 +283,14 @@ function useBookmarksListModel({
         merged.push(bookmark);
       }
     }
+    for (const item of todayQueue?.items ?? []) {
+      if (!seen.has(item.bookmark.tweetId)) {
+        seen.add(item.bookmark.tweetId);
+        merged.push(item.bookmark);
+      }
+    }
     return merged;
-  }, [continueReadingItems, unreadBookmarks]);
+  }, [continueReadingItems, unreadBookmarks, todayQueue?.items]);
 
   const { query, setQuery, results, queryTerms, isSearching, didYouMean } =
     useBookmarkSearch(allBookmarks);
@@ -333,6 +384,9 @@ function useBookmarksListModel({
   }, [unreadBookmarks, continueReadingItems]);
 
   const visibleTweetIds = useMemo(() => {
+    if (activeTab === "today") {
+      return (todayQueue?.items ?? []).map((item) => item.bookmark.tweetId);
+    }
     if (activeTab === "continue") {
       return continueReadingItems.flatMap((item) =>
         item.progress.completed ? [] : [item.bookmark.tweetId],
@@ -344,7 +398,7 @@ function useBookmarksListModel({
       );
     }
     return unreadBookmarks.map((bookmark) => bookmark.tweetId);
-  }, [activeTab, continueReadingItems, unreadBookmarks]);
+  }, [activeTab, continueReadingItems, todayQueue?.items, unreadBookmarks]);
 
   const refreshHighlightCounts = useCallback(() => {
     const tweetIds = visibleTweetIds;
@@ -429,7 +483,45 @@ function useBookmarksListModel({
     [filteredCompleted, sortPreferences.read, highlightCounts],
   );
 
-  const activeSort = sortPreferences[activeTab];
+  const todayRows: BookmarkRow[] = useMemo(
+    () =>
+      (todayQueue?.items ?? []).map(({ bookmark, progress, metadata }) => {
+        if (progress && !progress.completed) {
+          return {
+            bookmark,
+            subtitle: `Today's Read · last read ${timeAgo(progress.lastReadAt)}`,
+          };
+        }
+        if (metadata?.intent === "read_soon") {
+          return { bookmark, subtitle: "Today's Read · read soon" };
+        }
+        return { bookmark, subtitle: "Today's Read" };
+      }),
+    [todayQueue?.items],
+  );
+
+  const handledTodayItems: TodayQueueHandledItem[] = todayQueue?.handledItems ?? [];
+  const actionTodayItems = useMemo(
+    () => handledTodayItems.filter((item) => item.reason === "action"),
+    [handledTodayItems],
+  );
+  const passiveHandledTodayItems = useMemo(
+    () => handledTodayItems.filter((item) => item.reason !== "action"),
+    [handledTodayItems],
+  );
+  const todayCompletionSummary = useMemo(() => {
+    const counts = new Map<TodayQueueHandledReason, number>();
+    for (const item of handledTodayItems) {
+      counts.set(item.reason, (counts.get(item.reason) ?? 0) + 1);
+    }
+    return TODAY_COMPLETION_ORDER.flatMap((reason) => {
+      const count = counts.get(reason) ?? 0;
+      return count > 0
+        ? [{ reason, label: TODAY_COMPLETION_LABELS[reason], count }]
+        : [];
+    });
+  }, [handledTodayItems]);
+  const activeSort = activeTab === "today" ? "recent" : sortPreferences[activeTab];
 
   // Map tweetId → progress so search results across all tabs can show their
   // current read state in the row subtitle.
@@ -491,6 +583,9 @@ function useBookmarksListModel({
         };
       });
     }
+    if (activeTab === "today") {
+      return todayRows;
+    }
     if (activeTab === "continue") {
       return sortedInProgress.map(({ bookmark, progress }) => ({
         bookmark,
@@ -510,6 +605,7 @@ function useBookmarksListModel({
     results,
     progressByTweetId,
     activeTab,
+    todayRows,
     sortedUnread,
     sortedInProgress,
     sortedCompleted,
@@ -581,6 +677,7 @@ function useBookmarksListModel({
 
   const handleSortChange = useCallback(
     (nextSort: string) => {
+      if (activeTab === "today") return;
       if (!isReadingSort(nextSort)) return;
       updateListState((current) => {
         const next = { ...current.sortPreferences, [activeTab]: nextSort };
@@ -589,6 +686,21 @@ function useBookmarksListModel({
       });
     },
     [activeTab],
+  );
+
+  const openBookmark = useCallback(
+    (bookmark: Bookmark) => {
+      if (!isSearching && activeTab === "today") {
+        const trackedOpen =
+          todayQueue?.recordOpen(bookmark.tweetId) ?? Promise.resolve();
+        void trackedOpen.catch(() => {}).finally(() => {
+          onOpenBookmark(bookmark);
+        });
+        return;
+      }
+      onOpenBookmark(bookmark);
+    },
+    [activeTab, isSearching, onOpenBookmark, todayQueue],
   );
 
   useHotkeys(
@@ -619,11 +731,11 @@ function useBookmarksListModel({
     "enter, space",
     () => {
       if (focusedIndex >= 0 && focusedIndex < visibleBookmarks.length) {
-        onOpenBookmark(visibleBookmarks[focusedIndex]);
+        openBookmark(visibleBookmarks[focusedIndex]);
       }
     },
     { preventDefault: true, ignoreEventWhen: ignoreListHotkeys },
-    [focusedIndex, visibleBookmarks, onOpenBookmark],
+    [focusedIndex, visibleBookmarks, openBookmark],
   );
 
   useHotkeys(
@@ -633,7 +745,7 @@ function useBookmarksListModel({
     [onBack],
   );
 
-  const tabOrder: ReadingTab[] = ["unread", "continue", "read"];
+  const tabOrder: ReadingTab[] = ["today", "unread", "continue", "read"];
 
   useHotkeys(
     "tab",
@@ -677,6 +789,9 @@ function useBookmarksListModel({
       event.preventDefault();
       event.stopPropagation();
       const result = togglePin(tweetId, unreadIdSet);
+      if (activeTab === "today") {
+        void todayQueue?.recordPinned(tweetId).catch(() => {});
+      }
       updateListState({
         pinnedIds: result.ids,
         pinnedOrder: getPinnedTweetIdsOrdered(),
@@ -688,7 +803,42 @@ function useBookmarksListModel({
           : {}),
       });
     },
-    [unreadIdSet],
+    [activeTab, todayQueue, unreadIdSet],
+  );
+
+  const handleTodaySnooze = useCallback(
+    (tweetId: string, event: React.MouseEvent) => {
+      event.preventDefault();
+      event.stopPropagation();
+      void todayQueue?.snooze(tweetId).catch(() => {});
+    },
+    [todayQueue],
+  );
+
+  const handleTodayIntent = useCallback(
+    (
+      tweetId: string,
+      intent: "act",
+      event: React.MouseEvent,
+    ) => {
+      event.preventDefault();
+      event.stopPropagation();
+      void todayQueue?.setIntent(tweetId, intent).catch(() => {});
+    },
+    [todayQueue],
+  );
+
+  const handleTodayUndo = useCallback(
+    (
+      tweetId: string,
+      reason: TodayQueueHandledReason,
+      event: React.MouseEvent,
+    ) => {
+      event.preventDefault();
+      event.stopPropagation();
+      void todayQueue?.undoHandled(tweetId, reason).catch(() => {});
+    },
+    [todayQueue],
   );
 
   const handleLogin = useCallback(() => {
@@ -702,6 +852,61 @@ function useBookmarksListModel({
   const hasItems = visibleBookmarks.length > 0;
 
   const renderEmptyState = () => {
+    if (activeTab === "today") {
+      if (todayQueue?.isDone) {
+        return (
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <div className="mb-5 flex size-12 items-center justify-center rounded-full bg-accent-surface text-accent shadow-[0_0_0_1px] shadow-accent/15">
+              <CheckCircleIcon weight="fill" className="size-6" />
+            </div>
+            <h2 className="text-xl font-medium text-foreground text-balance">
+              Nice. Today's Read is clear.
+            </h2>
+            <p className="mt-2 max-w-md text-sm leading-relaxed text-muted/60 text-balance">
+              You handled everything for today. We'll line up a fresh read
+              tomorrow.
+            </p>
+            {todayCompletionSummary.length > 0 && (
+              <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+                {todayCompletionSummary.map((item) => (
+                  <span
+                    key={item.reason}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-surface-card/45 px-2.5 py-1 text-xs text-muted/70"
+                  >
+                    <span className="font-medium tabular-nums text-foreground/75">
+                      {item.count}
+                    </span>
+                    {item.label}
+                  </span>
+                ))}
+              </div>
+            )}
+            <Button
+              variant="ghost"
+              onClick={() => onTabChange("unread")}
+              className="mt-5"
+            >
+              Browse unread
+            </Button>
+          </div>
+        );
+      }
+
+      return (
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <p className="text-lg text-muted text-balance">
+            Nothing queued for Today's Read.
+          </p>
+          <Button
+            variant="ghost"
+            onClick={() => onTabChange("unread")}
+            className="mt-4"
+          >
+            Browse unread
+          </Button>
+        </div>
+      );
+    }
     if (activeTab === "unread") {
       return (
         <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -765,8 +970,12 @@ function useBookmarksListModel({
     handleLogin,
     handleRemoveRecent,
     handleSortChange,
+    handleTodayIntent,
+    handleTodaySnooze,
     handleTogglePin,
+    handleTodayUndo,
     hasItems,
+    actionTodayItems,
     highlightCounts,
     insertSuggestion,
     isMac,
@@ -774,6 +983,7 @@ function useBookmarksListModel({
     newBookmarkIds,
     offlineMode,
     onBack,
+    openBookmark,
     pinnedBookmarks,
     pinnedCardRefs,
     pinnedCount,
@@ -793,7 +1003,9 @@ function useBookmarksListModel({
     sortedCompleted,
     sortedInProgress,
     sortedUnread,
+    passiveHandledTodayItems,
     toastMessage,
+    todayQueue,
     unpinnedRows,
     updateListState,
     virtualizer,
@@ -818,8 +1030,12 @@ function renderBookmarksList({
   handleLogin,
   handleRemoveRecent,
   handleSortChange,
+  handleTodayIntent,
+  handleTodaySnooze,
   handleTogglePin,
+  handleTodayUndo,
   hasItems,
+  actionTodayItems,
   highlightCounts,
   insertSuggestion,
   isMac,
@@ -827,6 +1043,7 @@ function renderBookmarksList({
   newBookmarkIds,
   offlineMode,
   onBack,
+  openBookmark,
   pinnedBookmarks,
   pinnedCardRefs,
   pinnedCount,
@@ -846,7 +1063,9 @@ function renderBookmarksList({
   sortedCompleted,
   sortedInProgress,
   sortedUnread,
+  passiveHandledTodayItems,
   toastMessage,
+  todayQueue,
   unpinnedRows,
   updateListState,
   virtualizer,
@@ -1001,6 +1220,28 @@ function renderBookmarksList({
                 </span>
               </Tabs.Tab>
             )}
+            {!isSearching && (
+              <Tabs.Tab
+                value="today"
+                className={cn(
+                  "px-4 py-2.5 text-sm font-medium transition-colors outline-none select-none",
+                  "text-muted hover:text-foreground data-active:text-foreground",
+                )}
+              >
+                <span className="inline-flex items-center gap-1.5">
+                  <SparkleIcon
+                    weight="fill"
+                    className="size-3.5 text-accent/75"
+                  />
+                  Today's Read
+                </span>
+                {(todayQueue?.activeCount ?? 0) > 0 && (
+                  <span className="ml-1.5 inline-flex items-center justify-center rounded px-1.5 text-xs tabular-nums bg-accent-surface text-accent">
+                    {todayQueue?.activeCount}
+                  </span>
+                )}
+              </Tabs.Tab>
+            )}
             <Tabs.Tab
               value="unread"
               className={cn(
@@ -1076,7 +1317,7 @@ function renderBookmarksList({
               ?
             </div>
           )}
-          {hasItems && !isSearching && (
+          {hasItems && !isSearching && activeTab !== "today" && (
             <div className="mb-4 flex justify-end">
               <Select
                 value={activeSort}
@@ -1248,6 +1489,21 @@ function renderBookmarksList({
                   >
                     <a
                       href={getBookmarkHref(bookmark)}
+                      onClick={(event) => {
+                        if (
+                          event.defaultPrevented ||
+                          event.metaKey ||
+                          event.ctrlKey ||
+                          event.shiftKey ||
+                          event.altKey ||
+                          isSearching ||
+                          activeTab !== "today"
+                        ) {
+                          return;
+                        }
+                        event.preventDefault();
+                        openBookmark(bookmark);
+                      }}
                       className={cn(
                         "group/row flex w-full items-center gap-3 py-3 px-3 text-left no-underline transition-colors duration-150",
                         virtualItem.index % 2 === 0
@@ -1361,6 +1617,59 @@ function renderBookmarksList({
                           )}
                         </p>
                       </div>
+                      {!isSearching && activeTab === "today" && (
+                        <div className="flex shrink-0 items-center gap-0.5">
+                          <button
+                            type="button"
+                            onClick={(e) =>
+                              handleTodaySnooze(bookmark.tweetId, e)
+                            }
+                            className="flex size-8 items-center justify-center rounded text-muted/45 transition-colors hover:bg-foreground/5 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-focus-ring"
+                            aria-label="Snooze"
+                            title="Snooze"
+                          >
+                            <ClockCountdownIcon className="size-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) =>
+                              handleTodayIntent(bookmark.tweetId, "act", e)
+                            }
+                            className="flex size-8 items-center justify-center rounded text-muted/45 transition-colors hover:bg-foreground/5 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-focus-ring"
+                            aria-label="Act on this"
+                            title="Act on this"
+                          >
+                            <ListChecksIcon className="size-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => handleTogglePin(bookmark.tweetId, e)}
+                            className={cn(
+                              "flex size-8 items-center justify-center rounded transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-focus-ring",
+                              pinnedIds.has(bookmark.tweetId)
+                                ? "text-accent hover:bg-accent-surface"
+                                : "text-muted/45 hover:bg-foreground/5 hover:text-foreground",
+                            )}
+                            aria-label={
+                              pinnedIds.has(bookmark.tweetId)
+                                ? "Unpin bookmark"
+                                : "Pin bookmark"
+                            }
+                            title={
+                              pinnedIds.has(bookmark.tweetId) ? "Unpin" : "Pin"
+                            }
+                          >
+                            <PushPinIcon
+                              weight={
+                                pinnedIds.has(bookmark.tweetId)
+                                  ? "fill"
+                                  : "regular"
+                              }
+                              className="size-3.5"
+                            />
+                          </button>
+                        </div>
+                      )}
                       {activeTab === "unread" && (
                         <button
                           type="button"
@@ -1388,7 +1697,9 @@ function renderBookmarksList({
                           />
                         </button>
                       )}
-                      {activeTab !== "unread" && pinnedIds.has(bookmark.tweetId) && (
+                      {activeTab !== "unread" &&
+                        activeTab !== "today" &&
+                        pinnedIds.has(bookmark.tweetId) && (
                         <div
                           className="flex size-10 shrink-0 items-center justify-center text-accent opacity-60"
                           title="Pinned"
@@ -1404,6 +1715,128 @@ function renderBookmarksList({
           ) : (
             renderEmptyState()
           )}
+
+          {!isSearching &&
+            activeTab === "today" &&
+            actionTodayItems.length > 0 && (
+              <section
+                className={cn(
+                  "mt-8 border-t border-border/50 pt-4",
+                  !hasItems && "mt-4",
+                )}
+              >
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="text-2xs font-medium uppercase tracking-extra-wide text-muted/40">
+                    Action needed
+                  </span>
+                  <span className="text-xs tabular-nums text-muted/40">
+                    {actionTodayItems.length}
+                  </span>
+                </div>
+                <div className="divide-y divide-border/35">
+                  {actionTodayItems.map((item) => {
+                    const title = pickTitle(item.bookmark);
+
+                    return (
+                      <div
+                        key={`${item.bookmark.tweetId}:${item.reason}`}
+                        className="flex items-center gap-3 py-2.5"
+                      >
+                        <span className="flex size-7 shrink-0 items-center justify-center rounded bg-accent-surface/50 text-accent/70">
+                          <ListChecksIcon className="size-3.5" />
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-xs font-medium text-foreground/75">
+                            {title}
+                          </p>
+                          <p className="mt-0.5 truncate text-2xs text-muted/45">
+                            Follow-up
+                          </p>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) =>
+                            handleTodayUndo(
+                              item.bookmark.tweetId,
+                              item.reason,
+                              e,
+                            )
+                          }
+                          className="h-7 shrink-0 px-2 text-xs text-muted/60 hover:text-foreground"
+                        >
+                          <ArrowCounterClockwiseIcon className="size-3" />
+                          Undo
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
+
+          {!isSearching &&
+            activeTab === "today" &&
+            passiveHandledTodayItems.length > 0 && (
+              <section
+                className={cn(
+                  "border-t border-border/50 pt-4",
+                  actionTodayItems.length > 0 ? "mt-6" : "mt-8",
+                  !hasItems && actionTodayItems.length === 0 && "mt-4",
+                )}
+              >
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="text-2xs font-medium uppercase tracking-extra-wide text-muted/40">
+                    Handled today
+                  </span>
+                  <span className="text-xs tabular-nums text-muted/40">
+                    {passiveHandledTodayItems.length}
+                  </span>
+                </div>
+                <div className="divide-y divide-border/35">
+                  {passiveHandledTodayItems.map((item) => {
+                    const label = HANDLED_TODAY_LABELS[item.reason];
+                    const title = pickTitle(item.bookmark);
+
+                    return (
+                      <div
+                        key={`${item.bookmark.tweetId}:${item.reason}`}
+                        className="flex items-center gap-3 py-2.5"
+                      >
+                        <span className="flex size-7 shrink-0 items-center justify-center rounded bg-foreground/[0.03] text-muted/45">
+                          <HandledTodayIcon reason={item.reason} />
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-xs font-medium text-foreground/75">
+                            {title}
+                          </p>
+                          <p className="mt-0.5 truncate text-2xs text-muted/45">
+                            {label}
+                          </p>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) =>
+                            handleTodayUndo(
+                              item.bookmark.tweetId,
+                              item.reason,
+                              e,
+                            )
+                          }
+                          className="h-7 shrink-0 px-2 text-xs text-muted/60 hover:text-foreground"
+                        >
+                          <ArrowCounterClockwiseIcon className="size-3" />
+                          Undo
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
 
           {offlineMode && (
             <div className="mt-8">

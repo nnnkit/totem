@@ -56,3 +56,24 @@ export const RELATED_WEIGHTS = {
   randomBoost: 2,
   minTokenLength: 4,
 } as const;
+
+export const TODAY_QUEUE = {
+  version: 1,
+  size: 5,
+  freshWindowMs: 72 * 60 * 60 * 1000,
+  neglectedAfterMs: 14 * 24 * 60 * 60 * 1000,
+  exposureWindowMs: 7 * 24 * 60 * 60 * 1000,
+  maxQueuedExposureWithoutEngagement: 3,
+} as const;
+
+export const TODAY_QUEUE_WEIGHTS = {
+  readSoon: 80,
+  inProgress: 70,
+  pinned: 55,
+  freshness: 35,
+  neglected: 30,
+  budgetFit: 24,
+  budgetOverrunPenalty: 12,
+  queuedExposurePenalty: 12,
+  highlightOrNote: 8,
+} as const;

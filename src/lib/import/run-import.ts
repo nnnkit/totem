@@ -9,13 +9,22 @@ import {
   upsertTweetDetailCaches,
   upsertHighlights,
   upsertReadingProgressRows,
+  getAllQueueBookmarkMetadata,
+  getAllTodayQueueExposures,
+  getAllTodayQueueSnapshots,
+  upsertQueueBookmarkMetadataRows,
+  upsertTodayQueueExposures,
+  upsertTodayQueueSnapshots,
 } from "../../db";
 import { sha256hex } from "../crypto";
 import type {
   Bookmark,
+  BookmarkQueueMetadata,
   TweetDetailCache,
   Highlight,
   ReadingProgress,
+  TodayQueueExposure,
+  TodayQueueSnapshot,
 } from "../../types";
 
 export type RefusedReason =
@@ -34,12 +43,18 @@ export interface ImportManifest {
     details: number;
     highlights: number;
     reading_progress: number;
+    today_queue_snapshots?: number;
+    bookmark_queue_metadata?: number;
+    today_queue_exposures?: number;
   };
   shards: {
     bookmarks: string[];
     details: string[];
     highlights: string[];
     reading_progress: string[];
+    today_queue_snapshots?: string[];
+    bookmark_queue_metadata?: string[];
+    today_queue_exposures?: string[];
   };
   checksums: Record<string, string>;
 }
@@ -60,6 +75,9 @@ export interface ImportResult {
   details: ImportStoreOutcome;
   highlights: ImportStoreOutcome;
   readingProgress: ImportStoreOutcome;
+  todayQueueSnapshots: ImportStoreOutcome;
+  queueMetadata: ImportStoreOutcome;
+  todayQueueExposures: ImportStoreOutcome;
 }
 
 export type ParsedZip =
@@ -177,24 +195,89 @@ function isImportableReadingProgress(value: unknown): value is ReadingProgress {
   );
 }
 
+function isImportableTodayQueueSnapshot(
+  value: unknown,
+): value is TodayQueueSnapshot {
+  return (
+    isRecord(value) &&
+    typeof value.key === "string" &&
+    typeof value.localDate === "string" &&
+    (value.budgetMinutes === 5 ||
+      value.budgetMinutes === 15 ||
+      value.budgetMinutes === 30) &&
+    isNumber(value.version) &&
+    Array.isArray(value.tweetIds) &&
+    value.tweetIds.every((item) => typeof item === "string") &&
+    isNumber(value.generatedAt)
+  );
+}
+
+function isImportableQueueMetadata(
+  value: unknown,
+): value is BookmarkQueueMetadata {
+  return (
+    isRecord(value) &&
+    typeof value.tweetId === "string" &&
+    (value.intent === "unset" ||
+      value.intent === "read_soon" ||
+      value.intent === "reference" ||
+      value.intent === "act") &&
+    (value.snoozedUntil === null || typeof value.snoozedUntil === "string") &&
+    isNumber(value.updatedAt)
+  );
+}
+
+function isImportableTodayQueueExposure(
+  value: unknown,
+): value is TodayQueueExposure {
+  return (
+    isRecord(value) &&
+    typeof value.id === "string" &&
+    typeof value.tweetId === "string" &&
+    (value.action === "queued" ||
+      value.action === "opened" ||
+      value.action === "snoozed" ||
+      value.action === "read" ||
+      value.action === "reference" ||
+      value.action === "act" ||
+      value.action === "pinned") &&
+    typeof value.localDate === "string" &&
+    isNumber(value.createdAt)
+  );
+}
+
 function isCountMap(value: unknown): value is ImportManifest["counts"] {
   if (!isRecord(value)) return false;
-  return (
+  const hasRequired =
     typeof value.bookmarks === "number" &&
     typeof value.details === "number" &&
     typeof value.highlights === "number" &&
-    typeof value.reading_progress === "number"
-  );
+    typeof value.reading_progress === "number";
+  const hasValidQueueCounts =
+    (value.today_queue_snapshots === undefined ||
+      typeof value.today_queue_snapshots === "number") &&
+    (value.bookmark_queue_metadata === undefined ||
+      typeof value.bookmark_queue_metadata === "number") &&
+    (value.today_queue_exposures === undefined ||
+      typeof value.today_queue_exposures === "number");
+  return hasRequired && hasValidQueueCounts;
 }
 
 function isShardMap(value: unknown): value is ImportManifest["shards"] {
   if (!isRecord(value)) return false;
-  return (
+  const hasRequired =
     isStringArray(value.bookmarks) &&
     isStringArray(value.details) &&
     isStringArray(value.highlights) &&
-    isStringArray(value.reading_progress)
-  );
+    isStringArray(value.reading_progress);
+  const hasValidQueueShards =
+    (value.today_queue_snapshots === undefined ||
+      isStringArray(value.today_queue_snapshots)) &&
+    (value.bookmark_queue_metadata === undefined ||
+      isStringArray(value.bookmark_queue_metadata)) &&
+    (value.today_queue_exposures === undefined ||
+      isStringArray(value.today_queue_exposures));
+  return hasRequired && hasValidQueueShards;
 }
 
 function isChecksumMap(value: unknown): value is Record<string, string> {
@@ -275,7 +358,10 @@ export function parseZip(file: Uint8Array, limits: ParseZipLimits = {}): ParsedZ
     (manifest.shards.bookmarks?.length > 0 ||
       manifest.shards.details?.length > 0 ||
       manifest.shards.highlights?.length > 0 ||
-      manifest.shards.reading_progress?.length > 0);
+      manifest.shards.reading_progress?.length > 0 ||
+      (manifest.shards.today_queue_snapshots?.length ?? 0) > 0 ||
+      (manifest.shards.bookmark_queue_metadata?.length ?? 0) > 0 ||
+      (manifest.shards.today_queue_exposures?.length ?? 0) > 0);
 
   if (!hasData) {
     return { ok: false, reason: "empty_zip" };
@@ -311,6 +397,9 @@ export async function validateImport(
     ...(manifest.shards.details || []),
     ...(manifest.shards.highlights || []),
     ...(manifest.shards.reading_progress || []),
+    ...(manifest.shards.today_queue_snapshots || []),
+    ...(manifest.shards.bookmark_queue_metadata || []),
+    ...(manifest.shards.today_queue_exposures || []),
   ];
   const checksumResults = await Promise.all(allShards.map(async (shard) => {
     const expected = manifest.checksums?.[shard];
@@ -423,7 +512,14 @@ async function writeBatches<T>(
 }
 
 export type ImportStoreProgress = {
-  store: "bookmarks" | "details" | "highlights" | "reading_progress";
+  store:
+    | "bookmarks"
+    | "details"
+    | "highlights"
+    | "reading_progress"
+    | "today_queue_snapshots"
+    | "bookmark_queue_metadata"
+    | "today_queue_exposures";
   added: number;
   alreadyHad: number;
   total: number;
@@ -463,6 +559,9 @@ export async function runImport(
     details: emptyOutcome(),
     highlights: emptyOutcome(),
     readingProgress: emptyOutcome(),
+    todayQueueSnapshots: emptyOutcome(),
+    queueMetadata: emptyOutcome(),
+    todayQueueExposures: emptyOutcome(),
   };
 
   // Bookmarks — keyed by `id`
@@ -587,6 +686,114 @@ export async function runImport(
   } catch (error) {
     result.status = "partial";
     result.readingProgress = failOutcome(readingProgressCounts, error);
+  }
+
+  if ((manifest.shards.today_queue_snapshots?.length ?? 0) > 0) {
+    let queueSnapshotCounts: ImportStoreCounts = { added: 0, alreadyHad: 0, total: 0 };
+    try {
+      const rawRows = gatherShardRows(
+        manifest.shards.today_queue_snapshots || [],
+        files,
+      );
+      queueSnapshotCounts.total = rawRows.length;
+      const rows = dedupeRowsByStringKey(
+        rawRows.filter(isImportableTodayQueueSnapshot),
+        (row) => row.key,
+      );
+      queueSnapshotCounts.total = rows.length;
+      const existingRows = await getAllTodayQueueSnapshots();
+      const existingKeys = new Set(existingRows.map((row) => row.key));
+      const toInsert: TodayQueueSnapshot[] = [];
+      for (const row of rows) {
+        if (existingKeys.has(row.key)) {
+          queueSnapshotCounts.alreadyHad++;
+        } else {
+          toInsert.push(row);
+        }
+      }
+      await writeBatches(toInsert, upsertTodayQueueSnapshots, queueSnapshotCounts);
+      result.todayQueueSnapshots = { status: "succeeded", ...queueSnapshotCounts };
+      onProgress?.({
+        store: "today_queue_snapshots",
+        ...result.todayQueueSnapshots,
+        total: queueSnapshotCounts.total,
+      });
+    } catch (error) {
+      result.status = "partial";
+      result.todayQueueSnapshots = failOutcome(queueSnapshotCounts, error);
+    }
+  }
+
+  if ((manifest.shards.bookmark_queue_metadata?.length ?? 0) > 0) {
+    let queueMetadataCounts: ImportStoreCounts = { added: 0, alreadyHad: 0, total: 0 };
+    try {
+      const rawRows = gatherShardRows(
+        manifest.shards.bookmark_queue_metadata || [],
+        files,
+      );
+      queueMetadataCounts.total = rawRows.length;
+      const rows = dedupeRowsByStringKey(
+        rawRows.filter(isImportableQueueMetadata),
+        (row) => row.tweetId,
+      );
+      queueMetadataCounts.total = rows.length;
+      const existingRows = await getAllQueueBookmarkMetadata();
+      const existingIds = new Set(existingRows.map((row) => row.tweetId));
+      const toInsert: BookmarkQueueMetadata[] = [];
+      for (const row of rows) {
+        if (existingIds.has(row.tweetId)) {
+          queueMetadataCounts.alreadyHad++;
+        } else {
+          toInsert.push(row);
+        }
+      }
+      await writeBatches(toInsert, upsertQueueBookmarkMetadataRows, queueMetadataCounts);
+      result.queueMetadata = { status: "succeeded", ...queueMetadataCounts };
+      onProgress?.({
+        store: "bookmark_queue_metadata",
+        ...result.queueMetadata,
+        total: queueMetadataCounts.total,
+      });
+    } catch (error) {
+      result.status = "partial";
+      result.queueMetadata = failOutcome(queueMetadataCounts, error);
+    }
+  }
+
+  if ((manifest.shards.today_queue_exposures?.length ?? 0) > 0) {
+    let queueExposureCounts: ImportStoreCounts = { added: 0, alreadyHad: 0, total: 0 };
+    try {
+      const rawRows = gatherShardRows(
+        manifest.shards.today_queue_exposures || [],
+        files,
+      );
+      queueExposureCounts.total = rawRows.length;
+      const rows = dedupeRowsByStringKey(
+        rawRows.filter(isImportableTodayQueueExposure),
+        (row) => row.id,
+      );
+      queueExposureCounts.total = rows.length;
+      const existingRows = await getAllTodayQueueExposures();
+      const existingIds = new Set(existingRows.map((row) => row.id));
+      const toInsert: TodayQueueExposure[] = [];
+      for (const row of rows) {
+        if (existingIds.has(row.id)) {
+          queueExposureCounts.alreadyHad++;
+        } else {
+          toInsert.push(row);
+        }
+      }
+      await writeBatches(toInsert, upsertTodayQueueExposures, queueExposureCounts);
+      result.todayQueueExposures = { status: "succeeded", ...queueExposureCounts };
+      onProgress?.({
+        store: "today_queue_exposures",
+        ...result.todayQueueExposures,
+        total: queueExposureCounts.total,
+      });
+    } catch (error) {
+      result.status = "partial";
+      result.todayQueueExposures = failOutcome(queueExposureCounts, error);
+    }
   }
 
   if (result.status === "partial") {

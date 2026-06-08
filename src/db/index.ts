@@ -5,6 +5,9 @@ import type {
   ReadingProgress,
   Highlight,
   SavedSearch,
+  TodayQueueSnapshot,
+  BookmarkQueueMetadata,
+  TodayQueueExposure,
 } from "../types";
 import { sanitizeBookmark } from "../lib/sanitize";
 import { emitReaderActivity } from "../lib/reader-activity";
@@ -18,6 +21,9 @@ import {
   STORE_HIGHLIGHTS as HIGHLIGHTS_STORE_NAME,
   STORE_SAVED_SEARCHES as SAVED_SEARCHES_STORE_NAME,
   STORE_SEARCH_INDEX as SEARCH_INDEX_STORE_NAME,
+  STORE_TODAY_QUEUE_SNAPSHOTS as TODAY_QUEUE_SNAPSHOTS_STORE_NAME,
+  STORE_BOOKMARK_QUEUE_METADATA as BOOKMARK_QUEUE_METADATA_STORE_NAME,
+  STORE_TODAY_QUEUE_EXPOSURES as TODAY_QUEUE_EXPOSURES_STORE_NAME,
   SEARCH_INDEX_KEY,
 } from "../lib/constants/db";
 import { LEGACY_IDB_DATABASE_NAME } from "../lib/storage-keys";
@@ -66,6 +72,31 @@ interface XBookmarksDbSchema extends DBSchema {
   search_index: {
     key: string;
     value: { id: string; json: string; savedAt: number };
+  };
+  today_queue_snapshots: {
+    key: string;
+    value: TodayQueueSnapshot;
+    indexes: {
+      localDate: string;
+      generatedAt: number;
+    };
+  };
+  bookmark_queue_metadata: {
+    key: string;
+    value: BookmarkQueueMetadata;
+    indexes: {
+      intent: string;
+      updatedAt: number;
+    };
+  };
+  today_queue_exposures: {
+    key: string;
+    value: TodayQueueExposure;
+    indexes: {
+      tweetId: string;
+      localDate: string;
+      createdAt: number;
+    };
   };
 }
 
@@ -178,6 +209,60 @@ function createDb(dbName: string) {
       if (!db.objectStoreNames.contains(SEARCH_INDEX_STORE_NAME)) {
         db.createObjectStore(SEARCH_INDEX_STORE_NAME, { keyPath: "id" });
       }
+
+      const queueStore = db.objectStoreNames.contains(
+        TODAY_QUEUE_SNAPSHOTS_STORE_NAME,
+      )
+        ? tx.objectStore(TODAY_QUEUE_SNAPSHOTS_STORE_NAME)
+        : db.createObjectStore(TODAY_QUEUE_SNAPSHOTS_STORE_NAME, {
+            keyPath: "key",
+          });
+
+      if (!queueStore.indexNames.contains("localDate")) {
+        queueStore.createIndex("localDate", "localDate", { unique: false });
+      }
+      if (!queueStore.indexNames.contains("generatedAt")) {
+        queueStore.createIndex("generatedAt", "generatedAt", { unique: false });
+      }
+
+      const queueMetadataStore = db.objectStoreNames.contains(
+        BOOKMARK_QUEUE_METADATA_STORE_NAME,
+      )
+        ? tx.objectStore(BOOKMARK_QUEUE_METADATA_STORE_NAME)
+        : db.createObjectStore(BOOKMARK_QUEUE_METADATA_STORE_NAME, {
+            keyPath: "tweetId",
+          });
+
+      if (!queueMetadataStore.indexNames.contains("intent")) {
+        queueMetadataStore.createIndex("intent", "intent", { unique: false });
+      }
+      if (!queueMetadataStore.indexNames.contains("updatedAt")) {
+        queueMetadataStore.createIndex("updatedAt", "updatedAt", {
+          unique: false,
+        });
+      }
+
+      const queueExposureStore = db.objectStoreNames.contains(
+        TODAY_QUEUE_EXPOSURES_STORE_NAME,
+      )
+        ? tx.objectStore(TODAY_QUEUE_EXPOSURES_STORE_NAME)
+        : db.createObjectStore(TODAY_QUEUE_EXPOSURES_STORE_NAME, {
+            keyPath: "id",
+          });
+
+      if (!queueExposureStore.indexNames.contains("tweetId")) {
+        queueExposureStore.createIndex("tweetId", "tweetId", { unique: false });
+      }
+      if (!queueExposureStore.indexNames.contains("localDate")) {
+        queueExposureStore.createIndex("localDate", "localDate", {
+          unique: false,
+        });
+      }
+      if (!queueExposureStore.indexNames.contains("createdAt")) {
+        queueExposureStore.createIndex("createdAt", "createdAt", {
+          unique: false,
+        });
+      }
     },
     blocked() {
       // Keep existing tabs open; app can continue with in-memory state until next refresh.
@@ -229,18 +314,44 @@ async function migrateFromDatabase(
     const highlights = sourceDb.objectStoreNames.contains(HIGHLIGHTS_STORE_NAME)
       ? await sourceDb.getAll(HIGHLIGHTS_STORE_NAME)
       : [];
+    const queueSnapshots = sourceDb.objectStoreNames.contains(
+      TODAY_QUEUE_SNAPSHOTS_STORE_NAME,
+    )
+      ? await sourceDb.getAll(TODAY_QUEUE_SNAPSHOTS_STORE_NAME)
+      : [];
+    const queueMetadata = sourceDb.objectStoreNames.contains(
+      BOOKMARK_QUEUE_METADATA_STORE_NAME,
+    )
+      ? await sourceDb.getAll(BOOKMARK_QUEUE_METADATA_STORE_NAME)
+      : [];
+    const queueExposures = sourceDb.objectStoreNames.contains(
+      TODAY_QUEUE_EXPOSURES_STORE_NAME,
+    )
+      ? await sourceDb.getAll(TODAY_QUEUE_EXPOSURES_STORE_NAME)
+      : [];
 
     if (
       bookmarks.length === 0 &&
       details.length === 0 &&
       progress.length === 0 &&
-      highlights.length === 0
+      highlights.length === 0 &&
+      queueSnapshots.length === 0 &&
+      queueMetadata.length === 0 &&
+      queueExposures.length === 0
     ) {
       return false;
     }
 
     const tx = db.transaction(
-      [STORE_NAME, DETAIL_STORE_NAME, PROGRESS_STORE_NAME, HIGHLIGHTS_STORE_NAME],
+      [
+        STORE_NAME,
+        DETAIL_STORE_NAME,
+        PROGRESS_STORE_NAME,
+        HIGHLIGHTS_STORE_NAME,
+        TODAY_QUEUE_SNAPSHOTS_STORE_NAME,
+        BOOKMARK_QUEUE_METADATA_STORE_NAME,
+        TODAY_QUEUE_EXPOSURES_STORE_NAME,
+      ],
       "readwrite",
     );
     for (const row of bookmarks) {
@@ -255,6 +366,15 @@ async function migrateFromDatabase(
     for (const row of highlights) {
       tx.objectStore(HIGHLIGHTS_STORE_NAME).put(row);
     }
+    for (const row of queueSnapshots) {
+      tx.objectStore(TODAY_QUEUE_SNAPSHOTS_STORE_NAME).put(row);
+    }
+    for (const row of queueMetadata) {
+      tx.objectStore(BOOKMARK_QUEUE_METADATA_STORE_NAME).put(row);
+    }
+    for (const row of queueExposures) {
+      tx.objectStore(TODAY_QUEUE_EXPOSURES_STORE_NAME).put(row);
+    }
     await tx.done;
     return true;
   } finally {
@@ -266,16 +386,36 @@ async function migrateLegacyDatabaseIfNeeded(
   db: IDBPDatabase<XBookmarksDbSchema>,
   dbName: string,
 ): Promise<void> {
-  const [bookmarkCount, detailCount, progressCount, highlightCount] =
+  const [
+    bookmarkCount,
+    detailCount,
+    progressCount,
+    highlightCount,
+    queueSnapshotCount,
+    queueMetadataCount,
+    queueExposureCount,
+  ] =
     await Promise.all([
       db.count(STORE_NAME),
       db.count(DETAIL_STORE_NAME),
       db.count(PROGRESS_STORE_NAME),
       db.count(HIGHLIGHTS_STORE_NAME),
+      db.count(TODAY_QUEUE_SNAPSHOTS_STORE_NAME),
+      db.count(BOOKMARK_QUEUE_METADATA_STORE_NAME),
+      db.count(TODAY_QUEUE_EXPOSURES_STORE_NAME),
     ]);
 
   // If the target DB already has user data, don't overwrite it.
-  if (bookmarkCount + detailCount + progressCount + highlightCount > 0) return;
+  if (
+    bookmarkCount +
+      detailCount +
+      progressCount +
+      highlightCount +
+      queueSnapshotCount +
+      queueMetadataCount +
+      queueExposureCount >
+    0
+  ) return;
 
   const migrationSourceNames = dbName === DB_NAME
     ? [LEGACY_IDB_DATABASE_NAME]
@@ -398,13 +538,24 @@ export async function getAllBookmarks(): Promise<Bookmark[]> {
 export async function clearAllLocalData(): Promise<void> {
   const db = await getDb();
   const tx = db.transaction(
-    [STORE_NAME, DETAIL_STORE_NAME, PROGRESS_STORE_NAME, HIGHLIGHTS_STORE_NAME],
+    [
+      STORE_NAME,
+      DETAIL_STORE_NAME,
+      PROGRESS_STORE_NAME,
+      HIGHLIGHTS_STORE_NAME,
+      TODAY_QUEUE_SNAPSHOTS_STORE_NAME,
+      BOOKMARK_QUEUE_METADATA_STORE_NAME,
+      TODAY_QUEUE_EXPOSURES_STORE_NAME,
+    ],
     "readwrite",
   );
   tx.objectStore(STORE_NAME).clear();
   tx.objectStore(DETAIL_STORE_NAME).clear();
   tx.objectStore(PROGRESS_STORE_NAME).clear();
   tx.objectStore(HIGHLIGHTS_STORE_NAME).clear();
+  tx.objectStore(TODAY_QUEUE_SNAPSHOTS_STORE_NAME).clear();
+  tx.objectStore(BOOKMARK_QUEUE_METADATA_STORE_NAME).clear();
+  tx.objectStore(TODAY_QUEUE_EXPOSURES_STORE_NAME).clear();
   await tx.done;
 }
 
@@ -414,12 +565,18 @@ export async function clearAllLocalData(): Promise<void> {
 export async function clearTransientStores(): Promise<void> {
   const db = await getDb();
   const tx = db.transaction(
-    [STORE_NAME, DETAIL_STORE_NAME, SEARCH_INDEX_STORE_NAME],
+    [
+      STORE_NAME,
+      DETAIL_STORE_NAME,
+      SEARCH_INDEX_STORE_NAME,
+      TODAY_QUEUE_SNAPSHOTS_STORE_NAME,
+    ],
     "readwrite",
   );
   tx.objectStore(STORE_NAME).clear();
   tx.objectStore(DETAIL_STORE_NAME).clear();
   tx.objectStore(SEARCH_INDEX_STORE_NAME).clear();
+  tx.objectStore(TODAY_QUEUE_SNAPSHOTS_STORE_NAME).clear();
   await tx.done;
 }
 
@@ -439,12 +596,19 @@ export async function deleteBookmarksByTweetIds(
 
   const db = await getDb();
   const tx = db.transaction(
-    [STORE_NAME, DETAIL_STORE_NAME, PROGRESS_STORE_NAME, HIGHLIGHTS_STORE_NAME],
+    [
+      STORE_NAME,
+      DETAIL_STORE_NAME,
+      PROGRESS_STORE_NAME,
+      HIGHLIGHTS_STORE_NAME,
+      BOOKMARK_QUEUE_METADATA_STORE_NAME,
+    ],
     "readwrite",
   );
   const bookmarkStore = tx.objectStore(STORE_NAME);
   const detailStore = tx.objectStore(DETAIL_STORE_NAME);
   const progressStore = tx.objectStore(PROGRESS_STORE_NAME);
+  const queueMetadataStore = tx.objectStore(BOOKMARK_QUEUE_METADATA_STORE_NAME);
   const tweetIndex = bookmarkStore.index("tweetId");
   const highlightsStore = tx.objectStore(HIGHLIGHTS_STORE_NAME);
   const highlightTweetIndex = highlightsStore.index("tweetId");
@@ -461,6 +625,7 @@ export async function deleteBookmarksByTweetIds(
     await Promise.all([
       detailStore.delete(tweetId),
       progressStore.delete(tweetId),
+      queueMetadataStore.delete(tweetId),
     ]);
   }));
 
@@ -759,6 +924,168 @@ export async function getBookmarkSignals(): Promise<
     // ignore — empty signals just disable the click signal.
   }
   return out;
+}
+
+export async function getTodayQueueSnapshot(
+  key: string,
+): Promise<TodayQueueSnapshot | null> {
+  if (!key) return null;
+  const db = await getDb();
+  return (await db.get(TODAY_QUEUE_SNAPSHOTS_STORE_NAME, key)) ?? null;
+}
+
+export async function upsertTodayQueueSnapshot(
+  snapshot: TodayQueueSnapshot,
+): Promise<void> {
+  await upsertTodayQueueSnapshots([snapshot]);
+}
+
+export async function upsertTodayQueueSnapshots(
+  snapshots: TodayQueueSnapshot[],
+): Promise<void> {
+  if (snapshots.length === 0) return;
+  const db = await getDb();
+  const tx = db.transaction(TODAY_QUEUE_SNAPSHOTS_STORE_NAME, "readwrite");
+  for (const snapshot of snapshots) {
+    tx.store.put(snapshot);
+  }
+  await tx.done;
+  emitReaderActivity();
+}
+
+export async function deleteTodayQueueSnapshot(key: string): Promise<void> {
+  if (!key) return;
+  const db = await getDb();
+  await db.delete(TODAY_QUEUE_SNAPSHOTS_STORE_NAME, key);
+  emitReaderActivity();
+}
+
+export async function getQueueBookmarkMetadataByTweetId(
+  tweetId: string,
+): Promise<BookmarkQueueMetadata | null> {
+  if (!tweetId) return null;
+  const db = await getDb();
+  return (await db.get(BOOKMARK_QUEUE_METADATA_STORE_NAME, tweetId)) ?? null;
+}
+
+export async function getAllQueueBookmarkMetadata(): Promise<
+  BookmarkQueueMetadata[]
+> {
+  const db = await getDb();
+  return db.getAll(BOOKMARK_QUEUE_METADATA_STORE_NAME);
+}
+
+export async function getAllTodayQueueSnapshots(): Promise<
+  TodayQueueSnapshot[]
+> {
+  const db = await getDb();
+  return db.getAll(TODAY_QUEUE_SNAPSHOTS_STORE_NAME);
+}
+
+export async function getAllTodayQueueExposures(): Promise<
+  TodayQueueExposure[]
+> {
+  const db = await getDb();
+  return db.getAll(TODAY_QUEUE_EXPOSURES_STORE_NAME);
+}
+
+export function iterateTodayQueueSnapshots(): AsyncIterable<TodayQueueSnapshot> {
+  return {
+    async *[Symbol.asyncIterator](): AsyncIterator<TodayQueueSnapshot> {
+      const db = await getDb();
+      const rows = await db.getAll(TODAY_QUEUE_SNAPSHOTS_STORE_NAME);
+      for (const row of rows) yield row;
+    },
+  };
+}
+
+export function iterateQueueBookmarkMetadata(): AsyncIterable<
+  BookmarkQueueMetadata
+> {
+  return {
+    async *[Symbol.asyncIterator](): AsyncIterator<BookmarkQueueMetadata> {
+      const db = await getDb();
+      const rows = await db.getAll(BOOKMARK_QUEUE_METADATA_STORE_NAME);
+      for (const row of rows) yield row;
+    },
+  };
+}
+
+export function iterateTodayQueueExposures(): AsyncIterable<
+  TodayQueueExposure
+> {
+  return {
+    async *[Symbol.asyncIterator](): AsyncIterator<TodayQueueExposure> {
+      const db = await getDb();
+      const rows = await db.getAll(TODAY_QUEUE_EXPOSURES_STORE_NAME);
+      for (const row of rows) yield row;
+    },
+  };
+}
+
+export async function upsertQueueBookmarkMetadataRows(
+  rows: BookmarkQueueMetadata[],
+): Promise<void> {
+  if (rows.length === 0) return;
+  const db = await getDb();
+  const tx = db.transaction(BOOKMARK_QUEUE_METADATA_STORE_NAME, "readwrite");
+  for (const row of rows) {
+    tx.store.put(row);
+  }
+  await tx.done;
+  emitReaderActivity();
+}
+
+export async function upsertQueueBookmarkMetadata(
+  row: BookmarkQueueMetadata,
+): Promise<void> {
+  await upsertQueueBookmarkMetadataRows([row]);
+}
+
+export async function deleteQueueBookmarkMetadata(
+  tweetId: string,
+): Promise<void> {
+  if (!tweetId) return;
+  const db = await getDb();
+  await db.delete(BOOKMARK_QUEUE_METADATA_STORE_NAME, tweetId);
+  emitReaderActivity();
+}
+
+export async function recordTodayQueueExposures(
+  exposures: TodayQueueExposure[],
+): Promise<void> {
+  await upsertTodayQueueExposures(exposures);
+}
+
+export async function upsertTodayQueueExposures(
+  exposures: TodayQueueExposure[],
+): Promise<void> {
+  if (exposures.length === 0) return;
+  const db = await getDb();
+  const tx = db.transaction(TODAY_QUEUE_EXPOSURES_STORE_NAME, "readwrite");
+  for (const exposure of exposures) {
+    tx.store.put(exposure);
+  }
+  await tx.done;
+  emitReaderActivity();
+}
+
+export async function getTodayQueueExposuresSince(
+  sinceMs: number,
+): Promise<TodayQueueExposure[]> {
+  const db = await getDb();
+  const tx = db.transaction(TODAY_QUEUE_EXPOSURES_STORE_NAME, "readonly");
+  const rows: TodayQueueExposure[] = [];
+  let cursor = await tx.store.index("createdAt").openCursor(
+    IDBKeyRange.lowerBound(sinceMs),
+    "prev",
+  );
+  while (cursor) {
+    rows.push(cursor.value);
+    cursor = await cursor.continue();
+  }
+  await tx.done;
+  return rows;
 }
 
 // ─── Search index persistence ────────────────────────────────────────────
