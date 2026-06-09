@@ -7,6 +7,7 @@ import type {
   TodayQueueSnapshot,
 } from "../../types";
 import {
+  addTweetIdToTodayQueueSnapshot,
   buildTodayQueue,
   deriveActiveTodayQueueItems,
   deriveHandledTodayQueueItems,
@@ -234,6 +235,51 @@ describe("today queue snapshots", () => {
       budgetMinutes: 15,
       version: 1,
       tweetIds: ["1"],
+      generatedAt: NOW,
+    });
+  });
+
+  it("adds a manually selected post to the front of a snapshot", () => {
+    const snapshot: TodayQueueSnapshot = {
+      key: "2026-06-08:15:v1",
+      localDate: LOCAL_DATE,
+      budgetMinutes: 15,
+      version: 1,
+      tweetIds: ["first", "second", "third"],
+      generatedAt: NOW,
+    };
+
+    expect(
+      addTweetIdToTodayQueueSnapshot({
+        snapshot,
+        tweetId: "second",
+        key: snapshot.key,
+        localDate: LOCAL_DATE,
+        budgetMinutes: 15,
+        generatedAt: NOW + 1,
+      }),
+    ).toEqual<TodayQueueSnapshot>({
+      ...snapshot,
+      tweetIds: ["second", "first", "third"],
+    });
+  });
+
+  it("creates a snapshot when a manually selected post is the first today item", () => {
+    expect(
+      addTweetIdToTodayQueueSnapshot({
+        snapshot: null,
+        tweetId: "manual",
+        key: "2026-06-08:15:v1",
+        localDate: LOCAL_DATE,
+        budgetMinutes: 15,
+        generatedAt: NOW,
+      }),
+    ).toEqual<TodayQueueSnapshot>({
+      key: "2026-06-08:15:v1",
+      localDate: LOCAL_DATE,
+      budgetMinutes: 15,
+      version: 1,
+      tweetIds: ["manual"],
       generatedAt: NOW,
     });
   });

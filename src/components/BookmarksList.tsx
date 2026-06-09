@@ -7,10 +7,12 @@ import {
   ArrowLeftIcon,
   ArrowCounterClockwiseIcon,
   ArrowsDownUpIcon,
+  ArchiveIcon,
   CheckCircleIcon,
   ClockCountdownIcon,
   ClockIcon,
   ListChecksIcon,
+  ListPlusIcon,
   MagnifyingGlassIcon,
   PushPinIcon,
   SparkleIcon,
@@ -32,7 +34,11 @@ import {
   readRecentSearches,
   removeRecentSearch,
 } from "../lib/recent-searches";
-import { NEW_BADGE_CUTOFF_MS } from "../lib/constants/ui";
+import {
+  NEW_BADGE_CUTOFF_MS,
+  TODAY_QUEUE_DONE_MESSAGE,
+  TODAY_QUEUE_DONE_TITLE,
+} from "../lib/constants/ui";
 import {
   getPinnedTweetIds,
   getPinnedTweetIdsOrdered,
@@ -152,14 +158,14 @@ const ITEM_HEIGHT = 64;
 const HANDLED_TODAY_LABELS: Record<TodayQueueHandledReason, string> = {
   read: "Read",
   snoozed: "Snoozed",
-  archived: "Removed",
+  archived: "Archived",
   action: "Follow-up",
 };
 
 const TODAY_COMPLETION_LABELS: Record<TodayQueueHandledReason, string> = {
   read: "Read",
   snoozed: "Snoozed",
-  archived: "Removed",
+  archived: "Archived",
   action: "Action needed",
 };
 
@@ -196,7 +202,7 @@ function HandledTodayIcon({ reason }: { reason: TodayQueueHandledReason }) {
     case "snoozed":
       return <ClockCountdownIcon className="size-3.5" />;
     case "archived":
-      return <XIcon className="size-3.5" />;
+      return <ArchiveIcon className="size-3.5" />;
     case "action":
       return <ListChecksIcon className="size-3.5" />;
   }
@@ -497,6 +503,10 @@ function useBookmarksListModel({
         }
         return { bookmark, subtitle: "Today's Read" };
       }),
+    [todayQueue?.items],
+  );
+  const todayTweetIdSet = useMemo(
+    () => new Set((todayQueue?.items ?? []).map((item) => item.bookmark.tweetId)),
     [todayQueue?.items],
   );
 
@@ -806,6 +816,26 @@ function useBookmarksListModel({
     [activeTab, todayQueue, unreadIdSet],
   );
 
+  const handleAddToToday = useCallback(
+    (tweetId: string, event: React.MouseEvent) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (todayTweetIdSet.has(tweetId)) {
+        updateListState({ toastMessage: "Already in Today's Read." });
+        return;
+      }
+      void todayQueue
+        ?.addToTodayQueue(tweetId)
+        .then(() =>
+          updateListState({ toastMessage: "Added to Today's Read." }),
+        )
+        .catch(() =>
+          updateListState({ toastMessage: "Couldn't add to Today's Read." }),
+        );
+    },
+    [todayQueue, todayTweetIdSet],
+  );
+
   const handleTodaySnooze = useCallback(
     (tweetId: string, event: React.MouseEvent) => {
       event.preventDefault();
@@ -818,7 +848,7 @@ function useBookmarksListModel({
   const handleTodayIntent = useCallback(
     (
       tweetId: string,
-      intent: "act",
+      intent: "reference" | "act",
       event: React.MouseEvent,
     ) => {
       event.preventDefault();
@@ -860,18 +890,17 @@ function useBookmarksListModel({
               <CheckCircleIcon weight="fill" className="size-6" />
             </div>
             <h2 className="text-xl font-medium text-foreground text-balance">
-              Nice. Today's Read is clear.
+              {TODAY_QUEUE_DONE_TITLE}
             </h2>
-            <p className="mt-2 max-w-md text-sm leading-relaxed text-muted/60 text-balance">
-              You handled everything for today. We'll line up a fresh read
-              tomorrow.
+            <p className="mt-2 max-w-md text-sm leading-relaxed text-subtle text-balance">
+              {TODAY_QUEUE_DONE_MESSAGE}
             </p>
             {todayCompletionSummary.length > 0 && (
               <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
                 {todayCompletionSummary.map((item) => (
                   <span
                     key={item.reason}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-surface-card/45 px-2.5 py-1 text-xs text-muted/70"
+                    className="inline-flex items-center gap-1.5 rounded-full border border-border-soft bg-surface-card/70 px-2.5 py-1 text-xs text-subtle"
                   >
                     <span className="font-medium tabular-nums text-foreground/75">
                       {item.count}
@@ -970,6 +999,7 @@ function useBookmarksListModel({
     handleLogin,
     handleRemoveRecent,
     handleSortChange,
+    handleAddToToday,
     handleTodayIntent,
     handleTodaySnooze,
     handleTogglePin,
@@ -1006,6 +1036,7 @@ function useBookmarksListModel({
     passiveHandledTodayItems,
     toastMessage,
     todayQueue,
+    todayTweetIdSet,
     unpinnedRows,
     updateListState,
     virtualizer,
@@ -1027,6 +1058,7 @@ function renderBookmarksList({
   didYouMean,
   focusedIndex,
   getBookmarkHref,
+  handleAddToToday,
   handleLogin,
   handleRemoveRecent,
   handleSortChange,
@@ -1066,6 +1098,7 @@ function renderBookmarksList({
   passiveHandledTodayItems,
   toastMessage,
   todayQueue,
+  todayTweetIdSet,
   unpinnedRows,
   updateListState,
   virtualizer,
@@ -1101,7 +1134,7 @@ function renderBookmarksList({
             openOnInputClick
           >
             <div className="relative ml-auto mr-1 w-40 shrink-0 transition-transform duration-150 ease-out focus-within:-translate-y-px sm:w-52 md:w-60">
-              <MagnifyingGlassIcon className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted/65" />
+              <MagnifyingGlassIcon className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-control-muted" />
               <Autocomplete.Input
                 ref={searchInputRef}
                 onFocus={() => updateListState({ isSearchFocused: true })}
@@ -1115,14 +1148,14 @@ function renderBookmarksList({
                 aria-label="Filter bookmarks"
                 placeholder="Search bookmarks..."
                 className={cn(
-                  "h-8 w-full rounded border border-border/70 bg-surface/45 pl-8 text-xs-plus text-foreground placeholder:text-muted/50 transition-[border-color,background-color] duration-150 ease-out focus:border-foreground/20 focus:bg-surface/55 focus:outline-none",
+                  "h-8 w-full rounded border border-border bg-surface-card/55 pl-8 text-xs-plus text-foreground placeholder:text-placeholder transition-[border-color,background-color] duration-150 ease-out focus:border-foreground/25 focus:bg-surface-card/75 focus:outline-none",
                   showSearchHint ? "pr-12" : "pr-2",
                 )}
               />
               {showSearchHint && (
                 <kbd
                   aria-hidden="true"
-                  className="pointer-events-none absolute right-1.5 top-1/2 flex -translate-y-1/2 select-none items-center gap-0.5 rounded border border-border/60 bg-surface-card/80 px-1 py-px font-sans text-[10px] font-medium text-muted/70 shadow-[inset_0_-1px_0_0] shadow-border/40"
+                  className="pointer-events-none absolute right-1.5 top-1/2 flex -translate-y-1/2 select-none items-center gap-0.5 rounded border border-border-soft bg-surface-card/90 px-1 py-px font-sans text-[10px] font-medium text-subtle shadow-[inset_0_-1px_0_0] shadow-border-soft"
                 >
                   {isMac ? <span className="text-xs leading-none">⌘</span> : <span>Ctrl</span>}
                   <span>K</span>
@@ -1135,7 +1168,7 @@ function renderBookmarksList({
                   <Autocomplete.List>
                     {recents.length > 0 && (
                       <Autocomplete.Group className="px-3 pt-2.5 pb-1.5">
-                        <Autocomplete.GroupLabel className="block text-2xs font-medium uppercase tracking-extra-wide text-muted/50">
+                        <Autocomplete.GroupLabel className="block text-2xs font-medium uppercase tracking-extra-wide text-faint">
                           Recent
                         </Autocomplete.GroupLabel>
                         <div className="mt-1.5 flex flex-col">
@@ -1146,7 +1179,7 @@ function renderBookmarksList({
                               onClick={() => insertSuggestion(q)}
                               className="group/recent flex cursor-pointer items-center gap-2 rounded py-1 pl-1 pr-1 text-xs text-muted outline-none transition-colors data-highlighted:bg-foreground/5 data-highlighted:text-foreground"
                             >
-                              <ClockIcon className="size-3.5 shrink-0 text-muted/55" />
+                              <ClockIcon className="size-3.5 shrink-0 text-control-muted" />
                               <span className="min-w-0 flex-1 truncate text-left">{q}</span>
                               <button
                                 type="button"
@@ -1155,7 +1188,7 @@ function renderBookmarksList({
                                   e.stopPropagation();
                                   handleRemoveRecent(q);
                                 }}
-                                className="flex size-5 shrink-0 items-center justify-center rounded text-muted/40 transition-colors hover:bg-foreground/5 hover:text-foreground"
+                                className="flex size-5 shrink-0 items-center justify-center rounded text-control-muted transition-colors hover:bg-foreground/5 hover:text-foreground"
                                 aria-label={`Forget search ${q}`}
                                 title="Forget"
                               >
@@ -1167,10 +1200,10 @@ function renderBookmarksList({
                       </Autocomplete.Group>
                     )}
                     {recents.length > 0 && (
-                      <div className="border-t border-border/40" />
+                      <div className="border-t border-border-soft" />
                     )}
                     <Autocomplete.Group className="px-3 pt-2 pb-2.5">
-                      <Autocomplete.GroupLabel className="block text-2xs font-medium uppercase tracking-extra-wide text-muted/50">
+                      <Autocomplete.GroupLabel className="block text-2xs font-medium uppercase tracking-extra-wide text-faint">
                         Try
                       </Autocomplete.GroupLabel>
                       <div className="mt-1.5 flex flex-wrap gap-1">
@@ -1179,7 +1212,7 @@ function renderBookmarksList({
                             key={op.label}
                             value={op.insert}
                             onClick={() => insertSuggestion(op.insert)}
-                            className="inline-flex cursor-pointer items-center gap-1 rounded border border-border/60 bg-surface/40 px-1.5 py-0.5 text-2xs text-muted/80 outline-none transition-colors data-highlighted:border-foreground/20 data-highlighted:bg-surface/60 data-highlighted:text-foreground"
+                            className="inline-flex cursor-pointer items-center gap-1 rounded border border-border-soft bg-surface-card/55 px-1.5 py-0.5 text-2xs text-subtle outline-none transition-colors data-highlighted:border-foreground/25 data-highlighted:bg-surface-card data-highlighted:text-foreground"
                           >
                             <SparkleIcon className="size-2.5" />
                             <span>{op.label}</span>
@@ -1302,7 +1335,7 @@ function renderBookmarksList({
       <div ref={scrollContainerRef} className="flex-1 overflow-y-auto">
         <main className={cn(containerWidthClass, "mx-auto px-6 pb-16 pt-4")}>
           {isSearching && didYouMean && (
-            <div className="mb-3 rounded border border-border/50 bg-surface/40 px-3 py-2 text-xs text-muted/80">
+            <div className="mb-3 rounded border border-border-soft bg-surface-card/55 px-3 py-2 text-xs text-subtle">
               Did you mean{" "}
               <button
                 type="button"
@@ -1328,7 +1361,7 @@ function renderBookmarksList({
                 leadingIcon={
                   <ArrowsDownUpIcon weight="bold" className="size-3.5" />
                 }
-                className="w-36 shrink-0 border-border/70 bg-surface/45 hover:bg-surface/55"
+                className="w-36 shrink-0 border-border bg-surface-card/55 hover:bg-surface-card/75"
                 popupClassName="w-[7.5rem]"
               />
             </div>
@@ -1336,7 +1369,7 @@ function renderBookmarksList({
 
           {!isSearching && activeTab === "unread" && pinnedCount > 0 && (
             <div className="mb-2">
-              <span className="text-2xs font-medium uppercase tracking-extra-wide text-muted/40">
+              <span className="text-2xs font-medium uppercase tracking-extra-wide text-faint">
                 Pinned
               </span>
             </div>
@@ -1399,7 +1432,7 @@ function renderBookmarksList({
                         href={`https://x.com/${bookmark.author.screenName}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="truncate text-xs text-muted/70 transition-colors hover:text-foreground"
+                        className="truncate text-xs text-subtle transition-colors hover:text-foreground"
                         onClick={(e) => e.stopPropagation()}
                       >
                         <Highlighted
@@ -1416,9 +1449,9 @@ function renderBookmarksList({
                       className="line-clamp-2 text-xs leading-relaxed text-foreground"
                     />
                     {hasAnnotations && (
-                      <p className="truncate text-2xs text-muted/40">
+                      <p className="truncate text-2xs text-faint">
                         {(counts?.highlights ?? 0) > 0 && (
-                          <span className="text-accent/60">
+                          <span className="text-accent">
                             {counts!.highlights}{" "}
                             {counts!.highlights === 1
                               ? "Highlight"
@@ -1430,7 +1463,7 @@ function renderBookmarksList({
                         {(counts?.notes ?? 0) > 0 && (
                           <span
                             style={{ color: "var(--note-pill-fg)" }}
-                            className="opacity-60"
+                            className="opacity-80"
                           >
                             {counts!.notes}{" "}
                             {counts!.notes === 1 ? "Note" : "Notes"}
@@ -1456,7 +1489,7 @@ function renderBookmarksList({
             </div>
           )}
           {!isSearching && activeTab === "unread" && pinnedCount > 0 && unpinnedRows.length > 0 && (
-            <div className="mb-4 border-t border-dashed border-border/50" />
+            <div className="mb-4 border-t border-dashed border-border-soft" />
           )}
 
           {hasItems ? (
@@ -1562,10 +1595,10 @@ function renderBookmarksList({
                             terms={queryTerms}
                             windowTokens={20}
                             hideOnNoMatch
-                            className="mt-0.5 line-clamp-1 text-xs text-muted/55"
+                            className="mt-0.5 line-clamp-1 text-xs text-subtle"
                           />
                         )}
-                        <p className="mt-1 truncate text-xs text-muted/50">
+                        <p className="mt-1 truncate text-xs text-subtle">
                           <a
                             href={`https://x.com/${bookmark.author.screenName}`}
                             target="_blank"
@@ -1580,21 +1613,21 @@ function renderBookmarksList({
                             />
                           </a>
                           {row.subtitle ? (
-                            <span className="text-muted/40">
+                            <span className="text-faint">
                               {" "}
                               &middot; {row.subtitle}
                             </span>
                           ) : (
-                            <span className="text-muted/40">
+                            <span className="text-faint">
                               {" "}
                               &middot; {inferKindBadge(bookmark)}
                             </span>
                           )}
                           {(counts?.highlights ?? 0) > 0 && (
-                            <span className="text-muted/40">
+                            <span className="text-faint">
                               {" "}
                               &middot;{" "}
-                              <span className="text-accent/60">
+                              <span className="text-accent">
                                 {counts!.highlights}{" "}
                                 {counts!.highlights === 1
                                   ? "Highlight"
@@ -1603,12 +1636,12 @@ function renderBookmarksList({
                             </span>
                           )}
                           {(counts?.notes ?? 0) > 0 && (
-                            <span className="text-muted/40">
+                            <span className="text-faint">
                               {" "}
                               &middot;{" "}
                               <span
                                 style={{ color: "var(--note-pill-fg)" }}
-                                className="opacity-60"
+                                className="opacity-80"
                               >
                                 {counts!.notes}{" "}
                                 {counts!.notes === 1 ? "Note" : "Notes"}
@@ -1624,7 +1657,7 @@ function renderBookmarksList({
                             onClick={(e) =>
                               handleTodaySnooze(bookmark.tweetId, e)
                             }
-                            className="flex size-8 items-center justify-center rounded text-muted/45 transition-colors hover:bg-foreground/5 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-focus-ring"
+                            className="flex size-8 items-center justify-center rounded text-control-muted transition-colors hover:bg-foreground/5 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-focus-ring"
                             aria-label="Snooze"
                             title="Snooze"
                           >
@@ -1633,9 +1666,24 @@ function renderBookmarksList({
                           <button
                             type="button"
                             onClick={(e) =>
+                              handleTodayIntent(
+                                bookmark.tweetId,
+                                "reference",
+                                e,
+                              )
+                            }
+                            className="flex size-8 items-center justify-center rounded text-control-muted transition-colors hover:bg-foreground/5 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-focus-ring"
+                            aria-label="Archive"
+                            title="Archive"
+                          >
+                            <ArchiveIcon className="size-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) =>
                               handleTodayIntent(bookmark.tweetId, "act", e)
                             }
-                            className="flex size-8 items-center justify-center rounded text-muted/45 transition-colors hover:bg-foreground/5 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-focus-ring"
+                            className="flex size-8 items-center justify-center rounded text-control-muted transition-colors hover:bg-foreground/5 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-focus-ring"
                             aria-label="Act on this"
                             title="Act on this"
                           >
@@ -1648,7 +1696,7 @@ function renderBookmarksList({
                               "flex size-8 items-center justify-center rounded transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-focus-ring",
                               pinnedIds.has(bookmark.tweetId)
                                 ? "text-accent hover:bg-accent-surface"
-                                : "text-muted/45 hover:bg-foreground/5 hover:text-foreground",
+                                : "text-control-muted hover:bg-foreground/5 hover:text-foreground",
                             )}
                             aria-label={
                               pinnedIds.has(bookmark.tweetId)
@@ -1671,31 +1719,69 @@ function renderBookmarksList({
                         </div>
                       )}
                       {activeTab === "unread" && (
-                        <button
-                          type="button"
-                          onClick={(e) => handleTogglePin(bookmark.tweetId, e)}
-                          className={cn(
-                            "flex size-10 shrink-0 items-center justify-center rounded transition-[color,opacity]",
-                            pinnedIds.has(bookmark.tweetId)
-                              ? "text-accent opacity-100 hover:text-accent/80"
-                              : "text-muted/40 opacity-0 group-hover/row:opacity-100 hover:text-muted",
+                        <div className="flex shrink-0 items-center gap-0.5">
+                          {!isSearching && todayQueue && (
+                            <button
+                              type="button"
+                              onClick={(e) =>
+                                handleAddToToday(bookmark.tweetId, e)
+                              }
+                              disabled={todayTweetIdSet.has(bookmark.tweetId)}
+                              className={cn(
+                                "flex size-8 shrink-0 items-center justify-center rounded transition-[background-color,color,opacity]",
+                                todayTweetIdSet.has(bookmark.tweetId)
+                                  ? "cursor-default text-accent opacity-100"
+                                  : "text-control-muted opacity-0 hover:bg-foreground/5 hover:text-muted group-hover/row:opacity-100",
+                              )}
+                              aria-label={
+                                todayTweetIdSet.has(bookmark.tweetId)
+                                  ? "In Today's Read"
+                                  : "Add to Today's Read"
+                              }
+                              title={
+                                todayTweetIdSet.has(bookmark.tweetId)
+                                  ? "In Today's Read"
+                                  : "Add to Today's Read"
+                              }
+                            >
+                              <ListPlusIcon
+                                weight={
+                                  todayTweetIdSet.has(bookmark.tweetId)
+                                    ? "fill"
+                                    : "regular"
+                                }
+                                className="size-3.5"
+                              />
+                            </button>
                           )}
-                          aria-label={
-                            pinnedIds.has(bookmark.tweetId)
-                              ? "Unpin bookmark"
-                              : "Pin bookmark"
-                          }
-                          title={
-                            pinnedIds.has(bookmark.tweetId) ? "Unpin" : "Pin"
-                          }
-                        >
-                          <PushPinIcon
-                            weight={
-                              pinnedIds.has(bookmark.tweetId) ? "fill" : "regular"
+                          <button
+                            type="button"
+                            onClick={(e) => handleTogglePin(bookmark.tweetId, e)}
+                            className={cn(
+                              "flex size-10 shrink-0 items-center justify-center rounded transition-[color,opacity]",
+                              pinnedIds.has(bookmark.tweetId)
+                                ? "text-accent opacity-100 hover:text-accent/80"
+                                : "text-control-muted opacity-0 group-hover/row:opacity-100 hover:text-muted",
+                            )}
+                            aria-label={
+                              pinnedIds.has(bookmark.tweetId)
+                                ? "Unpin bookmark"
+                                : "Pin bookmark"
                             }
-                            className="size-3.5"
-                          />
-                        </button>
+                            title={
+                              pinnedIds.has(bookmark.tweetId) ? "Unpin" : "Pin"
+                            }
+                          >
+                            <PushPinIcon
+                              weight={
+                                pinnedIds.has(bookmark.tweetId)
+                                  ? "fill"
+                                  : "regular"
+                              }
+                              className="size-3.5"
+                            />
+                          </button>
+                        </div>
                       )}
                       {activeTab !== "unread" &&
                         activeTab !== "today" &&
@@ -1721,19 +1807,19 @@ function renderBookmarksList({
             actionTodayItems.length > 0 && (
               <section
                 className={cn(
-                  "mt-8 border-t border-border/50 pt-4",
+                  "mt-8 border-t border-border-soft pt-4",
                   !hasItems && "mt-4",
                 )}
               >
                 <div className="mb-2 flex items-center justify-between">
-                  <span className="text-2xs font-medium uppercase tracking-extra-wide text-muted/40">
+                  <span className="text-2xs font-medium uppercase tracking-extra-wide text-faint">
                     Action needed
                   </span>
-                  <span className="text-xs tabular-nums text-muted/40">
+                  <span className="text-xs tabular-nums text-faint">
                     {actionTodayItems.length}
                   </span>
                 </div>
-                <div className="divide-y divide-border/35">
+                <div className="divide-y divide-border-soft">
                   {actionTodayItems.map((item) => {
                     const title = pickTitle(item.bookmark);
 
@@ -1742,14 +1828,14 @@ function renderBookmarksList({
                         key={`${item.bookmark.tweetId}:${item.reason}`}
                         className="flex items-center gap-3 py-2.5"
                       >
-                        <span className="flex size-7 shrink-0 items-center justify-center rounded bg-accent-surface/50 text-accent/70">
+                        <span className="flex size-7 shrink-0 items-center justify-center rounded bg-accent-surface text-accent">
                           <ListChecksIcon className="size-3.5" />
                         </span>
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-xs font-medium text-foreground/75">
+                          <p className="truncate text-xs font-medium text-secondary">
                             {title}
                           </p>
-                          <p className="mt-0.5 truncate text-2xs text-muted/45">
+                          <p className="mt-0.5 truncate text-2xs text-subtle">
                             Follow-up
                           </p>
                         </div>
@@ -1764,7 +1850,7 @@ function renderBookmarksList({
                               e,
                             )
                           }
-                          className="h-7 shrink-0 px-2 text-xs text-muted/60 hover:text-foreground"
+                          className="h-7 shrink-0 px-2 text-xs text-control-muted hover:text-foreground"
                         >
                           <ArrowCounterClockwiseIcon className="size-3" />
                           Undo
@@ -1781,20 +1867,20 @@ function renderBookmarksList({
             passiveHandledTodayItems.length > 0 && (
               <section
                 className={cn(
-                  "border-t border-border/50 pt-4",
+                  "border-t border-border-soft pt-4",
                   actionTodayItems.length > 0 ? "mt-6" : "mt-8",
                   !hasItems && actionTodayItems.length === 0 && "mt-4",
                 )}
               >
                 <div className="mb-2 flex items-center justify-between">
-                  <span className="text-2xs font-medium uppercase tracking-extra-wide text-muted/40">
+                  <span className="text-2xs font-medium uppercase tracking-extra-wide text-faint">
                     Handled today
                   </span>
-                  <span className="text-xs tabular-nums text-muted/40">
+                  <span className="text-xs tabular-nums text-faint">
                     {passiveHandledTodayItems.length}
                   </span>
                 </div>
-                <div className="divide-y divide-border/35">
+                <div className="divide-y divide-border-soft">
                   {passiveHandledTodayItems.map((item) => {
                     const label = HANDLED_TODAY_LABELS[item.reason];
                     const title = pickTitle(item.bookmark);
@@ -1804,14 +1890,14 @@ function renderBookmarksList({
                         key={`${item.bookmark.tweetId}:${item.reason}`}
                         className="flex items-center gap-3 py-2.5"
                       >
-                        <span className="flex size-7 shrink-0 items-center justify-center rounded bg-foreground/[0.03] text-muted/45">
+                        <span className="flex size-7 shrink-0 items-center justify-center rounded bg-surface-alt text-control-muted">
                           <HandledTodayIcon reason={item.reason} />
                         </span>
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-xs font-medium text-foreground/75">
+                          <p className="truncate text-xs font-medium text-secondary">
                             {title}
                           </p>
-                          <p className="mt-0.5 truncate text-2xs text-muted/45">
+                          <p className="mt-0.5 truncate text-2xs text-subtle">
                             {label}
                           </p>
                         </div>
@@ -1826,7 +1912,7 @@ function renderBookmarksList({
                               e,
                             )
                           }
-                          className="h-7 shrink-0 px-2 text-xs text-muted/60 hover:text-foreground"
+                          className="h-7 shrink-0 px-2 text-xs text-control-muted hover:text-foreground"
                         >
                           <ArrowCounterClockwiseIcon className="size-3" />
                           Undo

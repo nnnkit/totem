@@ -235,6 +235,7 @@ function isImportableTodayQueueExposure(
     typeof value.id === "string" &&
     typeof value.tweetId === "string" &&
     (value.action === "queued" ||
+      value.action === "added" ||
       value.action === "opened" ||
       value.action === "snoozed" ||
       value.action === "read" ||

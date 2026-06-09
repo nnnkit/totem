@@ -248,6 +248,7 @@ export type TodayQueueBudgetMinutes = 5 | 15 | 30;
 export type BookmarkIntent = "unset" | "read_soon" | "reference" | "act";
 export type TodayQueueExposureAction =
   | "queued"
+  | "added"
   | "opened"
   | "snoozed"
   | "read"

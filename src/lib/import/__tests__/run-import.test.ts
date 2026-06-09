@@ -469,7 +469,7 @@ describe("runImport", () => {
     const exposure: TodayQueueExposure = {
       id: "exposure-1",
       tweetId: "t1",
-      action: "reference",
+      action: "added",
       localDate: "2026-06-08",
       createdAt: 1_700_000_000_002,
     };

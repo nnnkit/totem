@@ -44,8 +44,14 @@
     --color-surface-hover: var(--surface-hover);
     --color-surface-link-card: var(--surface-link-card);
     --color-foreground: var(--foreground);
+    --color-secondary: var(--secondary);
+    --color-subtle: var(--subtle);
     --color-muted: var(--muted);
+    --color-faint: var(--faint);
+    --color-control-muted: var(--control-muted);
+    --color-placeholder: var(--placeholder);
     --color-border: var(--border);
+    --color-border-soft: var(--border-soft);
     --color-success: var(--success);
     --color-focus-ring: var(--focus-ring);
 
@@ -227,20 +233,26 @@
         --accent: #c25a41;
         --accent-surface: #FDE9E3;
         --accent-surface-hover: #FCDAD0;
-        --surface: #F5F5F5;
-        --surface-alt: #EFEFEF;
-        --surface-alt-hover: #E7E7E7;
-        --surface-card: #FFFFFF;
-        --surface-pinned: #FFFFFF;
-        --surface-hover: rgba(0, 0, 0, 0.02);
-        --surface-link-card: #F0F0F0;
+        --surface: #F6F3ED;
+        --surface-alt: #EAE3D8;
+        --surface-alt-hover: #E6DDD0;
+        --surface-card: #FFFCF7;
+        --surface-pinned: #FFFCF7;
+        --surface-hover: #EEE8DF;
+        --surface-link-card: #ECE5DB;
 
         /* Text */
-        --foreground: #1A1A1A;
-        --muted: #6B6B6B;
+        --foreground: #171512;
+        --secondary: #3F3B35;
+        --subtle: #57524A;
+        --muted: #6F685F;
+        --faint: #827A6F;
+        --control-muted: #746C61;
+        --placeholder: #847B70;
 
         /* Borders */
-        --border: #DCDCDC;
+        --border: #DED6C8;
+        --border-soft: #E8E1D5;
 
         /* Focus ring — neutral, calmer than brand accent */
         --focus-ring: rgba(26, 26, 26, 0.38);
@@ -288,10 +300,16 @@
 
             /* Text */
             --foreground: rgba(245, 243, 240, 0.92);
+            --secondary: rgba(245, 243, 240, 0.82);
+            --subtle: rgba(255, 255, 255, 0.38);
             --muted: rgba(255, 255, 255, 0.75);
+            --faint: rgba(255, 255, 255, 0.3);
+            --control-muted: rgba(255, 255, 255, 0.34);
+            --placeholder: rgba(255, 255, 255, 0.38);
 
             /* Borders */
             --border: #2A2A2D;
+            --border-soft: #242427;
 
             /* Focus ring — neutral, calmer than brand accent */
             --focus-ring: rgba(245, 243, 240, 0.4);
@@ -336,10 +354,16 @@
 
         /* Text */
         --foreground: rgba(245, 243, 240, 0.92);
+        --secondary: rgba(245, 243, 240, 0.82);
+        --subtle: rgba(255, 255, 255, 0.38);
         --muted: rgba(255, 255, 255, 0.75);
+        --faint: rgba(255, 255, 255, 0.3);
+        --control-muted: rgba(255, 255, 255, 0.34);
+        --placeholder: rgba(255, 255, 255, 0.38);
 
         /* Borders */
         --border: #2A2A2D;
+        --border-soft: #242427;
 
         /* Focus ring — neutral, calmer than brand accent */
         --focus-ring: rgba(245, 243, 240, 0.4);
@@ -875,15 +899,15 @@
     --color-on-bg-ghost: rgba(255, 255, 255, 0.56);
 
     /* Main background (cards, search) */
-    --color-main-bg: rgba(250, 250, 250, 0.97);
-    --color-main-bg-hover: #fafafa;
+    --color-main-bg: rgba(255, 252, 247, 0.97);
+    --color-main-bg-hover: #fffaf2;
     --shadow-glass:
         0 1px 3px rgba(0, 0, 0, 0.06), 0 6px 24px rgba(0, 0, 0, 0.06);
 
     /* Card text */
-    --color-home-fg: rgba(10, 10, 12, 0.92);
-    --color-home-fg-secondary: rgba(10, 10, 12, 0.82);
-    --color-home-fg-muted: rgba(10, 10, 12, 0.54);
+    --color-home-fg: rgba(23, 21, 18, 0.94);
+    --color-home-fg-secondary: rgba(23, 21, 18, 0.84);
+    --color-home-fg-muted: rgba(23, 21, 18, 0.64);
 
     /* Accent */
     --color-home-accent: #e28067;
@@ -892,12 +916,12 @@
     /* Search */
     --shadow-search:
         0 1px 3px rgba(0, 0, 0, 0.06), 0 6px 24px rgba(0, 0, 0, 0.06);
-    --color-home-placeholder: rgba(10, 10, 12, 0.36);
+    --color-home-placeholder: rgba(23, 21, 18, 0.48);
 
     /* Secondary buttons */
-    --color-home-secondary-bg: rgba(250, 250, 250, 0.95);
-    --color-home-secondary-border: rgba(10, 10, 12, 0.15);
-    --color-home-secondary-text: rgba(10, 10, 12, 0.72);
+    --color-home-secondary-bg: rgba(255, 252, 247, 0.95);
+    --color-home-secondary-border: rgba(23, 21, 18, 0.18);
+    --color-home-secondary-text: rgba(23, 21, 18, 0.76);
 
     /* Overlay (translucent white on photo) */
     --color-overlay: rgba(255, 255, 255, 0.08);
@@ -906,8 +930,12 @@
     --color-overlay-hover-edge: rgba(255, 255, 255, 0.18);
 
     /* Description & empty state */
-    --color-home-description: rgba(10, 10, 12, 0.6);
-    --color-home-empty: rgba(10, 10, 12, 0.44);
+    --color-home-description: rgba(23, 21, 18, 0.85);
+    --color-home-empty: rgba(23, 21, 18, 0.56);
+
+    /* Today's queue step bars */
+    --color-home-step-current: rgba(10, 10, 12, 0.45);
+    --color-home-step-upcoming: rgba(10, 10, 12, 0.20);
 }
 
 @layer components {
@@ -1028,6 +1056,8 @@
         --color-home-secondary-text: rgba(255, 255, 255, 0.8);
         --color-home-description: rgba(255, 255, 255, 0.74);
         --color-home-empty: rgba(255, 255, 255, 0.5);
+        --color-home-step-current: rgba(255, 255, 255, 0.40);
+        --color-home-step-upcoming: rgba(255, 255, 255, 0.15);
     }
 }
 
@@ -1049,4 +1079,6 @@
     --color-home-secondary-text: rgba(255, 255, 255, 0.8);
     --color-home-description: rgba(255, 255, 255, 0.74);
     --color-home-empty: rgba(255, 255, 255, 0.5);
+    --color-home-step-current: rgba(255, 255, 255, 0.40);
+    --color-home-step-upcoming: rgba(255, 255, 255, 0.15);
 }

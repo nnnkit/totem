@@ -1,14 +1,16 @@
-import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { BookmarkReader } from "../../../../../src/components/BookmarkReader";
 import { BookmarksList } from "../../../../../src/components/BookmarksList";
 import { NewTabHome } from "../../../../../src/components/NewTabHome";
 import { SettingsModal } from "../../../../../src/components/SettingsModal";
 import { Toast } from "../../../../../src/components/ui/Toast";
 import { useContinueReading } from "../../../../../src/hooks/useContinueReading";
+import type { UseTodayQueueResult } from "../../../../../src/hooks/useTodayQueue";
 import { useTheme } from "../../../../../src/hooks/useTheme";
 import { pickRelatedBookmarks } from "../../../../../src/lib/related";
 import { LS_READING_TAB } from "../../../../../src/lib/storage-keys";
 import type { ReadingTab } from "../../../../../src/lib/reading-list";
+import type { TodayQueueHandledReason } from "../../../../../src/lib/today-queue";
 import type { FooterState, SyncButtonState } from "../../../../../src/stores/selectors";
 import type { ThemePreference } from "../../../../../src/types";
 import type {
@@ -56,14 +58,40 @@ interface DemoState {
   readingTab: ReadingTab;
 }
 
+interface DemoTodayQueueState {
+  activeIds: string[];
+  handledReasons: Partial<Record<string, TodayQueueHandledReason>>;
+}
+
 type DemoStatePatch = Partial<DemoState> | ((state: DemoState) => Partial<DemoState>);
+
+function isReadingTab(value: string | null): value is ReadingTab {
+  return (
+    value === "today" ||
+    value === "unread" ||
+    value === "continue" ||
+    value === "read"
+  );
+}
 
 function readInitialReadingTab(): ReadingTab {
   const stored = localStorage.getItem(DEMO_READING_TAB_KEY);
-  if (stored === "unread" || stored === "continue" || stored === "read") {
-    return stored;
+  return isReadingTab(stored) ? stored : "unread";
+}
+
+function createDemoTodayQueueState(bookmarks: Bookmark[]): DemoTodayQueueState {
+  const queueIds = bookmarks.slice(0, 5).map((bookmark) => bookmark.tweetId);
+  const handledCount = Math.min(2, Math.max(0, queueIds.length - 1));
+  const handledReasons: DemoTodayQueueState["handledReasons"] = {};
+
+  for (const tweetId of queueIds.slice(0, handledCount)) {
+    handledReasons[tweetId] = "read";
   }
-  return "unread";
+
+  return {
+    activeIds: queueIds.slice(handledCount),
+    handledReasons,
+  };
 }
 
 function createInitialDemoState(): DemoState {
@@ -152,9 +180,17 @@ function mergeSettings(raw?: Partial<UserSettings>): UserSettings {
         ? raw.searchEngine
         : DEFAULT_DEMO_SETTINGS.searchEngine,
     recommendationSource:
-      raw.recommendationSource === "random" || raw.recommendationSource === "pinned"
+      raw.recommendationSource === "today" ||
+      raw.recommendationSource === "random" ||
+      raw.recommendationSource === "pinned"
         ? raw.recommendationSource
         : DEFAULT_DEMO_SETTINGS.recommendationSource,
+    todayQueueBudgetMinutes:
+      raw.todayQueueBudgetMinutes === 5 ||
+      raw.todayQueueBudgetMinutes === 15 ||
+      raw.todayQueueBudgetMinutes === 30
+        ? raw.todayQueueBudgetMinutes
+        : DEFAULT_DEMO_SETTINGS.todayQueueBudgetMinutes,
     defaultHighlightColor:
       typeof raw.defaultHighlightColor === "string"
         ? raw.defaultHighlightColor
@@ -301,6 +337,9 @@ function useDemoNewTabModel() {
     undefined,
     createInitialDemoState,
   );
+  const [demoTodayQueueState, setDemoTodayQueueState] =
+    useState<DemoTodayQueueState>(() => createDemoTodayQueueState([]));
+  const demoTodayQueueSeedVersionRef = useRef(0);
   const {
     bookmarks,
     seedDetails,
@@ -330,6 +369,118 @@ function useDemoNewTabModel() {
     () => new Set(continueReading.map((item) => item.progress.tweetId)),
     [continueReading],
   );
+
+  useEffect(() => {
+    if (
+      seedVersion === 0 ||
+      demoTodayQueueSeedVersionRef.current === seedVersion
+    ) {
+      return;
+    }
+
+    demoTodayQueueSeedVersionRef.current = seedVersion;
+    setDemoTodayQueueState(createDemoTodayQueueState(bookmarks));
+  }, [bookmarks, seedVersion]);
+
+  const restoreDemoTodayQueueItem = useCallback((tweetId: string) => {
+    setDemoTodayQueueState((current) => {
+      const handledReasons = { ...current.handledReasons };
+      delete handledReasons[tweetId];
+      return {
+        activeIds: current.activeIds.includes(tweetId)
+          ? current.activeIds
+          : [...current.activeIds, tweetId],
+        handledReasons,
+      };
+    });
+  }, []);
+
+  const handleDemoTodayQueueItem = useCallback(
+    (tweetId: string, reason: TodayQueueHandledReason) => {
+      setDemoTodayQueueState((current) => ({
+        activeIds: current.activeIds.filter((id) => id !== tweetId),
+        handledReasons: {
+          ...current.handledReasons,
+          [tweetId]: reason,
+        },
+      }));
+    },
+    [],
+  );
+
+  const demoTodayQueue = useMemo<UseTodayQueueResult | undefined>(() => {
+    const bookmarkByTweetId = new Map(
+      bookmarks.map((bookmark) => [bookmark.tweetId, bookmark]),
+    );
+    const toItem = (bookmark: Bookmark) => ({
+      bookmark,
+      progress: null,
+      metadata: null,
+    });
+    const activeItems = demoTodayQueueState.activeIds.flatMap((tweetId) => {
+      const bookmark = bookmarkByTweetId.get(tweetId);
+      return bookmark ? [toItem(bookmark)] : [];
+    });
+    const handledItems = Object.entries(
+      demoTodayQueueState.handledReasons,
+    ).flatMap(([tweetId, reason]) => {
+      const bookmark = bookmarkByTweetId.get(tweetId);
+      return bookmark && reason ? [{ ...toItem(bookmark), reason }] : [];
+    });
+    const snapshotTweetIds = [
+      ...activeItems.map((item) => item.bookmark.tweetId),
+      ...handledItems.map((item) => item.bookmark.tweetId),
+    ];
+    if (snapshotTweetIds.length === 0 && bookmarks.length === 0) return undefined;
+    const activeCount = activeItems.length;
+    const handledCount = handledItems.length;
+
+    return {
+      status: "ready",
+      localDate: "demo",
+      snapshot: {
+        key: "demo",
+        localDate: "demo",
+        budgetMinutes: settings.todayQueueBudgetMinutes,
+        version: 1,
+        tweetIds: snapshotTweetIds,
+        generatedAt: 0,
+      },
+      items: activeItems,
+      handledItems,
+      budgetMinutes: settings.todayQueueBudgetMinutes,
+      activeCount,
+      handledCount,
+      totalCount: snapshotTweetIds.length,
+      completedCount: handledItems.filter((item) => item.reason === "read").length,
+      isDone: snapshotTweetIds.length > 0 && activeCount === 0,
+      refresh: () => {},
+      addToTodayQueue: async (tweetId: string) => restoreDemoTodayQueueItem(tweetId),
+      recordOpen: async () => {},
+      recordRead: async (tweetId: string) =>
+        handleDemoTodayQueueItem(tweetId, "read"),
+      recordPinned: async () => {},
+      snooze: async (tweetId: string) =>
+        handleDemoTodayQueueItem(tweetId, "snoozed"),
+      setIntent: async (tweetId, intent) => {
+        if (intent === "reference") {
+          handleDemoTodayQueueItem(tweetId, "archived");
+        } else if (intent === "act") {
+          handleDemoTodayQueueItem(tweetId, "action");
+        } else {
+          restoreDemoTodayQueueItem(tweetId);
+        }
+      },
+      clearFeedback: async (tweetId: string) => restoreDemoTodayQueueItem(tweetId),
+      undoHandled: async (tweetId: string) => restoreDemoTodayQueueItem(tweetId),
+    };
+  }, [
+    bookmarks,
+    demoTodayQueueState,
+    handleDemoTodayQueueItem,
+    restoreDemoTodayQueueItem,
+    settings.todayQueueBudgetMinutes,
+  ]);
   const selectedBookmark = useMemo(
     () => bookmarks.find((bookmark) => bookmark.tweetId === selectedTweetId) ?? null,
     [bookmarks, selectedTweetId],
@@ -445,21 +596,22 @@ function useDemoNewTabModel() {
 
   const tabHasItems = useCallback(
     (tab: ReadingTab) => {
+      if (tab === "today") return (demoTodayQueue?.totalCount ?? 0) > 0;
       if (tab === "unread") return allUnread.length > 0;
       if (tab === "continue") return continueReading.some((item) => !item.progress.completed);
       return continueReading.some((item) => item.progress.completed);
     },
-    [allUnread, continueReading],
+    [allUnread, continueReading, demoTodayQueue?.totalCount],
   );
 
   const restoreReadingTab = useCallback(() => {
     const stored = localStorage.getItem(DEMO_READING_TAB_KEY);
-    if (stored === "unread" || stored === "continue" || stored === "read") {
+    if (isReadingTab(stored) && tabHasItems(stored)) {
       updateState({ readingTab: stored });
     } else {
       updateState({ readingTab: "unread" });
     }
-  }, []);
+  }, [tabHasItems]);
 
   const handleReadingTabChange = useCallback(
     (tab: ReadingTab) => {
@@ -603,6 +755,7 @@ function useDemoNewTabModel() {
     demoSyncButtonState,
     detailedTweetIds,
     settings,
+    demoTodayQueue,
     openedTweetIds,
     demoFooterState,
     closeReader,
@@ -691,6 +844,7 @@ interface DemoContentArgs {
   demoSyncButtonState: SyncButtonState;
   detailedTweetIds: Set<string>;
   settings: UserSettings;
+  demoTodayQueue: UseTodayQueueResult | undefined;
   openedTweetIds: Set<string>;
   demoFooterState: FooterState;
   closeReader: () => void;
@@ -725,6 +879,7 @@ function renderDemoContent({
   demoSyncButtonState,
   detailedTweetIds,
   settings,
+  demoTodayQueue,
   openedTweetIds,
   demoFooterState,
   closeReader,
@@ -786,6 +941,7 @@ function renderDemoContent({
         getBookmarkHref={(bookmark) => getDemoReaderHref(bookmark.tweetId)}
         onSync={handleSync}
         onBack={() => updateState({ view: "home" })}
+        todayQueue={demoTodayQueue}
         syncButtonStateOverride={demoSyncButtonState}
         offlineModeOverride={false}
       />
@@ -807,6 +963,7 @@ function renderDemoContent({
       onOpenBookmark={openBookmark}
       getBookmarkHref={(bookmark) => getDemoReaderHref(bookmark.tweetId)}
       recommendationSource={settings.recommendationSource}
+      todayQueue={demoTodayQueue}
       onOpenSettings={() => updateState({ settingsOpen: true })}
       onOpenImport={() => {
         updateState({ toast: { message: "Import is available in the extension." } });

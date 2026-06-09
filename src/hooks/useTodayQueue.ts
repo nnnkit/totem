@@ -20,6 +20,7 @@ import {
   upsertTodayQueueSnapshot,
 } from "../db";
 import {
+  addTweetIdToTodayQueueSnapshot,
   buildTodayQueue,
   deriveActiveTodayQueueItems,
   deriveHandledTodayQueueItems,
@@ -67,6 +68,7 @@ export interface UseTodayQueueResult {
   completedCount: number;
   isDone: boolean;
   refresh: () => void;
+  addToTodayQueue: (tweetId: string) => Promise<void>;
   recordOpen: (tweetId: string) => Promise<void>;
   recordRead: (tweetId: string) => Promise<void>;
   recordPinned: (tweetId: string) => Promise<void>;
@@ -333,6 +335,38 @@ export function useTodayQueue({
     [writeMetadata],
   );
 
+  const addToTodayQueue = useCallback(
+    async (tweetId: string) => {
+      const localDate = state.localDate || formatLocalDate();
+      const key = makeTodayQueueKey({ localDate, budgetMinutes });
+      const storedSnapshot = await getTodayQueueSnapshot(key);
+      const currentSnapshot =
+        storedSnapshot ?? (state.snapshot?.key === key ? state.snapshot : null);
+      const createdAt = Date.now();
+      const snapshot = addTweetIdToTodayQueueSnapshot({
+        snapshot: currentSnapshot,
+        tweetId,
+        key,
+        localDate,
+        budgetMinutes,
+        generatedAt: createdAt,
+      });
+
+      await deleteQueueBookmarkMetadata(tweetId);
+      await upsertTodayQueueSnapshot(snapshot);
+      await recordTodayQueueExposures([
+        makeQueueExposure({
+          tweetId,
+          action: "added",
+          localDate,
+          createdAt,
+        }),
+      ]);
+      refresh();
+    },
+    [budgetMinutes, refresh, state.localDate, state.snapshot],
+  );
+
   return {
     status: state.status,
     localDate: state.localDate,
@@ -346,6 +380,7 @@ export function useTodayQueue({
     completedCount,
     isDone: state.status === "ready" && totalCount > 0 && activeCount === 0,
     refresh,
+    addToTodayQueue,
     recordOpen: (tweetId) => recordAction(tweetId, "opened"),
     recordRead: (tweetId) => recordAction(tweetId, "read"),
     recordPinned: (tweetId) => recordAction(tweetId, "pinned"),

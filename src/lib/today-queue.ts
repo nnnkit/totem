@@ -68,6 +68,7 @@ interface ScoredCandidate {
 }
 
 const ENGAGEMENT_ACTIONS = new Set<TodayQueueExposure["action"]>([
+  "added",
   "opened",
   "snoozed",
   "read",
@@ -105,6 +106,36 @@ export function toTodayQueueSnapshot(
     version: result.version,
     tweetIds: result.tweetIds,
     generatedAt: result.generatedAt,
+  };
+}
+
+export function addTweetIdToTodayQueueSnapshot({
+  snapshot,
+  tweetId,
+  key,
+  localDate,
+  budgetMinutes,
+  version = TODAY_QUEUE.version,
+  generatedAt = Date.now(),
+}: {
+  snapshot: TodayQueueSnapshot | null;
+  tweetId: string;
+  key: string;
+  localDate: string;
+  budgetMinutes: TodayQueueBudgetMinutes;
+  version?: number;
+  generatedAt?: number;
+}): TodayQueueSnapshot {
+  return {
+    key: snapshot?.key ?? key,
+    localDate: snapshot?.localDate ?? localDate,
+    budgetMinutes: snapshot?.budgetMinutes ?? budgetMinutes,
+    version: snapshot?.version ?? version,
+    generatedAt: snapshot?.generatedAt ?? generatedAt,
+    tweetIds: [
+      tweetId,
+      ...(snapshot?.tweetIds ?? []).filter((id) => id !== tweetId),
+    ],
   };
 }
 
