@@ -32,7 +32,7 @@ This is not a generic folder/tag system. It is a consumption loop:
 4. As a reader, I want the same queue to stay stable during the day, so that the app feels intentional instead of random.
 5. As a reader, I want a “done for today” state, so that finishing a small queue feels complete even if my archive is large.
 6. As a reader, I want to snooze a suggested post, so that a bad suggestion does not keep appearing.
-7. As a reader, I want to mark a post as Reference, so that evergreen resources leave the guilt-producing read queue.
+7. As a reader, I want to Archive a post, so that saved resources can leave the guilt-producing read queue without being deleted.
 8. As a reader, I want to mark a post as Act on this, so that task-like bookmarks do not get buried among passive reading.
 9. As a reader, I want pinned items to influence Today’s Queue, so that important saves are more likely to come back.
 10. As a reader, I want in-progress items to be prioritized, so that unfinished reading is easier to resume.
@@ -63,7 +63,7 @@ Exclude or strongly suppress:
 
 - completed/read bookmarks
 - items snoozed until a future date
-- items marked Reference
+- archived items
 - items marked Act on this, unless the user is viewing an action-focused queue
 - items already shown too many times this week without engagement
 - items whose detail fetch failed and cannot be read offline, unless the user is online
@@ -83,7 +83,7 @@ The queue should not reshuffle on every reload. New syncs can add candidates, bu
 
 Use a weighted score with clear signals:
 
-- intent: Read soon gets the largest boost; Reference is suppressed; Act on this belongs in a separate action surface
+- intent: Read soon gets the largest boost; Archive is suppressed; Act on this belongs in a separate action surface
 - pinned: pinned unread items get a strong boost
 - progress: partially read items get a strong boost
 - freshness: new saves get a temporary boost for 48 to 72 hours
@@ -114,7 +114,7 @@ Each action should update future suggestions:
 
 - Read: remove from unread, count as positive signal for similar items
 - Snooze: hide until the snooze date
-- Reference: remove from daily reading pressure
+- Archive: remove from daily reading pressure while keeping the bookmark saved
 - Act on this: move to action surface
 - Pin: boost in future queues
 - Open but do not finish: prioritize in-progress next time
@@ -125,11 +125,11 @@ Do not use hidden heuristics to mark completion. Totem’s existing explicit rea
 
 - Add a queue generation module with a small interface: build today’s queue from bookmarks, reading progress, pins, intent metadata, exposure history, and user preferences.
 - Persist queue state locally per account and date so the queue is stable across reloads.
-- Add lightweight bookmark intent metadata: Read soon, Reference, Act on this, and unset.
+- Add lightweight bookmark intent metadata: Read soon, Archive, Act on this, and unset.
 - Add exposure history so Totem knows what was shown, skipped, snoozed, or completed.
 - Extend the home recommendation source so the main new-tab card can pull from Today’s Queue before falling back to unread or pinned items.
 - Add a Today view to the reading list before the full unread/archive views.
-- Add row and reader actions for Snooze, Reference, and Act on this.
+- Add row and reader actions for Snooze, Archive, and Act on this.
 - Reuse the existing reading progress and explicit completion model.
 - Reuse the existing Markdown/export pipeline for a later “Digest today’s queue” action.
 - Keep all queue generation local. No backend, no telemetry, no AI service in the first version.
@@ -143,7 +143,7 @@ Test the queue generation module with fixed inputs:
 - stable queue for the same account, date, budget, and corpus
 - read items are excluded
 - snoozed items are excluded until the snooze date
-- Reference items are suppressed
+- archived items are suppressed
 - in-progress and pinned items are prioritized
 - older neglected items can resurface
 - low reading budget prefers shorter items
@@ -155,7 +155,7 @@ Test UI behavior around:
 - home card uses Today’s Queue when available
 - “done for today” appears after the queue is cleared
 - snooze removes an item from today’s queue
-- Reference removes an item from daily reading pressure
+- Archive removes an item from daily reading pressure
 - Act on this moves the item out of the normal reading queue
 - offline cached bookmarks can still produce a queue
 
@@ -178,7 +178,7 @@ Prior art exists in the current tests for reading-list behavior, reader navigati
 1. Ship the local queue model and Today view behind a small feature flag or internal setting.
 2. Use deterministic scoring first and tune from manual testing with realistic bookmark libraries.
 3. Update the new-tab home to say “Today’s read” instead of generic “your next read” when the queue is active.
-4. Add Snooze and Reference before adding Act on this, because they directly reduce queue friction.
+4. Add Snooze and Archive before adding Act on this, because they directly reduce queue friction.
 5. Add “Digest today’s queue” only after the daily queue feels useful.
 6. Position the feature publicly as a reading loop, not an organization system.
 
@@ -189,7 +189,7 @@ Because Totem has no telemetry by design, success should be evaluated through lo
 - users understand why a post was suggested
 - users clear a daily queue without seeing the full backlog as a guilt number
 - users return to the new tab and continue reading
-- users use Snooze and Reference instead of abandoning the queue
+- users use Snooze and Archive instead of abandoning the queue
 - users describe Totem as making bookmarks come back, not merely storing them
 
 ## Further Notes

@@ -2,6 +2,12 @@
 
 This project uses `@base-ui/react` (v1.2.0) for base UI primitives. Always prefer Base UI components over raw HTML elements when a corresponding component is available. Check `node_modules/@base-ui/react/` for the full list of available components.
 
+## Repository Knowledge
+
+`docs/solutions/` stores documented solutions to past problems and product patterns, organized by category with YAML frontmatter (`module`, `tags`, `problem_type`). Relevant when implementing or debugging in documented areas.
+
+`CONCEPTS.md` defines shared domain vocabulary for project-specific entities, named processes, and status concepts. Relevant when orienting to the codebase or discussing domain concepts.
+
 ## Extension screenshots
 
 Before capturing, regenerating, editing, or reviewing extension screenshots, read [`docs/extension-screenshot-workflow.md`](docs/extension-screenshot-workflow.md). It is the source of truth for Chrome Web Store screenshot order, dimensions, required copy, asset paths, `agent-browser` capture, and verification.
