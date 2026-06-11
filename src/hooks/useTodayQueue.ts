@@ -25,8 +25,10 @@ import {
   deriveActiveTodayQueueItems,
   deriveHandledTodayQueueItems,
   formatLocalDate,
+  isTodayQueueSnapshotDone,
   makeQueueExposure,
   makeTodayQueueKey,
+  shouldPersistTodayQueueSnapshot,
   toTodayQueueSnapshot,
   type TodayQueueHandledItem,
   type TodayQueueHandledReason,
@@ -141,7 +143,10 @@ export function useTodayQueue({
         return;
       }
 
-      let snapshot = storedSnapshot;
+      let snapshot =
+        storedSnapshot && shouldPersistTodayQueueSnapshot(storedSnapshot)
+          ? storedSnapshot
+          : null;
 
       if (!snapshot) {
         const result = buildTodayQueue({
@@ -158,17 +163,19 @@ export function useTodayQueue({
           restrictToCachedDetails,
         });
         snapshot = toTodayQueueSnapshot(result);
-        await upsertTodayQueueSnapshot(snapshot);
-        await recordTodayQueueExposures(
-          snapshot.tweetIds.map((tweetId) =>
-            makeQueueExposure({
-              tweetId,
-              action: "queued",
-              localDate,
-              createdAt: result.generatedAt,
-            }),
-          ),
-        );
+        if (shouldPersistTodayQueueSnapshot(snapshot)) {
+          await upsertTodayQueueSnapshot(snapshot);
+          await recordTodayQueueExposures(
+            snapshot.tweetIds.map((tweetId) =>
+              makeQueueExposure({
+                tweetId,
+                action: "queued",
+                localDate,
+                createdAt: result.generatedAt,
+              }),
+            ),
+          );
+        }
       }
 
       if (!cancelled) {
@@ -257,6 +264,24 @@ export function useTodayQueue({
   const totalCount = state.snapshot?.tweetIds.length ?? 0;
   const activeCount = items.length;
   const handledCount = handledItems.length;
+  const completionHandledItems = useMemo(
+    () =>
+      deriveHandledTodayQueueItems({
+        snapshot: state.snapshot,
+        bookmarks,
+        readingProgress,
+        metadata: state.metadata,
+        restrictToCachedDetails: false,
+        localDate: state.localDate || formatLocalDate(),
+      }),
+    [
+      bookmarks,
+      readingProgress,
+      state.localDate,
+      state.metadata,
+      state.snapshot,
+    ],
+  );
   const completedCount = handledItems.filter(
     (item) => item.reason === "read",
   ).length;
@@ -378,7 +403,11 @@ export function useTodayQueue({
     handledCount,
     totalCount,
     completedCount,
-    isDone: state.status === "ready" && totalCount > 0 && activeCount === 0,
+    isDone: state.status === "ready" &&
+      isTodayQueueSnapshotDone({
+        snapshot: state.snapshot,
+        handledItems: completionHandledItems,
+      }),
     refresh,
     addToTodayQueue,
     recordOpen: (tweetId) => recordAction(tweetId, "opened"),

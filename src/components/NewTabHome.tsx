@@ -25,6 +25,7 @@ import type { ReadingTab } from "../lib/reading-list";
 import { getPinnedTweetIdsOrdered } from "../lib/pins";
 import { SEARCH_ENGINES } from "../lib/search-engines";
 import { hasChromeSearch } from "../lib/chrome";
+import { resolveHomeReadingTab } from "../lib/home-reading-tab";
 import { formatClock } from "../lib/time";
 import {
   pickTitle,
@@ -775,9 +776,15 @@ function useNewTabHomeModel({
     (todayQueueLoading && !currentItem ? "loading" : runtimeFooterState);
   const openReadingFromHome = useCallback(
     (tab?: ReadingTab) => {
-      onOpenReading(tab ?? (todayQueueDone ? "unread" : undefined));
+      onOpenReading(
+        resolveHomeReadingTab({
+          requestedTab: tab,
+          recommendationSource,
+          todayQueueDone,
+        }),
+      );
     },
-    [onOpenReading, todayQueueDone],
+    [onOpenReading, recommendationSource, todayQueueDone],
   );
 
   const showWallpaper = Boolean(wallpaperUrl && !imgError);

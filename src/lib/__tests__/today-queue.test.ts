@@ -12,8 +12,10 @@ import {
   deriveActiveTodayQueueItems,
   deriveHandledTodayQueueItems,
   formatLocalDate,
+  isTodayQueueSnapshotDone,
   makeQueueExposure,
   makeTodayQueueKey,
+  shouldPersistTodayQueueSnapshot,
   toTodayQueueSnapshot,
 } from "../today-queue";
 
@@ -224,6 +226,20 @@ describe("today queue generation", () => {
 });
 
 describe("today queue snapshots", () => {
+  it("does not persist empty generated snapshots", () => {
+    const result = buildTodayQueue(
+      baseInput({
+        bookmarks: [bookmark("uncached", daysAgo(1))],
+        detailedTweetIds: new Set(),
+        restrictToCachedDetails: true,
+      }),
+    );
+    const snapshot = toTodayQueueSnapshot(result);
+
+    expect(snapshot.tweetIds).toEqual([]);
+    expect(shouldPersistTodayQueueSnapshot(snapshot)).toBe(false);
+  });
+
   it("converts generation output to a persisted snapshot", () => {
     const result = buildTodayQueue(
       baseInput({ bookmarks: [bookmark("1", daysAgo(1))] }),
@@ -349,5 +365,63 @@ describe("today queue snapshots", () => {
       ["archived", "archived"],
       ["action", "action"],
     ]);
+  });
+
+  it("does not treat hidden uncached snapshot items as complete", () => {
+    const snapshot: TodayQueueSnapshot = {
+      key: "2026-06-08:15:v1",
+      localDate: LOCAL_DATE,
+      budgetMinutes: 15,
+      version: 1,
+      tweetIds: ["hidden"],
+      generatedAt: NOW,
+    };
+    const bookmarks = [bookmark("hidden", daysAgo(1))];
+    const visibleItems = deriveActiveTodayQueueItems({
+      snapshot,
+      bookmarks,
+      readingProgress: [],
+      metadata: [],
+      detailedTweetIds: new Set(),
+      restrictToCachedDetails: true,
+      localDate: LOCAL_DATE,
+    });
+    const handledItems = deriveHandledTodayQueueItems({
+      snapshot,
+      bookmarks,
+      readingProgress: [],
+      metadata: [],
+      detailedTweetIds: new Set(),
+      restrictToCachedDetails: false,
+      localDate: LOCAL_DATE,
+    });
+
+    expect(visibleItems).toEqual([]);
+    expect(isTodayQueueSnapshotDone({ snapshot, handledItems })).toBe(false);
+  });
+
+  it("marks a snapshot complete only when every queued item is handled", () => {
+    const snapshot: TodayQueueSnapshot = {
+      key: "2026-06-08:15:v1",
+      localDate: LOCAL_DATE,
+      budgetMinutes: 15,
+      version: 1,
+      tweetIds: ["read", "action"],
+      generatedAt: NOW,
+    };
+    const handledItems = deriveHandledTodayQueueItems({
+      snapshot,
+      bookmarks: [
+        bookmark("read", daysAgo(1)),
+        bookmark("action", daysAgo(2)),
+      ],
+      readingProgress: [progress("read", true)],
+      metadata: [metadata("action", { intent: "act" })],
+      detailedTweetIds: new Set(),
+      restrictToCachedDetails: false,
+      localDate: LOCAL_DATE,
+    });
+
+    expect(isTodayQueueSnapshotDone({ snapshot, handledItems })).toBe(true);
   });
 });

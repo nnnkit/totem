@@ -109,6 +109,26 @@ export function toTodayQueueSnapshot(
   };
 }
 
+export function shouldPersistTodayQueueSnapshot(
+  snapshot: TodayQueueSnapshot,
+): boolean {
+  return snapshot.tweetIds.length > 0;
+}
+
+export function isTodayQueueSnapshotDone({
+  snapshot,
+  handledItems,
+}: {
+  snapshot: TodayQueueSnapshot | null;
+  handledItems: TodayQueueHandledItem[];
+}): boolean {
+  if (!snapshot || snapshot.tweetIds.length === 0) return false;
+  const handledTweetIds = new Set(
+    handledItems.map((item) => item.bookmark.tweetId),
+  );
+  return snapshot.tweetIds.every((tweetId) => handledTweetIds.has(tweetId));
+}
+
 export function addTweetIdToTodayQueueSnapshot({
   snapshot,
   tweetId,
