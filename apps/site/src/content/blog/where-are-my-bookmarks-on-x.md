@@ -34,6 +34,12 @@ If the post was recently saved, it should be near the top.
 
 If you saved it months ago, the hard part starts.
 
+## What X officially gives you
+
+X's bookmark feature gives you the save action, a private Bookmarks timeline, and a way to remove saved posts.[^x-bookmarks] That is the official core.
+
+It does not give you a portable bookmark export, a local reading queue, a structured archive, or a non-feed place to return to saved posts. If that is the job you are trying to solve, you are no longer asking "where are my bookmarks?" You are choosing a bookmark manager. I compare the main options here: [best Twitter bookmark managers for search, export, and actually reading](/blog/best-twitter-bookmark-managers-2026).
+
 ## Why your bookmarks feel missing
 
 Most "where are my bookmarks" moments are not true deletion. They are retrieval failure.

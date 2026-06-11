@@ -14,7 +14,22 @@ export default defineConfig({
     format: "directory",
     assets: "assets",
   },
-  integrations: [react(), sitemap()],
+  integrations: [
+    react(),
+    sitemap({
+      filter: (page) => !new URL(page).pathname.startsWith("/uninstall-feedback/"),
+      serialize(item) {
+        const pathname = new URL(item.url).pathname;
+        const isHome = pathname === "/";
+        const isBlogPost = pathname.startsWith("/blog/") && pathname !== "/blog/";
+        return {
+          ...item,
+          changefreq: isBlogPost ? "weekly" : "monthly",
+          priority: isHome ? 1 : isBlogPost ? 0.7 : 0.8,
+        };
+      },
+    }),
+  ],
   markdown: {
     remarkPlugins: [remarkGfm],
     rehypePlugins: [rehypeBlogLinks],

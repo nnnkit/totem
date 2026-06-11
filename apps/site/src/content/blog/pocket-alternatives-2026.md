@@ -41,6 +41,10 @@ But the comment that caught me was this one:
 
 That is the real read-later problem. It's not a tooling problem; it's a behavioral one. Anything you choose has to make you actually look at the thing you saved, not just collect more of them. Hold that thought — it's the whole reason the last branch of the decision tree exists.
 
+This is also why Chrome's built-in Reading List is useful but limited: the save action exists, but the return surface is still easy to miss. The separate breakdown is here: [Chrome Reading List: where it is, how it works, and why nobody uses it](/blog/chrome-reading-list-why-nobody-uses-it).
+
+The same return-surface question applies to your browser start point: [what to put on your Chrome new tab page](/blog/what-to-put-on-your-chrome-new-tab-page).
+
 <a id="decision-tree"></a>
 ## The decision tree
 

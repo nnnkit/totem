@@ -16,6 +16,8 @@ Before capturing, regenerating, editing, or reviewing extension screenshots, rea
 
 All blog work is managed in [`plans/blog-pipeline.md`](plans/blog-pipeline.md). It is the single source of truth for ideas, in-progress drafts, and published posts. Before doing any blog-related work — pitching topics, researching keywords, drafting, publishing — read it.
 
+For end-to-end SEO execution, also read [`plans/seo-agent-goal.md`](plans/seo-agent-goal.md). It is the reusable goal/checklist and long-running loop for choosing SEO opportunities, validating SERPs, adding non-commodity evidence, publishing pages, internal-linking them, building the site, updating tracking, writing readable HTML research/status reports under `plans/research/`, writing distribution plans, and looping back until the backlog is done or blocked.
+
 It contains:
 - **Voice** — the editorial personality every post must match ("Notes on bookmarks, reading, and the things you save"). Behavioral, honest about scope, specific, terse. No generic listicles without a thesis.
 - **Topic filter** — 4 ✅ / 4 ❌ checks to run an idea through before spending `/dataforseo` API budget on research.

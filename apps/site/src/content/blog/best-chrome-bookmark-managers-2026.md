@@ -25,9 +25,11 @@ The rest of this post is the why, an honest comparison table, and the one questi
 
 Networkworld's 2016 listicle still ranks #2 for "best bookmark manager chrome." It's nine years old. The fact that it hasn't been displaced is itself the story: the SERP has been frozen for a decade because most readers don't actually need a better bookmark manager. They need to *open* the one they have.
 
-Chrome's own usage data backs this up indirectly. Chrome shipped a built-in **Reading List** in 2021, four years ago. It lives behind a hover on the bookmarks star. Most users have never opened it. There's a 1,000/mo search cluster around `reading list chrome` whose top result is, literally, "Reading list tab disappeared." People can't find the feature *they already have.*
+Chrome's own Reading List backs this up indirectly. It is built into Chrome, but the current path is still a menu and side-panel path: `Bookmarks and lists` -> `Reading list` -> `Show reading list`. There is a 1,000/mo search cluster around `reading list chrome` whose cached SERP includes "Reading list tab disappeared." People search for the feature they already have. I wrote the fuller version here: [Chrome Reading List: where it is, how it works, and why nobody uses it](/blog/chrome-reading-list-why-nobody-uses-it).
 
 So before picking a tool: **the manager that helps is the one that puts what you saved in front of you.** Filing tools (Raindrop, Bookmanize) help if you're someone who actually re-opens your bookmarks to look something up. Surfacing tools (Toby's session restore, our own thing further down) help if you're not.
+
+The new-tab version of that choice is here: [what to put on your Chrome new tab page](/blog/what-to-put-on-your-chrome-new-tab-page). Blank, launcher, dashboard, and reading queue are different answers.
 
 That distinction is the real split. Pick accordingly.
 

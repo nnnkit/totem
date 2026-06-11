@@ -1,15 +1,23 @@
 ---
 import { getCollection } from "astro:content";
+import { readFileSync } from "node:fs";
 import BaseLayout from "../layouts/BaseLayout.astro";
 import { LandingPage } from "../react/SiteApp";
 import { SITE_LINKS } from "../react/site-content";
 
+const packageJson = JSON.parse(
+  readFileSync(new URL("../../../../package.json", import.meta.url), "utf8"),
+) as { version?: string };
+const appVersion = packageJson.version ?? "0.0.0";
+
+function dateTime(value: unknown): number {
+  if (!value) return 0;
+  const date = value instanceof Date ? value : new Date(String(value));
+  return Number.isNaN(date.getTime()) ? 0 : date.getTime();
+}
+
 const posts = (await getCollection("blog", ({ data }) => !data.draft)).sort(
-  (a, b) => {
-    const aDate = a.data.publishedAt ? String(a.data.publishedAt) : "";
-    const bDate = b.data.publishedAt ? String(b.data.publishedAt) : "";
-    return bDate.localeCompare(aDate);
-  },
+  (a, b) => dateTime(b.data.publishedAt) - dateTime(a.data.publishedAt),
 );
 
 const recentPosts = posts.slice(0, 3).map((post) => {
@@ -51,10 +59,12 @@ const recentPosts = posts.slice(0, 3).map((post) => {
       applicationCategory: "BrowserApplication",
       applicationSubCategory: "Productivity",
       operatingSystem: "Google Chrome",
-      softwareVersion: "1.2.1",
+      softwareVersion: appVersion,
+      isAccessibleForFree: true,
       offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
       url: "https://usetotem.xyz",
       downloadUrl: SITE_LINKS.chromeWebStoreListingUrl,
+      publisher: { "@id": "https://usetotem.xyz/#organization" },
       aggregateRating: {
         "@type": "AggregateRating",
         ratingValue: "5.0",

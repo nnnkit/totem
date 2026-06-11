@@ -2,12 +2,14 @@
 import { getCollection } from "astro:content";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 
+function dateTime(value: unknown): number {
+  if (!value) return 0;
+  const date = value instanceof Date ? value : new Date(String(value));
+  return Number.isNaN(date.getTime()) ? 0 : date.getTime();
+}
+
 const posts = (await getCollection("blog", ({ data }) => !data.draft)).sort(
-  (a, b) => {
-    const aDate = a.data.publishedAt ? String(a.data.publishedAt) : "";
-    const bDate = b.data.publishedAt ? String(b.data.publishedAt) : "";
-    return bDate.localeCompare(aDate);
-  },
+  (a, b) => dateTime(b.data.publishedAt) - dateTime(a.data.publishedAt),
 );
 
 function formatDate(value: unknown): string | null {
@@ -27,6 +29,44 @@ function isoDate(value: unknown): string | null {
   if (Number.isNaN(date.getTime())) return null;
   return date.toISOString().slice(0, 10);
 }
+
+const blogUrl = "https://usetotem.xyz/blog/";
+const blogJsonLd = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Blog",
+      "@id": `${blogUrl}#blog`,
+      name: "Totem Blog",
+      description:
+        "Notes on Twitter/X bookmarks, read-later workflows, and the small details that make reading what you saved actually possible.",
+      url: blogUrl,
+      inLanguage: "en",
+      publisher: { "@id": "https://usetotem.xyz/#organization" },
+    },
+    {
+      "@type": "ItemList",
+      "@id": `${blogUrl}#posts`,
+      itemListElement: posts.map((post, index) => {
+        const slug = post.data.slug ?? post.id;
+        const url = `https://usetotem.xyz/blog/${slug}/`;
+        const dateIso = isoDate(post.data.publishedAt);
+        return {
+          "@type": "ListItem",
+          position: index + 1,
+          url,
+          item: {
+            "@type": "BlogPosting",
+            "@id": `${url}#article`,
+            headline: post.data.title,
+            description: post.data.description,
+            ...(dateIso ? { datePublished: dateIso } : {}),
+          },
+        };
+      }),
+    },
+  ],
+};
 ---
 
 <BaseLayout
@@ -42,6 +82,10 @@ function isoDate(value: unknown): string | null {
     image: "https://usetotem.xyz/icons/icon-128.png",
   }}
 >
+  <Fragment slot="head">
+    <script is:inline type="application/ld+json" set:html={JSON.stringify(blogJsonLd)} />
+  </Fragment>
+
   <main class="mx-auto max-w-3xl px-6 pb-16 pt-12 sm:pt-16">
     <p class="text-xs font-semibold uppercase tracking-widest text-neutral-400 mb-3">
       Totem blog

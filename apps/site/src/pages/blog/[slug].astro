@@ -15,9 +15,11 @@ const { post } = Astro.props;
 const { Content } = await render(post);
 
 const slug = post.data.slug ?? post.id;
-const url = `https://usetotem.xyz/blog/${slug}`;
+const url = `https://usetotem.xyz/blog/${slug}/`;
 const description = post.data.description;
 const ogImage = "https://usetotem.xyz/icons/icon-128.png";
+const organizationId = "https://usetotem.xyz/#organization";
+const blogId = "https://usetotem.xyz/blog/#blog";
 
 function formatDate(value: unknown): string | null {
   if (!value) return null;
@@ -43,16 +45,17 @@ const dateIso = isoDate(post.data.publishedAt);
 const jsonLd = {
   "@context": "https://schema.org",
   "@type": "BlogPosting",
+  "@id": `${url}#article`,
+  mainEntityOfPage: { "@type": "WebPage", "@id": url },
   headline: post.data.title,
   description,
-  datePublished: dateIso,
+  ...(dateIso ? { datePublished: dateIso, dateModified: dateIso } : {}),
   url,
-  author: { "@type": "Organization", name: "Totem" },
-  publisher: {
-    "@type": "Organization",
-    name: "Totem",
-    logo: { "@type": "ImageObject", url: ogImage },
-  },
+  image: [ogImage],
+  inLanguage: "en",
+  isPartOf: { "@id": blogId },
+  author: { "@id": organizationId },
+  publisher: { "@id": organizationId },
 };
 ---
 
