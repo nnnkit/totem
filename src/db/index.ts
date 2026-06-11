@@ -501,17 +501,16 @@ export function iterateBookmarks(): AsyncIterable<Bookmark> {
     async *[Symbol.asyncIterator](): AsyncIterator<Bookmark> {
       const db = await getDb();
       const tx = db.transaction(STORE_NAME, "readonly");
-      const ids: string[] = [];
-      let cursor = await tx.store.index("sortIndex").openKeyCursor(null, "prev");
+      const rows: Bookmark[] = [];
+      let cursor = await tx.store.index("sortIndex").openCursor(null, "prev");
       while (cursor) {
-        ids.push(cursor.primaryKey as string);
+        rows.push(cursor.value);
         cursor = await cursor.continue();
       }
       await tx.done;
 
-      for (const id of ids) {
-        const bookmark = await getBookmarkById(id);
-        if (bookmark) yield bookmark;
+      for (const row of rows) {
+        yield normalizeBookmarkForRead(row);
       }
     },
   };

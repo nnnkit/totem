@@ -120,6 +120,8 @@ function readmeLinkText(text: string): string {
 
 interface BookmarkMarkdownFile {
   bookmarkId: string;
+  bookmark: Bookmark;
+  detail: TweetDetailCache | null;
   year: string;
   path: string;
   title: string;
@@ -333,11 +335,7 @@ async function* csvLines(
 ): AsyncIterable<string> {
   yield BOM + csvRow([...CSV_COLUMNS]);
   for (const file of bookmarkFiles) {
-    const bookmark = await getBookmarkById(file.bookmarkId);
-    // The row was deleted after we snapshotted ids (e.g. a concurrent sync or
-    // hydration write in the same tab). Skip it rather than abort the export.
-    if (!bookmark) continue;
-    yield bookmarkCsvLine(bookmark, fullThreadIds);
+    yield bookmarkCsvLine(file.bookmark, fullThreadIds);
   }
 }
 
@@ -460,10 +458,8 @@ async function* bookmarksForYear(
 ): AsyncIterable<Bookmark> {
   for (const file of bookmarkFiles) {
     if (file.year !== year) continue;
-    const bookmark = await getBookmarkById(file.bookmarkId);
-    if (!bookmark) continue; // row removed mid-export; skip it
     counter.n++;
-    yield bookmark;
+    yield file.bookmark;
   }
 }
 
@@ -471,17 +467,17 @@ async function collectBookmarkMarkdownFiles(): Promise<{ files: BookmarkMarkdown
   const files: BookmarkMarkdownFile[] = [];
   const years = new Set<string>();
   const usedPaths = new Set<string>();
-  const bookmarkIds: string[] = [];
+  const bookmarkSnapshots: Bookmark[] = [];
 
   for await (const bookmark of iterateBookmarks()) {
-    bookmarkIds.push(bookmark.id);
+    bookmarkSnapshots.push(bookmark);
   }
 
-  const ordinalWidth = Math.max(2, String(bookmarkIds.length).length);
+  const ordinalWidth = Math.max(2, String(bookmarkSnapshots.length).length);
   let index = 0;
 
-  for (const bookmarkId of bookmarkIds) {
-    const bookmark = await getBookmarkById(bookmarkId);
+  for (const snapshot of bookmarkSnapshots) {
+    const bookmark = await getBookmarkById(snapshot.id);
     if (!bookmark) continue; // row removed between snapshot and read; skip it
     const detail = await getTweetDetailCache(bookmark.tweetId);
     const rendered = getBookmarkMarkdownMetadata(bookmark, detail);
@@ -496,6 +492,8 @@ async function collectBookmarkMarkdownFiles(): Promise<{ files: BookmarkMarkdown
     years.add(year);
     files.push({
       bookmarkId: bookmark.id,
+      bookmark,
+      detail,
       year,
       path,
       title: rendered.title,
@@ -596,9 +594,9 @@ export async function runQuickExport(
     const accountIdHash = `sha256:${await sha256hex(encoder.encode(account.userId))}`;
     const now = exportDate;
 
-    // Counts of rows actually streamed. Ids were snapshotted up front but rows
-    // are re-fetched lazily, so a concurrent delete can drop a row; tracking
-    // the real emitted count keeps the manifest honest instead of overstating.
+    // Counts of rows actually streamed. Bookmarks are validated once after the
+    // sorted snapshot so a concurrent delete can drop a row before export
+    // starts; tracking emitted rows keeps the manifest honest.
     const bookmarkCounter = { n: 0 };
     const detailCounter = { n: 0 };
     const highlightCounter = { n: 0 };
@@ -696,10 +694,11 @@ export async function runQuickExport(
       await queueExposures.done;
 
       for (const file of bookmarkMarkdownFiles) {
-        const bookmark = await getBookmarkById(file.bookmarkId);
-        if (!bookmark) continue; // row removed mid-export; skip its markdown file
-        const detail = await getTweetDetailCache(bookmark.tweetId);
-        const body = buildBookmarkMarkdown(bookmark, detail, exportedAtLabel).body;
+        const body = buildBookmarkMarkdown(
+          file.bookmark,
+          file.detail,
+          exportedAtLabel,
+        ).body;
         const markdown = hashingTextEntry(
           file.path,
           singleTextLine(() => body),
