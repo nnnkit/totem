@@ -45,6 +45,10 @@ const TOP_SITES_LIMIT_OPTIONS = [3, 4, 5, 6, 8, 10].map((value) => ({
   value: String(value),
   label: String(value),
 }));
+const TODAY_QUEUE_BUDGET_OPTIONS = [5, 15, 30].map((value) => ({
+  value: String(value),
+  label: `${value} min`,
+}));
 
 function useSettingsModalModel({
   open,
@@ -301,14 +305,37 @@ function renderSettingsModal({
                     value={settings.recommendationSource}
                     onValueChange={(value) =>
                       onUpdateSettings({
-                        recommendationSource: value as "random" | "pinned",
+                        recommendationSource:
+                          value as UserSettings["recommendationSource"],
                       })
                     }
                     options={[
+                      { value: "today", label: "Today" },
                       { value: "random", label: "Random" },
                       { value: "pinned", label: "Pinned" },
                     ]}
                     ariaLabel="Recommended post source"
+                    size="sm"
+                    className="w-[7.5rem] shrink-0 border-border/70 bg-surface/45 hover:bg-surface/55"
+                    popupClassName="w-[7.5rem]"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between min-h-10">
+                  <span className="text-sm text-foreground/80">
+                    Daily reading budget
+                  </span>
+                  <Select
+                    value={String(settings.todayQueueBudgetMinutes)}
+                    onValueChange={(value) =>
+                      onUpdateSettings({
+                        todayQueueBudgetMinutes: Number(
+                          value,
+                        ) as UserSettings["todayQueueBudgetMinutes"],
+                      })
+                    }
+                    options={TODAY_QUEUE_BUDGET_OPTIONS}
+                    ariaLabel="Daily reading budget"
                     size="sm"
                     className="w-[7.5rem] shrink-0 border-border/70 bg-surface/45 hover:bg-surface/55"
                     popupClassName="w-[7.5rem]"

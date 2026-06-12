@@ -9,6 +9,7 @@ import {
   detectArticleHeadings,
   groupBlocks,
   renderBlockInlineContent,
+  sanitizeMediaSrc,
 } from "./utils";
 import { RichTextBlock } from "./TweetText";
 import { CodeBlock } from "./CodeBlock";
@@ -97,34 +98,32 @@ function ArticleBlockRenderer({ blocks, entityMap }: ArticleBlockRendererProps) 
             if (entity?.type === "MEDIA") {
               const imageUrl = entity.data?.imageUrl;
               const videoUrl = entity.data?.videoUrl;
-              if (typeof videoUrl === "string" && videoUrl) {
+              const imageSrc = typeof imageUrl === "string" ? sanitizeMediaSrc(imageUrl) : "";
+              const videoSrc = typeof videoUrl === "string" ? sanitizeMediaSrc(videoUrl) : "";
+              if (videoSrc) {
                 return (
                   <figure
                     key={group.key}
                     className="-mx-6 my-6 flex justify-center"
                   >
                     <video
-                      src={videoUrl}
+                      src={videoSrc}
                       controls
                       playsInline
-                      poster={
-                        typeof imageUrl === "string" && imageUrl
-                          ? imageUrl
-                          : undefined
-                      }
+                      poster={imageSrc || undefined}
                       className="h-auto max-h-[72vh] max-w-full min-w-0 rounded bg-gray-950 object-contain"
                     />
                   </figure>
                 );
               }
-              if (typeof imageUrl === "string" && imageUrl) {
+              if (imageSrc) {
                 return (
                   <figure
                     key={group.key}
                     className="-mx-6 my-6 flex justify-center"
                   >
                     <img
-                      src={imageUrl}
+                      src={imageSrc}
                       alt=""
                       className="h-auto max-w-full min-w-0 rounded object-cover"
                       loading="lazy"
@@ -237,7 +236,7 @@ interface Props {
 export function TweetArticle({ article, compact = false, authorProfileImageUrl }: Props) {
   const plainText = article.plainText?.trim() || "";
   const coverImageUrl = useMemo(
-    () => resolveArticleCoverImageUrl(article.coverImageUrl, authorProfileImageUrl),
+    () => sanitizeMediaSrc(resolveArticleCoverImageUrl(article.coverImageUrl, authorProfileImageUrl)),
     [article.coverImageUrl, authorProfileImageUrl],
   );
 

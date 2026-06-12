@@ -97,7 +97,9 @@ The useful question is:
 
 > Do I want a file, or do I want a place to work with the saved posts?
 
-If you want a place, compare bookmark managers. If you want a file, compare export formats.
+If you want a place, compare bookmark managers by job: search, export, reading, digests, AI context, or cleanup. The practical comparison is here: [best Twitter bookmark managers for search, export, and actually reading](/blog/best-twitter-bookmark-managers-2026).
+
+If you want a file, compare export formats.
 
 ## Method 4: Totem export, if you want a local reading backup
 
@@ -151,6 +153,8 @@ The best export has a restorable data layer. That is what keeps the boring but i
 Most people do not care about this until the day they need it.
 
 That is why export is not a feature you judge by the button. You judge it by the file you get after the button.
+
+One more trap: a raw CSV or JSON blob is not a reading system. If your next action is "actually read this pile," a bookmark manager with a return path may matter more than another export button.
 
 ## The short version
 

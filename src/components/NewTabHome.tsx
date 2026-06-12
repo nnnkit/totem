@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "r
 import { useHotkeys } from "react-hotkeys-hook";
 import {
   ArrowsClockwiseIcon,
+  CaretLeftIcon,
+  CaretRightIcon,
   EnvelopeSimpleIcon,
   GearSixIcon,
   InfoIcon,
@@ -18,9 +20,12 @@ import type {
   RecommendationSource,
   SearchEngineId,
 } from "../types";
+import type { UseTodayQueueResult } from "../hooks/useTodayQueue";
+import type { ReadingTab } from "../lib/reading-list";
 import { getPinnedTweetIdsOrdered } from "../lib/pins";
 import { SEARCH_ENGINES } from "../lib/search-engines";
 import { hasChromeSearch } from "../lib/chrome";
+import { resolveHomeReadingTab } from "../lib/home-reading-tab";
 import { formatClock } from "../lib/time";
 import {
   pickTitle,
@@ -35,6 +40,15 @@ import {
   SUPPORT_X_HANDLE,
   SUPPORT_X_URL,
 } from "../lib/constants/support";
+import {
+  TODAY_QUEUE_DONE_MESSAGE,
+  TODAY_QUEUE_DONE_TITLE,
+} from "../lib/constants/ui";
+import {
+  getTodayQueueProgress,
+  TodayQueueProgressIndicator,
+  type TodayQueueProgress,
+} from "./new-tab-home-progress";
 import { Popover, PopoverContent } from "./ui/Popover";
 import { useWallpaper } from "../hooks/useWallpaper";
 import { useTopSites } from "../hooks/useTopSites";
@@ -78,7 +92,8 @@ interface Props {
   onOpenImport: () => void;
   onOpenExport: () => void;
   recommendationSource: RecommendationSource;
-  onOpenReading: () => void;
+  todayQueue?: UseTodayQueueResult;
+  onOpenReading: (tab?: ReadingTab) => void;
   isResetting?: boolean;
   footerStateOverride?: FooterState;
   syncButtonStateOverride?: SyncButtonState;
@@ -94,12 +109,29 @@ interface DecoratedBookmark {
   isRead: boolean;
 }
 
+function decorateBookmark(
+  bookmark: Bookmark,
+  detailedTweetIds: ReadonlySet<string>,
+  openedTweetIds: ReadonlySet<string>,
+): DecoratedBookmark {
+  return {
+    bookmark,
+    title: pickTitle(bookmark),
+    excerpt: pickExcerpt(bookmark),
+    minutes: detailedTweetIds.has(bookmark.tweetId)
+      ? estimateReadingMinutes(bookmark)
+      : null,
+    isRead: openedTweetIds.has(bookmark.tweetId),
+  };
+}
+
 interface NewTabHomeState {
   now: Date;
   imgLoaded: boolean;
   imgError: boolean;
   cardEngaged: boolean;
   mountSeed: number;
+  todayQueueIndex: number;
 }
 
 type NewTabHomePatch =
@@ -113,6 +145,7 @@ function createInitialNewTabHomeState(): NewTabHomeState {
     imgError: false,
     cardEngaged: false,
     mountSeed: Math.random(),
+    todayQueueIndex: 0,
   };
 }
 
@@ -137,11 +170,17 @@ interface FooterCardProps {
   onCardEngagedChange: (engaged: boolean) => void;
   recommendationSource: RecommendationSource;
   offlineMode: boolean;
-  onOpenBookmark: (bookmark: Bookmark) => void;
+  onOpenBookmark: () => void;
+  onOpenReading: (tab?: ReadingTab) => void;
+  todayQueueDone: boolean;
+  todayQueueProgress: TodayQueueProgress | null;
   syncButton: SyncButtonState;
   onSync: () => void;
   handleLoginButton: () => void;
   onOpenImport: () => void;
+  showTodayQueueNavigation: boolean;
+  onMovePrev: () => void;
+  onMoveNext: () => void;
 }
 
 function FooterCard({
@@ -156,10 +195,16 @@ function FooterCard({
   recommendationSource,
   offlineMode,
   onOpenBookmark,
+  onOpenReading,
+  todayQueueDone,
+  todayQueueProgress,
   syncButton,
   onSync,
   handleLoginButton,
   onOpenImport,
+  showTodayQueueNavigation,
+  onMovePrev,
+  onMoveNext,
 }: FooterCardProps) {
   switch (footerState) {
     case "loading":
@@ -199,63 +244,145 @@ function FooterCard({
           </Button>
         </article>
       );
-    case "bookmark_card":
+    case "bookmark_card": {
       if (!currentItem) return null;
-      return (
-        <a
-          href={getBookmarkHref(currentItem.bookmark)}
+      const isTodayQueue = recommendationSource === "today";
+      const cardAriaLabel = `Read ${currentItem.title} by @${
+        currentItem.bookmark.author.screenName
+      }${currentItem.minutes !== null ? `, ${currentItem.minutes} min read` : ""}`;
+      const handleCardBlurCapture = (
+        event: React.FocusEvent<HTMLElement>,
+      ) => {
+        const nextTarget =
+          event.relatedTarget instanceof Node ? event.relatedTarget : null;
+        if (!nextTarget || !event.currentTarget.contains(nextTarget)) {
+          onCardEngagedChange(false);
+        }
+      };
+      const handleCardClick = (event: React.MouseEvent<HTMLAnchorElement>) => {
+        if (
+          event.defaultPrevented ||
+          event.metaKey ||
+          event.ctrlKey ||
+          event.shiftKey ||
+          event.altKey
+        ) {
+          return;
+        }
+        event.preventDefault();
+        onOpenBookmark();
+      };
+      const handleCardKeyDown = (event: React.KeyboardEvent<HTMLAnchorElement>) => {
+        if (event.key === " ") {
+          event.preventDefault();
+          event.stopPropagation();
+          onOpenBookmark();
+        }
+      };
+      const cardBody = (
+        <div
           className={cn(
-            cardBase,
-            "block cursor-pointer p-4 no-underline hover:bg-main-bg-hover max-sm:py-3.5",
-            cardEngaged && "bg-main-bg-hover",
+            "flex flex-col translate-y-0 opacity-100 transition-[transform,opacity] duration-200 ease-overlay-in",
+            isTodayQueue
+              ? "min-h-28 px-4 pt-4 pb-3 max-sm:min-h-24"
+              : "min-h-32 max-sm:min-h-28",
           )}
-          onMouseEnter={() => onCardEngagedChange(true)}
-          onMouseLeave={() => onCardEngagedChange(false)}
-          onFocusCapture={() => onCardEngagedChange(true)}
-          onBlurCapture={(event) => {
-            const nextTarget =
-              event.relatedTarget instanceof Node ? event.relatedTarget : null;
-            if (!nextTarget || !event.currentTarget.contains(nextTarget)) {
-              onCardEngagedChange(false);
-            }
-          }}
-          onKeyDown={(event) => {
-            if (event.key === " ") {
-              event.preventDefault();
-              event.stopPropagation();
-              onOpenBookmark(currentItem.bookmark);
-            }
-          }}
-          aria-label={`Read ${currentItem.title} by @${
-            currentItem.bookmark.author.screenName
-          }${
-            currentItem.minutes !== null ? `, ${currentItem.minutes} min read` : ""
-          }`}
         >
-          <div className="flex min-h-32 flex-col translate-y-0 opacity-100 transition-[transform,opacity] duration-200 ease-overlay-in max-sm:min-h-28">
+          {isTodayQueue ? (
+            <div
+              className="flex items-center gap-2"
+              aria-label={todayQueueProgress?.ariaLabel}
+            >
+              <p className="shrink-0 text-xs font-semibold uppercase tracking-extra-wide text-accent">
+                today's read
+              </p>
+              {todayQueueProgress && (
+                <>
+                  <div className="flex w-16 shrink-0 gap-0.5" aria-hidden="true">
+                    {Array.from({ length: todayQueueProgress.totalCount }, (_, i) => (
+                      <span
+                        key={i}
+                        className={cn(
+                          "h-0.5 flex-1 rounded-full",
+                          i < todayQueueProgress.handledCount && "bg-accent",
+                        )}
+                        style={
+                          i >= todayQueueProgress.handledCount
+                            ? {
+                                backgroundColor: `var(${
+                                  i === todayQueueProgress.handledCount
+                                    ? "--color-home-step-current"
+                                    : "--color-home-step-upcoming"
+                                })`,
+                              }
+                            : undefined
+                        }
+                      />
+                    ))}
+                  </div>
+                  <span className="shrink-0 tabular-nums text-xs text-home-fg-muted">
+                    {todayQueueProgress.handledCount} of {todayQueueProgress.totalCount}
+                  </span>
+                </>
+              )}
+              {offlineMode && (
+                <span title="Not signed in — showing cached bookmarks">
+                  <LinkBreakIcon className="size-4 animate-offline-pulse text-muted" />
+                </span>
+              )}
+            </div>
+          ) : (
             <div className="flex justify-between">
-              <div className="flex items-center gap-1.5">
+              <div className="flex min-w-0 items-center gap-1.5">
                 <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
                   {recommendationSource === "pinned" ? "pinned" : "your next read"}
                 </p>
+                {todayQueueProgress && (
+                  <p
+                    className="text-xs font-medium tabular-nums text-home-fg-secondary"
+                    aria-label={todayQueueProgress.ariaLabel}
+                  >
+                    <span className="text-home-fg-muted">·</span>{" "}
+                    {todayQueueProgress.leftLabel}
+                  </p>
+                )}
                 {offlineMode && (
                   <span title="Not signed in — showing cached bookmarks">
                     <LinkBreakIcon className="size-4 animate-offline-pulse text-muted" />
                   </span>
                 )}
               </div>
-              <kbd className="ml-2 border-home-secondary-border bg-accent-tint text-home-fg-muted shadow-kbd">
-                Space
-              </kbd>
+              <div className="ml-2 flex shrink-0 items-center gap-2">
+                <kbd className="hidden border-home-secondary-border bg-accent-tint text-home-fg-muted shadow-kbd sm:inline-flex">
+                  Space
+                </kbd>
+              </div>
             </div>
-            <div className="mt-4 flex flex-col gap-1">
-              <h2 className="capitalize font-serif line-clamp-2 text-balance text-lg font-medium leading-snug text-home-fg-secondary max-sm:text-base lg:text-xl">
-                {currentItem.title}
-              </h2>
-              <p className="line-clamp-1 text-xs text-home-description/80">
-                {currentItem.excerpt}
-              </p>
-            </div>
+          )}
+          {!isTodayQueue && todayQueueProgress && (
+            <TodayQueueProgressIndicator progress={todayQueueProgress} />
+          )}
+          <div className="mt-4 flex flex-col gap-1">
+            <h2
+              className={cn(
+                "capitalize font-serif line-clamp-2 text-balance font-medium leading-snug text-home-fg-secondary",
+                isTodayQueue
+                  ? "text-xl max-sm:text-lg lg:text-2xl"
+                  : "text-lg max-sm:text-base lg:text-xl",
+              )}
+            >
+              {currentItem.title}
+            </h2>
+            <p
+              className={cn(
+                "text-xs text-home-description/80",
+                isTodayQueue ? "line-clamp-2" : "line-clamp-1",
+              )}
+            >
+              {currentItem.excerpt}
+            </p>
+          </div>
+          {!isTodayQueue && (
             <div className="mt-auto flex items-center gap-2.5 pt-3">
               <img
                 src={currentItem.bookmark.author.profileImageUrl}
@@ -271,8 +398,176 @@ function FooterCard({
                 </p>
               </div>
             </div>
+          )}
+        </div>
+      );
+      const todayQueueFooter = isTodayQueue ? (
+        <div className="flex items-center justify-between gap-2 border-t border-home-secondary-border bg-black/[0.02] px-4 py-2.5 dark:bg-black/[0.07]">
+          <div className="flex min-w-0 items-center gap-2">
+            <img
+              src={currentItem.bookmark.author.profileImageUrl}
+              alt={`@${currentItem.bookmark.author.screenName}`}
+              className="size-6 shrink-0 rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.06)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]"
+            />
+            <div className="min-w-0">
+              <p className="truncate text-xxs font-medium text-home-fg-secondary">
+                {currentItem.bookmark.author.name}
+              </p>
+              <p className="truncate text-xxs text-home-fg-muted">
+                {currentItem.minutes !== null
+                  ? `${currentItem.minutes} min`
+                  : `@${currentItem.bookmark.author.screenName}`}
+              </p>
+            </div>
           </div>
+          <div
+            className="flex shrink-0 items-center gap-1"
+            role="toolbar"
+            aria-label="Queue controls"
+          >
+            <Button
+              type="button"
+              variant="secondary"
+              className="h-8 bg-home-secondary-bg px-2.5 text-xs font-semibold leading-none text-home-secondary-text shadow-glass transition-colors duration-150 ease-hover hover:bg-main-bg-hover"
+              onClick={() => onOpenReading()}
+            >
+              List
+              <kbd className="ml-1.5 hidden border-home-secondary-border bg-accent-tint text-home-fg-muted shadow-kbd sm:inline-flex">
+                L
+              </kbd>
+            </Button>
+            {showTodayQueueNavigation && (
+              <>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  className="size-8 text-home-fg-muted transition-colors duration-150 ease-hover hover:text-home-fg-secondary"
+                  aria-label="Previous Today's Read item"
+                  onClick={onMovePrev}
+                >
+                  <CaretLeftIcon className="size-3.5" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  className="size-8 text-home-fg-muted transition-colors duration-150 ease-hover hover:text-home-fg-secondary"
+                  aria-label="Next Today's Read item"
+                  onClick={onMoveNext}
+                >
+                  <CaretRightIcon className="size-3.5" />
+                </Button>
+              </>
+            )}
+            <Button
+              type="button"
+              className="h-8 border-0 bg-home-accent px-3 text-xs font-semibold leading-none text-[#18100d] hover:opacity-90"
+              onClick={onOpenBookmark}
+            >
+              Read
+              <kbd className="ml-1.5 hidden border-black/20 bg-black/[0.14] text-black/50 shadow-kbd sm:inline-flex">
+                Space
+              </kbd>
+            </Button>
+          </div>
+        </div>
+      ) : null;
+      if (isTodayQueue) {
+        return (
+          <article
+            className={cn(
+              cardBase,
+              "p-0 hover:bg-main-bg-hover max-sm:p-0",
+              cardEngaged && "bg-main-bg-hover",
+            )}
+            onMouseEnter={() => onCardEngagedChange(true)}
+            onMouseLeave={() => onCardEngagedChange(false)}
+            onFocusCapture={() => onCardEngagedChange(true)}
+            onBlurCapture={handleCardBlurCapture}
+          >
+            <a
+              href={getBookmarkHref(currentItem.bookmark)}
+              className="block cursor-pointer no-underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+              onClick={handleCardClick}
+              onKeyDown={handleCardKeyDown}
+              aria-label={cardAriaLabel}
+            >
+              {cardBody}
+            </a>
+            {todayQueueFooter}
+          </article>
+        );
+      }
+      return (
+        <a
+          href={getBookmarkHref(currentItem.bookmark)}
+          className={cn(
+            cardBase,
+            "block cursor-pointer p-4 no-underline hover:bg-main-bg-hover max-sm:py-3.5",
+            cardEngaged && "bg-main-bg-hover",
+          )}
+          onMouseEnter={() => onCardEngagedChange(true)}
+          onMouseLeave={() => onCardEngagedChange(false)}
+          onFocusCapture={() => onCardEngagedChange(true)}
+          onBlurCapture={handleCardBlurCapture}
+          onClick={handleCardClick}
+          onKeyDown={handleCardKeyDown}
+          aria-label={cardAriaLabel}
+        >
+          {cardBody}
         </a>
+      );
+    }
+    case "empty_can_sync":
+      if (todayQueueDone) {
+        return (
+          <article className={cardCentered}>
+            <h2 className="text-balance text-xl font-medium leading-snug text-home-fg-secondary">
+              {TODAY_QUEUE_DONE_TITLE}
+            </h2>
+            <p className="mt-4 text-pretty text-base text-home-empty">
+              {TODAY_QUEUE_DONE_MESSAGE}
+            </p>
+            <Button
+              type="button"
+              onClick={() => onOpenReading("unread")}
+              className="mt-6 border-0 bg-home-accent text-white hover:opacity-90"
+            >
+              Browse unread
+            </Button>
+          </article>
+        );
+      }
+      return (
+        <>
+          <article className={cardCentered}>
+            <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
+              Your reading list is quiet
+            </p>
+            <p className="mt-4 text-pretty text-base text-home-empty">
+              No bookmarks yet. Bookmark posts on X, then sync to start reading.
+            </p>
+            <Button
+              type="button"
+              onClick={onSync}
+              disabled={syncButton.disabled}
+              className="mt-6 border-0 bg-home-accent text-white hover:opacity-90"
+            >
+              Sync bookmarks
+            </Button>
+          </article>
+          <p className="text-center text-xs text-on-bg-ghost">
+            Already have a Totem export?{" "}
+            <button
+              type="button"
+              onClick={onOpenImport}
+              className="underline hover:text-on-bg-muted"
+            >
+              Import &rarr;
+            </button>
+          </p>
+        </>
       );
     case "syncing_bootstrap":
       return (
@@ -327,7 +622,6 @@ function FooterCard({
           </Button>
         </article>
       );
-    case "empty_can_sync":
     default:
       return (
         <>
@@ -379,6 +673,7 @@ function useNewTabHomeModel({
   onOpenImport,
   onOpenExport,
   recommendationSource,
+  todayQueue,
   onOpenReading,
   isResetting,
   footerStateOverride,
@@ -397,6 +692,7 @@ function useNewTabHomeModel({
     imgError,
     cardEngaged,
     mountSeed,
+    todayQueueIndex,
   } = homeState;
   const searchRef = useRef<HTMLInputElement>(null);
   const { wallpaperUrl, wallpaperCredit, gradientCss } =
@@ -407,20 +703,26 @@ function useNewTabHomeModel({
   const runtimeOfflineMode = useIsOffline();
 
   const { items, unreadItems } = useMemo(() => {
-    const allItems: DecoratedBookmark[] = bookmarks.map((bookmark) => ({
-      bookmark,
-      title: pickTitle(bookmark),
-      excerpt: pickExcerpt(bookmark),
-      minutes: detailedTweetIds.has(bookmark.tweetId)
-        ? estimateReadingMinutes(bookmark)
-        : null,
-      isRead: openedTweetIds.has(bookmark.tweetId),
-    }));
+    const allItems = bookmarks.map((bookmark) =>
+      decorateBookmark(bookmark, detailedTweetIds, openedTweetIds),
+    );
     const unread = allItems.filter((item) => !item.isRead);
     return { items: allItems, unreadItems: unread };
   }, [bookmarks, detailedTweetIds, openedTweetIds]);
 
+  const todayQueueItems = useMemo(
+    () =>
+      (todayQueue?.items ?? []).map((item) =>
+        decorateBookmark(item.bookmark, detailedTweetIds, openedTweetIds),
+      ),
+    [detailedTweetIds, openedTweetIds, todayQueue?.items],
+  );
+
   const currentItem = useMemo(() => {
+    if (recommendationSource === "today") {
+      return todayQueueItems[todayQueueIndex] ?? todayQueueItems[0] ?? null;
+    }
+
     // When pinned source is selected, pick from pinned bookmarks
     if (recommendationSource === "pinned") {
       const pinnedIds = getPinnedTweetIdsOrdered();
@@ -444,22 +746,63 @@ function useNewTabHomeModel({
     if (pool.length === 0) return null;
     const index = Math.floor(mountSeed * pool.length);
     return pool[index];
-  }, [items, unreadItems, mountSeed, recommendationSource]);
+  }, [
+    items,
+    unreadItems,
+    mountSeed,
+    recommendationSource,
+    todayQueueIndex,
+    todayQueueItems,
+  ]);
   const hydrationStatus = useHydrationStore((s) => s.status);
   const hydrationTotal = useHydrationStore((s) => s.total);
   const hydrationProcessed = useHydrationStore((s) => s.processed);
   const hydrationPauseUntil = useHydrationStore((s) => s.pauseUntil);
 
-  const runtimeFooterState = useFooterState(Boolean(currentItem), isResetting);
+  const todayQueueLoading =
+    recommendationSource === "today" && todayQueue?.status === "loading";
+  const todayQueueDone =
+    recommendationSource === "today" && Boolean(todayQueue?.isDone);
+  const todayQueueProgress =
+    recommendationSource === "today" ? getTodayQueueProgress(todayQueue) : null;
+  const runtimeFooterState = useFooterState(
+    Boolean(currentItem) || todayQueueLoading,
+    isResetting,
+  );
   const syncButton = syncButtonStateOverride ?? runtimeSyncButton;
   const offlineMode = offlineModeOverride ?? runtimeOfflineMode;
-  const footerState = footerStateOverride ?? runtimeFooterState;
+  const footerState =
+    footerStateOverride ??
+    (todayQueueLoading && !currentItem ? "loading" : runtimeFooterState);
+  const openReadingFromHome = useCallback(
+    (tab?: ReadingTab) => {
+      onOpenReading(
+        resolveHomeReadingTab({
+          requestedTab: tab,
+          recommendationSource,
+          todayQueueDone,
+        }),
+      );
+    },
+    [onOpenReading, recommendationSource, todayQueueDone],
+  );
 
   const showWallpaper = Boolean(wallpaperUrl && !imgError);
 
   useEffect(() => {
     updateHomeState({ imgLoaded: false, imgError: false });
   }, [wallpaperUrl]);
+
+  useEffect(() => {
+    if (recommendationSource !== "today" || todayQueueItems.length === 0) {
+      if (todayQueueIndex !== 0) updateHomeState({ todayQueueIndex: 0 });
+      return;
+    }
+
+    if (todayQueueIndex >= todayQueueItems.length) {
+      updateHomeState({ todayQueueIndex: todayQueueItems.length - 1 });
+    }
+  }, [recommendationSource, todayQueueIndex, todayQueueItems.length]);
 
   useEffect(() => {
     const timer = window.setInterval(
@@ -470,19 +813,43 @@ function useNewTabHomeModel({
   }, []);
 
   const openItem = useCallback(
-    (item: DecoratedBookmark | null) => {
+    (item: DecoratedBookmark | null, recordTodayQueueOpen = true) => {
       if (!item) return;
+      if (recordTodayQueueOpen && recommendationSource === "today") {
+        const trackedOpen =
+          todayQueue?.recordOpen(item.bookmark.tweetId) ?? Promise.resolve();
+        void trackedOpen.catch(() => {}).finally(() => {
+          onOpenBookmark(item.bookmark);
+        });
+        return;
+      }
       onOpenBookmark(item.bookmark);
     },
-    [onOpenBookmark],
+    [onOpenBookmark, recommendationSource, todayQueue],
   );
 
   const surpriseMe = useCallback(() => {
     if (items.length === 0) return;
     const pool = unreadItems.length > 0 ? unreadItems : items;
     const pick = pool[Math.floor(Math.random() * pool.length)];
-    openItem(pick);
+    openItem(pick, false);
   }, [items, unreadItems, openItem]);
+
+  const moveTodayQueueItem = useCallback(
+    (direction: -1 | 1) => {
+      if (recommendationSource !== "today" || todayQueueItems.length <= 1) {
+        return;
+      }
+
+      updateHomeState((state) => ({
+        todayQueueIndex:
+          (state.todayQueueIndex + direction + todayQueueItems.length) %
+          todayQueueItems.length,
+        cardEngaged: false,
+      }));
+    },
+    [recommendationSource, todayQueueItems.length],
+  );
 
   useHotkeys("/", () => searchRef.current?.focus(), {
     preventDefault: true,
@@ -499,11 +866,11 @@ function useNewTabHomeModel({
 
   useHotkeys(
     "l",
-    () => onOpenReading(),
+    () => openReadingFromHome(),
     {
       preventDefault: true,
     },
-    [onOpenReading],
+    [openReadingFromHome],
   );
 
   useHotkeys(
@@ -515,7 +882,27 @@ function useNewTabHomeModel({
     [surpriseMe],
   );
 
+  useHotkeys(
+    "left",
+    () => moveTodayQueueItem(-1),
+    {
+      preventDefault: true,
+    },
+    [moveTodayQueueItem],
+  );
+
+  useHotkeys(
+    "right",
+    () => moveTodayQueueItem(1),
+    {
+      preventDefault: true,
+    },
+    [moveTodayQueueItem],
+  );
+
   const showCardButtons = footerState === "bookmark_card";
+  const showTodayQueueNavigation =
+    recommendationSource === "today" && todayQueueItems.length > 1;
 
   const cardBase =
     "relative min-h-40 overflow-hidden rounded px-6 py-6 bg-main-bg shadow-glass transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring max-sm:min-h-36 max-sm:px-4 max-sm:py-4";
@@ -558,22 +945,26 @@ function useNewTabHomeModel({
     imgLoaded,
     now,
     offlineMode,
-    onOpenBookmark,
+    openItem,
     onOpenExport,
     onOpenImport,
-    onOpenReading,
+    onOpenReading: openReadingFromHome,
     onOpenSettings,
     onSearchEngineChange,
     onSync,
+    moveTodayQueueItem,
     recommendationSource,
     searchEngine,
     searchRef,
     showCardButtons,
     showSearchBar,
     showWallpaper,
+    showTodayQueueNavigation,
     showTopSites,
     surpriseMe,
     syncButton,
+    todayQueueDone,
+    todayQueueProgress,
     topSites,
     updateHomeState,
     wallpaperCredit,
@@ -603,9 +994,10 @@ function renderNewTabHome({
   hydrationStatus,
   hydrationTotal,
   imgLoaded,
+  moveTodayQueueItem,
   now,
   offlineMode,
-  onOpenBookmark,
+  openItem,
   onOpenExport,
   onOpenImport,
   onOpenReading,
@@ -618,9 +1010,12 @@ function renderNewTabHome({
   showCardButtons,
   showSearchBar,
   showWallpaper,
+  showTodayQueueNavigation,
   showTopSites,
   surpriseMe,
   syncButton,
+  todayQueueDone,
+  todayQueueProgress,
   topSites,
   updateHomeState,
   wallpaperCredit,
@@ -802,41 +1197,75 @@ function renderNewTabHome({
             onCardEngagedChange={(engaged) => updateHomeState({ cardEngaged: engaged })}
             recommendationSource={recommendationSource}
             offlineMode={offlineMode}
-            onOpenBookmark={onOpenBookmark}
+            onOpenBookmark={() => openItem(currentItem)}
+            onOpenReading={onOpenReading}
+            todayQueueDone={todayQueueDone}
+            todayQueueProgress={todayQueueProgress}
             syncButton={syncButton}
             onSync={onSync}
             handleLoginButton={handleLoginButton}
             onOpenImport={onOpenImport}
+            showTodayQueueNavigation={showTodayQueueNavigation}
+            onMovePrev={() => moveTodayQueueItem(-1)}
+            onMoveNext={() => moveTodayQueueItem(1)}
           />
 
-          <div
-            className={cn(
-              "flex items-center justify-between gap-2.5 max-sm:gap-2",
-              !showCardButtons && "invisible pointer-events-none",
-            )}
-            aria-hidden={!showCardButtons || undefined}
-          >
-            <Button
-              variant="secondary"
-              className="bg-home-secondary-bg px-5 py-2.5 font-semibold leading-none text-home-secondary-text shadow-glass transition-colors duration-150 ease-hover hover:bg-main-bg-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
-              onClick={onOpenReading}
+          {recommendationSource !== "today" && (
+            <div
+              className={cn(
+                "flex items-center justify-between gap-2.5 max-sm:flex-wrap max-sm:justify-center max-sm:gap-2",
+                !showCardButtons && "invisible pointer-events-none",
+              )}
+              aria-hidden={!showCardButtons || undefined}
             >
-              Open reading list
-              <kbd className="ml-2 border-home-secondary-border bg-accent-tint text-home-fg-muted shadow-kbd">
-                L
-              </kbd>
-            </Button>
-            <Button
-              variant="secondary"
-              className="bg-home-secondary-bg px-5 py-2.5 font-semibold leading-none text-home-secondary-text shadow-glass transition-colors duration-150 ease-hover hover:bg-main-bg-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
-              onClick={surpriseMe}
-            >
-              Surprise me
-              <kbd className="ml-2 border-home-secondary-border bg-accent-tint text-home-fg-muted shadow-kbd">
-                S
-              </kbd>
-            </Button>
-          </div>
+              <Button
+                variant="secondary"
+                className="bg-home-secondary-bg px-5 py-2.5 font-semibold leading-none text-home-secondary-text shadow-glass transition-colors duration-150 ease-hover hover:bg-main-bg-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring max-sm:px-3"
+                onClick={() => onOpenReading()}
+              >
+                Open reading list
+                <kbd className="ml-2 hidden border-home-secondary-border bg-accent-tint text-home-fg-muted shadow-kbd sm:inline-flex">
+                  L
+                </kbd>
+              </Button>
+              {showTodayQueueNavigation && (
+                <div className="flex items-center gap-1">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="icon-sm"
+                    onClick={() => moveTodayQueueItem(-1)}
+                    className="size-10 bg-home-secondary-bg text-home-secondary-text shadow-glass transition-colors duration-150 ease-hover hover:bg-main-bg-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring max-sm:size-9"
+                    aria-label="Previous Today's Read item"
+                    title="Previous Today's Read item"
+                  >
+                    <CaretLeftIcon className="size-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="icon-sm"
+                    onClick={() => moveTodayQueueItem(1)}
+                    className="size-10 bg-home-secondary-bg text-home-secondary-text shadow-glass transition-colors duration-150 ease-hover hover:bg-main-bg-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring max-sm:size-9"
+                    aria-label="Next Today's Read item"
+                    title="Next Today's Read item"
+                  >
+                    <CaretRightIcon className="size-4" />
+                  </Button>
+                </div>
+              )}
+              <Button
+                variant="secondary"
+                className="bg-home-secondary-bg px-5 py-2.5 font-semibold leading-none text-home-secondary-text shadow-glass transition-colors duration-150 ease-hover hover:bg-main-bg-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring max-sm:px-3"
+                onClick={surpriseMe}
+              >
+                Surprise me
+                <kbd className="ml-2 hidden border-home-secondary-border bg-accent-tint text-home-fg-muted shadow-kbd sm:inline-flex">
+                  S
+                </kbd>
+              </Button>
+            </div>
+          )}
 
           <p
             className={cn(

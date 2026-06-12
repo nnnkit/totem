@@ -9,13 +9,25 @@ import {
   upsertTweetDetailCaches,
   upsertHighlights,
   upsertReadingProgressRows,
+  getAllQueueBookmarkMetadata,
+  getAllTodayQueueExposures,
+  getAllTodayQueueSnapshots,
+  upsertQueueBookmarkMetadataRows,
+  upsertTodayQueueExposures,
+  upsertTodayQueueSnapshots,
 } from "../../db";
 import { sha256hex } from "../crypto";
 import type {
   Bookmark,
+  BookmarkQueueMetadata,
+  ArticleContent,
+  ArticleContentBlock,
+  ArticleContentEntity,
   TweetDetailCache,
   Highlight,
   ReadingProgress,
+  TodayQueueExposure,
+  TodayQueueSnapshot,
 } from "../../types";
 
 export type RefusedReason =
@@ -34,12 +46,18 @@ export interface ImportManifest {
     details: number;
     highlights: number;
     reading_progress: number;
+    today_queue_snapshots?: number;
+    bookmark_queue_metadata?: number;
+    today_queue_exposures?: number;
   };
   shards: {
     bookmarks: string[];
     details: string[];
     highlights: string[];
     reading_progress: string[];
+    today_queue_snapshots?: string[];
+    bookmark_queue_metadata?: string[];
+    today_queue_exposures?: string[];
   };
   checksums: Record<string, string>;
 }
@@ -60,6 +78,9 @@ export interface ImportResult {
   details: ImportStoreOutcome;
   highlights: ImportStoreOutcome;
   readingProgress: ImportStoreOutcome;
+  todayQueueSnapshots: ImportStoreOutcome;
+  queueMetadata: ImportStoreOutcome;
+  todayQueueExposures: ImportStoreOutcome;
 }
 
 export type ParsedZip =
@@ -111,12 +132,232 @@ function isNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
 }
 
+function isOptionalString(value: unknown): boolean {
+  return value === undefined || typeof value === "string";
+}
+
+function isOptionalNumber(value: unknown): boolean {
+  return value === undefined || isNumber(value);
+}
+
+function isOptionalBoolean(value: unknown): boolean {
+  return value === undefined || typeof value === "boolean";
+}
+
+function isNullableImportable<T>(
+  value: unknown,
+  guard: (item: unknown) => item is T,
+): value is T | null | undefined {
+  return value === undefined || value === null || guard(value);
+}
+
+function isOptionalArrayOf<T>(
+  value: unknown,
+  guard: (item: unknown) => item is T,
+): value is T[] | undefined {
+  return value === undefined || (Array.isArray(value) && value.every(guard));
+}
+
 function isImportableAuthor(value: unknown): value is Bookmark["author"] {
   return (
     isRecord(value) &&
     typeof value.name === "string" &&
     typeof value.screenName === "string" &&
-    typeof value.profileImageUrl === "string"
+    typeof value.profileImageUrl === "string" &&
+    isOptionalBoolean(value.verified) &&
+    isOptionalString(value.bio) &&
+    isOptionalNumber(value.followersCount) &&
+    isOptionalNumber(value.followingCount) &&
+    isOptionalString(value.website) &&
+    isOptionalString(value.createdAt) &&
+    isOptionalString(value.bannerUrl) &&
+    (
+      value.affiliate === undefined ||
+      (
+        isRecord(value.affiliate) &&
+        typeof value.affiliate.name === "string" &&
+        isOptionalString(value.affiliate.badgeUrl) &&
+        isOptionalString(value.affiliate.url)
+      )
+    )
+  );
+}
+
+function isImportableMetrics(value: unknown): value is Bookmark["metrics"] {
+  return (
+    isRecord(value) &&
+    isNumber(value.likes) &&
+    isNumber(value.retweets) &&
+    isNumber(value.replies) &&
+    isNumber(value.views) &&
+    isNumber(value.bookmarks)
+  );
+}
+
+function isImportableMedia(value: unknown): value is Bookmark["media"][number] {
+  return (
+    isRecord(value) &&
+    (
+      value.type === "photo" ||
+      value.type === "video" ||
+      value.type === "animated_gif"
+    ) &&
+    typeof value.url === "string" &&
+    isOptionalString(value.videoUrl) &&
+    isNumber(value.width) &&
+    isNumber(value.height) &&
+    isOptionalString(value.altText)
+  );
+}
+
+function isImportableLinkCard(value: unknown): value is NonNullable<Bookmark["urls"][number]["card"]> {
+  return (
+    isRecord(value) &&
+    isOptionalString(value.title) &&
+    isOptionalString(value.description) &&
+    isOptionalString(value.imageUrl) &&
+    isOptionalString(value.imageAlt) &&
+    isOptionalString(value.domain) &&
+    isOptionalString(value.cardType)
+  );
+}
+
+function isImportableTweetUrl(value: unknown): value is Bookmark["urls"][number] {
+  return (
+    isRecord(value) &&
+    typeof value.url === "string" &&
+    typeof value.displayUrl === "string" &&
+    typeof value.expandedUrl === "string" &&
+    (value.card === undefined || isImportableLinkCard(value.card))
+  );
+}
+
+function isImportableRange(value: unknown): value is { offset: number; length: number; style: string } {
+  return (
+    isRecord(value) &&
+    isNumber(value.offset) &&
+    isNumber(value.length) &&
+    typeof value.style === "string"
+  );
+}
+
+function isImportableEntityRange(value: unknown): value is { offset: number; length: number; key: number } {
+  return (
+    isRecord(value) &&
+    isNumber(value.offset) &&
+    isNumber(value.length) &&
+    isNumber(value.key)
+  );
+}
+
+function isImportableArticleDataRange(
+  value: unknown,
+): value is { fromIndex: number; toIndex: number; text?: string } {
+  return (
+    isRecord(value) &&
+    isNumber(value.fromIndex) &&
+    isNumber(value.toIndex) &&
+    isOptionalString(value.text)
+  );
+}
+
+function isImportableArticleBlockData(value: unknown): boolean {
+  return (
+    value === undefined ||
+    (
+      isRecord(value) &&
+      isOptionalArrayOf(value.urls, isImportableArticleDataRange) &&
+      isOptionalArrayOf(value.mentions, isImportableArticleDataRange)
+    )
+  );
+}
+
+function isImportableArticleContentBlock(
+  value: unknown,
+): value is ArticleContentBlock {
+  return (
+    isRecord(value) &&
+    typeof value.type === "string" &&
+    typeof value.text === "string" &&
+    Array.isArray(value.inlineStyleRanges) &&
+    value.inlineStyleRanges.every(isImportableRange) &&
+    Array.isArray(value.entityRanges) &&
+    value.entityRanges.every(isImportableEntityRange) &&
+    isNumber(value.depth) &&
+    isImportableArticleBlockData(value.data)
+  );
+}
+
+function isImportableArticleContentEntity(
+  value: unknown,
+): value is ArticleContentEntity {
+  return (
+    isRecord(value) &&
+    typeof value.type === "string" &&
+    isRecord(value.data)
+  );
+}
+
+function isImportableArticleContent(value: unknown): value is ArticleContent {
+  return (
+    isRecord(value) &&
+    isOptionalString(value.title) &&
+    typeof value.plainText === "string" &&
+    isOptionalString(value.coverImageUrl) &&
+    isOptionalArrayOf(value.contentBlocks, isImportableArticleContentBlock) &&
+    (
+      value.entityMap === undefined ||
+      (isRecord(value.entityMap) &&
+        Object.values(value.entityMap).every(isImportableArticleContentEntity))
+    )
+  );
+}
+
+function isImportableTweetKind(value: unknown): boolean {
+  return (
+    value === undefined ||
+    value === "tweet" ||
+    value === "reply" ||
+    value === "quote" ||
+    value === "repost" ||
+    value === "thread" ||
+    value === "article"
+  );
+}
+
+function isImportableQuotedTweet(value: unknown): value is NonNullable<Bookmark["quotedTweet"]> {
+  return (
+    isRecord(value) &&
+    typeof value.tweetId === "string" &&
+    typeof value.text === "string" &&
+    isNumber(value.createdAt) &&
+    isImportableAuthor(value.author) &&
+    Array.isArray(value.media) &&
+    value.media.every(isImportableMedia) &&
+    isOptionalArrayOf(value.urls, isImportableTweetUrl) &&
+    isNullableImportable(value.article, isImportableArticleContent)
+  );
+}
+
+function isImportableThreadTweet(value: unknown): value is TweetDetailCache["thread"][number] {
+  return (
+    isRecord(value) &&
+    typeof value.tweetId === "string" &&
+    typeof value.text === "string" &&
+    isNumber(value.createdAt) &&
+    isImportableAuthor(value.author) &&
+    Array.isArray(value.media) &&
+    value.media.every(isImportableMedia) &&
+    Array.isArray(value.urls) &&
+    value.urls.every(isImportableTweetUrl) &&
+    isNullableImportable(value.article, isImportableArticleContent) &&
+    isNullableImportable(value.quotedTweet, isImportableQuotedTweet) &&
+    isNullableImportable(value.retweetedTweet, isImportableQuotedTweet) &&
+    isImportableTweetKind(value.tweetKind) &&
+    isOptionalString(value.tweetDisplayType) &&
+    isOptionalString(value.inReplyToTweetId) &&
+    isOptionalString(value.inReplyToScreenName) &&
+    isOptionalBoolean(value.isThread)
   );
 }
 
@@ -130,13 +371,22 @@ function isImportableBookmark(value: unknown): value is Bookmark {
     typeof value.sortIndex === "string" &&
     typeof value.bookmarked === "boolean" &&
     isImportableAuthor(value.author) &&
-    isRecord(value.metrics) &&
+    isImportableMetrics(value.metrics) &&
     Array.isArray(value.media) &&
+    value.media.every(isImportableMedia) &&
     Array.isArray(value.urls) &&
+    value.urls.every(isImportableTweetUrl) &&
     typeof value.isThread === "boolean" &&
     typeof value.hasImage === "boolean" &&
     typeof value.hasVideo === "boolean" &&
-    typeof value.hasLink === "boolean"
+    typeof value.hasLink === "boolean" &&
+    isNullableImportable(value.quotedTweet, isImportableQuotedTweet) &&
+    isNullableImportable(value.retweetedTweet, isImportableQuotedTweet) &&
+    isNullableImportable(value.article, isImportableArticleContent) &&
+    isImportableTweetKind(value.tweetKind) &&
+    isOptionalString(value.tweetDisplayType) &&
+    isOptionalString(value.inReplyToTweetId) &&
+    isOptionalString(value.inReplyToScreenName)
   );
 }
 
@@ -146,7 +396,8 @@ function isImportableDetail(value: unknown): value is TweetDetailCache {
     typeof value.tweetId === "string" &&
     isNumber(value.fetchedAt) &&
     (value.focalTweet === null || isImportableBookmark(value.focalTweet)) &&
-    Array.isArray(value.thread)
+    Array.isArray(value.thread) &&
+    value.thread.every(isImportableThreadTweet)
   );
 }
 
@@ -177,24 +428,90 @@ function isImportableReadingProgress(value: unknown): value is ReadingProgress {
   );
 }
 
+function isImportableTodayQueueSnapshot(
+  value: unknown,
+): value is TodayQueueSnapshot {
+  return (
+    isRecord(value) &&
+    typeof value.key === "string" &&
+    typeof value.localDate === "string" &&
+    (value.budgetMinutes === 5 ||
+      value.budgetMinutes === 15 ||
+      value.budgetMinutes === 30) &&
+    isNumber(value.version) &&
+    Array.isArray(value.tweetIds) &&
+    value.tweetIds.every((item) => typeof item === "string") &&
+    isNumber(value.generatedAt)
+  );
+}
+
+function isImportableQueueMetadata(
+  value: unknown,
+): value is BookmarkQueueMetadata {
+  return (
+    isRecord(value) &&
+    typeof value.tweetId === "string" &&
+    (value.intent === "unset" ||
+      value.intent === "read_soon" ||
+      value.intent === "reference" ||
+      value.intent === "act") &&
+    (value.snoozedUntil === null || typeof value.snoozedUntil === "string") &&
+    isNumber(value.updatedAt)
+  );
+}
+
+function isImportableTodayQueueExposure(
+  value: unknown,
+): value is TodayQueueExposure {
+  return (
+    isRecord(value) &&
+    typeof value.id === "string" &&
+    typeof value.tweetId === "string" &&
+    (value.action === "queued" ||
+      value.action === "added" ||
+      value.action === "opened" ||
+      value.action === "snoozed" ||
+      value.action === "read" ||
+      value.action === "reference" ||
+      value.action === "act" ||
+      value.action === "pinned") &&
+    typeof value.localDate === "string" &&
+    isNumber(value.createdAt)
+  );
+}
+
 function isCountMap(value: unknown): value is ImportManifest["counts"] {
   if (!isRecord(value)) return false;
-  return (
+  const hasRequired =
     typeof value.bookmarks === "number" &&
     typeof value.details === "number" &&
     typeof value.highlights === "number" &&
-    typeof value.reading_progress === "number"
-  );
+    typeof value.reading_progress === "number";
+  const hasValidQueueCounts =
+    (value.today_queue_snapshots === undefined ||
+      typeof value.today_queue_snapshots === "number") &&
+    (value.bookmark_queue_metadata === undefined ||
+      typeof value.bookmark_queue_metadata === "number") &&
+    (value.today_queue_exposures === undefined ||
+      typeof value.today_queue_exposures === "number");
+  return hasRequired && hasValidQueueCounts;
 }
 
 function isShardMap(value: unknown): value is ImportManifest["shards"] {
   if (!isRecord(value)) return false;
-  return (
+  const hasRequired =
     isStringArray(value.bookmarks) &&
     isStringArray(value.details) &&
     isStringArray(value.highlights) &&
-    isStringArray(value.reading_progress)
-  );
+    isStringArray(value.reading_progress);
+  const hasValidQueueShards =
+    (value.today_queue_snapshots === undefined ||
+      isStringArray(value.today_queue_snapshots)) &&
+    (value.bookmark_queue_metadata === undefined ||
+      isStringArray(value.bookmark_queue_metadata)) &&
+    (value.today_queue_exposures === undefined ||
+      isStringArray(value.today_queue_exposures));
+  return hasRequired && hasValidQueueShards;
 }
 
 function isChecksumMap(value: unknown): value is Record<string, string> {
@@ -275,7 +592,10 @@ export function parseZip(file: Uint8Array, limits: ParseZipLimits = {}): ParsedZ
     (manifest.shards.bookmarks?.length > 0 ||
       manifest.shards.details?.length > 0 ||
       manifest.shards.highlights?.length > 0 ||
-      manifest.shards.reading_progress?.length > 0);
+      manifest.shards.reading_progress?.length > 0 ||
+      (manifest.shards.today_queue_snapshots?.length ?? 0) > 0 ||
+      (manifest.shards.bookmark_queue_metadata?.length ?? 0) > 0 ||
+      (manifest.shards.today_queue_exposures?.length ?? 0) > 0);
 
   if (!hasData) {
     return { ok: false, reason: "empty_zip" };
@@ -311,6 +631,9 @@ export async function validateImport(
     ...(manifest.shards.details || []),
     ...(manifest.shards.highlights || []),
     ...(manifest.shards.reading_progress || []),
+    ...(manifest.shards.today_queue_snapshots || []),
+    ...(manifest.shards.bookmark_queue_metadata || []),
+    ...(manifest.shards.today_queue_exposures || []),
   ];
   const checksumResults = await Promise.all(allShards.map(async (shard) => {
     const expected = manifest.checksums?.[shard];
@@ -423,7 +746,14 @@ async function writeBatches<T>(
 }
 
 export type ImportStoreProgress = {
-  store: "bookmarks" | "details" | "highlights" | "reading_progress";
+  store:
+    | "bookmarks"
+    | "details"
+    | "highlights"
+    | "reading_progress"
+    | "today_queue_snapshots"
+    | "bookmark_queue_metadata"
+    | "today_queue_exposures";
   added: number;
   alreadyHad: number;
   total: number;
@@ -451,6 +781,54 @@ function failOutcome(
   };
 }
 
+// Imports a string-keyed store whose shards may be absent from older exports.
+// Returns null when the manifest has no shards for it, so callers keep the
+// default empty outcome.
+async function importOptionalKeyedStore<T>({
+  store,
+  shards,
+  files,
+  isImportable,
+  keyOf,
+  loadExisting,
+  persist,
+  onProgress,
+}: {
+  store: ImportStoreProgress["store"];
+  shards: string[] | undefined;
+  files: Record<string, Uint8Array>;
+  isImportable: (value: unknown) => value is T;
+  keyOf: (row: T) => string;
+  loadExisting: () => Promise<T[]>;
+  persist: (rows: T[]) => Promise<void>;
+  onProgress?: (progress: ImportStoreProgress) => void;
+}): Promise<ImportStoreOutcome | null> {
+  if ((shards?.length ?? 0) === 0) return null;
+  const counts: ImportStoreCounts = { added: 0, alreadyHad: 0, total: 0 };
+  try {
+    const rows = dedupeRowsByStringKey(
+      gatherShardRows(shards || [], files).filter(isImportable),
+      keyOf,
+    );
+    counts.total = rows.length;
+    const existingKeys = new Set((await loadExisting()).map(keyOf));
+    const toInsert: T[] = [];
+    for (const row of rows) {
+      if (existingKeys.has(keyOf(row))) {
+        counts.alreadyHad++;
+      } else {
+        toInsert.push(row);
+      }
+    }
+    await writeBatches(toInsert, persist, counts);
+    const outcome: ImportStoreOutcome = { status: "succeeded", ...counts };
+    onProgress?.({ store, ...outcome, total: counts.total });
+    return outcome;
+  } catch (error) {
+    return failOutcome(counts, error);
+  }
+}
+
 export async function runImport(
   validated: Extract<ValidatedImport, { ok: true }>,
   onProgress?: (progress: ImportStoreProgress) => void,
@@ -463,6 +841,9 @@ export async function runImport(
     details: emptyOutcome(),
     highlights: emptyOutcome(),
     readingProgress: emptyOutcome(),
+    todayQueueSnapshots: emptyOutcome(),
+    queueMetadata: emptyOutcome(),
+    todayQueueExposures: emptyOutcome(),
   };
 
   // Bookmarks — keyed by `id`
@@ -587,6 +968,51 @@ export async function runImport(
   } catch (error) {
     result.status = "partial";
     result.readingProgress = failOutcome(readingProgressCounts, error);
+  }
+
+  const queueSnapshotOutcome = await importOptionalKeyedStore({
+    store: "today_queue_snapshots",
+    shards: manifest.shards.today_queue_snapshots,
+    files,
+    isImportable: isImportableTodayQueueSnapshot,
+    keyOf: (row) => row.key,
+    loadExisting: getAllTodayQueueSnapshots,
+    persist: upsertTodayQueueSnapshots,
+    onProgress,
+  });
+  if (queueSnapshotOutcome) {
+    result.todayQueueSnapshots = queueSnapshotOutcome;
+    if (queueSnapshotOutcome.status === "failed") result.status = "partial";
+  }
+
+  const queueMetadataOutcome = await importOptionalKeyedStore({
+    store: "bookmark_queue_metadata",
+    shards: manifest.shards.bookmark_queue_metadata,
+    files,
+    isImportable: isImportableQueueMetadata,
+    keyOf: (row) => row.tweetId,
+    loadExisting: getAllQueueBookmarkMetadata,
+    persist: upsertQueueBookmarkMetadataRows,
+    onProgress,
+  });
+  if (queueMetadataOutcome) {
+    result.queueMetadata = queueMetadataOutcome;
+    if (queueMetadataOutcome.status === "failed") result.status = "partial";
+  }
+
+  const queueExposureOutcome = await importOptionalKeyedStore({
+    store: "today_queue_exposures",
+    shards: manifest.shards.today_queue_exposures,
+    files,
+    isImportable: isImportableTodayQueueExposure,
+    keyOf: (row) => row.id,
+    loadExisting: getAllTodayQueueExposures,
+    persist: upsertTodayQueueExposures,
+    onProgress,
+  });
+  if (queueExposureOutcome) {
+    result.todayQueueExposures = queueExposureOutcome;
+    if (queueExposureOutcome.status === "failed") result.status = "partial";
   }
 
   if (result.status === "partial") {

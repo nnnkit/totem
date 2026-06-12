@@ -13,9 +13,20 @@ import {
   getAllTweetDetails,
   getAllHighlights,
   getAllReadingProgress,
+  getAllQueueBookmarkMetadata,
+  getAllTodayQueueExposures,
+  getAllTodayQueueSnapshots,
   upsertBookmarks,
 } from "../../../db";
-import type { Bookmark, TweetDetailCache, Highlight, ReadingProgress } from "../../../types";
+import type {
+  Bookmark,
+  BookmarkQueueMetadata,
+  TweetDetailCache,
+  Highlight,
+  ReadingProgress,
+  TodayQueueExposure,
+  TodayQueueSnapshot,
+} from "../../../types";
 
 function makeBookmark(id: string, tweetId: string): Bookmark {
   return {
@@ -84,6 +95,9 @@ async function buildValidZip(bookmarks: Bookmark[], options?: {
   details?: TweetDetailCache[];
   highlights?: Highlight[];
   readingProgress?: ReadingProgress[];
+  todayQueueSnapshots?: TodayQueueSnapshot[];
+  queueMetadata?: BookmarkQueueMetadata[];
+  todayQueueExposures?: TodayQueueExposure[];
   accountUserId?: string;
   schemaVersion?: number;
 }) {
@@ -91,6 +105,9 @@ async function buildValidZip(bookmarks: Bookmark[], options?: {
   const dets = options?.details ?? [];
   const hlts = options?.highlights ?? [];
   const rp = options?.readingProgress ?? [];
+  const queueSnapshots = options?.todayQueueSnapshots;
+  const queueMetadata = options?.queueMetadata;
+  const queueExposures = options?.todayQueueExposures;
   const accountUserId = options?.accountUserId ?? "user123";
   const schemaVersion = options?.schemaVersion ?? 8;
 
@@ -106,6 +123,15 @@ async function buildValidZip(bookmarks: Bookmark[], options?: {
   const rpJsonl = encoder.encode(
     rp.length > 0 ? rp.map((r) => JSON.stringify(r)).join("\n") + "\n" : "",
   );
+  const queueSnapshotsJsonl = queueSnapshots
+    ? encoder.encode(queueSnapshots.map((row) => JSON.stringify(row)).join("\n") + "\n")
+    : null;
+  const queueMetadataJsonl = queueMetadata
+    ? encoder.encode(queueMetadata.map((row) => JSON.stringify(row)).join("\n") + "\n")
+    : null;
+  const queueExposuresJsonl = queueExposures
+    ? encoder.encode(queueExposures.map((row) => JSON.stringify(row)).join("\n") + "\n")
+    : null;
 
   const checksums: Record<string, string> = {
     "data/bookmarks-2023.jsonl": `sha256:${await sha256hex(bookmarksJsonl)}`,
@@ -113,6 +139,19 @@ async function buildValidZip(bookmarks: Bookmark[], options?: {
     "data/highlights.jsonl": `sha256:${await sha256hex(highlightsJsonl)}`,
     "data/reading-progress.jsonl": `sha256:${await sha256hex(rpJsonl)}`,
   };
+
+  if (queueSnapshotsJsonl) {
+    checksums["data/today-queue-snapshots.jsonl"] =
+      `sha256:${await sha256hex(queueSnapshotsJsonl)}`;
+  }
+  if (queueMetadataJsonl) {
+    checksums["data/bookmark-queue-metadata.jsonl"] =
+      `sha256:${await sha256hex(queueMetadataJsonl)}`;
+  }
+  if (queueExposuresJsonl) {
+    checksums["data/today-queue-exposures.jsonl"] =
+      `sha256:${await sha256hex(queueExposuresJsonl)}`;
+  }
 
   const accountIdHash = `sha256:${await sha256hex(encoder.encode(accountUserId))}`;
 
@@ -124,12 +163,30 @@ async function buildValidZip(bookmarks: Bookmark[], options?: {
       details: dets.length,
       highlights: hlts.length,
       reading_progress: rp.length,
+      ...(queueSnapshots
+        ? { today_queue_snapshots: queueSnapshots.length }
+        : {}),
+      ...(queueMetadata
+        ? { bookmark_queue_metadata: queueMetadata.length }
+        : {}),
+      ...(queueExposures
+        ? { today_queue_exposures: queueExposures.length }
+        : {}),
     },
     shards: {
       bookmarks: ["data/bookmarks-2023.jsonl"],
       details: ["data/details.jsonl"],
       highlights: ["data/highlights.jsonl"],
       reading_progress: ["data/reading-progress.jsonl"],
+      ...(queueSnapshots
+        ? { today_queue_snapshots: ["data/today-queue-snapshots.jsonl"] }
+        : {}),
+      ...(queueMetadata
+        ? { bookmark_queue_metadata: ["data/bookmark-queue-metadata.jsonl"] }
+        : {}),
+      ...(queueExposures
+        ? { today_queue_exposures: ["data/today-queue-exposures.jsonl"] }
+        : {}),
     },
     checksums,
   };
@@ -143,6 +200,15 @@ async function buildValidZip(bookmarks: Bookmark[], options?: {
     "data/highlights.jsonl": highlightsJsonl,
     "data/reading-progress.jsonl": rpJsonl,
   };
+  if (queueSnapshotsJsonl) {
+    files["data/today-queue-snapshots.jsonl"] = queueSnapshotsJsonl;
+  }
+  if (queueMetadataJsonl) {
+    files["data/bookmark-queue-metadata.jsonl"] = queueMetadataJsonl;
+  }
+  if (queueExposuresJsonl) {
+    files["data/today-queue-exposures.jsonl"] = queueExposuresJsonl;
+  }
 
   return zipSync(files);
 }
@@ -383,6 +449,55 @@ describe("runImport", () => {
     expect(storedDetails.length).toBe(1);
     expect(storedHighlights.length).toBe(1);
     expect(storedProgress.length).toBe(1);
+  });
+
+  it("imports optional queue stores", async () => {
+    const snapshot: TodayQueueSnapshot = {
+      key: "2026-06-08:15:v1",
+      localDate: "2026-06-08",
+      budgetMinutes: 15,
+      version: 1,
+      tweetIds: ["t1"],
+      generatedAt: 1_700_000_000_000,
+    };
+    const metadata: BookmarkQueueMetadata = {
+      tweetId: "t1",
+      intent: "reference",
+      snoozedUntil: null,
+      updatedAt: 1_700_000_000_001,
+    };
+    const exposure: TodayQueueExposure = {
+      id: "exposure-1",
+      tweetId: "t1",
+      action: "added",
+      localDate: "2026-06-08",
+      createdAt: 1_700_000_000_002,
+    };
+
+    const zip = await buildValidZip([], {
+      todayQueueSnapshots: [snapshot],
+      queueMetadata: [metadata],
+      todayQueueExposures: [exposure],
+    });
+    const parsed = parseZip(zip);
+    if (!parsed.ok) throw new Error("parse failed");
+    const validated = await validateImport(parsed, "user123");
+    if (!validated.ok) throw new Error("validation failed");
+
+    const result = await runImport(validated);
+    expect(result.todayQueueSnapshots.added).toBe(1);
+    expect(result.queueMetadata.added).toBe(1);
+    expect(result.todayQueueExposures.added).toBe(1);
+
+    const [storedSnapshots, storedMetadata, storedExposures] =
+      await Promise.all([
+        getAllTodayQueueSnapshots(),
+        getAllQueueBookmarkMetadata(),
+        getAllTodayQueueExposures(),
+      ]);
+    expect(storedSnapshots).toEqual([snapshot]);
+    expect(storedMetadata).toEqual([metadata]);
+    expect(storedExposures).toEqual([exposure]);
   });
 
   it("skips rows missing a primary key and imports the rest of the store", async () => {
@@ -643,6 +758,80 @@ describe("runImport", () => {
     expect(storedDetails).toHaveLength(1);
     expect(storedHighlights).toHaveLength(1);
     expect(storedProgress).toHaveLength(1);
+  });
+
+  it("skips malformed nested bookmark and detail rows", async () => {
+    const validBookmark: Bookmark = {
+      ...makeBookmark("b1", "t1"),
+      hasImage: true,
+      hasLink: true,
+      media: [
+        {
+          type: "photo",
+          url: "https://pbs.twimg.com/media/test.jpg",
+          width: 640,
+          height: 480,
+          altText: "test image",
+        },
+      ],
+      urls: [
+        {
+          url: "https://t.co/test",
+          displayUrl: "example.com/test",
+          expandedUrl: "https://example.com/test",
+          card: {
+            title: "Example",
+            imageUrl: "https://example.com/card.jpg",
+          },
+        },
+      ],
+      article: {
+        plainText: "Article body",
+        coverImageUrl: "https://example.com/cover.jpg",
+        contentBlocks: [],
+        entityMap: {},
+      },
+    };
+    const malformedMediaBookmark = {
+      ...makeBookmark("b2", "t2"),
+      media: [{ type: "photo", url: 123, width: 1, height: 1 }],
+    } as unknown as Bookmark;
+    const malformedUrlBookmark = {
+      ...makeBookmark("b3", "t3"),
+      urls: [{ url: "https://t.co/bad", displayUrl: 123, expandedUrl: "https://example.com" }],
+    } as unknown as Bookmark;
+    const validDetail = makeDetail("t1");
+    const malformedDetail = {
+      tweetId: "t2",
+      fetchedAt: Date.now(),
+      focalTweet: null,
+      thread: [{ tweetId: "t2" }],
+    } as unknown as TweetDetailCache;
+
+    const zip = await buildValidZip(
+      [validBookmark, malformedMediaBookmark, malformedUrlBookmark],
+      { details: [validDetail, malformedDetail] },
+    );
+    const parsed = parseZip(zip);
+    if (!parsed.ok) throw new Error("parse failed");
+    const validated = await validateImport(parsed, "user123");
+    if (!validated.ok) throw new Error("validation failed");
+
+    const result = await runImport(validated);
+
+    expect(result.bookmarks).toMatchObject({ status: "succeeded", added: 1, total: 1 });
+    expect(result.details).toMatchObject({ status: "succeeded", added: 1, total: 1 });
+
+    const [storedBookmarks, storedDetails] = await Promise.all([
+      getAllBookmarks(),
+      getAllTweetDetails(),
+    ]);
+    expect(storedBookmarks).toHaveLength(1);
+    expect(storedBookmarks[0].tweetId).toBe("t1");
+    expect(storedBookmarks[0].media[0]?.url).toBe("https://pbs.twimg.com/media/test.jpg");
+    expect(storedBookmarks[0].urls[0]?.card?.imageUrl).toBe("https://example.com/card.jpg");
+    expect(storedDetails).toHaveLength(1);
+    expect(storedDetails[0].tweetId).toBe("t1");
   });
 
   it("calls onProgress per store", async () => {

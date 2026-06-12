@@ -19,7 +19,7 @@ This plan replaces the Vite SPA at `apps/site` with an Astro site that staticall
 
 **Non-goals**
 - Not refactoring `apps/site/src/SiteApp.tsx` content. Components carry over as-is, just hosted by Astro.
-- Not touching the extension app at `apps/extension` or root `src/` (extension new-tab/reader code).
+- Not touching root `src/` (extension new-tab/reader code).
 - Not changing the existing markdown content under `apps/site/content/blog/*.md`.
 - Not adding new pages or new design.
 

@@ -2,6 +2,12 @@
 
 This project uses `@base-ui/react` (v1.2.0) for base UI primitives. Always prefer Base UI components over raw HTML elements when a corresponding component is available. Check `node_modules/@base-ui/react/` for the full list of available components.
 
+## Repository Knowledge
+
+`docs/solutions/` stores documented solutions to past problems and product patterns, organized by category with YAML frontmatter (`module`, `tags`, `problem_type`). Relevant when implementing or debugging in documented areas.
+
+`CONCEPTS.md` defines shared domain vocabulary for project-specific entities, named processes, and status concepts. Relevant when orienting to the codebase or discussing domain concepts.
+
 ## Extension screenshots
 
 Before capturing, regenerating, editing, or reviewing extension screenshots, read [`docs/extension-screenshot-workflow.md`](docs/extension-screenshot-workflow.md). It is the source of truth for Chrome Web Store screenshot order, dimensions, required copy, asset paths, `agent-browser` capture, and verification.
@@ -9,6 +15,8 @@ Before capturing, regenerating, editing, or reviewing extension screenshots, rea
 ## Blog pipeline
 
 All blog work is managed in [`plans/blog-pipeline.md`](plans/blog-pipeline.md). It is the single source of truth for ideas, in-progress drafts, and published posts. Before doing any blog-related work — pitching topics, researching keywords, drafting, publishing — read it.
+
+For end-to-end SEO execution, also read [`plans/seo-agent-goal.md`](plans/seo-agent-goal.md). It is the reusable goal/checklist and long-running loop for choosing SEO opportunities, validating SERPs, adding non-commodity evidence, publishing pages, internal-linking them, building the site, updating tracking, writing readable HTML research/status reports under `plans/research/`, writing distribution plans, and looping back until the backlog is done or blocked.
 
 It contains:
 - **Voice** — the editorial personality every post must match ("Notes on bookmarks, reading, and the things you save"). Behavioral, honest about scope, specific, terse. No generic listicles without a thesis.

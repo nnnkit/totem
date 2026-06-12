@@ -52,6 +52,8 @@ That is where a local bookmark reader is different. It can search the local libr
 
 If you want to search before you export, [install Totem for Chrome](https://chromewebstore.google.com/detail/acpkgdfhoaalmnhjifhneghcgfnjkglo?utm_source=blog&utm_medium=inline_cta&utm_campaign=search-twitter-bookmarks-before-export) and use the local library as the place where Twitter bookmarks become searchable.
 
+If privacy is the reason you want to search before exporting, be specific about what "private" means. A local-first Chrome extension, a cloud dashboard, and an AI search tool have different data models even when they all call themselves bookmark managers. I keep a job-based comparison here: [best Twitter bookmark managers for search, export, and actually reading](/blog/best-twitter-bookmark-managers-2026).
+
 ## Useful searches before export
 
 These examples use Totem's search syntax. Plain text works. Quoted phrases work. A handle like `@someone` works as shorthand for `from:someone`.

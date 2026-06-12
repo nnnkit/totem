@@ -4,7 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Totem Next Release Plan - Knowledge Digests and Sync Destinations</title>
+<meta name="author" content="Totem">
 <meta name="description" content="Research brief and release plan for turning Totem's X / Twitter bookmark library into knowledge digests and sync destinations.">
+<meta name="keywords" content="Totem, knowledge digests, Obsidian sync, Notion sync, X bookmarks">
+<meta name="generator" content="Kami">
 <style>
   @page {
     size: A4;
@@ -12,24 +15,24 @@
   }
 
   :root {
-    --paper: #f6f3ea;
-    --sheet: #fffdf7;
+    --paper: #f5f4ed;
+    --sheet: #faf9f5;
     --ink: #171615;
     --muted: #68645d;
     --subtle: #8a857b;
-    --blue: #1b365d;
-    --blue-soft: #e7edf5;
+    --blue: #1B365D;
+    --blue-soft: #E4ECF5;
     --green: #28634a;
     --green-soft: #e8f2ed;
     --amber: #8b5c18;
     --amber-soft: #f4ecd9;
     --red: #9b342c;
     --red-soft: #f6e7e4;
-    --line: #ded9ca;
-    --line-strong: #c9c1ae;
+    --line: #e8e6dc;
+    --line-strong: #e5e3d8;
     --mono: "SF Mono", "JetBrains Mono", Consolas, monospace;
-    --serif: Charter, Georgia, "Times New Roman", serif;
-    --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --serif: Charter, Georgia, Palatino, "Times New Roman", serif;
+    --sans: var(--serif);
   }
 
   * {
@@ -258,6 +261,35 @@
     color: var(--red);
   }
 
+  .confidence {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 6px;
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-family: var(--sans);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .confidence.high {
+    background: var(--green-soft);
+    color: var(--green);
+  }
+
+  .confidence.med {
+    background: var(--amber-soft);
+    color: var(--amber);
+  }
+
+  .confidence.low {
+    background: var(--red-soft);
+    color: var(--red);
+  }
+
   .phase {
     display: grid;
     grid-template-columns: 120px 1fr;
@@ -409,7 +441,7 @@
           Ship a local-first digest layer first, then one destination that works without
           a backend: Obsidian Markdown sync. Treat Notion, Google Sheets, Zotero,
           Readwise, scheduled email, and AI summaries as paid/cloud features once the
-          digest workflow proves value.
+          digest workflow proves value. <span class="confidence high">High confidence</span>
         </p>
       </div>
 
@@ -440,6 +472,60 @@
     </section>
 
     <section>
+      <h2>Verification Addendum</h2>
+      <p>
+        The Grok verification strengthens the original plan rather than changing its
+        direction. The main correction is emphasis: TweetSmash is a hosted curation
+        product with multi-destination workflow automation, while Totem's strongest
+        counter-position is local reading, local files, and user-controlled sync.
+      </p>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Verified claim</th>
+              <th>Confidence</th>
+              <th>Planning implication</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>TweetSmash's core loop is import, organize, resurface as digest, then sync to knowledge-base tools.</td>
+              <td><span class="confidence high">High</span></td>
+              <td>Totem should define a first-class digest model, not bolt sync buttons onto export.</td>
+            </tr>
+            <tr>
+              <td>TweetSmash is a hosted SaaS workflow: sign up, connect X, import/store/process bookmarks, then export/sync out.</td>
+              <td><span class="confidence high">High</span></td>
+              <td>Totem should not imitate the hosted data posture in v1. Privacy and local control are the wedge.</td>
+            </tr>
+            <tr>
+              <td>Notion and Google Sheets sync require OAuth-style hosted infrastructure for a distributed product.</td>
+              <td><span class="confidence high">High</span></td>
+              <td>Both belong behind a paid cloud tier after the digest and adapter contracts exist.</td>
+            </tr>
+            <tr>
+              <td>Obsidian sync is technically feasible from the extension through user-granted folder access.</td>
+              <td><span class="confidence high">High</span></td>
+              <td>Obsidian remains the right first concrete destination because it preserves the local-first story.</td>
+            </tr>
+            <tr>
+              <td>Readwise is likely the easiest remote destination because token auth is simpler than OAuth.</td>
+              <td><span class="confidence med">Medium</span></td>
+              <td>Consider Readwise before Zotero if the first paid remote sync needs a lower auth burden.</td>
+            </tr>
+            <tr>
+              <td>TweetSmash's public traction and pricing claims validate demand for paid digest/workflow sync.</td>
+              <td><span class="confidence med">Medium</span></td>
+              <td>Use as market signal, not as audited benchmark. Avoid anchoring Totem pricing only to competitor copy.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section>
       <h2>What TweetSmash Teaches Us</h2>
       <p>
         TweetSmash's positioning is broader than bookmark backup. Its homepage sells
@@ -447,6 +533,10 @@
         digest creation, labels, thread/reply organization, and knowledge-base sync.
         Its resources page groups education around organizing, searching, managing,
         folders, auto-organization, PDF export, Notion export, and Sheets export.
+        The sharper product lesson is that TweetSmash owns hosted curation: recurring
+        digest delivery, recipes, labels, AI chat, and automatic sync. Totem should
+        use that as validation while avoiding the same trust tradeoff for its first
+        release.
       </p>
 
       <div class="table-wrap">
@@ -484,6 +574,11 @@
               <td>Digest length adapts to a coffee break or long weekend read.</td>
               <td>Use Totem's reading-minute estimate to build 5, 15, 30, and 60 minute digests.</td>
             </tr>
+            <tr>
+              <td>Hosted paid workflow</td>
+              <td>AI chat, scheduled digests, exports, folders, and sync are part of the paid curation surface.</td>
+              <td>Charge later for automation and cloud destinations, not for the basic act of reading locally.</td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -510,8 +605,8 @@
           <tbody>
             <tr>
               <td><a href="https://www.tweetsmash.com/">TweetSmash</a></td>
-              <td>Digests, AI chat, recipes, labels, Notion, Sheets, Zotero.</td>
-              <td>Digest plus sync is the right strategic direction.</td>
+              <td>Hosted digests, AI chat, recipes, labels, Notion, Sheets, Zotero, and paid export/sync bundles.</td>
+              <td>Digest plus sync is the right strategic direction; local-first is the differentiation.</td>
             </tr>
             <tr>
               <td><a href="https://twibird.com/">Twibird</a></td>
@@ -559,7 +654,7 @@
             <tr>
               <td>Obsidian</td>
               <td><span class="tag free">Free local</span></td>
-              <td>Write Markdown to a user-selected vault folder via File System Access.</td>
+              <td>Write Markdown to a user-selected vault folder via File System Access; store the directory handle in account-scoped IndexedDB with permission checks.</td>
               <td>Best first sync. No backend. Strong local-first alignment.</td>
             </tr>
             <tr>
@@ -571,26 +666,26 @@
             <tr>
               <td>Notion</td>
               <td><span class="tag paid">Paid cloud</span></td>
-              <td>Public OAuth connection, server-side code exchange, token storage, database mapping.</td>
+              <td>Public OAuth connection, server-side code exchange, token storage, database mapping. Internal tokens only work for a user's own workspace.</td>
               <td>High willingness to pay. Should wait until sync model is stable.</td>
             </tr>
             <tr>
               <td>Google Sheets</td>
               <td><span class="tag paid">Paid cloud</span></td>
-              <td>Google OAuth scopes, spreadsheet create/append/update, rate handling.</td>
+              <td>Google OAuth scopes, spreadsheet create/append/update, rate handling, and field mapping.</td>
               <td>Useful for power users, analytics, and agencies.</td>
-            </tr>
-            <tr>
-              <td>Zotero</td>
-              <td><span class="tag paid">Paid cloud</span></td>
-              <td>API key or OAuth, item templates, write requests, duplicate detection.</td>
-              <td>Useful for researchers. Best after links/papers detection improves.</td>
             </tr>
             <tr>
               <td>Readwise Reader</td>
               <td><span class="tag paid">Paid cloud</span></td>
-              <td>User API token or OAuth-like flow if available, save document endpoint, rate handling.</td>
-              <td>Good fit for read-later users, but less core than Notion/Obsidian.</td>
+              <td>User API token, save document endpoint, tweet category support, and rate handling.</td>
+              <td>Likely easiest remote sync. Good first paid remote destination if Notion takes longer.</td>
+            </tr>
+            <tr>
+              <td>Zotero</td>
+              <td><span class="tag paid">Paid cloud</span></td>
+              <td>User API key with write access, item templates, write tokens, versioning, and duplicate detection.</td>
+              <td>Useful for researchers. Best after links/papers detection improves.</td>
             </tr>
             <tr>
               <td>Email digest</td>
@@ -614,6 +709,60 @@
     </section>
 
     <section>
+      <h2>Why This Fits Totem</h2>
+      <p>
+        The verification pass confirms this is not a greenfield direction. Totem already
+        has most of the ingredients for local digests: account-scoped IndexedDB, full
+        tweet detail caches, Markdown export, reader state, highlights, local search,
+        and File System Access usage for ZIP downloads.
+      </p>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Existing primitive</th>
+              <th>Current role</th>
+              <th>Digest / sync use</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Markdown export renderer</td>
+              <td>Per-bookmark Markdown inside ZIP and reader copy/download actions.</td>
+              <td>Reuse as the canonical bookmark-to-note renderer for digests and Obsidian.</td>
+            </tr>
+            <tr>
+              <td>Quick export ZIP</td>
+              <td>CSV, Markdown, JSONL, manifest, and readme generated locally.</td>
+              <td>Digest should share manifest/idempotency concepts rather than inventing a separate export shape.</td>
+            </tr>
+            <tr>
+              <td>Local search</td>
+              <td>MiniSearch over bookmarks, handles, snippets, links, and operators.</td>
+              <td>Saved searches can become the first recipe system for digests.</td>
+            </tr>
+            <tr>
+              <td>Reading progress and pins</td>
+              <td>Continue-reading, read/unread, and user-prioritized items.</td>
+              <td>Digest selection can rank unread, pinned, and partially-read items without AI.</td>
+            </tr>
+            <tr>
+              <td>Highlights and notes</td>
+              <td>User annotations stored locally.</td>
+              <td>Obsidian notes can include highlights as durable user-generated context.</td>
+            </tr>
+            <tr>
+              <td>File System Access types</td>
+              <td>Already used for save-file export when available.</td>
+              <td>Extend to directory access for vault-style Obsidian sync.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section>
       <h2>Release Shape</h2>
 
       <div class="phase">
@@ -628,6 +777,7 @@
             <li>Digest inputs: saved search, tab, time range, reading budget, unread/read state, pinned items.</li>
             <li>Digest output: title, generated date, bookmark list, source links, Markdown body, optional HTML preview.</li>
             <li>Sync state: destination, last synced at, row/file ids, errors, retry status.</li>
+            <li>Renderer rule: digest, ZIP, copy Markdown, and destination sync should share one Markdown pipeline.</li>
           </ul>
         </div>
       </div>
@@ -661,6 +811,7 @@
             <li>Write to <code>Totem/Index.md</code>, <code>Totem/Digests/</code>, and <code>Totem/Bookmarks/</code>.</li>
             <li>Use stable filenames based on bookmark id and digest date.</li>
             <li>Store a Totem manifest so cleanup only touches files Totem created.</li>
+            <li>Deep-link with <code>obsidian://open</code> after files are written, when vault and file names are known.</li>
             <li>Fallback to ZIP/Markdown download if directory access is unavailable.</li>
           </ul>
         </div>
@@ -680,6 +831,7 @@
             <li>Server-side OAuth token exchange and encrypted token storage.</li>
             <li>Background sync queue with retry and per-destination status.</li>
             <li>Notion database template and mapping preview.</li>
+            <li>Readwise token sync as a lower-auth-burden remote adapter candidate.</li>
           </ul>
         </div>
       </div>
@@ -723,7 +875,7 @@
             <tr>
               <td>Pro</td>
               <td>Scheduled digests, Notion sync, Sheets sync, Readwise/Zotero sync, AI labels, AI summaries.</td>
-              <td>These create ongoing server cost, OAuth maintenance, and repeated user value.</td>
+              <td>Charge for automation, hosted token storage, recurring delivery, and cloud processing, not for local ownership of files.</td>
             </tr>
             <tr>
               <td>Team or creator</td>
@@ -762,6 +914,14 @@
           <b>Payment timing</b>
           Should Pro launch with Notion only, or wait until Notion plus scheduled email are both ready?
         </div>
+        <div class="check">
+          <b>Remote sync order</b>
+          Should the first paid remote destination be Notion because demand is clearest, or Readwise because token auth is simpler?
+        </div>
+        <div class="check">
+          <b>Hosted posture</b>
+          What exact copy explains that paid sync stores destination tokens while core bookmarks remain local by default?
+        </div>
       </div>
     </section>
 
@@ -773,13 +933,19 @@
         <li>Prototype manual Markdown digest generation from existing bookmarks and cached details.</li>
         <li>Design the Obsidian folder output and sync manifest rules.</li>
         <li>Decide where the UI entry point belongs: Reading list, Export modal, or a new Digests view.</li>
-        <li>Only after local digest + Obsidian is useful, plan Notion OAuth, server, and billing.</li>
+        <li>Choose the first paid remote adapter: Notion for demand, or Readwise for implementation speed.</li>
+        <li>Only after local digest + Obsidian is useful, plan OAuth/server/token storage and billing.</li>
       </ol>
     </section>
 
     <section>
       <h2>Source Notes</h2>
       <div class="sources">
+        <div class="source-card">
+          <strong>Grok verification note</strong>
+          <p>User-provided June 2026 verification that checked TweetSmash, integration APIs, Totem codebase fit, and existing planning docs. Used as synthesis input, not copied wholesale.</p>
+          <small>Conversation material supplied on June 5, 2026</small>
+        </div>
         <div class="source-card">
           <strong>TweetSmash homepage</strong>
           <p>Primary competitive reference for knowledge digests, AI chat, recipes, reading-time digests, labels, and integrations.</p>

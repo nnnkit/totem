@@ -5,10 +5,15 @@ import * as db from "../../../db";
 import {
   clearAllLocalData,
   closeDb,
+  recordTodayQueueExposures,
   upsertBookmarks,
+  upsertQueueBookmarkMetadata,
+  upsertTodayQueueSnapshot,
   upsertTweetDetailCache,
 } from "../../../db";
 import type { Bookmark, ThreadTweet } from "../../../types";
+import { sha256hex } from "../../crypto";
+import { makeQueueExposure } from "../../today-queue";
 import { runQuickExport } from "../quick-export";
 
 const SNOWFLAKE_EPOCH = 1288834974657n;
@@ -140,6 +145,28 @@ describe("runQuickExport", () => {
       detailsStatus: "unavailable",
       unavailableReason: "deleted",
     });
+    await upsertTodayQueueSnapshot({
+      key: "2026-06-08:15:v1",
+      localDate: "2026-06-08",
+      budgetMinutes: 15,
+      version: 1,
+      tweetIds: ["tweet-1"],
+      generatedAt: Date.UTC(2026, 5, 8, 8),
+    });
+    await upsertQueueBookmarkMetadata({
+      tweetId: "tweet-1",
+      intent: "read_soon",
+      snoozedUntil: null,
+      updatedAt: Date.UTC(2026, 5, 8, 9),
+    });
+    await recordTodayQueueExposures([
+      makeQueueExposure({
+        tweetId: "tweet-1",
+        action: "queued",
+        localDate: "2026-06-08",
+        createdAt: Date.UTC(2026, 5, 8, 8),
+      }),
+    ]);
 
     const zipBytes = await runExportThroughFilePicker();
     const entries = unzipSync(zipBytes);
@@ -147,16 +174,22 @@ describe("runQuickExport", () => {
     const csv = strFromU8(entries["bookmarks.csv"]);
     const readme = strFromU8(entries["readme.md"]);
     const tweetMarkdown = strFromU8(entries["bookmarks/02-bookmark-tweet-1.md"]);
+    const queueSnapshots = strFromU8(entries["data/today-queue-snapshots.jsonl"]);
+    const queueMetadata = strFromU8(entries["data/bookmark-queue-metadata.jsonl"]);
+    const queueExposures = strFromU8(entries["data/today-queue-exposures.jsonl"]);
 
     expect(Object.keys(entries).sort()).toEqual([
       "bookmarks.csv",
       "bookmarks/01-bookmark-tweet-2.md",
       "bookmarks/02-bookmark-tweet-1.md",
+      "data/bookmark-queue-metadata.jsonl",
       "data/bookmarks-2021.jsonl",
       "data/bookmarks-2024.jsonl",
       "data/details.jsonl",
       "data/highlights.jsonl",
       "data/reading-progress.jsonl",
+      "data/today-queue-exposures.jsonl",
+      "data/today-queue-snapshots.jsonl",
       "manifest.json",
       "readme.md",
     ]);
@@ -165,11 +198,20 @@ describe("runQuickExport", () => {
       details: 2,
       highlights: 0,
       reading_progress: 0,
+      today_queue_snapshots: 1,
+      bookmark_queue_metadata: 1,
+      today_queue_exposures: 1,
     });
     expect(manifest.shards.bookmarks).toEqual([
       "data/bookmarks-2021.jsonl",
       "data/bookmarks-2024.jsonl",
     ]);
+    expect(manifest.checksums["bookmarks.csv"]).toBe(
+      `sha256:${await sha256hex(entries["bookmarks.csv"])}`,
+    );
+    expect(manifest.checksums["data/details.jsonl"]).toBe(
+      `sha256:${await sha256hex(entries["data/details.jsonl"])}`,
+    );
     expect(entries["bookmarks.csv"][0]).toBe(0xef);
     expect(entries["bookmarks.csv"][1]).toBe(0xbb);
     expect(entries["bookmarks.csv"][2]).toBe(0xbf);
@@ -191,6 +233,9 @@ describe("runQuickExport", () => {
     expect(tweetMarkdown).toContain("source: https://x.com/test/status/tweet-1");
     expect(tweetMarkdown).toContain("# Bookmark tweet-1");
     expect(tweetMarkdown).toContain("Full context continuation");
+    expect(queueSnapshots).toContain('"key":"2026-06-08:15:v1"');
+    expect(queueMetadata).toContain('"intent":"read_soon"');
+    expect(queueExposures).toContain('"action":"queued"');
   });
 
   it("falls back to an anchor download when showSaveFilePicker is unavailable", async () => {

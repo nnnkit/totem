@@ -7,6 +7,7 @@ import {
   markReadingProgressUncompleted,
   getTweetDetailCache,
   getAllReadingProgress,
+  recordTodayQueueExposures,
 } from "./db";
 import { pickRelatedBookmarks } from "./lib/related";
 import { resetLocalData } from "./lib/reset";
@@ -37,6 +38,7 @@ import { TotemLoading } from "./components/ui/TotemLoading";
 import { resolveReaderErrorView } from "./components/reader/reader-error-view";
 import { useContinueReading } from "./hooks/useContinueReading";
 import { useReaderDetail } from "./hooks/useReaderDetail";
+import { useTodayQueue } from "./hooks/useTodayQueue";
 import { useViewerProfile } from "./hooks/useViewerProfile";
 import {
   useActiveAccountId,
@@ -61,6 +63,7 @@ import {
   shouldShowReengagementNudge,
   shouldShowReviewPrompt,
 } from "./lib/growth-state";
+import { formatLocalDate, makeQueueExposure } from "./lib/today-queue";
 import type { Bookmark, SyncBlockedReason, ThreadTweet } from "./types";
 
 interface DemoExportPayload {
@@ -183,10 +186,15 @@ function readerRouteReducer(
 
 function readStoredReadingTab(): ReadingTab {
   const stored = localStorage.getItem(LS_READING_TAB);
-  if (stored === "unread" || stored === "continue" || stored === "read") {
+  if (
+    stored === "today" ||
+    stored === "unread" ||
+    stored === "continue" ||
+    stored === "read"
+  ) {
     return stored;
   }
-  return "unread";
+  return "today";
 }
 
 function openBookmarkInCurrentTab(tweetId: string, returnSurface: ReturnSurface) {
@@ -396,6 +404,7 @@ function NewTabRouteApp() {
   const displayBookmarks = useDisplayBookmarks();
   const detailedTweetIds = useDetailedTweetIds();
   const activeAccountId = useActiveAccountId();
+  const bookmarksLoaded = useBookmarksLoaded();
   const authPhase = useAuthPhase();
   const offlineMode = useIsOffline();
   const { themePreference, setThemePreference } = useTheme();
@@ -438,6 +447,21 @@ function NewTabRouteApp() {
     [offlineMode, allUnread, detailedTweetIds],
   );
 
+  const readingProgressRows = useMemo(
+    () => continueReading.map((item) => item.progress),
+    [continueReading],
+  );
+
+  const todayQueue = useTodayQueue({
+    enabled: bookmarksLoaded,
+    accountId: activeAccountId,
+    bookmarks,
+    readingProgress: readingProgressRows,
+    detailedTweetIds,
+    budgetMinutes: settings.todayQueueBudgetMinutes,
+    restrictToCachedDetails: offlineMode,
+  });
+
   const restoreReadingTab = useCallback(() => {
     updateRouteState({ readingTab: readStoredReadingTab() });
   }, []);
@@ -445,6 +469,16 @@ function NewTabRouteApp() {
   const handleReadingTabChange = useCallback((tab: ReadingTab) => {
     updateRouteState({ readingTab: tab });
     localStorage.setItem(LS_READING_TAB, tab);
+  }, []);
+
+  const openReading = useCallback((tab?: ReadingTab) => {
+    if (tab) {
+      updateRouteState({ readingTab: tab, view: "reading" });
+      localStorage.setItem(LS_READING_TAB, tab);
+      return;
+    }
+
+    updateRouteState({ readingTab: readStoredReadingTab(), view: "reading" });
   }, []);
 
   const notifySyncBlocked = useCallback((reason?: string, retryAfterMs?: number) => {
@@ -620,6 +654,7 @@ function NewTabRouteApp() {
       <BookmarksList
         continueReadingItems={continueReading}
         unreadBookmarks={visibleUnread}
+        todayQueue={todayQueue}
         activeTab={readingTab}
         onTabChange={handleReadingTabChange}
         onOpenBookmark={openBookmarkFromReading}
@@ -643,13 +678,11 @@ function NewTabRouteApp() {
         onOpenBookmark={openBookmarkFromHome}
         getBookmarkHref={getHomeBookmarkHref}
         recommendationSource={settings.recommendationSource}
+        todayQueue={todayQueue}
         onOpenSettings={() => updateRouteState({ settingsOpen: true })}
         onOpenImport={() => updateRouteState({ importOpen: true })}
         onOpenExport={() => updateRouteState({ exportOpen: true })}
-        onOpenReading={() => {
-          restoreReadingTab();
-          updateRouteState({ view: "reading" });
-        }}
+        onOpenReading={openReading}
         isResetting={isResetting}
       />
     );
@@ -867,6 +900,17 @@ function ReaderRouteApp() {
     updateReaderRouteState({ externalUnbookmarkedTweetId: tweetId });
   }, [actions, displayBookmark, localBookmark, localBookmarkSnapshot]);
 
+  const handleMarkAsRead = useCallback((tweetId: string) => {
+    void markReadingProgressCompleted(tweetId).catch(() => {});
+    void recordTodayQueueExposures([
+      makeQueueExposure({
+        tweetId,
+        action: "read",
+        localDate: formatLocalDate(),
+      }),
+    ]).catch(() => {});
+  }, []);
+
   const unbookmarking =
     localMutation === "unbookmarking" || externalMutation === "unbookmarking";
 
@@ -918,7 +962,7 @@ function ReaderRouteApp() {
               : undefined
           }
           bookmarkAction={bookmarkAction}
-          onMarkAsRead={markReadingProgressCompleted}
+          onMarkAsRead={handleMarkAsRead}
           onMarkAsUnread={markReadingProgressUncompleted}
           defaultHighlightColor={settings.defaultHighlightColor}
           loadDetail={

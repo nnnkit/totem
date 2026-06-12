@@ -26,6 +26,11 @@ export function sanitizeUrl(url: string): string {
   return "";
 }
 
+export function sanitizeMediaSrc(url: string | undefined): string {
+  if (!url) return "";
+  return sanitizeUrl(url.trim());
+}
+
 export function sanitizeUrlRelaxed(url: string): string {
   const t = url.trim();
   if (!t) return "";

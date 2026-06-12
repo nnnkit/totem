@@ -19,7 +19,8 @@ export const DEFAULT_DEMO_SETTINGS: UserSettings = {
   topSitesLimit: 5,
   backgroundMode: "images",
   searchEngine: "google",
-  recommendationSource: "random",
+  recommendationSource: "today",
+  todayQueueBudgetMinutes: 15,
   defaultHighlightColor: "classic",
 };
 

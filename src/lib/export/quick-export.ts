@@ -1,7 +1,10 @@
 import type {
   Bookmark,
+  BookmarkQueueMetadata,
   Highlight,
   ReadingProgress,
+  TodayQueueExposure,
+  TodayQueueSnapshot,
   TweetDetailCache,
 } from "../../types";
 import { getArticleMarkdownString } from "./article-download";
@@ -16,9 +19,12 @@ import {
   iterateTweetDetails,
   iterateHighlights,
   iterateReadingProgress,
+  iterateQueueBookmarkMetadata,
+  iterateTodayQueueExposures,
+  iterateTodayQueueSnapshots,
 } from "../../db";
 import { DB_VERSION } from "../constants/db";
-import { sha256hex } from "../crypto";
+import { createSha256Hex, sha256hex } from "../crypto";
 import { stripCardUrlsFromTweetText } from "../tweet-text";
 import { sortIndexToTimestamp } from "../time";
 import {
@@ -112,8 +118,13 @@ function readmeLinkText(text: string): string {
   return text.replace(/\\/g, "\\\\").replace(/]/g, "\\]");
 }
 
+// Holds the bookmark row (small) but not its TweetDetailCache: detail rows
+// carry full thread JSON, and retaining one per bookmark for the whole export
+// would buffer the heaviest store in memory. Details are re-fetched when the
+// markdown file is written.
 interface BookmarkMarkdownFile {
   bookmarkId: string;
+  bookmark: Bookmark;
   year: string;
   path: string;
   title: string;
@@ -261,6 +272,9 @@ export interface QuickExportResult {
   detailCount: number;
   highlightCount: number;
   readingProgressCount: number;
+  todayQueueSnapshotCount: number;
+  queueMetadataCount: number;
+  todayQueueExposureCount: number;
 }
 
 function hasSaveFilePicker(): boolean {
@@ -324,11 +338,7 @@ async function* csvLines(
 ): AsyncIterable<string> {
   yield BOM + csvRow([...CSV_COLUMNS]);
   for (const file of bookmarkFiles) {
-    const bookmark = await getBookmarkById(file.bookmarkId);
-    // The row was deleted after we snapshotted ids (e.g. a concurrent sync or
-    // hydration write in the same tab). Skip it rather than abort the export.
-    if (!bookmark) continue;
-    yield bookmarkCsvLine(bookmark, fullThreadIds);
+    yield bookmarkCsvLine(file.bookmark, fullThreadIds);
   }
 }
 
@@ -359,24 +369,14 @@ function textStream(lines: AsyncIterable<string>): ReadableStream<Uint8Array> {
   });
 }
 
-function concatChunks(chunks: Uint8Array[], total: number): Uint8Array {
-  const output = new Uint8Array(total);
-  let offset = 0;
-  for (const chunk of chunks) {
-    output.set(chunk, offset);
-    offset += chunk.byteLength;
-  }
-  return output;
-}
-
 function hashingTextEntry(
   name: string,
   lines: AsyncIterable<string>,
   checksums: Record<string, string>,
   lastModified: Date,
 ): { entry: StreamZipEntry; done: Promise<void> } {
-  const chunks: Uint8Array[] = [];
-  let total = 0;
+  const encoder = new TextEncoder();
+  const hasher = createSha256Hex();
   let resolveDone!: () => void;
   let rejectDone!: (error: unknown) => void;
   const done = new Promise<void>((resolve, reject) => {
@@ -387,12 +387,10 @@ function hashingTextEntry(
   const input = textStream((async function* () {
     try {
       for await (const line of lines) {
-        const chunk = new TextEncoder().encode(line);
-        chunks.push(chunk);
-        total += chunk.byteLength;
+        hasher.update(encoder.encode(line));
         yield line;
       }
-      checksums[name] = `sha256:${await sha256hex(concatChunks(chunks, total))}`;
+      checksums[name] = `sha256:${hasher.digestHex()}`;
       resolveDone();
     } catch (error) {
       rejectDone(error);
@@ -451,10 +449,8 @@ async function* bookmarksForYear(
 ): AsyncIterable<Bookmark> {
   for (const file of bookmarkFiles) {
     if (file.year !== year) continue;
-    const bookmark = await getBookmarkById(file.bookmarkId);
-    if (!bookmark) continue; // row removed mid-export; skip it
     counter.n++;
-    yield bookmark;
+    yield file.bookmark;
   }
 }
 
@@ -462,17 +458,17 @@ async function collectBookmarkMarkdownFiles(): Promise<{ files: BookmarkMarkdown
   const files: BookmarkMarkdownFile[] = [];
   const years = new Set<string>();
   const usedPaths = new Set<string>();
-  const bookmarkIds: string[] = [];
+  const bookmarkSnapshots: Bookmark[] = [];
 
   for await (const bookmark of iterateBookmarks()) {
-    bookmarkIds.push(bookmark.id);
+    bookmarkSnapshots.push(bookmark);
   }
 
-  const ordinalWidth = Math.max(2, String(bookmarkIds.length).length);
+  const ordinalWidth = Math.max(2, String(bookmarkSnapshots.length).length);
   let index = 0;
 
-  for (const bookmarkId of bookmarkIds) {
-    const bookmark = await getBookmarkById(bookmarkId);
+  for (const snapshot of bookmarkSnapshots) {
+    const bookmark = await getBookmarkById(snapshot.id);
     if (!bookmark) continue; // row removed between snapshot and read; skip it
     const detail = await getTweetDetailCache(bookmark.tweetId);
     const rendered = getBookmarkMarkdownMetadata(bookmark, detail);
@@ -487,6 +483,7 @@ async function collectBookmarkMarkdownFiles(): Promise<{ files: BookmarkMarkdown
     years.add(year);
     files.push({
       bookmarkId: bookmark.id,
+      bookmark,
       year,
       path,
       title: rendered.title,
@@ -534,6 +531,33 @@ async function* readingProgressByIdJsonl(
   }
 }
 
+async function* todayQueueSnapshotsJsonl(
+  counter: { n: number },
+): AsyncIterable<TodayQueueSnapshot> {
+  for await (const snapshot of iterateTodayQueueSnapshots()) {
+    counter.n++;
+    yield snapshot;
+  }
+}
+
+async function* queueMetadataJsonl(
+  counter: { n: number },
+): AsyncIterable<BookmarkQueueMetadata> {
+  for await (const row of iterateQueueBookmarkMetadata()) {
+    counter.n++;
+    yield row;
+  }
+}
+
+async function* todayQueueExposuresJsonl(
+  counter: { n: number },
+): AsyncIterable<TodayQueueExposure> {
+  for await (const exposure of iterateTodayQueueExposures()) {
+    counter.n++;
+    yield exposure;
+  }
+}
+
 export async function runQuickExport(
   account: ExportAccountInfo,
 ): Promise<QuickExportResult> {
@@ -560,13 +584,16 @@ export async function runQuickExport(
     const accountIdHash = `sha256:${await sha256hex(encoder.encode(account.userId))}`;
     const now = exportDate;
 
-    // Counts of rows actually streamed. Ids were snapshotted up front but rows
-    // are re-fetched lazily, so a concurrent delete can drop a row; tracking
-    // the real emitted count keeps the manifest honest instead of overstating.
+    // Counts of rows actually streamed. Bookmarks are validated once after the
+    // sorted snapshot so a concurrent delete can drop a row before export
+    // starts; tracking emitted rows keeps the manifest honest.
     const bookmarkCounter = { n: 0 };
     const detailCounter = { n: 0 };
     const highlightCounter = { n: 0 };
     const progressCounter = { n: 0 };
+    const queueSnapshotCounter = { n: 0 };
+    const queueMetadataCounter = { n: 0 };
+    const queueExposureCounter = { n: 0 };
     const writtenMarkdownPaths: string[] = [];
 
     async function* entries(): AsyncIterable<StreamZipEntry> {
@@ -629,11 +656,40 @@ export async function runQuickExport(
       yield progress.entry;
       await progress.done;
 
+      const queueSnapshots = hashingTextEntry(
+        "data/today-queue-snapshots.jsonl",
+        jsonlLines(todayQueueSnapshotsJsonl(queueSnapshotCounter)),
+        checksums,
+        now,
+      );
+      yield queueSnapshots.entry;
+      await queueSnapshots.done;
+
+      const queueMetadata = hashingTextEntry(
+        "data/bookmark-queue-metadata.jsonl",
+        jsonlLines(queueMetadataJsonl(queueMetadataCounter)),
+        checksums,
+        now,
+      );
+      yield queueMetadata.entry;
+      await queueMetadata.done;
+
+      const queueExposures = hashingTextEntry(
+        "data/today-queue-exposures.jsonl",
+        jsonlLines(todayQueueExposuresJsonl(queueExposureCounter)),
+        checksums,
+        now,
+      );
+      yield queueExposures.entry;
+      await queueExposures.done;
+
       for (const file of bookmarkMarkdownFiles) {
-        const bookmark = await getBookmarkById(file.bookmarkId);
-        if (!bookmark) continue; // row removed mid-export; skip its markdown file
-        const detail = await getTweetDetailCache(bookmark.tweetId);
-        const body = buildBookmarkMarkdown(bookmark, detail, exportedAtLabel).body;
+        const detail = await getTweetDetailCache(file.bookmark.tweetId);
+        const body = buildBookmarkMarkdown(
+          file.bookmark,
+          detail,
+          exportedAtLabel,
+        ).body;
         const markdown = hashingTextEntry(
           file.path,
           singleTextLine(() => body),
@@ -666,12 +722,18 @@ export async function runQuickExport(
           details: detailCounter.n,
           highlights: highlightCounter.n,
           reading_progress: progressCounter.n,
+          today_queue_snapshots: queueSnapshotCounter.n,
+          bookmark_queue_metadata: queueMetadataCounter.n,
+          today_queue_exposures: queueExposureCounter.n,
         },
         shards: {
           bookmarks: shardNames,
           details: ["data/details.jsonl"],
           highlights: ["data/highlights.jsonl"],
           reading_progress: ["data/reading-progress.jsonl"],
+          today_queue_snapshots: ["data/today-queue-snapshots.jsonl"],
+          bookmark_queue_metadata: ["data/bookmark-queue-metadata.jsonl"],
+          today_queue_exposures: ["data/today-queue-exposures.jsonl"],
         },
         derived: {
           csv: "bookmarks.csv",
@@ -701,6 +763,9 @@ export async function runQuickExport(
       detailCount: detailCounter.n,
       highlightCount: highlightCounter.n,
       readingProgressCount: progressCounter.n,
+      todayQueueSnapshotCount: queueSnapshotCounter.n,
+      queueMetadataCount: queueMetadataCounter.n,
+      todayQueueExposureCount: queueExposureCounter.n,
     };
   } catch (error) {
     if (target.kind === "fsa") {

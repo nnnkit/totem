@@ -3,6 +3,7 @@ import "../styles/global.css";
 import SiteHeader from "../components/SiteHeader.astro";
 import SiteFooter from "../components/SiteFooter.astro";
 import Favicon from "../components/Favicon.astro";
+import { SITE_LINKS } from "../react/site-content";
 
 export type SitePageKey = "landing" | "privacy" | "how-it-works" | "blog-index" | "blog-post";
 
@@ -19,6 +20,7 @@ interface Props {
   showChrome?: boolean;
   page?: SitePageKey;
   bodyClass?: string;
+  robots?: string | null;
 }
 
 const {
@@ -32,11 +34,40 @@ const {
   showChrome = true,
   page,
   bodyClass,
+  robots = null,
 } = Astro.props;
 
+const siteUrl = "https://usetotem.xyz/";
+const organizationId = `${siteUrl}#organization`;
+const websiteId = `${siteUrl}#website`;
 const fontHref = spaceGrotesk
   ? "https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,700;1,400;1,700&family=Space+Grotesk:wght@400;500;600;700&display=swap"
   : "https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,700;1,400;1,700&display=swap";
+
+const foundationJsonLd = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": organizationId,
+      name: "Totem",
+      url: siteUrl,
+      logo: {
+        "@type": "ImageObject",
+        url: "https://usetotem.xyz/icons/icon-128.png",
+      },
+      sameAs: [SITE_LINKS.githubRepoUrl, SITE_LINKS.chromeWebStoreListingUrl],
+    },
+    {
+      "@type": "WebSite",
+      "@id": websiteId,
+      name: "Totem",
+      url: siteUrl,
+      inLanguage: "en",
+      publisher: { "@id": organizationId },
+    },
+  ],
+};
 ---
 
 <!doctype html>
@@ -82,7 +113,9 @@ gtag('config', 'G-VBKV6TVM6W');`} />
     <title>{title}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />
+    {robots && <meta name="robots" content={robots} />}
     <Favicon />
+    <script is:inline type="application/ld+json" set:html={JSON.stringify(foundationJsonLd)} />
 
     {
       og && (
@@ -92,6 +125,7 @@ gtag('config', 'G-VBKV6TVM6W');`} />
           <meta property="og:title" content={og.title ?? title} />
           <meta property="og:description" content={og.description ?? description} />
           {og.image && <meta property="og:image" content={og.image} />}
+          <meta property="og:locale" content="en_US" />
           <meta property="og:site_name" content="Totem" />
         </>
       )

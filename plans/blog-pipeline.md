@@ -53,6 +53,13 @@ zero ❌:
 
 ## Workflow for a new post
 
+For an agent-ready end-to-end SEO checklist, use
+[`plans/seo-agent-goal.md`](seo-agent-goal.md). It turns this pipeline and the
+current keyword backlog into a single goal file that can be passed to another
+agent before starting SEO work, including a long-running loop that tests each
+published page, writes readable HTML research/status reports under
+`plans/research/`, and then returns to the next unfinished item.
+
 ```
 Idea  →  /dataforseo research  →  Fit check  →  Draft  →  Publish  →  Track
 ```
@@ -201,6 +208,9 @@ a third-party screenshot we don't have the right to use.
 | 2026-05-28 | How to Search Your Twitter Bookmarks Before You Export Them | [search-twitter-bookmarks-before-export](/blog/search-twitter-bookmarks-before-export) | twitter bookmarks search | ~110 |
 | 2026-06-02 | Twitter Saver: What Saving Actually Does | [twitter-saver-what-saving-actually-does](/blog/twitter-saver-what-saving-actually-does) | twitter saver | 5,400 |
 | 2026-06-02 | Where Are My Bookmarks on X? | [where-are-my-bookmarks-on-x](/blog/where-are-my-bookmarks-on-x) | where are my bookmarks on x | ~640 |
+| 2026-06-10 | Best Twitter Bookmark Managers for Search, Export, and Actually Reading | [best-twitter-bookmark-managers-2026](/blog/best-twitter-bookmark-managers-2026) | twitter bookmark manager | ~120 |
+| 2026-06-10 | Chrome Reading List: Where It Is, How It Works, and Why Nobody Uses It | [chrome-reading-list-why-nobody-uses-it](/blog/chrome-reading-list-why-nobody-uses-it) | reading list chrome | ~1,000 |
+| 2026-06-10 | What to Put on Your Chrome New Tab Page | [what-to-put-on-your-chrome-new-tab-page](/blog/what-to-put-on-your-chrome-new-tab-page) | chrome new tab page | ~880 |
 
 ---
 
@@ -229,14 +239,17 @@ Published from this batch:
 - Published `/blog/search-twitter-bookmarks-before-export` for `twitter bookmarks search`.
 - Published `/blog/twitter-saver-what-saving-actually-does` for `twitter saver`.
 - Published `/blog/where-are-my-bookmarks-on-x` for the X bookmark location cluster.
+- Published `/blog/best-twitter-bookmark-managers-2026` for `twitter bookmark manager`.
 
-#### LX4. "Best Twitter bookmark managers for search, export, and actually reading"
+#### LX4. Published 2026-06-10: "Best Twitter bookmark managers for search, export, and actually reading"
 - **Canonical kw**: `twitter bookmark manager`
+- **URL**: `/blog/best-twitter-bookmark-managers-2026`
 - **Cluster vol**: ~120/mo (`twitter bookmark manager` 40, `twitter bookmarks manager` 40, `x bookmark manager` 10, `x bookmarks manager` 10, `twitter bookmarks app` 10, plus adjacent `how to organize twitter bookmarks` 20).
 - **Competition**: LOW.
 - **SERP gap**: SERP is Reddit, X profiles, app stores, Dewey, Circleboom, an outdated 2023 Medium post, XBookmark, TweetSmash, and Firefox add-ons. There is room for a 2026 comparison that ranks tools by job: search, export, read, organize, backup.
 - **Angle**: Honest comparison table. Totem wins "new tab reading + local export"; Dewey wins cloud multi-platform; TweetSmash wins digest/workflows; Twillot wins lightweight search; exporter extensions win one-time CSV.
 - **Fit**: ★★★★ — close to existing L3, but the export/search frame makes it launch-relevant.
+- **Cycle report**: `plans/research/seo-cycle-2026-06-10-best-twitter-bookmark-managers.html`.
 
 #### LX5. "A read-later app is only as good as its restore button"
 - **Canonical kw**: `pocket alternative` or internal-link essay, not an export keyword.
@@ -254,6 +267,19 @@ Published from this batch:
 - **Angle**: Most one-click exporters scrape X's API response which gives tweet metadata (URL, truncated text, author, date). For threads, you get disconnected fragments — individual tweets with no thread context. Totem exports what the reader view already parsed: the full thread as a coherent document (all tweets in order, full text, inline formatting, linked article content where available, YAML frontmatter). The Markdown file you get from Totem is the reading experience, not the raw data. Honest scope: this only applies to bookmarks that Totem has synced and rendered in reader view — exports of un-read bookmarks are metadata only.
 - **Tracking goal**: Install CTA click-through from people already searching "export twitter bookmarks." This post exists to convert comparison-stage readers, not top-of-funnel searchers.
 - **Fit**: ★★★ — not a volume play, a conversion and trust play. Publish after LX4.
+
+### Watchlist from 2026-06-10 recency pass
+
+These came from the `$last30days` sub-agent pass plus live verification. They are not keyword-validated yet; use `/dataforseo` before drafting.
+
+- **"Best local Twitter bookmark exporters"** — compare XArchive, XBookmark, `sarisen/x-bookmark-manager`, userscripts, and Totem's ZIP. Likely intent: people who want JSON/Markdown/local backup, not cloud organization.
+- **"XArchive vs XBookmark vs Totem"** — candidate comparison if `x archive bookmark manager`, `xbookmark`, or `x bookmark manager exporter` volume appears. Useful because XArchive is active in Chrome Web Store and GitHub language is sharply export/local/delete-oriented.
+- **"Twitter bookmarks to Obsidian / Markdown"** — test `twitter bookmarks markdown`, `export twitter bookmarks markdown`, `x bookmarks obsidian`, and `save tweets to markdown`. SERP language is shifting toward Markdown, JSON, Obsidian, and local copy.
+- **"Twitter bookmarks for AI agents / MCP"** — watch ContextBolt and Keep.md. Needs careful fit check; this can become too generic unless framed as "saved posts as context."
+- **Refresh trigger for `/blog/best-twitter-bookmark-managers-2026`** — re-check XArchive, TweetStorm.ai, Keep.md, Bookmarkjar, ContextBolt, and Twillot repo/product status before any quarterly refresh.
+- **"Clean Chrome new tab page without a feed"** — test `clean chrome new tab page`, `minimal new tab`, `blank new tab chrome`, and `chrome new tab bookmarks bar`. The recency scan showed strong "clean page" and control language.
+- **"Your read-later list is not a reading habit"** — test `read later queue`, `read later app with reminders`, `save tabs for later chrome`, and `bookmark manager read later`. Use the "tabs are not a reading list" / "bookmarks are a graveyard" framing only if live SERP intent supports it.
+- **Product watch: Totem one-item resurfacing** — consider a calm new-tab mode that shows 1-3 saved X bookmarks with read, archive, and snooze. Do not let this become a widget dashboard.
 
 #### Deprioritized: "Tweet saver — what 'save a tweet' actually does"
 - **Canonical kw tested**: `tweet saver`
@@ -291,10 +317,10 @@ Published from this batch:
 - **SERP gap**: Top 10 is Chrome Web Store listings + Dashy listicle + Momentum + a 2026 web-highlights listicle. Every one of them mixes wallpapers, todos, and dashboards into one undifferentiated soup. **Nobody segments by what the new tab is actually *for*.**
 - **Voice fit**: ★★★★ — the format is a top-10 (the SERP demands it), but the **thesis** is ours: your new tab is the most-loaded page in your browser, so what it shows decides what you read all day. That framing turns a generic listicle into a Totem post.
 - **Angle**:
-  - Open with the thesis: *the new tab page is opened ~50× a day. It's not décor — it's a reading surface, a focus surface, or a launcher. Pick on purpose.*
-  - Group the 10 picks by intent: **Reading & saved content** (Totem, Tab for a Cause), **Focus & calm** (Momentum, Dream Afar, blank tab), **Launcher / dashboard** (Tabby, Toby, Workona), **Aesthetic** (Muzli, Unsplash). Honest sentence each.
+  - Open with the thesis: *the new tab page is not decor. It is a choice surface. Pick what it should help you do next.*
+  - Group the picks by intent: **Clean / blank** (blank tab, Tabliss, Bonjourr), **Launcher / links** (start.me, Infinity New Tab), **Reading & saved content** (Totem, read-later/new-tab surfaces), **Tabs / workspaces** (Toby, Workona-style tools), **Dashboard** (Momentum/Home New Tab-type tools). Honest sentence each.
   - Pick a winner per category, not overall — that's the differentiator vs every listicle currently ranking.
-  - Totem owns the "Reading & saved content" slot; we recommend Momentum if the reader's real problem is focus, not reading.
+  - Totem owns the "Reading & saved content from X" slot; recommend blank/focus tools if the reader's real problem is distraction.
 - **Caveat to watch**: don't drift into a wallpaper review. Every pick has to be defended on a productivity dimension. Aesthetic/minimalist new tab keywords (~160/mo cluster) fold in here as the "Calm" category — not a separate post.
 
 ### Thesis & explainer
@@ -315,18 +341,21 @@ Published from this batch:
 - **Angle**: What "save" technically does (X server-side bookmark vs browser bookmark vs screenshots vs DM-to-self), then the honest behavioral truth. Recommend tools by intent — Totem for "I want to actually read these."
 
 #### T3. "Chrome's built-in reading list — why nobody uses it"
+- **Status 2026-06-10**: Published as `/blog/chrome-reading-list-why-nobody-uses-it`.
 - **Cluster vol**: ~1,000/mo (`reading list chrome`)
 - **Competition**: LOW
-- **SERP gap**: Top is Chrome Web Store, Google Help, Reddit "Reading list tab disappeared", popsci, 9to5google. Pure tutorial coverage. No one names the actual reason — it lives behind a hover that you never trigger.
+- **SERP gap**: Top is Chrome Web Store, Google Help, Reddit "Reading list tab disappeared", popsci, 9to5google. Pure tutorial coverage. No one names the actual reason — the return path lives behind a menu/side-panel habit most people do not build.
 - **Voice fit**: ★★★★★ — pure save-vs-read gap, in Chrome's own UI.
-- **Angle**: Quick tour (where it is, how to use it), then the honest point: Chrome shipped a reading list four years ago and ~no one has it pinned. The save-vs-read pattern explains why a tab tucked under a star icon dies on the vine. Soft CTA: Totem puts saved stuff on the new tab — same idea, different surface.
+- **Angle**: Quick tour (where it is, how to use it), then the honest point: a saved page does not return unless the surface brings it back. Soft CTA: Totem puts saved X bookmarks on the new tab — same idea, different surface.
 
 #### T4. "What to put on your Chrome new tab page (and why it matters)"
+- **Status 2026-06-10**: Published as `/blog/what-to-put-on-your-chrome-new-tab-page`.
 - **Cluster vol**: ~880/mo (`chrome new tab page`)
 - **Competition**: LOW
 - **SERP gap**: Top is Google Help, Chrome Web Store, Reddit, superuser, homenewtab.com. Every result is "here's how to change it." None of them argue *what to put there.*
 - **Voice fit**: ★★★★ — companion explainer to L4. Could share traffic / internal-link with the listicle.
-- **Angle**: ~50 opens/day means the new tab is a habit-forming surface. Three honest options — blank (focus), feed (reading), launcher (speed). Pick by what your last hour of browsing actually was. Mini-list inside the explainer; full picks live in L4.
+- **Angle**: The new tab is a decision surface, not decor. Four honest options: blank, launcher, dashboard/resume, or reading queue. Pick by what your last ten new tabs actually needed to do. Mini-list inside the explainer; full picks live in L4.
+- **Cycle report**: `plans/research/seo-cycle-2026-06-10-chrome-new-tab-page.html`.
 
 ---
 

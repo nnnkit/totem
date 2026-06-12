@@ -61,6 +61,31 @@ vi.mock("../../api/core/sync", () => ({
   reserveSyncRun: mocks.reserveSyncRun,
 }));
 
+vi.mock("../../lib/fetch-queue", () => {
+  class FetchQueue {
+    private aborted = false;
+
+    enqueue<T>(fn: () => Promise<T>): Promise<T> {
+      if (this.aborted) return Promise.reject(new Error("Queue aborted"));
+      return fn();
+    }
+
+    abort() {
+      this.aborted = true;
+    }
+
+    get pending() {
+      return 0;
+    }
+
+    get isAborted() {
+      return this.aborted;
+    }
+  }
+
+  return { FetchQueue };
+});
+
 vi.mock("../../db", () => ({
   cleanupOldTweetDetails: mocks.cleanupOldTweetDetails,
   deleteBookmarksByTweetIds: mocks.deleteBookmarksByTweetIds,

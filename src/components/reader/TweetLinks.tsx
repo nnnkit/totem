@@ -1,11 +1,12 @@
 import { useMemo } from "react";
 import type { LinkCard, TweetUrl } from "../../types";
-import { sanitizeUrl } from "./utils";
+import { sanitizeMediaSrc, sanitizeUrl } from "./utils";
 
 type ResolvedUrl = {
   href: string;
   displayUrl: string;
   card: LinkCard;
+  imageSrc: string;
 };
 
 interface LinkPreviewCardProps {
@@ -21,9 +22,9 @@ function LinkPreviewCard({ url }: LinkPreviewCardProps) {
       rel="noopener noreferrer"
       className="flex overflow-hidden rounded border border-border bg-surface-link-card transition-colors hover:bg-surface-hover"
     >
-      {card.imageUrl && (
+      {url.imageSrc && (
         <img
-          src={card.imageUrl}
+          src={url.imageSrc}
           alt={card.imageAlt || card.title || ""}
           className="size-28 shrink-0 border-r border-border object-cover"
         />
@@ -57,8 +58,9 @@ export function TweetLinks({ urls }: Props) {
         if (!url.card?.title) return [];
         const href = sanitizeUrl((url.expandedUrl || url.url || "").trim());
         if (!href) return [];
+        const imageSrc = sanitizeMediaSrc(url.card.imageUrl);
         return [
-          { href, displayUrl: (url.displayUrl || href).trim(), card: url.card },
+          { href, displayUrl: (url.displayUrl || href).trim(), card: url.card, imageSrc },
         ];
       }),
     [urls],

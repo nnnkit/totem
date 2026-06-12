@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ArticleContentBlock } from "../../../types";
-import { renderBlockInlineContent } from "../utils";
+import { renderBlockInlineContent, sanitizeMediaSrc } from "../utils";
 
 describe("renderBlockInlineContent", () => {
   it("renders urls from block data when entity ranges are missing", () => {
@@ -33,5 +33,16 @@ describe("renderBlockInlineContent", () => {
     expect(renderBlockInlineContent(block, {})).toContain(
       '<a href="https://example.com/report" target="_blank" rel="noopener noreferrer">https://example.com/report</a>',
     );
+  });
+});
+
+describe("sanitizeMediaSrc", () => {
+  it("keeps http urls and drops executable or relative schemes", () => {
+    expect(sanitizeMediaSrc("https://example.com/image.jpg")).toBe(
+      "https://example.com/image.jpg",
+    );
+    expect(sanitizeMediaSrc(" javascript:alert(1) ")).toBe("");
+    expect(sanitizeMediaSrc("data:image/png;base64,abc")).toBe("");
+    expect(sanitizeMediaSrc("/relative/image.jpg")).toBe("");
   });
 });

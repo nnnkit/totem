@@ -45,6 +45,8 @@ These clusters already have published pages or release work in place:
 | Search Twitter bookmarks | `/blog/search-twitter-bookmarks-before-export` | 70-110 direct |
 | Twitter saver | `/blog/twitter-saver-what-saving-actually-does`; CWS rename | 5,400 |
 | Where bookmarks are on X | `/blog/where-are-my-bookmarks-on-x` | ~640 cluster |
+| Twitter bookmark manager | `/blog/best-twitter-bookmark-managers-2026` | ~120 cluster |
+| Chrome Reading List | `/blog/chrome-reading-list-why-nobody-uses-it` | ~1,000 |
 | Chrome bookmark manager | `/blog/best-chrome-bookmark-managers-2026` | 2,400-3,500 cluster |
 | Pocket alternative | `/blog/pocket-alternatives-2026` | ~3,500 cluster |
 
@@ -94,6 +96,7 @@ tab`, and most exact "copy for AI" phrases.
 
 ### 2. Best Twitter Bookmark Managers 2026
 
+- Status 2026-06-10: published as `/blog/best-twitter-bookmark-managers-2026`.
 - Canonical keyword: `twitter bookmark manager`.
 - Cached volume: 40/mo direct, ~120+ cluster.
 - Supporting terms: `twitter bookmarks manager`, `x bookmark manager`, `x bookmarks manager`, `twitter bookmarks app`, `how to organize twitter bookmarks`.
@@ -104,6 +107,7 @@ tab`, and most exact "copy for AI" phrases.
 
 ### 3. Chrome Reading List: Why Nobody Uses It
 
+- Status 2026-06-10: published as `/blog/chrome-reading-list-why-nobody-uses-it`.
 - Canonical keyword: `reading list chrome`.
 - Cached volume: 1,000/mo.
 - SERP signal: Chrome Web Store, Google Help, Reddit "Reading list tab disappeared", Chrome developer docs, 9to5Google, PopSci.
@@ -113,6 +117,7 @@ tab`, and most exact "copy for AI" phrases.
 
 ### 4. What To Put On Your Chrome New Tab Page
 
+- Status 2026-06-10: published as `/blog/what-to-put-on-your-chrome-new-tab-page`.
 - Canonical keyword: `chrome new tab page`.
 - Cached volume: 880/mo direct; related `new tab page` 1,600, `chrome new tab` 4,400.
 - SERP signal: Google Help, CWS listings, Reddit, support threads, SuperUser. Most pages answer how to change it, not what belongs there.
@@ -147,10 +152,15 @@ tab`, and most exact "copy for AI" phrases.
 
 ## Suggested 8-Week Publishing Order
 
+Agent handoff: use [`plans/seo-agent-goal.md`](seo-agent-goal.md) as the
+execution checklist for turning any item below into a researched, published,
+internally linked, tested, and tracked page. Its long-running loop tells an
+agent to come back to this order after each completed page.
+
 1. Clear / delete all X bookmarks.
-2. Best Twitter bookmark managers 2026.
-3. Chrome Reading List: why nobody uses it.
-4. What to put on your Chrome new tab page.
+2. Best Twitter bookmark managers 2026. Published 2026-06-10.
+3. Chrome Reading List: why nobody uses it. Published 2026-06-10.
+4. What to put on your Chrome new tab page. Published 2026-06-10.
 5. Best new tab Chrome extensions 2026.
 6. `/vs/twillot`.
 7. `/vs/tweetsmash`.

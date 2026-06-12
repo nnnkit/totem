@@ -6,13 +6,18 @@
   "scripts": {
     "dev": "vite",
     "build": "pnpm build:extension",
-    "build:extension": "tsc && vite build",
+    "build:extension": "pnpm typecheck && vite build",
     "build:website": "pnpm --filter @totem/site build",
     "build:all": "pnpm build:extension && pnpm build:website",
+    "typecheck": "tsc --noEmit",
+    "typecheck:core": "pnpm --filter @make/x-twitter-extension-core typecheck",
+    "check:website": "pnpm --filter @totem/site check",
+    "verify:workspace": "pnpm typecheck:core && pnpm check:website && pnpm build:website",
     "preview": "vite preview",
     "package:extension": "pnpm build:extension && node scripts/package-extension.mjs",
     "package:website": "pnpm build:website && node scripts/package-website.mjs",
     "package:all": "pnpm package:extension && pnpm package:website",
+    "seo:indexnow": "node scripts/submit-indexnow.mjs",
     "release": "node scripts/release.mjs",
     "ship": "pnpm release",
     "ship:minor": "pnpm release minor",
@@ -22,12 +27,14 @@
     "release:prepare": "node scripts/prepare-release.mjs",
     "test": "vitest run",
     "test:reliability": "vitest run src/stores/__tests__/runtime-store.test.ts src/api/__tests__/parsers.bookmarks.test.ts src/lib/__tests__/reconcile.test.ts src/lib/__tests__/sw-pure.test.ts",
-    "ci:verify": "pnpm test && pnpm build",
+    "audit:prod": "pnpm audit --prod --audit-level high",
+    "ci:verify": "pnpm test && pnpm build && pnpm verify:workspace && pnpm audit:prod",
     "ralph": ".ralph/run.sh"
   },
   "dependencies": {
     "@base-ui/react": "^1.2.0",
     "@make/x-twitter-extension-core": "workspace:*",
+    "@noble/hashes": "2.2.0",
     "@phosphor-icons/react": "^2.1.10",
     "@tanstack/react-virtual": "^3.13.23",
     "client-zip": "^2.5.0",
@@ -44,16 +51,23 @@
   },
   "devDependencies": {
     "@tailwindcss/typography": "^0.5.19",
-    "@tailwindcss/vite": "^4.0.0",
+    "@tailwindcss/vite": "^4.3.0",
     "@types/chrome": "^0.0.287",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "@vitejs/plugin-react": "^4.3.0",
+    "@vitejs/plugin-react": "^4.7.0",
     "fake-indexeddb": "^6.2.5",
     "fflate": "^0.8.2",
     "tailwindcss": "^4.0.0",
     "typescript": "^5.7.0",
-    "vite": "^6.0.0",
+    "vite": "^6.4.3",
     "vitest": "^4.0.18"
+  },
+  "pnpm": {
+    "overrides": {
+      "devalue": "^5.8.1",
+      "picomatch": "^4.0.4",
+      "rollup": "^4.59.0"
+    }
   }
 }
