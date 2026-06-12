@@ -11,6 +11,15 @@ const key = process.env.INDEXNOW_KEY;
 const keyLocation =
   process.env.INDEXNOW_KEY_LOCATION ?? (key ? new URL(`/${key}.txt`, siteUrl).href : null);
 
+// Fail before reading the sitemap so a missing key surfaces immediately;
+// --dry-run stays usable without one.
+if (!dryRun && (!key || !keyLocation)) {
+  console.error(
+    "Set INDEXNOW_KEY and host a matching key file, usually apps/site/public/$INDEXNOW_KEY.txt.",
+  );
+  process.exit(1);
+}
+
 function readUrlsFromSitemap(path) {
   const xml = readFileSync(path, "utf8");
   return Array.from(xml.matchAll(/<loc>([^<]+)<\/loc>/g), (match) => match[1]).filter(
@@ -19,13 +28,6 @@ function readUrlsFromSitemap(path) {
 }
 
 async function submitChunk(urlList) {
-  if (!key || !keyLocation) {
-    console.error(
-      "Set INDEXNOW_KEY and host a matching key file, usually apps/site/public/$INDEXNOW_KEY.txt.",
-    );
-    process.exit(1);
-  }
-
   const response = await fetch("https://api.indexnow.org/indexnow", {
     method: "POST",
     headers: { "content-type": "application/json; charset=utf-8" },

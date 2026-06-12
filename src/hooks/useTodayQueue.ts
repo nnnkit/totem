@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
   Bookmark,
   BookmarkIntent,
@@ -108,14 +108,19 @@ export function useTodayQueue({
   restrictToCachedDetails,
 }: UseTodayQueueInput): UseTodayQueueResult {
   const [state, setState] = useState<TodayQueueState>(EMPTY_STATE);
+  // refresh() is called from effects and action handlers alike; a monotonic
+  // sequence lets a newer run supersede an older in-flight one so the slower
+  // response can't clobber state with stale data.
+  const refreshSeqRef = useRef(0);
 
   const refresh = useCallback(() => {
+    const requestId = ++refreshSeqRef.current;
     if (!enabled) {
       setState(EMPTY_STATE);
       return;
     }
 
-    let cancelled = false;
+    const isCurrent = () => refreshSeqRef.current === requestId;
     const run = async () => {
       setState((current) => ({
         ...current,
@@ -132,7 +137,7 @@ export function useTodayQueue({
       ]);
 
       if (bookmarks.length === 0) {
-        if (!cancelled) {
+        if (isCurrent()) {
           setState({
             status: "ready",
             localDate,
@@ -178,7 +183,7 @@ export function useTodayQueue({
         }
       }
 
-      if (!cancelled) {
+      if (isCurrent()) {
         setState({
           status: "ready",
           localDate,
@@ -189,12 +194,8 @@ export function useTodayQueue({
     };
 
     run().catch(() => {
-      if (!cancelled) setState({ ...EMPTY_STATE, status: "ready" });
+      if (isCurrent()) setState({ ...EMPTY_STATE, status: "ready" });
     });
-
-    return () => {
-      cancelled = true;
-    };
   }, [
     accountId,
     bookmarks,
@@ -205,7 +206,9 @@ export function useTodayQueue({
     restrictToCachedDetails,
   ]);
 
-  useEffect(() => refresh(), [refresh]);
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -216,6 +219,23 @@ export function useTodayQueue({
       unsubscribePins();
     };
   }, [enabled, refresh]);
+
+  // A new-tab page left open past midnight would otherwise keep showing
+  // yesterday's queue until some other activity triggers a refresh.
+  const localDate = state.localDate;
+  useEffect(() => {
+    if (!enabled || !localDate) return;
+    const refreshOnDayChange = () => {
+      if (document.visibilityState !== "visible") return;
+      if (formatLocalDate() !== localDate) refresh();
+    };
+    document.addEventListener("visibilitychange", refreshOnDayChange);
+    window.addEventListener("focus", refreshOnDayChange);
+    return () => {
+      document.removeEventListener("visibilitychange", refreshOnDayChange);
+      window.removeEventListener("focus", refreshOnDayChange);
+    };
+  }, [enabled, localDate, refresh]);
 
   const items = useMemo(
     () =>
@@ -261,9 +281,9 @@ export function useTodayQueue({
     ],
   );
 
-  const totalCount = state.snapshot?.tweetIds.length ?? 0;
-  const activeCount = items.length;
-  const handledCount = handledItems.length;
+  // Progress counts come from the unrestricted handled set so the "n of m"
+  // indicator stays consistent with totalCount (which counts the whole
+  // snapshot) even when offline mode hides uncached items from the list.
   const completionHandledItems = useMemo(
     () =>
       deriveHandledTodayQueueItems({
@@ -282,7 +302,20 @@ export function useTodayQueue({
       state.snapshot,
     ],
   );
-  const completedCount = handledItems.filter(
+  const existingTweetIds = useMemo(
+    () => new Set(bookmarks.map((bookmark) => bookmark.tweetId)),
+    [bookmarks],
+  );
+  const totalCount = state.snapshot?.tweetIds.length ?? 0;
+  const activeCount = items.length;
+  // Deleted bookmarks count as handled (matching isDone) so the progress
+  // indicator can still reach totalCount after an unbookmark.
+  const deletedCount =
+    state.snapshot?.tweetIds.filter(
+      (tweetId) => !existingTweetIds.has(tweetId),
+    ).length ?? 0;
+  const handledCount = completionHandledItems.length + deletedCount;
+  const completedCount = completionHandledItems.filter(
     (item) => item.reason === "read",
   ).length;
 
@@ -407,6 +440,7 @@ export function useTodayQueue({
       isTodayQueueSnapshotDone({
         snapshot: state.snapshot,
         handledItems: completionHandledItems,
+        existingTweetIds,
       }),
     refresh,
     addToTodayQueue,

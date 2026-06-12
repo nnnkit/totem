@@ -118,15 +118,23 @@ export function shouldPersistTodayQueueSnapshot(
 export function isTodayQueueSnapshotDone({
   snapshot,
   handledItems,
+  existingTweetIds,
 }: {
   snapshot: TodayQueueSnapshot | null;
   handledItems: TodayQueueHandledItem[];
+  existingTweetIds?: ReadonlySet<string>;
 }): boolean {
   if (!snapshot || snapshot.tweetIds.length === 0) return false;
   const handledTweetIds = new Set(
     handledItems.map((item) => item.bookmark.tweetId),
   );
-  return snapshot.tweetIds.every((tweetId) => handledTweetIds.has(tweetId));
+  // A queued bookmark that was unbookmarked can never appear in handledItems;
+  // count it as handled so one deletion doesn't make "done" unreachable.
+  return snapshot.tweetIds.every(
+    (tweetId) =>
+      handledTweetIds.has(tweetId) ||
+      (existingTweetIds !== undefined && !existingTweetIds.has(tweetId)),
+  );
 }
 
 export function addTweetIdToTodayQueueSnapshot({
@@ -216,13 +224,26 @@ function recentExposureSummary(
   const since = now - TODAY_QUEUE.exposureWindowMs;
   const summary = new Map<string, { queued: number; engaged: boolean }>();
 
+  // Rebuilding the queue (e.g. after a budget change) re-queues the same day,
+  // so count distinct days rather than raw rows — settings churn must not
+  // burn a tweet's exposure quota or stack its penalty.
+  const queuedDatesByTweetId = new Map<string, Set<string>>();
+
   for (const exposure of exposures) {
     if (exposure.createdAt < since) continue;
     const current = summary.get(exposure.tweetId) ?? {
       queued: 0,
       engaged: false,
     };
-    if (exposure.action === "queued") current.queued += 1;
+    if (exposure.action === "queued") {
+      let dates = queuedDatesByTweetId.get(exposure.tweetId);
+      if (!dates) {
+        dates = new Set();
+        queuedDatesByTweetId.set(exposure.tweetId, dates);
+      }
+      dates.add(exposure.localDate);
+      current.queued = dates.size;
+    }
     if (ENGAGEMENT_ACTIONS.has(exposure.action)) current.engaged = true;
     summary.set(exposure.tweetId, current);
   }
@@ -552,6 +573,11 @@ export function deriveHandledTodayQueueItems({
   return items;
 }
 
+// Two exposures for the same tweet + action can land in the same millisecond
+// (e.g. queue rebuild plus manual add); a sequence keeps their ids distinct so
+// one row doesn't silently overwrite the other.
+let exposureSequence = 0;
+
 export function makeQueueExposure({
   tweetId,
   action,
@@ -560,8 +586,9 @@ export function makeQueueExposure({
 }: Omit<TodayQueueExposure, "id" | "createdAt"> & {
   createdAt?: number;
 }): TodayQueueExposure {
+  exposureSequence += 1;
   return {
-    id: `${createdAt}:${tweetId}:${action}:${hashString(`${tweetId}:${action}:${createdAt}`)}`,
+    id: `${createdAt}:${tweetId}:${action}:${exposureSequence.toString(36)}:${hashString(`${tweetId}:${action}:${createdAt}`)}`,
     tweetId,
     action,
     localDate,

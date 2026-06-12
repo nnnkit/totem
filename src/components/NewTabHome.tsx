@@ -795,7 +795,7 @@ function useNewTabHomeModel({
 
   useEffect(() => {
     if (recommendationSource !== "today" || todayQueueItems.length === 0) {
-      updateHomeState({ todayQueueIndex: 0 });
+      if (todayQueueIndex !== 0) updateHomeState({ todayQueueIndex: 0 });
       return;
     }
 

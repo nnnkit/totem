@@ -118,10 +118,13 @@ function readmeLinkText(text: string): string {
   return text.replace(/\\/g, "\\\\").replace(/]/g, "\\]");
 }
 
+// Holds the bookmark row (small) but not its TweetDetailCache: detail rows
+// carry full thread JSON, and retaining one per bookmark for the whole export
+// would buffer the heaviest store in memory. Details are re-fetched when the
+// markdown file is written.
 interface BookmarkMarkdownFile {
   bookmarkId: string;
   bookmark: Bookmark;
-  detail: TweetDetailCache | null;
   year: string;
   path: string;
   title: string;
@@ -493,7 +496,6 @@ async function collectBookmarkMarkdownFiles(): Promise<{ files: BookmarkMarkdown
     files.push({
       bookmarkId: bookmark.id,
       bookmark,
-      detail,
       year,
       path,
       title: rendered.title,
@@ -694,9 +696,10 @@ export async function runQuickExport(
       await queueExposures.done;
 
       for (const file of bookmarkMarkdownFiles) {
+        const detail = await getTweetDetailCache(file.bookmark.tweetId);
         const body = buildBookmarkMarkdown(
           file.bookmark,
-          file.detail,
+          detail,
           exportedAtLabel,
         ).body;
         const markdown = hashingTextEntry(

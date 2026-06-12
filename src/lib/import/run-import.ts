@@ -548,6 +548,54 @@ function failOutcome(
   };
 }
 
+// Imports a string-keyed store whose shards may be absent from older exports.
+// Returns null when the manifest has no shards for it, so callers keep the
+// default empty outcome.
+async function importOptionalKeyedStore<T>({
+  store,
+  shards,
+  files,
+  isImportable,
+  keyOf,
+  loadExisting,
+  persist,
+  onProgress,
+}: {
+  store: ImportStoreProgress["store"];
+  shards: string[] | undefined;
+  files: Record<string, Uint8Array>;
+  isImportable: (value: unknown) => value is T;
+  keyOf: (row: T) => string;
+  loadExisting: () => Promise<T[]>;
+  persist: (rows: T[]) => Promise<void>;
+  onProgress?: (progress: ImportStoreProgress) => void;
+}): Promise<ImportStoreOutcome | null> {
+  if ((shards?.length ?? 0) === 0) return null;
+  const counts: ImportStoreCounts = { added: 0, alreadyHad: 0, total: 0 };
+  try {
+    const rows = dedupeRowsByStringKey(
+      gatherShardRows(shards || [], files).filter(isImportable),
+      keyOf,
+    );
+    counts.total = rows.length;
+    const existingKeys = new Set((await loadExisting()).map(keyOf));
+    const toInsert: T[] = [];
+    for (const row of rows) {
+      if (existingKeys.has(keyOf(row))) {
+        counts.alreadyHad++;
+      } else {
+        toInsert.push(row);
+      }
+    }
+    await writeBatches(toInsert, persist, counts);
+    const outcome: ImportStoreOutcome = { status: "succeeded", ...counts };
+    onProgress?.({ store, ...outcome, total: counts.total });
+    return outcome;
+  } catch (error) {
+    return failOutcome(counts, error);
+  }
+}
+
 export async function runImport(
   validated: Extract<ValidatedImport, { ok: true }>,
   onProgress?: (progress: ImportStoreProgress) => void,
@@ -689,112 +737,49 @@ export async function runImport(
     result.readingProgress = failOutcome(readingProgressCounts, error);
   }
 
-  if ((manifest.shards.today_queue_snapshots?.length ?? 0) > 0) {
-    let queueSnapshotCounts: ImportStoreCounts = { added: 0, alreadyHad: 0, total: 0 };
-    try {
-      const rawRows = gatherShardRows(
-        manifest.shards.today_queue_snapshots || [],
-        files,
-      );
-      queueSnapshotCounts.total = rawRows.length;
-      const rows = dedupeRowsByStringKey(
-        rawRows.filter(isImportableTodayQueueSnapshot),
-        (row) => row.key,
-      );
-      queueSnapshotCounts.total = rows.length;
-      const existingRows = await getAllTodayQueueSnapshots();
-      const existingKeys = new Set(existingRows.map((row) => row.key));
-      const toInsert: TodayQueueSnapshot[] = [];
-      for (const row of rows) {
-        if (existingKeys.has(row.key)) {
-          queueSnapshotCounts.alreadyHad++;
-        } else {
-          toInsert.push(row);
-        }
-      }
-      await writeBatches(toInsert, upsertTodayQueueSnapshots, queueSnapshotCounts);
-      result.todayQueueSnapshots = { status: "succeeded", ...queueSnapshotCounts };
-      onProgress?.({
-        store: "today_queue_snapshots",
-        ...result.todayQueueSnapshots,
-        total: queueSnapshotCounts.total,
-      });
-    } catch (error) {
-      result.status = "partial";
-      result.todayQueueSnapshots = failOutcome(queueSnapshotCounts, error);
-    }
+  const queueSnapshotOutcome = await importOptionalKeyedStore({
+    store: "today_queue_snapshots",
+    shards: manifest.shards.today_queue_snapshots,
+    files,
+    isImportable: isImportableTodayQueueSnapshot,
+    keyOf: (row) => row.key,
+    loadExisting: getAllTodayQueueSnapshots,
+    persist: upsertTodayQueueSnapshots,
+    onProgress,
+  });
+  if (queueSnapshotOutcome) {
+    result.todayQueueSnapshots = queueSnapshotOutcome;
+    if (queueSnapshotOutcome.status === "failed") result.status = "partial";
   }
 
-  if ((manifest.shards.bookmark_queue_metadata?.length ?? 0) > 0) {
-    let queueMetadataCounts: ImportStoreCounts = { added: 0, alreadyHad: 0, total: 0 };
-    try {
-      const rawRows = gatherShardRows(
-        manifest.shards.bookmark_queue_metadata || [],
-        files,
-      );
-      queueMetadataCounts.total = rawRows.length;
-      const rows = dedupeRowsByStringKey(
-        rawRows.filter(isImportableQueueMetadata),
-        (row) => row.tweetId,
-      );
-      queueMetadataCounts.total = rows.length;
-      const existingRows = await getAllQueueBookmarkMetadata();
-      const existingIds = new Set(existingRows.map((row) => row.tweetId));
-      const toInsert: BookmarkQueueMetadata[] = [];
-      for (const row of rows) {
-        if (existingIds.has(row.tweetId)) {
-          queueMetadataCounts.alreadyHad++;
-        } else {
-          toInsert.push(row);
-        }
-      }
-      await writeBatches(toInsert, upsertQueueBookmarkMetadataRows, queueMetadataCounts);
-      result.queueMetadata = { status: "succeeded", ...queueMetadataCounts };
-      onProgress?.({
-        store: "bookmark_queue_metadata",
-        ...result.queueMetadata,
-        total: queueMetadataCounts.total,
-      });
-    } catch (error) {
-      result.status = "partial";
-      result.queueMetadata = failOutcome(queueMetadataCounts, error);
-    }
+  const queueMetadataOutcome = await importOptionalKeyedStore({
+    store: "bookmark_queue_metadata",
+    shards: manifest.shards.bookmark_queue_metadata,
+    files,
+    isImportable: isImportableQueueMetadata,
+    keyOf: (row) => row.tweetId,
+    loadExisting: getAllQueueBookmarkMetadata,
+    persist: upsertQueueBookmarkMetadataRows,
+    onProgress,
+  });
+  if (queueMetadataOutcome) {
+    result.queueMetadata = queueMetadataOutcome;
+    if (queueMetadataOutcome.status === "failed") result.status = "partial";
   }
 
-  if ((manifest.shards.today_queue_exposures?.length ?? 0) > 0) {
-    let queueExposureCounts: ImportStoreCounts = { added: 0, alreadyHad: 0, total: 0 };
-    try {
-      const rawRows = gatherShardRows(
-        manifest.shards.today_queue_exposures || [],
-        files,
-      );
-      queueExposureCounts.total = rawRows.length;
-      const rows = dedupeRowsByStringKey(
-        rawRows.filter(isImportableTodayQueueExposure),
-        (row) => row.id,
-      );
-      queueExposureCounts.total = rows.length;
-      const existingRows = await getAllTodayQueueExposures();
-      const existingIds = new Set(existingRows.map((row) => row.id));
-      const toInsert: TodayQueueExposure[] = [];
-      for (const row of rows) {
-        if (existingIds.has(row.id)) {
-          queueExposureCounts.alreadyHad++;
-        } else {
-          toInsert.push(row);
-        }
-      }
-      await writeBatches(toInsert, upsertTodayQueueExposures, queueExposureCounts);
-      result.todayQueueExposures = { status: "succeeded", ...queueExposureCounts };
-      onProgress?.({
-        store: "today_queue_exposures",
-        ...result.todayQueueExposures,
-        total: queueExposureCounts.total,
-      });
-    } catch (error) {
-      result.status = "partial";
-      result.todayQueueExposures = failOutcome(queueExposureCounts, error);
-    }
+  const queueExposureOutcome = await importOptionalKeyedStore({
+    store: "today_queue_exposures",
+    shards: manifest.shards.today_queue_exposures,
+    files,
+    isImportable: isImportableTodayQueueExposure,
+    keyOf: (row) => row.id,
+    loadExisting: getAllTodayQueueExposures,
+    persist: upsertTodayQueueExposures,
+    onProgress,
+  });
+  if (queueExposureOutcome) {
+    result.todayQueueExposures = queueExposureOutcome;
+    if (queueExposureOutcome.status === "failed") result.status = "partial";
   }
 
   if (result.status === "partial") {

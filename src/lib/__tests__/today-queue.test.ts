@@ -90,11 +90,12 @@ function metadata(
 }
 
 function queuedExposure(tweetId: string, days: number): TodayQueueExposure {
+  const createdAt = daysAgo(days);
   return makeQueueExposure({
     tweetId,
     action: "queued",
-    localDate: LOCAL_DATE,
-    createdAt: daysAgo(days),
+    localDate: formatLocalDate(new Date(createdAt)),
+    createdAt,
   });
 }
 
@@ -181,6 +182,24 @@ describe("today queue generation", () => {
     );
 
     expect(result.tweetIds).toEqual(["available"]);
+  });
+
+  it("counts repeated same-day queue exposures as a single exposure", () => {
+    // Toggling the budget setting rebuilds the queue under a new key and
+    // re-records "queued" the same day; that must not suppress the candidate.
+    const result = buildTodayQueue(
+      baseInput({
+        bookmarks: [bookmark("requeued", daysAgo(7))],
+        exposures: [
+          queuedExposure("requeued", 0),
+          queuedExposure("requeued", 0),
+          queuedExposure("requeued", 0),
+          queuedExposure("requeued", 0),
+        ],
+      }),
+    );
+
+    expect(result.tweetIds).toEqual(["requeued"]);
   });
 
   it("keeps recently engaged candidates eligible even after repeated queue exposure", () => {
@@ -423,5 +442,30 @@ describe("today queue snapshots", () => {
     });
 
     expect(isTodayQueueSnapshotDone({ snapshot, handledItems })).toBe(true);
+  });
+
+  it("treats deleted bookmarks as handled so done stays reachable", () => {
+    const snapshot: TodayQueueSnapshot = {
+      key: "2026-06-08:15:v1",
+      localDate: LOCAL_DATE,
+      budgetMinutes: 15,
+      version: 1,
+      tweetIds: ["read", "deleted"],
+      generatedAt: NOW,
+    };
+    const bookmarks = [bookmark("read", daysAgo(1))];
+    const handledItems = deriveHandledTodayQueueItems({
+      snapshot,
+      bookmarks,
+      readingProgress: [progress("read", true)],
+      metadata: [],
+      localDate: LOCAL_DATE,
+    });
+    const existingTweetIds = new Set(bookmarks.map((item) => item.tweetId));
+
+    expect(isTodayQueueSnapshotDone({ snapshot, handledItems })).toBe(false);
+    expect(
+      isTodayQueueSnapshotDone({ snapshot, handledItems, existingTweetIds }),
+    ).toBe(true);
   });
 });
