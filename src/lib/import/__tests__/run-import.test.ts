@@ -760,6 +760,80 @@ describe("runImport", () => {
     expect(storedProgress).toHaveLength(1);
   });
 
+  it("skips malformed nested bookmark and detail rows", async () => {
+    const validBookmark: Bookmark = {
+      ...makeBookmark("b1", "t1"),
+      hasImage: true,
+      hasLink: true,
+      media: [
+        {
+          type: "photo",
+          url: "https://pbs.twimg.com/media/test.jpg",
+          width: 640,
+          height: 480,
+          altText: "test image",
+        },
+      ],
+      urls: [
+        {
+          url: "https://t.co/test",
+          displayUrl: "example.com/test",
+          expandedUrl: "https://example.com/test",
+          card: {
+            title: "Example",
+            imageUrl: "https://example.com/card.jpg",
+          },
+        },
+      ],
+      article: {
+        plainText: "Article body",
+        coverImageUrl: "https://example.com/cover.jpg",
+        contentBlocks: [],
+        entityMap: {},
+      },
+    };
+    const malformedMediaBookmark = {
+      ...makeBookmark("b2", "t2"),
+      media: [{ type: "photo", url: 123, width: 1, height: 1 }],
+    } as unknown as Bookmark;
+    const malformedUrlBookmark = {
+      ...makeBookmark("b3", "t3"),
+      urls: [{ url: "https://t.co/bad", displayUrl: 123, expandedUrl: "https://example.com" }],
+    } as unknown as Bookmark;
+    const validDetail = makeDetail("t1");
+    const malformedDetail = {
+      tweetId: "t2",
+      fetchedAt: Date.now(),
+      focalTweet: null,
+      thread: [{ tweetId: "t2" }],
+    } as unknown as TweetDetailCache;
+
+    const zip = await buildValidZip(
+      [validBookmark, malformedMediaBookmark, malformedUrlBookmark],
+      { details: [validDetail, malformedDetail] },
+    );
+    const parsed = parseZip(zip);
+    if (!parsed.ok) throw new Error("parse failed");
+    const validated = await validateImport(parsed, "user123");
+    if (!validated.ok) throw new Error("validation failed");
+
+    const result = await runImport(validated);
+
+    expect(result.bookmarks).toMatchObject({ status: "succeeded", added: 1, total: 1 });
+    expect(result.details).toMatchObject({ status: "succeeded", added: 1, total: 1 });
+
+    const [storedBookmarks, storedDetails] = await Promise.all([
+      getAllBookmarks(),
+      getAllTweetDetails(),
+    ]);
+    expect(storedBookmarks).toHaveLength(1);
+    expect(storedBookmarks[0].tweetId).toBe("t1");
+    expect(storedBookmarks[0].media[0]?.url).toBe("https://pbs.twimg.com/media/test.jpg");
+    expect(storedBookmarks[0].urls[0]?.card?.imageUrl).toBe("https://example.com/card.jpg");
+    expect(storedDetails).toHaveLength(1);
+    expect(storedDetails[0].tweetId).toBe("t1");
+  });
+
   it("calls onProgress per store", async () => {
     const b = makeBookmark("b1", "t1");
     const zip = await buildValidZip([b]);

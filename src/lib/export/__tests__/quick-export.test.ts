@@ -12,6 +12,7 @@ import {
   upsertTweetDetailCache,
 } from "../../../db";
 import type { Bookmark, ThreadTweet } from "../../../types";
+import { sha256hex } from "../../crypto";
 import { makeQueueExposure } from "../../today-queue";
 import { runQuickExport } from "../quick-export";
 
@@ -205,6 +206,12 @@ describe("runQuickExport", () => {
       "data/bookmarks-2021.jsonl",
       "data/bookmarks-2024.jsonl",
     ]);
+    expect(manifest.checksums["bookmarks.csv"]).toBe(
+      `sha256:${await sha256hex(entries["bookmarks.csv"])}`,
+    );
+    expect(manifest.checksums["data/details.jsonl"]).toBe(
+      `sha256:${await sha256hex(entries["data/details.jsonl"])}`,
+    );
     expect(entries["bookmarks.csv"][0]).toBe(0xef);
     expect(entries["bookmarks.csv"][1]).toBe(0xbb);
     expect(entries["bookmarks.csv"][2]).toBe(0xbf);

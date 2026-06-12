@@ -1,9 +1,0 @@
-{
-  "name": "@totem/extension",
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "dev": "vite -c vite.config.ts",
-    "build": "tsc && vite build -c vite.config.ts"
-  }
-}

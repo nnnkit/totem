@@ -452,6 +452,34 @@ describe("query-id module", () => {
       expect(getCachedQueryId("TweetDetail")).toBe("detail_qid");
     });
 
+    it("STORE_QUERY_IDS ignores unknown operations and invalid IDs", async () => {
+      const deps = makeDeps(fakeChrome);
+      const handlers = createQueryIdHandlers(deps);
+      const router = createMessageRouter(mergeHandlerMaps(handlers));
+      fakeChrome.runtime.onMessage.addListener(router);
+
+      const response = await fakeChrome.runtime.sendMessage({
+        type: "STORE_QUERY_IDS",
+        ids: {
+          Bookmarks: "valid_qid_123",
+          HomeTimeline: "timeline_qid_123",
+          TweetDetail: "javascript:alert(1)",
+          UserByRestId: "",
+        },
+      });
+      expect(response).toEqual({ ok: true });
+
+      expect(getCachedQueryId("Bookmarks")).toBe("valid_qid_123");
+      expect(getCachedQueryId("HomeTimeline")).toBeNull();
+      expect(getCachedQueryId("TweetDetail")).toBeNull();
+      expect(getCachedQueryId("UserByRestId")).toBeNull();
+
+      const catalog = await loadGraphqlCatalog(deps.storage);
+      expect(catalog.endpoints["Bookmarks:valid_qid_123"]).toBeDefined();
+      expect(catalog.endpoints["HomeTimeline:timeline_qid_123"]).toBeUndefined();
+      expect(catalog.endpoints["TweetDetail:javascript:alert(1)"]).toBeUndefined();
+    });
+
     it("DISCOVER_QUERY_IDS triggers batch discovery", async () => {
       const fetchFn = vi.fn<typeof fetch>().mockResolvedValue(
         new Response("", { status: 404 }),

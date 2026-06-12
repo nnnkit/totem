@@ -3,6 +3,7 @@ import { XIcon } from "@phosphor-icons/react";
 import type { Media } from "../../types";
 import { cn } from "../../lib/cn";
 import { Modal } from "../ui/Modal";
+import { sanitizeMediaSrc } from "./utils";
 
 const prefersReducedMotion =
   typeof window !== "undefined" &&
@@ -33,45 +34,52 @@ export function TweetMedia({ items, bleed = false, compact = false }: Props) {
 
   const closePreview = useCallback(() => setPreviewImage(null), []);
 
-  if (items.length === 0) return null;
+  const visible = items.slice(0, 4).flatMap((item) => {
+    const imageSrc = sanitizeMediaSrc(item.url);
+    const videoSrc = sanitizeMediaSrc(item.videoUrl);
+    if (item.type === "video" || item.type === "animated_gif") {
+      return videoSrc || imageSrc ? [{ item, imageSrc, videoSrc }] : [];
+    }
+    return imageSrc ? [{ item, imageSrc, videoSrc }] : [];
+  });
+  if (visible.length === 0) return null;
 
-  const columns = items.length === 1 ? "grid-cols-1" : "grid-cols-2";
-  const visible = items.slice(0, 4);
-  const openPreview = (item: Media) => {
-    setPreviewImage({ src: item.url, alt: item.altText || "" });
+  const columns = visible.length === 1 ? "grid-cols-1" : "grid-cols-2";
+  const openPreview = (src: string, alt: string) => {
+    setPreviewImage({ src, alt });
   };
 
   return (
     <>
       <div className={cn("mt-5 overflow-hidden rounded border border-border bg-border", bleed && "-mx-6")}>
         <div className={cn("grid gap-px", columns)}>
-          {visible.map((item, index) => {
+          {visible.map(({ item, imageSrc, videoSrc }, index) => {
             const heightClass = mediaHeightClass(visible.length, index, compact);
             const spanClass = visible.length === 3 && index === 0 ? "col-span-2" : "";
 
             if (item.type === "video" || item.type === "animated_gif") {
-              return item.videoUrl ? (
+              return videoSrc ? (
                 <video
-                  key={item.videoUrl}
-                  src={item.videoUrl}
+                  key={videoSrc}
+                  src={videoSrc}
                   controls
                   loop={item.type === "animated_gif"}
                   autoPlay={item.type === "animated_gif" && !prefersReducedMotion}
                   muted={item.type === "animated_gif"}
                   playsInline
                   className={cn("w-full bg-black object-contain", heightClass)}
-                  poster={item.url}
+                  poster={imageSrc || undefined}
                 />
               ) : (
                 <button
-                  key={item.url}
+                  key={imageSrc}
                   type="button"
                   className={cn("block w-full overflow-hidden bg-gray-950", heightClass, spanClass)}
-                  onClick={() => openPreview(item)}
+                  onClick={() => openPreview(imageSrc, item.altText || "")}
                   aria-label="Open media preview"
                 >
                   <img
-                    src={item.url}
+                    src={imageSrc}
                     alt={item.altText || ""}
                     className="size-full object-contain"
                     loading="lazy"
@@ -82,14 +90,14 @@ export function TweetMedia({ items, bleed = false, compact = false }: Props) {
 
             return (
               <button
-                key={item.url}
+                key={imageSrc}
                 type="button"
                 className={cn("block w-full overflow-hidden", heightClass, spanClass)}
-                onClick={() => openPreview(item)}
+                onClick={() => openPreview(imageSrc, item.altText || "")}
                 aria-label="Open media preview"
               >
                 <img
-                  src={item.url}
+                  src={imageSrc}
                   alt={item.altText || ""}
                   className="size-full object-cover"
                   loading="lazy"

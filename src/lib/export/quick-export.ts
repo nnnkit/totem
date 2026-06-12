@@ -24,7 +24,7 @@ import {
   iterateTodayQueueSnapshots,
 } from "../../db";
 import { DB_VERSION } from "../constants/db";
-import { sha256hex } from "../crypto";
+import { createSha256Hex, sha256hex } from "../crypto";
 import { stripCardUrlsFromTweetText } from "../tweet-text";
 import { sortIndexToTimestamp } from "../time";
 import {
@@ -369,24 +369,14 @@ function textStream(lines: AsyncIterable<string>): ReadableStream<Uint8Array> {
   });
 }
 
-function concatChunks(chunks: Uint8Array[], total: number): Uint8Array {
-  const output = new Uint8Array(total);
-  let offset = 0;
-  for (const chunk of chunks) {
-    output.set(chunk, offset);
-    offset += chunk.byteLength;
-  }
-  return output;
-}
-
 function hashingTextEntry(
   name: string,
   lines: AsyncIterable<string>,
   checksums: Record<string, string>,
   lastModified: Date,
 ): { entry: StreamZipEntry; done: Promise<void> } {
-  const chunks: Uint8Array[] = [];
-  let total = 0;
+  const encoder = new TextEncoder();
+  const hasher = createSha256Hex();
   let resolveDone!: () => void;
   let rejectDone!: (error: unknown) => void;
   const done = new Promise<void>((resolve, reject) => {
@@ -397,12 +387,10 @@ function hashingTextEntry(
   const input = textStream((async function* () {
     try {
       for await (const line of lines) {
-        const chunk = new TextEncoder().encode(line);
-        chunks.push(chunk);
-        total += chunk.byteLength;
+        hasher.update(encoder.encode(line));
         yield line;
       }
-      checksums[name] = `sha256:${await sha256hex(concatChunks(chunks, total))}`;
+      checksums[name] = `sha256:${hasher.digestHex()}`;
       resolveDone();
     } catch (error) {
       rejectDone(error);

@@ -20,6 +20,9 @@ import { sha256hex } from "../crypto";
 import type {
   Bookmark,
   BookmarkQueueMetadata,
+  ArticleContent,
+  ArticleContentBlock,
+  ArticleContentEntity,
   TweetDetailCache,
   Highlight,
   ReadingProgress,
@@ -129,12 +132,232 @@ function isNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
 }
 
+function isOptionalString(value: unknown): boolean {
+  return value === undefined || typeof value === "string";
+}
+
+function isOptionalNumber(value: unknown): boolean {
+  return value === undefined || isNumber(value);
+}
+
+function isOptionalBoolean(value: unknown): boolean {
+  return value === undefined || typeof value === "boolean";
+}
+
+function isNullableImportable<T>(
+  value: unknown,
+  guard: (item: unknown) => item is T,
+): value is T | null | undefined {
+  return value === undefined || value === null || guard(value);
+}
+
+function isOptionalArrayOf<T>(
+  value: unknown,
+  guard: (item: unknown) => item is T,
+): value is T[] | undefined {
+  return value === undefined || (Array.isArray(value) && value.every(guard));
+}
+
 function isImportableAuthor(value: unknown): value is Bookmark["author"] {
   return (
     isRecord(value) &&
     typeof value.name === "string" &&
     typeof value.screenName === "string" &&
-    typeof value.profileImageUrl === "string"
+    typeof value.profileImageUrl === "string" &&
+    isOptionalBoolean(value.verified) &&
+    isOptionalString(value.bio) &&
+    isOptionalNumber(value.followersCount) &&
+    isOptionalNumber(value.followingCount) &&
+    isOptionalString(value.website) &&
+    isOptionalString(value.createdAt) &&
+    isOptionalString(value.bannerUrl) &&
+    (
+      value.affiliate === undefined ||
+      (
+        isRecord(value.affiliate) &&
+        typeof value.affiliate.name === "string" &&
+        isOptionalString(value.affiliate.badgeUrl) &&
+        isOptionalString(value.affiliate.url)
+      )
+    )
+  );
+}
+
+function isImportableMetrics(value: unknown): value is Bookmark["metrics"] {
+  return (
+    isRecord(value) &&
+    isNumber(value.likes) &&
+    isNumber(value.retweets) &&
+    isNumber(value.replies) &&
+    isNumber(value.views) &&
+    isNumber(value.bookmarks)
+  );
+}
+
+function isImportableMedia(value: unknown): value is Bookmark["media"][number] {
+  return (
+    isRecord(value) &&
+    (
+      value.type === "photo" ||
+      value.type === "video" ||
+      value.type === "animated_gif"
+    ) &&
+    typeof value.url === "string" &&
+    isOptionalString(value.videoUrl) &&
+    isNumber(value.width) &&
+    isNumber(value.height) &&
+    isOptionalString(value.altText)
+  );
+}
+
+function isImportableLinkCard(value: unknown): value is NonNullable<Bookmark["urls"][number]["card"]> {
+  return (
+    isRecord(value) &&
+    isOptionalString(value.title) &&
+    isOptionalString(value.description) &&
+    isOptionalString(value.imageUrl) &&
+    isOptionalString(value.imageAlt) &&
+    isOptionalString(value.domain) &&
+    isOptionalString(value.cardType)
+  );
+}
+
+function isImportableTweetUrl(value: unknown): value is Bookmark["urls"][number] {
+  return (
+    isRecord(value) &&
+    typeof value.url === "string" &&
+    typeof value.displayUrl === "string" &&
+    typeof value.expandedUrl === "string" &&
+    (value.card === undefined || isImportableLinkCard(value.card))
+  );
+}
+
+function isImportableRange(value: unknown): value is { offset: number; length: number; style: string } {
+  return (
+    isRecord(value) &&
+    isNumber(value.offset) &&
+    isNumber(value.length) &&
+    typeof value.style === "string"
+  );
+}
+
+function isImportableEntityRange(value: unknown): value is { offset: number; length: number; key: number } {
+  return (
+    isRecord(value) &&
+    isNumber(value.offset) &&
+    isNumber(value.length) &&
+    isNumber(value.key)
+  );
+}
+
+function isImportableArticleDataRange(
+  value: unknown,
+): value is { fromIndex: number; toIndex: number; text?: string } {
+  return (
+    isRecord(value) &&
+    isNumber(value.fromIndex) &&
+    isNumber(value.toIndex) &&
+    isOptionalString(value.text)
+  );
+}
+
+function isImportableArticleBlockData(value: unknown): boolean {
+  return (
+    value === undefined ||
+    (
+      isRecord(value) &&
+      isOptionalArrayOf(value.urls, isImportableArticleDataRange) &&
+      isOptionalArrayOf(value.mentions, isImportableArticleDataRange)
+    )
+  );
+}
+
+function isImportableArticleContentBlock(
+  value: unknown,
+): value is ArticleContentBlock {
+  return (
+    isRecord(value) &&
+    typeof value.type === "string" &&
+    typeof value.text === "string" &&
+    Array.isArray(value.inlineStyleRanges) &&
+    value.inlineStyleRanges.every(isImportableRange) &&
+    Array.isArray(value.entityRanges) &&
+    value.entityRanges.every(isImportableEntityRange) &&
+    isNumber(value.depth) &&
+    isImportableArticleBlockData(value.data)
+  );
+}
+
+function isImportableArticleContentEntity(
+  value: unknown,
+): value is ArticleContentEntity {
+  return (
+    isRecord(value) &&
+    typeof value.type === "string" &&
+    isRecord(value.data)
+  );
+}
+
+function isImportableArticleContent(value: unknown): value is ArticleContent {
+  return (
+    isRecord(value) &&
+    isOptionalString(value.title) &&
+    typeof value.plainText === "string" &&
+    isOptionalString(value.coverImageUrl) &&
+    isOptionalArrayOf(value.contentBlocks, isImportableArticleContentBlock) &&
+    (
+      value.entityMap === undefined ||
+      (isRecord(value.entityMap) &&
+        Object.values(value.entityMap).every(isImportableArticleContentEntity))
+    )
+  );
+}
+
+function isImportableTweetKind(value: unknown): boolean {
+  return (
+    value === undefined ||
+    value === "tweet" ||
+    value === "reply" ||
+    value === "quote" ||
+    value === "repost" ||
+    value === "thread" ||
+    value === "article"
+  );
+}
+
+function isImportableQuotedTweet(value: unknown): value is NonNullable<Bookmark["quotedTweet"]> {
+  return (
+    isRecord(value) &&
+    typeof value.tweetId === "string" &&
+    typeof value.text === "string" &&
+    isNumber(value.createdAt) &&
+    isImportableAuthor(value.author) &&
+    Array.isArray(value.media) &&
+    value.media.every(isImportableMedia) &&
+    isOptionalArrayOf(value.urls, isImportableTweetUrl) &&
+    isNullableImportable(value.article, isImportableArticleContent)
+  );
+}
+
+function isImportableThreadTweet(value: unknown): value is TweetDetailCache["thread"][number] {
+  return (
+    isRecord(value) &&
+    typeof value.tweetId === "string" &&
+    typeof value.text === "string" &&
+    isNumber(value.createdAt) &&
+    isImportableAuthor(value.author) &&
+    Array.isArray(value.media) &&
+    value.media.every(isImportableMedia) &&
+    Array.isArray(value.urls) &&
+    value.urls.every(isImportableTweetUrl) &&
+    isNullableImportable(value.article, isImportableArticleContent) &&
+    isNullableImportable(value.quotedTweet, isImportableQuotedTweet) &&
+    isNullableImportable(value.retweetedTweet, isImportableQuotedTweet) &&
+    isImportableTweetKind(value.tweetKind) &&
+    isOptionalString(value.tweetDisplayType) &&
+    isOptionalString(value.inReplyToTweetId) &&
+    isOptionalString(value.inReplyToScreenName) &&
+    isOptionalBoolean(value.isThread)
   );
 }
 
@@ -148,13 +371,22 @@ function isImportableBookmark(value: unknown): value is Bookmark {
     typeof value.sortIndex === "string" &&
     typeof value.bookmarked === "boolean" &&
     isImportableAuthor(value.author) &&
-    isRecord(value.metrics) &&
+    isImportableMetrics(value.metrics) &&
     Array.isArray(value.media) &&
+    value.media.every(isImportableMedia) &&
     Array.isArray(value.urls) &&
+    value.urls.every(isImportableTweetUrl) &&
     typeof value.isThread === "boolean" &&
     typeof value.hasImage === "boolean" &&
     typeof value.hasVideo === "boolean" &&
-    typeof value.hasLink === "boolean"
+    typeof value.hasLink === "boolean" &&
+    isNullableImportable(value.quotedTweet, isImportableQuotedTweet) &&
+    isNullableImportable(value.retweetedTweet, isImportableQuotedTweet) &&
+    isNullableImportable(value.article, isImportableArticleContent) &&
+    isImportableTweetKind(value.tweetKind) &&
+    isOptionalString(value.tweetDisplayType) &&
+    isOptionalString(value.inReplyToTweetId) &&
+    isOptionalString(value.inReplyToScreenName)
   );
 }
 
@@ -164,7 +396,8 @@ function isImportableDetail(value: unknown): value is TweetDetailCache {
     typeof value.tweetId === "string" &&
     isNumber(value.fetchedAt) &&
     (value.focalTweet === null || isImportableBookmark(value.focalTweet)) &&
-    Array.isArray(value.thread)
+    Array.isArray(value.thread) &&
+    value.thread.every(isImportableThreadTweet)
   );
 }
 

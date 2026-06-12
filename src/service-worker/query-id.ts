@@ -18,6 +18,10 @@ import {
   QueryIdStaleError,
 } from "@make/x-twitter-extension-core/query-id";
 import {
+  isValidOperationName,
+  isValidQueryId,
+} from "@make/x-twitter-extension-core/pure";
+import {
   extractQueryIdForOperation,
   isQueryIdStale,
   parseGraphqlEndpoint,
@@ -41,6 +45,12 @@ const QUERY_ID_OPS = [
 
 export type QueryIdOperationName = (typeof QUERY_ID_OPS)[number];
 export { QueryIdStaleError };
+
+const QUERY_ID_OP_SET = new Set<string>(QUERY_ID_OPS);
+
+function isAllowedQueryIdOperation(value: unknown): value is QueryIdOperationName {
+  return isValidOperationName(value) && QUERY_ID_OP_SET.has(value);
+}
 
 // ── Diagnostics ─────────────────────────────────────────────────
 
@@ -734,7 +744,7 @@ export function createQueryIdHandlers(
         const activeDeps = deps ?? defaultDeps();
         const toPersist: Array<{ op: string; id: string }> = [];
         for (const [op, id] of Object.entries(ids)) {
-          if (typeof id === "string" && id) {
+          if (isAllowedQueryIdOperation(op) && isValidQueryId(id)) {
             queryIdCacheSet(op, { id, ts: now });
             toPersist.push({ op, id });
           }

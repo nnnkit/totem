@@ -41,6 +41,9 @@ jobs:
       - name: Run tests
         run: pnpm test
 
+      - name: Run workspace verification
+        run: pnpm verify:workspace
+
       - name: Validate and package release artifact
         run: pnpm release:check
 
