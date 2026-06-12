@@ -90,6 +90,32 @@ const EMPTY_STATE: TodayQueueState = {
   metadata: [],
 };
 
+export interface TodayQueueStats {
+  totalCount: number;
+  handledCount: number;
+  completedCount: number;
+}
+
+export function computeTodayQueueStats({
+  snapshot,
+  handledItems,
+  existingTweetIds,
+}: {
+  snapshot: TodayQueueSnapshot | null;
+  handledItems: TodayQueueHandledItem[];
+  existingTweetIds: ReadonlySet<string>;
+}): TodayQueueStats {
+  const deletedCount =
+    snapshot?.tweetIds.filter((tweetId) => !existingTweetIds.has(tweetId))
+      .length ?? 0;
+  return {
+    totalCount: snapshot?.tweetIds.length ?? 0,
+    handledCount: handledItems.length + deletedCount,
+    completedCount: handledItems.filter((item) => item.reason === "read")
+      .length,
+  };
+}
+
 function nextLocalDate(): string {
   return formatLocalDate(new Date(Date.now() + 24 * 60 * 60 * 1000));
 }
@@ -306,18 +332,12 @@ export function useTodayQueue({
     () => new Set(bookmarks.map((bookmark) => bookmark.tweetId)),
     [bookmarks],
   );
-  const totalCount = state.snapshot?.tweetIds.length ?? 0;
   const activeCount = items.length;
-  // Deleted bookmarks count as handled (matching isDone) so the progress
-  // indicator can still reach totalCount after an unbookmark.
-  const deletedCount =
-    state.snapshot?.tweetIds.filter(
-      (tweetId) => !existingTweetIds.has(tweetId),
-    ).length ?? 0;
-  const handledCount = completionHandledItems.length + deletedCount;
-  const completedCount = completionHandledItems.filter(
-    (item) => item.reason === "read",
-  ).length;
+  const { totalCount, handledCount, completedCount } = computeTodayQueueStats({
+    snapshot: state.snapshot,
+    handledItems: completionHandledItems,
+    existingTweetIds,
+  });
 
   const recordAction = useCallback(
     async (tweetId: string, action: TodayQueueExposureAction) => {
