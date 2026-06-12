@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.3] - 2026-06-12
+
+- fix: harden extension integrity checks
+- fix(today): address queue review findings
+- fix(today): keep offline queue state accurate
+- fix(export): avoid repeated bookmark reads in quick export
+- feat: publish three blog posts and improve search discoverability
+- fix: polish Today's Read queue interactions
+- feat: add Today's Read queue
+
 ## [1.2.2] - 2026-06-05
 
 - Maintenance release.
