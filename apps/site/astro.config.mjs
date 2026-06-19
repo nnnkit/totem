@@ -33,6 +33,12 @@ export default defineConfig({
   markdown: {
     remarkPlugins: [remarkGfm],
     rehypePlugins: [rehypeBlogLinks],
+    remarkRehype: {
+      footnoteLabel: "Sources",
+      footnoteLabelTagName: "h2",
+      footnoteLabelProperties: { className: ["blog-sources-title"] },
+      footnoteBackLabel: "Back to text",
+    },
     smartypants: true,
   },
   vite: {
