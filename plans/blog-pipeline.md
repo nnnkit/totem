@@ -211,6 +211,8 @@ a third-party screenshot we don't have the right to use.
 | 2026-06-10 | Best Twitter Bookmark Managers for Search, Export, and Actually Reading | [best-twitter-bookmark-managers-2026](/blog/best-twitter-bookmark-managers-2026) | twitter bookmark manager | ~120 |
 | 2026-06-10 | Chrome Reading List: Where It Is, How It Works, and Why Nobody Uses It | [chrome-reading-list-why-nobody-uses-it](/blog/chrome-reading-list-why-nobody-uses-it) | reading list chrome | ~1,000 |
 | 2026-06-10 | What to Put on Your Chrome New Tab Page | [what-to-put-on-your-chrome-new-tab-page](/blog/what-to-put-on-your-chrome-new-tab-page) | chrome new tab page | ~880 |
+| 2026-06-19 | Your Twitter Bookmarks Are a Graveyard. Here's Why That's Not a Willpower Problem. | [twitter-bookmarks-are-a-graveyard](/blog/twitter-bookmarks-are-a-graveyard) | twitter bookmarks never read | not researched |
+| 2026-06-19 | Twitter Bookmarks to Obsidian: What Actually Works in 2026 (After the API Broke Everything) | [twitter-bookmarks-to-obsidian](/blog/twitter-bookmarks-to-obsidian) | twitter bookmarks to obsidian | thin last30days (1 Reddit item); SERP-validated cluster |
 
 ---
 
@@ -274,7 +276,7 @@ These came from the `$last30days` sub-agent pass plus live verification. They ar
 
 - **"Best local Twitter bookmark exporters"** — compare XArchive, XBookmark, `sarisen/x-bookmark-manager`, userscripts, and Totem's ZIP. Likely intent: people who want JSON/Markdown/local backup, not cloud organization.
 - **"XArchive vs XBookmark vs Totem"** — candidate comparison if `x archive bookmark manager`, `xbookmark`, or `x bookmark manager exporter` volume appears. Useful because XArchive is active in Chrome Web Store and GitHub language is sharply export/local/delete-oriented.
-- **"Twitter bookmarks to Obsidian / Markdown"** — test `twitter bookmarks markdown`, `export twitter bookmarks markdown`, `x bookmarks obsidian`, and `save tweets to markdown`. SERP language is shifting toward Markdown, JSON, Obsidian, and local copy.
+- ~~**"Twitter bookmarks to Obsidian / Markdown"**~~ — **PUBLISHED 2026-06-19** as [`/blog/twitter-bookmarks-to-obsidian`](/blog/twitter-bookmarks-to-obsidian), canonical kw `twitter bookmarks to obsidian`. Research via `/last30days` (thin: 1 Reddit item, X cookies blocked) + a 7-agent survey/verify workflow. Angle nobody else takes: rank tools by **connection method** (official paid API vs your own browser session vs third-party relay), not features — the API-route tools (kbravh, 0xrusowsky) died in 2023; session-route tools (prinsss, X Bookmarks Sync, Totem) survived. Honest Totem scope: ZIP Markdown is vault-ready via unzip, but **no native one-click vault sync yet**. Research report: `plans/research/seo-cycle-2026-06-19-twitter-bookmarks-to-obsidian.html`.
 - **"Twitter bookmarks for AI agents / MCP"** — watch ContextBolt and Keep.md. Needs careful fit check; this can become too generic unless framed as "saved posts as context."
 - **Refresh trigger for `/blog/best-twitter-bookmark-managers-2026`** — re-check XArchive, TweetStorm.ai, Keep.md, Bookmarkjar, ContextBolt, and Twillot repo/product status before any quarterly refresh.
 - **"Clean Chrome new tab page without a feed"** — test `clean chrome new tab page`, `minimal new tab`, `blank new tab chrome`, and `chrome new tab bookmarks bar`. The recency scan showed strong "clean page" and control language.

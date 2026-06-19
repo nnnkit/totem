@@ -53,7 +53,7 @@ Use this if you are comfortable with Tampermonkey and want a local, technical ex
 
 The strongest free option is `prinsss/twitter-web-exporter`.[^prinsss] It runs in your browser, watches the GraphQL responses X already sends while you scroll, and exports data formats like JSON, CSV, and HTML. It does not need an X API key. It does not need your password. It is also not a polished consumer app.
 
-One reason to prefer it: it is still alive. As of this writing it carries 2,552 GitHub stars and was last pushed in May 2026.[^prinsss] That matters more than it sounds. An export tool is only as good as whether it still runs against today's X. Compare `nornagon/twitter-bookmark-archiver`, an older API-route archiver with 141 stars that has not been touched since November 2022.[^nornagon] When a tool depends on a specific X endpoint and the endpoint changes, the tool quietly stops working — so check the last commit date before you trust one with a backup.
+One reason to prefer it: it is still alive. As of this writing it carries 2,552 GitHub stars and was last pushed in May 2026.[^prinsss] That matters more than it sounds. An export tool is only as good as whether it still runs against today's X. Compare `nornagon/twitter-bookmark-archiver`, an older API-route archiver with 141 stars that has not been touched since November 2022.[^nornagon] When a tool depends on a specific X endpoint and the endpoint changes, the tool quietly stops working — so check the last commit date before you trust one with a backup. If your destination is specifically Obsidian, that survival question is the whole game: see [Twitter bookmarks to Obsidian, and what actually works in 2026](/blog/twitter-bookmarks-to-obsidian).
 
 The flow is roughly:
 

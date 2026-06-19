@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SEO Cycle Report - Twitter Bookmarks to Obsidian</title>
+<meta name="description" content="Totem SEO cycle report for the Twitter-bookmarks-to-Obsidian post published June 19, 2026 — the connection-method thesis, tool inventory, fact-check corrections, and distribution plan.">
+<style>
+  :root {
+    --paper: #f7f4ec;
+    --sheet: #fffdf8;
+    --ink: #1f1e1b;
+    --muted: #67635b;
+    --line: #e6dfd1;
+    --blue: #1f4b6f;
+    --green: #2e6b4f;
+    --amber: #8a5b15;
+    --red: #8a2f22;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: Charter, Georgia, serif;
+    line-height: 1.55;
+  }
+  main {
+    width: min(1120px, calc(100% - 40px));
+    margin: 0 auto;
+    padding: 56px 0 80px;
+  }
+  header {
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 32px;
+  }
+  .eyebrow {
+    color: var(--blue);
+    font: 700 12px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  h1 {
+    max-width: 900px;
+    margin: 12px 0 12px;
+    font-size: clamp(40px, 6vw, 64px);
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+  }
+  h2 {
+    margin: 42px 0 14px;
+    border-top: 1px solid var(--line);
+    padding-top: 24px;
+    font-size: 28px;
+    line-height: 1.15;
+  }
+  h3 {
+    margin: 24px 0 8px;
+    font: 750 16px/1.3 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  p { margin: 10px 0 0; }
+  a { color: var(--blue); text-underline-offset: 3px; }
+  code {
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.7);
+    padding: 1px 4px;
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.9em;
+  }
+  .muted { color: var(--muted); }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+    margin-top: 22px;
+  }
+  .card, .note {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--sheet);
+    padding: 16px;
+  }
+  .card strong {
+    display: block;
+    margin-bottom: 6px;
+    color: var(--blue);
+    font: 750 12px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .note {
+    border-left: 4px solid var(--blue);
+    margin-top: 18px;
+  }
+  .note.warn { border-left-color: var(--red); }
+  .table-wrap { margin-top: 16px; overflow-x: auto; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--sheet);
+    font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  th, td {
+    border: 1px solid var(--line);
+    padding: 10px 12px;
+    text-align: left;
+    vertical-align: top;
+  }
+  th { background: #efe8d9; color: #33302a; font-weight: 750; }
+  ul { margin: 10px 0 0 22px; padding: 0; }
+  li { margin: 6px 0; }
+  .pill {
+    display: inline-block;
+    border-radius: 999px;
+    padding: 2px 8px;
+    font: 750 11px/1.3 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    white-space: nowrap;
+  }
+  .pill.api { background: #f6e0db; color: var(--red); }
+  .pill.session { background: #e1efe6; color: var(--green); }
+  .pill.relay { background: #f4ead5; color: var(--amber); }
+  .pill.dead { background: #ece9e3; color: #4a463f; }
+  .status {
+    display: inline-block;
+    border-radius: 999px;
+    padding: 3px 8px;
+    background: #e6f1eb;
+    color: var(--green);
+    font: 750 12px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  .status.pending { background: #f4ead5; color: var(--amber); }
+  @media (max-width: 780px) {
+    main { width: min(100% - 24px, 1120px); padding-top: 32px; }
+    .grid { grid-template-columns: 1fr; }
+    h1 { font-size: 38px; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="eyebrow">Totem SEO Cycle Report</div>
+    <h1>Twitter Bookmarks to Obsidian</h1>
+    <p class="muted">Cycle date: June 19, 2026. Target URL: <code>/blog/twitter-bookmarks-to-obsidian</code>. Canonical keyword: <code>twitter bookmarks to obsidian</code>.</p>
+    <div class="grid">
+      <div class="card">
+        <strong>Outcome</strong>
+        <p><span class="status">Published</span> New explainer built on a connection-method thesis no competing page makes, with three inline cards, a four-thread community panel, and fourteen sourced footnotes.</p>
+      </div>
+      <div class="card">
+        <strong>Intent</strong>
+        <p>Informational. People burned by a broken plugin who want an honest 2026 map — "what actually works," not a single vendor CTA. Split between single-tweet capture and whole-library export.</p>
+      </div>
+      <div class="card">
+        <strong>Research method</strong>
+        <p><code>/last30days</code> engine (thin: 1 Reddit item; X cookies blocked) + a 7-agent survey/verify workflow + direct GitHub / forum verification.</p>
+      </div>
+    </div>
+  </header>
+
+  <section>
+    <h2>Decision</h2>
+    <div class="note">
+      <p>Do not write another "here are the tools, here's how to install them" guide — that is the entire existing SERP. Win it instead with one move nobody else makes: <strong>rank Twitter-to-Obsidian tools by how they connect to X, because that — not the feature list — predicts whether a tool still works next year.</strong> The official (now paid) API is the route that died; tools that read the user's own logged-in session survived; third-party relays sit in between. Pair that thesis with a clean single-tweet-vs-whole-library fork and an honest fidelity caveat, then position Totem accurately as a local-first, session-route bulk exporter whose Markdown is vault-ready by unzip — explicitly <em>not</em> a one-click vault sync.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Research Inputs</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Input</th><th>Source</th><th>Result</th><th>Use in post</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Recent-language pass</td>
+            <td><code>/last30days</code> engine, raw at <code>tmp/last30days/twitter-bookmarks-to-obsidian-markdown-export-raw.md</code></td>
+            <td>Thin yield. Reddit search API returned 403; X cookies unreadable (Terminal lacks Full Disk Access). One live item: r/ObsidianMD "How do I do this on my obsidian?" (2026-06-17, 73 pts, 7 cmt). GitHub project mode resolved <code>kbravh/obsidian-tweet-to-markdown</code> and <code>prinsss/twitter-web-exporter</code>.</td>
+            <td>Confirmed the question is live in June 2026; flagged the two anchor repos. Thin yield logged in pipeline.</td>
+          </tr>
+          <tr>
+            <td>Multi-agent survey</td>
+            <td>Workflow <code>w72d9e8w8</code> — 5 survey agents + 2 adversarial verifiers</td>
+            <td>2 of 5 surveys returned structured output (non-obvious-insight, SERP-and-questions); 3 dropped their final JSON on a mid-response connection error but their evidence was recovered independently. Both verifiers returned full verdict sets.</td>
+            <td>Built the thesis spine, the SERP-gap list, the PAA/FAQ set, and the tool inventory. Verifiers drove the must-fix corrections below.</td>
+          </tr>
+          <tr>
+            <td>Direct liveness checks</td>
+            <td>GitHub API + raw READMEs</td>
+            <td>kbravh: 220 stars, 13,579 downloads, last release Dec 2022, last commit May 2023. 0xrusowsky: 25 stars, last commit Feb 4 2023. prinsss: 2,552 stars, pushed May 2026. deriqsocial: new, ~0 stars, 3 commits.</td>
+            <td>Turned the thesis into dated facts; corrected the GTM report's wrong "1,900+ stars" for kbravh (actual 220).</td>
+          </tr>
+          <tr>
+            <td>Community voice</td>
+            <td>Obsidian forum threads (fetchable; Reddit was not)</td>
+            <td>Verbatim, dated questions spanning 2021→2023 — "elegant solution for capturing content from Twitter," "Twitter favorites as an Obsidian brain," a builder tired of "manually copy-pasting."</td>
+            <td>Populated the four-card "Field notes" panel showing the need is old and steady while the tools churn.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="note warn">
+      <p><strong>Keyword volume not pulled this cycle.</strong> No <code>/dataforseo</code> budget was spent — the cluster (<code>twitter bookmarks to obsidian</code>, <code>tweet to markdown obsidian</code>, <code>save tweets to markdown</code>, <code>x bookmarks obsidian</code>) is SERP-validated as a real, fragmented, low-to-mid-volume informational cluster, but exact volumes remain a follow-up. Listed in pipeline as a backlog item.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>The Thesis (and why it's contrarian)</h2>
+    <p>Every ranking page sorts these tools by features: threads, images, tags, YAML. None sort by the one variable that predicts survival — <strong>how the tool talks to X</strong>. A clean natural experiment already sits in the results:</p>
+    <div class="grid">
+      <div class="card">
+        <strong>The official API · fragile</strong>
+        <p>kbravh's still-#1 plugin and the bulk Python pipelines all ask Twitter's API for permission. That route was paywalled April 27, 2023; the free tier can no longer read tweets. These are the tools that died or now cost money.</p>
+      </div>
+      <div class="card">
+        <strong>Your own session · durable</strong>
+        <p>The survivors read what the logged-in browser already loaded — no key, no plan. prinsss (created <em>after</em> the break, 2,552 stars), X Bookmarks Sync ("No API key. No OAuth. Just your existing browser session"), and Totem all live here.</p>
+      </div>
+      <div class="card">
+        <strong>A third-party relay · it depends</strong>
+        <p>tweet.md and the Post Embed plugin avoid the official API via public proxies (FxTwitter / oEmbed). Keyless and easy, but the fetch runs on someone else's server — a different fragility. Fine for one tweet.</p>
+      </div>
+    </div>
+    <p>The deeper payoff is archival, not PKM: once a tweet is plain-text Markdown in a vault, deletion stops mattering — and the API route literally cannot fetch a deleted tweet, so the "proper" path can't even do the thing archiving is for. The durable connection method and the archival goal are the same point from two directions.</p>
+  </section>
+
+  <section>
+    <h2>Tool Inventory (verified June 19, 2026)</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Tool</th><th>Connection</th><th>Status</th><th>Scope</th><th>Note</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>kbravh / obsidian-tweet-to-markdown</td>
+            <td><span class="pill api">official API</span></td>
+            <td><span class="pill dead">dormant</span></td>
+            <td>single tweet</td>
+            <td>Free path dead since 2023-04-27; needs a paid plan. 220★, last release Dec 2022. Still ranks #1. The headline exhibit.</td>
+          </tr>
+          <tr>
+            <td>0xrusowsky / bookmarks-to-obsidian</td>
+            <td><span class="pill api">official API</span></td>
+            <td><span class="pill dead">abandoned</span></td>
+            <td>whole library</td>
+            <td>"Sync Twitter bookmarks with an Obsidian vault." Last commit Feb 4 2023, 25★. Died as the API closed.</td>
+          </tr>
+          <tr>
+            <td>deriqsocial / x-bookmarks-to-obsidian</td>
+            <td><span class="pill api">official API</span></td>
+            <td><span class="pill relay">live but gated</span></td>
+            <td>whole library</td>
+            <td>Claude-enriched vault, wikilinks, graph. Needs X dev account + paid Claude key (~$0.50–2.00 / 100 bookmarks). ~0 users.</td>
+          </tr>
+          <tr>
+            <td>prinsss / twitter-web-exporter</td>
+            <td><span class="pill session">your session</span></td>
+            <td><span class="pill session">alive</span></td>
+            <td>whole library</td>
+            <td>2,552★, pushed May 2026. Created Sept 2023 to never touch the API. JSON/CSV/HTML out (not Markdown-native).</td>
+          </tr>
+          <tr>
+            <td>X Bookmarks Sync (teddy0605)</td>
+            <td><span class="pill session">your session</span></td>
+            <td><span class="pill session">alive</span></td>
+            <td>whole library</td>
+            <td>Obsidian plugin. "No API key. No OAuth. Just your existing browser session." Latest release 1.2.1 (Mar 2026). Desktop-only; images are CDN links.</td>
+          </tr>
+          <tr>
+            <td>X to Obsidian Saver</td>
+            <td><span class="pill session">your session</span></td>
+            <td><span class="pill session">alive</span></td>
+            <td>both</td>
+            <td>Chrome extension, v1.0.0, updated Mar 2026, 122 users. Saves likes + bookmarks as Markdown with local images. New.</td>
+          </tr>
+          <tr>
+            <td>X/Twitter Post Embed</td>
+            <td><span class="pill relay">relay (FxTwitter)</span></td>
+            <td><span class="pill session">alive</span></td>
+            <td>single tweet</td>
+            <td>Keyless paste-a-link with full thread + nested quote support. Uses FxTwitter/oEmbed, NOT the user's session.</td>
+          </tr>
+          <tr>
+            <td>tweet.md</td>
+            <td><span class="pill relay">relay (cloud)</span></td>
+            <td><span class="pill session">alive</span></td>
+            <td>single tweet</td>
+            <td>Swap <code>x.com</code> → <code>tweet.md</code> for clean Markdown. Conversion runs on their servers.</td>
+          </tr>
+          <tr>
+            <td>Totem</td>
+            <td><span class="pill session">your session</span></td>
+            <td><span class="pill session">alive</span></td>
+            <td>whole library</td>
+            <td>Local-first, reads x.com GraphQL responses. ZIP export = one .md/bookmark + YAML + readme + CSV + JSONL + manifest. Vault-ready by unzip; <strong>no native sync yet</strong>.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>Fact-Check Corrections Applied</h2>
+    <p>Two adversarial verifiers ran against the survey's load-bearing claims. Every must-fix below was honored in the published post:</p>
+    <ul>
+      <li><strong>kbravh is dormant, not "maintained."</strong> Last release Dec 2022, last commit May 2023. The post calls it dormant — which strengthens the thesis rather than weakening it.</li>
+      <li><strong>0xrusowsky is abandoned (Feb 2023), not "alive."</strong> Presented as a dead 2023 project, used as the dated counter-example to prinsss.</li>
+      <li><strong>X Bookmarks Sync version is 1.2.1, not "v1.1.10."</strong> The 1.1.10 string only appears in the community directory and conflicts with GitHub releases. Post cites no false version and uses the verbatim "No API key. No OAuth. Just your existing browser session."</li>
+      <li><strong>X/Twitter Post Embed is a relay, not a browser-session tool.</strong> It fetches via FxTwitter/oEmbed, not the user's cookies. The post puts it in the third "relay" category — load-bearing for a connection-method thesis.</li>
+      <li><strong>Thesis softened to "depends on the paid official API = fragile" vs "avoids it = durable."</strong> Not a clean "API = dead, session = alive": deriqsocial uses the API and is recently active (just gated), and relays avoid the API without using your session. The three-card framing captures this honestly.</li>
+      <li><strong>One keep.md quote was a misattributed composite.</strong> Only "This is the path that actually survives a tweet getting deleted, because the content lives in a second place you control." is genuine; the "developer routes only return non-deleted tweets" sentence is NOT on keep.md. The post states the deleted-tweet/API point as its own reasoning, not as a keep.md quote.</li>
+      <li><strong>No specific Twitter API dollar figure asserted.</strong> As of Feb 2026, X closed flat Basic/Pro tiers to new signups (pay-per-use default), so the post says only that the free tier can't read tweets and a paid plan is required.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>SERP Gaps This Post Owns</h2>
+    <ul>
+      <li><strong>Connection method as a survivability predictor</strong> — no competing page frames it; every guide ranks by features.</li>
+      <li><strong>Single-tweet vs whole-library fork</strong> — the two intents collide on the same keywords and every incumbent blurs them.</li>
+      <li><strong>Honest fidelity caveat</strong> — threads, quote tweets, long text, images, video round-trip differently; nobody tabulates it.</li>
+      <li><strong>"Obsidian-ready" ≠ "works with Obsidian"</strong> — a folder of .md vs YAML-as-Properties that Dataview can query.</li>
+      <li><strong>The archive doesn't contain bookmarks</strong> — the canonical reason the whole tool category exists, usually buried.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Internal Links</h2>
+    <p>Out (from the new post): <code>/blog/how-to-export-twitter-bookmarks</code>, <code>/blog/what-gets-exported-twitter-bookmarks</code>, <code>/blog/twitter-bookmarks-are-a-graveyard</code>, and <code>/export-format/v1</code>.</p>
+    <p>In (added this cycle): <code>/blog/how-to-export-twitter-bookmarks</code> now links to the new post from its userscript/liveness section — the most thematically aligned spot, since that section is already about whether a tool will keep working.</p>
+  </section>
+
+  <section>
+    <h2>Distribution Plan</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Channel</th><th>Angle</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>r/ObsidianMD</td><td>"What actually works for Twitter→Obsidian in 2026 (after the API break)"</td><td>Highest-intent audience; the live 2026-06-17 thread proves demand. Lead with the connection-method idea, not the product.</td></tr>
+          <tr><td>r/PKM</td><td>Archival framing: bookmarks as a copy that outlives deletion</td><td>PKM crowd responds to the "this is archival, not note-taking" reframe.</td></tr>
+          <tr><td>Obsidian forum</td><td>Reply on the long-running capture threads with the durable-tools summary</td><td>Threads 12911 / 54342 / 28510 are still trafficked; a genuinely useful answer earns a durable backlink.</td></tr>
+          <tr><td>Hacker News</td><td>"The official Twitter API path is the one that died"</td><td>Show HN-adjacent; the inverted-incentive angle suits HN. Time carefully; only if it reads as insight, not promo.</td></tr>
+          <tr><td>X / Twitter</td><td>Thread: three ways a tool connects, and which survived</td><td>Native-audience; pull the kbravh banner + the prinsss-vs-0xrusowsky date contrast.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>Follow-ups</h2>
+    <ul>
+      <li>Spend <code>/dataforseo</code> budget to attach real volumes to the cluster and confirm the canonical head term.</li>
+      <li>Consider a companion fidelity table post (thread / quote / media round-trip per tool) if the gap holds — flagged as table-stakes differentiation, not a spine.</li>
+      <li>If Totem ships a native vault writer, revisit the "Where Totem fits" section — today's honest scope is unzip-into-vault, not sync.</li>
+      <li>Re-fetch the r/ObsidianMD 2026-06-17 thread body once Reddit access is restored; it may yield a sharper community quote.</li>
+    </ul>
+  </section>
+</main>
+</body>
+</html>
