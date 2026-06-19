@@ -2,6 +2,11 @@
 
 This is the resubmission-safe Chrome Web Store copy for the `1.2.1` draft.
 
+Note: title, short description, and category changes are deferred while the
+current Chrome Web Store growth spike is active. Revisit after the listing has
+7-10 days of stable impression, install, active-user, uninstall, and review
+data.
+
 The `1.2.0` draft was rejected on June 3, 2026 for `Spam and Placement in the Store` because the detailed description contained an excessive keyword list. Do not paste a `KEYWORDS` block, SEO keyword list, competitor alternatives list, or repeated search phrases into the dashboard description.
 
 ## Extension Name
@@ -71,6 +76,32 @@ Read your saved posts from a calm new tab.
 3. Permission explanation uses this plain-language sentence: `x.com access is used only to sync bookmarks from your active X session.`
 4. Do not claim "no data" if the dashboard category asks whether the extension handles user content locally.
 5. Do not claim mobile sync, cross-device library sync, or service-side backup.
+
+## Permission Justifications
+
+Use these in the dashboard permission fields:
+
+- `storage`: Stores bookmarks, tweet detail cache, reading progress,
+  highlights, notes, runtime state, and user settings locally in the browser.
+- `webRequest`: Observes x.com GraphQL requests from the user's own browser
+  session to capture the auth headers required to sync that user's bookmarks.
+  Totem does not block or modify requests with `webRequest`.
+- `declarativeNetRequest`: Sets the required request header on Totem's own
+  x.com GraphQL requests so they match the authenticated browser session.
+- `scripting`: Registers or removes the optional `Open in Totem` content script
+  on x.com when the user enables or disables that setting.
+- `cookies`: Reads the x.com session/account cookie locally to identify the
+  active X account, scope the local bookmark cache, and detect logout or account
+  changes.
+- `https://x.com/*`: Runs Totem's x.com content scripts and sync logic only on
+  x.com so the extension can detect account context and keep the local bookmark
+  library in sync.
+- Optional `topSites`: Shows Chrome quick links on the new tab page only after
+  the user enables Quick Links.
+- Optional `favicon`: Shows favicons for Quick Links only after the user enables
+  Quick Links.
+- Optional `search`: Lets Totem submit a new-tab search to Chrome's default
+  search engine only after the user chooses `Browser default`.
 
 ## Do Not Include
 

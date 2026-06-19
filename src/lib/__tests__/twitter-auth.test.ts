@@ -5,10 +5,38 @@ import {
   normalizeHeaders,
   parseCapturedAuthHeaders,
   readLiveTwid,
-} from "./auth";
-import { createFakeStorageArea } from "./test-utils";
+} from "../twitter-auth";
 
-describe("auth primitives", () => {
+function createFakeStorageArea(initial: Record<string, unknown> = {}) {
+  const data = new Map(Object.entries(initial));
+  return {
+    async get(keys?: string | string[] | Record<string, unknown> | null) {
+      if (!keys) return Object.fromEntries(data);
+      if (typeof keys === "string") return { [keys]: data.get(keys) };
+      if (Array.isArray(keys)) {
+        return Object.fromEntries(keys.map((key) => [key, data.get(key)]));
+      }
+      return Object.fromEntries(
+        Object.entries(keys).map(([key, fallback]) => [
+          key,
+          data.has(key) ? data.get(key) : fallback,
+        ]),
+      );
+    },
+    async set(items: Record<string, unknown>) {
+      for (const [key, value] of Object.entries(items)) {
+        data.set(key, value);
+      }
+    },
+    async remove(keys: string | string[]) {
+      for (const key of Array.isArray(keys) ? keys : [keys]) {
+        data.delete(key);
+      }
+    },
+  };
+}
+
+describe("twitter auth helpers", () => {
   it("normalizes header names and validates captured auth identity", () => {
     const parsed = parseCapturedAuthHeaders(
       {

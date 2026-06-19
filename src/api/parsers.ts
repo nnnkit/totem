@@ -951,7 +951,10 @@ export function parseBookmarkPagePayload(payload: unknown): BookmarkPageResult {
     return list;
   });
   if (entries.length === 0) {
-    return { bookmarks: [], cursor: null, stopOnEmptyResponse: false };
+    // instructions: [] is a valid "end of list" signal (e.g. account with no
+    // bookmarks), distinct from a parse failure above. Treat as complete so
+    // a full sync doesn't misclassify this as cursor_missing → error.
+    return { bookmarks: [], cursor: null, stopOnEmptyResponse: true };
   }
 
   const bookmarks: Bookmark[] = [];

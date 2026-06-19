@@ -9,12 +9,13 @@
 
 import type { MessageRequest } from "../types/messages";
 import type { HandlerMap } from "./index";
-import { parseCapturedAuthHeaders } from "@make/x-twitter-extension-core/auth";
+import { parseCapturedAuthHeaders } from "../lib/twitter-auth";
 import {
   AuthExpiredError,
   RateLimitError,
-} from "@make/x-twitter-extension-core/query-id";
-import { QueryIdStaleError, withQueryId } from "./query-id";
+  QueryIdStaleError,
+  withQueryId,
+} from "./query-id";
 import {
   ensureAuthCapture,
   markAuthAuthenticated,
@@ -86,7 +87,7 @@ async function buildHeaders(
     accept: "*/*",
     authorization: parsedAuth.authorization,
     "x-csrf-token": parsedAuth.csrfToken,
-    "x-twitter-active-user": auth["x-twitter-active-user"] || "yes",
+    "x-twitter-active-user": "yes",
     "x-twitter-auth-type": auth["x-twitter-auth-type"] || "OAuth2Session",
     "x-twitter-client-language":
       auth["x-twitter-client-language"] || "en",

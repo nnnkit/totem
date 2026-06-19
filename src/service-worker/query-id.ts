@@ -14,15 +14,9 @@
 import type { MessageRequest } from "../types/messages";
 import type { HandlerMap } from "./index";
 import {
-  isQueryIdStaleError,
-  QueryIdStaleError,
-} from "@make/x-twitter-extension-core/query-id";
-import {
+  extractQueryIdForOperation,
   isValidOperationName,
   isValidQueryId,
-} from "@make/x-twitter-extension-core/pure";
-import {
-  extractQueryIdForOperation,
   isQueryIdStale,
   parseGraphqlEndpoint,
 } from "../lib/sw-pure";
@@ -44,9 +38,57 @@ const QUERY_ID_OPS = [
 ] as const;
 
 export type QueryIdOperationName = (typeof QUERY_ID_OPS)[number];
-export { QueryIdStaleError };
 
 const QUERY_ID_OP_SET = new Set<string>(QUERY_ID_OPS);
+
+export class QueryIdStaleError extends Error {
+  readonly code = "QUERY_ID_STALE";
+  readonly staleQueryId: string;
+
+  constructor(operationName: string, staleQueryId: string) {
+    super("QUERY_ID_STALE: " + operationName);
+    this.name = "QueryIdStaleError";
+    this.staleQueryId = staleQueryId;
+  }
+}
+
+export interface QueryIdStaleLike {
+  name?: string;
+  code?: string;
+  staleQueryId?: string;
+  message?: string;
+}
+
+export function isQueryIdStaleError(error: unknown): error is QueryIdStaleLike {
+  if (!error || typeof error !== "object") return false;
+  const value = error as QueryIdStaleLike;
+  return (
+    value.code === "QUERY_ID_STALE" ||
+    value.name === "QueryIdStaleError" ||
+    (typeof value.message === "string" &&
+      value.message.startsWith("QUERY_ID_STALE"))
+  );
+}
+
+export class AuthExpiredError extends Error {
+  readonly code = "AUTH_EXPIRED";
+
+  constructor(message = "AUTH_EXPIRED") {
+    super(message);
+    this.name = "AuthExpiredError";
+  }
+}
+
+export class RateLimitError extends Error {
+  readonly code = "RATE_LIMITED";
+  readonly retryAfterMs?: number;
+
+  constructor(message = "RATE_LIMITED", retryAfterMs?: number) {
+    super(message);
+    this.name = "RateLimitError";
+    this.retryAfterMs = retryAfterMs;
+  }
+}
 
 function isAllowedQueryIdOperation(value: unknown): value is QueryIdOperationName {
   return isValidOperationName(value) && QUERY_ID_OP_SET.has(value);

@@ -23,7 +23,7 @@ import {
   parseCapturedAuthHeaders,
   readLiveTwidUserId,
   usableAuthHeaderUserId,
-} from "@make/x-twitter-extension-core/auth";
+} from "../lib/twitter-auth";
 import {
   normalizeAuthState,
   normalizeSyncAccountId,
