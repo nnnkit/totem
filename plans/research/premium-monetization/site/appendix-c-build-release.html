@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Build & Release Pipeline · Totem Premium</title>
+<meta name="generator" content="Kami">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="topbar">
+  <a class="wordmark" href="index.html">Totem <span>Premium Conversion</span></a>
+  <div class="topbar-meta">Research &amp; execution plan · v1.0 · 2026.06</div>
+</header>
+<div class="layout">
+<nav class="sidebar" aria-label="Sections">
+<a class="side-brand" href="index.html">Totem <span>Premium</span></a>
+<div class="side-group"><div class="side-group-label">Overview</div>
+<a class="side-link" href="index.html">Home</a>
+</div>
+<div class="side-group"><div class="side-group-label">The Plan</div>
+<a class="side-link" href="02-the-model.html">The Model</a>
+<a class="side-link" href="03-features.html">Features &amp; Limits</a>
+<a class="side-link" href="04-tech-stack.html">Tech Stack</a>
+<a class="side-link" href="05-payments.html">Payment Gateway</a>
+<a class="side-link" href="06-license.html">License Architecture</a>
+<a class="side-link" href="07-system-changes.html">System Changes</a>
+<a class="side-link" href="08-compliance.html">CWS Compliance</a>
+<a class="side-link" href="09-paywall-ux.html">Paywall UX</a>
+<a class="side-link" href="10-rollout.html">Rollout &amp; Decisions</a>
+</div>
+<div class="side-group"><div class="side-group-label">Review</div>
+<a class="side-link" href="11-adversarial-review.html">Adversarial Review</a>
+</div>
+<div class="side-group"><div class="side-group-label">Appendices</div>
+<a class="side-link" href="appendix-a-data-sync.html">A · Data &amp; Sync</a>
+<a class="side-link" href="appendix-b-features-export.html">B · Features &amp; Export</a>
+<a class="side-link" href="appendix-c-build-release.html" aria-current="page">C · Build &amp; Release</a>
+<a class="side-link" href="appendix-d-site-distribution.html">D · Site &amp; Dist.</a>
+<a class="side-link" href="appendix-e-ui-state-upsell.html">E · UI &amp; Upsell</a>
+<a class="side-link" href="appendix-f-payments-compared.html">F · Gateways</a>
+<a class="side-link" href="appendix-g-license-arch.html">G · License &amp; DRM</a>
+<a class="side-link" href="appendix-h-market-discourse.html">H · Market Discourse</a>
+<a class="side-link" href="appendix-i-cws-policy-ux.html">I · CWS Policy</a>
+</div>
+<div class="side-group"><div class="side-group-label">Reference</div>
+<a class="side-link" href="appendix-j-references.html">J · References</a>
+</div>
+</nav>
+<main class="content">
+<div class="chapter-eyebrow">Appendix C</div><h1 class="page-title">Build &amp; Release Pipeline</h1><p class="lead">The exact build, package, and Chrome Web Store release pipeline as it stands today — one artifact, one manifest, one zip — and the precise repo-mechanical changes a Pro/license-check feature would force, including the single preflight script that blocks any new permission. All paths are relative to repo root <code>/Users/ankit/Documents/make/totem</code>.</p>
+
+<h2 id="how-the-extension-is-built-and-packaged-today">How the extension is built and packaged today</h2>
+
+<h3>The single shippable artifact</h3>
+<p>There is exactly <strong>one</strong> shippable extension artifact: <code>release/totem-v&lt;version&gt;.zip</code>, produced from <code>dist/</code>. The <code>dist/</code> shape today:</p>
+<pre><code>dist/
+  manifest.json            # byte-identical copy of public/manifest.json (verified via diff)
+  service-worker.js        # ~48 KB IIFE bundle
+  newtab.html, reader.html # entry HTML
+  assets/
+    main.js (~1 MB), main.css (~120 KB), index.js, open-in-totem.js
+  content/
+    detect-user.js, mutation-hook.js   # copied verbatim from public/content/
+  icons/, wallpapers/, favicon*, rules.json</code></pre>
+<p>Key fact: <code>vite.config.ts</code> sets <strong>no explicit <code>publicDir</code></strong>, so Vite uses its default (<code>public/</code>) and copies everything under <code>public/</code> into <code>dist/</code> unprocessed. That is why <code>dist/manifest.json</code>, <code>dist/rules.json</code>, and <code>dist/content/*.js</code> are byte-identical copies of the <code>public/</code> source — they are static assets, <strong>not</strong> build outputs. <code>service-worker.js</code> and <code>assets/main.js</code> etc. ARE build outputs (Rollup/Vite).</p>
+
+<h3>The build graph (<code>vite.config.ts</code>)</h3>
+<p>Three things are bundled in one <code>vite build</code>:</p>
+<ul>
+<li><strong>Main app</strong> — <code>newtab.html</code> + <code>reader.html</code> as Rollup inputs &rarr; <code>assets/[name].js</code> (ES modules, <code>base: "./"</code> for relative paths inside the extension).</li>
+<li><strong>Service worker</strong> — <code>serviceWorkerPlugin()</code> runs a <em>second</em> nested <code>viteBuild()</code> in <code>closeBundle()</code> that compiles <code>src/service-worker/index.ts</code> &rarr; <code>service-worker.js</code> as a single <strong>IIFE</strong> (MV3 service workers can't be ES modules unless <code>"type":"module"</code> is set in the manifest background block, which it is not — so IIFE is required).</li>
+<li><strong>Content script</strong> — <code>contentScriptPlugin()</code> compiles <code>src/content/open-in-totem.ts</code> &rarr; <code>assets/open-in-totem.js</code> as IIFE. (The MAIN-world <code>mutation-hook.js</code> and <code>detect-user.js</code> are hand-written static files in <code>public/content/</code>, not part of the TS build.)</li>
+<li><strong>Version injection</strong> — <code>define: { __TOTEM_APP_VERSION__: JSON.stringify(appVersion) }</code> reads <code>package.json.version</code> at config-eval time and inlines it as a global. Declared in <code>src/vite-env.d.ts</code>; consumed in <code>src/lib/export/quick-export.ts:35</code>. This is the existing precedent for compile-time constant injection — <span class="hl">the same <code>define</code> mechanism is the cleanest place to inject a license public key.</span></li>
+</ul>
+
+<h3>The full pipeline, command by command</h3>
+<p>From <code>package.json</code> scripts:</p>
+<pre><code>pnpm build:extension   = pnpm typecheck &amp;&amp; vite build      # tsc --noEmit, then build
+pnpm package:extension = pnpm build:extension &amp;&amp; node scripts/package-extension.mjs</code></pre>
+<p><code>scripts/package-extension.mjs</code>:</p>
+<ol>
+<li>Asserts <code>dist/</code> and <code>dist/manifest.json</code> exist (fails if you didn't build).</li>
+<li>Reads <code>version</code> from <code>dist/manifest.json</code>.</li>
+<li><code>zip -r -q release/totem-v&lt;version&gt;.zip .</code> run with <code>cwd: dist</code> (shells out to the system <code>zip</code> binary — a host dependency, not a JS lib).</li>
+</ol>
+<p>So the literal chain is: <strong>typecheck &rarr; vite build &rarr; copy public/&rarr;dist/ &rarr; zip dist/ &rarr; release/totem-v&lt;version&gt;.zip</strong>. Upload to CWS is <strong>manual</strong> (drag-zip into the developer dashboard) per <code>PUBLISH.md</code>; there is no automated CWS upload step. The GitHub release workflow only publishes the zip as a GitHub Release <strong>asset</strong>, not to the Web Store.</p>
+
+<h3>Release orchestration &amp; versioning sync</h3>
+<p>Two-file version sync is enforced in three places:</p>
+<ul>
+<li><code>scripts/check-version-sync.mjs</code> (<code>pnpm release:version:check</code>) — hard-fails if <code>package.json.version !== public/manifest.json.version</code>.</li>
+<li><code>scripts/prepare-release.mjs</code> (<code>pnpm release:prepare</code>) — bumps <strong>both</strong> files together, regenerates <code>CHANGELOG.md</code> from filtered git subjects, then runs <code>release:version:check</code> + <code>package:extension</code>.</li>
+<li><code>scripts/release.mjs</code> (<code>pnpm release</code> / <code>ship</code>) — guards (must be on <code>main</code>, clean tree), runs prepare, commits the 3 files, pushes <code>main</code>, creates+pushes <code>v&lt;version&gt;</code> tag.</li>
+</ul>
+<p>The tag push triggers <code>.github/workflows/release-extension.yml</code>: install &rarr; <code>pnpm test:reliability</code> &rarr; <code>pnpm test</code> &rarr; <code>pnpm verify:workspace</code> &rarr; <code>pnpm release:check</code> (<code>release:version:check</code> + <code>package:extension</code>) &rarr; assert <code>tag == dist/manifest.json.version</code> &rarr; upload <code>release/*.zip</code> to the GitHub Release. CI (<code>ci.yml</code>) runs <code>pnpm ci:verify</code> = <code>test &amp;&amp; build &amp;&amp; verify:workspace &amp;&amp; audit:prod</code> on every PR/push.</p>
+
+<div class="callout"><code>scripts/verify-cws-featured-readiness.mjs</code> (<code>pnpm cws:featured:preflight</code>) is a strict gate that <strong>hard-pins the manifest</strong>: it asserts the exact <code>permissions</code> array <code>[storage, webRequest, declarativeNetRequest, scripting, cookies]</code>, the exact <code>optional_permissions</code> <code>[topSites, favicon, search]</code>, and that <code>host_permissions</code> is <strong>exactly</strong> <code>["https://x.com/*"]</code> with length 1. Any new permission or host added for licensing will fail this preflight until the script is updated — the single most important repo-mechanical blocker to know about.</div>
+
+<h2 id="manifest-implications-of-adding-payments-licensing">Manifest implications of adding payments/licensing</h2>
+<p>Current relevant manifest state (<code>public/manifest.json</code>):</p>
+<ul>
+<li><code>permissions</code>: <code>storage, webRequest, declarativeNetRequest, scripting, cookies</code></li>
+<li><code>host_permissions</code>: <code>["https://x.com/*"]</code> only</li>
+<li>CSP (<code>content_security_policy.extension_pages</code>): <code>script-src 'self'; object-src 'self'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://*.twimg.com; media-src 'self' https://*.twimg.com</code></li>
+</ul>
+
+<h3>The MV3 "no remotely-hosted code" rule — the core constraint</h3>
+<p>Under MV3, <strong>all executable code must ship inside the package</strong>. License validation therefore must be a <span class="hl">pure data exchange</span>: the extension may <code>fetch()</code> JSON (a license token, an entitlement boolean, a signed receipt) from an endpoint, but it may <strong>not</strong> download and <code>eval</code>/inject any script, and it may <strong>not</strong> load a remote payment-provider SDK <code>&lt;script&gt;</code>. This rules out the common web pattern of dropping in <code>js.stripe.com/v3</code> or a Paddle/Lemon Squeezy overlay script. Two compliant shapes:</p>
+<ul>
+<li><span class="tag">RECOMMENDED</span> <strong>No in-extension checkout.</strong> Checkout happens on the web (a <code>usetotem.xyz/pro</code> page or the provider's hosted checkout, opened in a normal tab). The extension only ever does a <code>fetch()</code> to verify/retrieve an entitlement. The package contains zero payment SDK code. This keeps <code>script-src 'self'</code> untouched and is the cleanest MV3 posture.</li>
+<li><span class="tag">ACCEPTABLE</span> Bundle a provider's <em>client</em> library into <code>assets/main.js</code> at build time (npm dependency, compiled by Vite) and call its REST API. Still data-only at runtime; still <code>script-src 'self'</code>.</li>
+</ul>
+<p><code>script-src</code> should stay <code>'self'</code>. <strong>Do not</strong> add any host to <code>script-src</code>.</p>
+
+<h3>What must change for an outbound license fetch</h3>
+<p>A license check that calls an external endpoint needs <strong>two</strong> manifest additions:</p>
+<ol>
+<li><strong><code>host_permissions</code></strong> — add the license/verify origin, e.g. <code>"https://api.usetotem.xyz/*"</code> (a tiny first-party verify endpoint) or the provider's API origin (e.g. <code>"https://api.lemonsqueezy.com/*"</code>). Without this, <code>fetch()</code> from the extension is blocked by host-permission policy. Prefer a <strong>single, narrow, first-party</strong> origin you control — far easier to justify to reviewers than a third-party payment API, and it lets you swap providers without a manifest change/re-review.</li>
+<li><strong>CSP <code>connect-src</code></strong> — the extension's CSP currently has <strong>no <code>connect-src</code> directive</strong>, so it inherits the default and outbound <code>fetch</code>/XHR is governed by host_permissions plus the default <code>connect-src</code>. To be explicit and safe, add a <code>connect-src</code> listing exactly the verify origin (and keep <code>'self'</code>), e.g.:
+<pre><code>connect-src 'self' https://api.usetotem.xyz;</code></pre>
+Today's <code>fetch</code> to <code>x.com</code> works because <code>https://x.com/*</code> is in <code>host_permissions</code> and there is no restrictive <code>connect-src</code>. Once you add an explicit <code>connect-src</code>, you must list <strong>every</strong> origin the extension talks to (x.com, twimg via img/media already covered, and the new verify origin), or you'll break existing network calls. Safest minimal change: add the <code>host_permissions</code> entry + a <code>connect-src</code> including <code>'self'</code>, <code>https://x.com</code>, and the verify origin.</li>
+<li><strong><code>optional_host_permissions</code></strong> (strongly recommended posture) — instead of a static <code>host_permissions</code> grant, declare the verify origin under <code>optional_host_permissions</code> and request it at runtime only when the user actually upgrades. This keeps the default install footprint identical to today (helps CWS review and user trust), and means free users never grant a payment-related host. Trade-off: slightly more runtime code (<code>chrome.permissions.request</code>).</li>
+</ol>
+
+<h3>Permission additions to avoid</h3>
+<ul>
+<li><strong>Do not</strong> add <code>identity</code> / OAuth unless you truly need Google sign-in for accounts — it contradicts the "no account" ethos and adds review friction. A one-time license key (paste-a-key or deep-link redemption) avoids it entirely.</li>
+<li><strong>Do not</strong> broaden to <code>&lt;all_urls&gt;</code> or wildcard hosts. The narrower the better; <code>verify-cws-featured-readiness.mjs</code> and the local-first story both depend on a tight host list.</li>
+</ul>
+
+<h2 id="build-time-secrets-env-injection">Build-time secrets &amp; env injection</h2>
+
+<h3>Current state</h3>
+<p>There is <strong>no <code>.env</code> anywhere</strong> (confirmed: no <code>.env*</code> files outside node_modules), and <code>.gitignore</code> already ignores <code>*.local</code> and <code>dist</code>/<code>release</code>. The only compile-time constant today is <code>__TOTEM_APP_VERSION__</code>, injected via Vite <code>define</code>. <code>import.meta.env</code> is used only for <code>import.meta.env.DEV</code> test-guards (<code>src/api/core/posts.ts</code>). So there is currently <strong>no env-injection plumbing</strong> — it must be added.</p>
+
+<h3>What a license check needs at build time, and where it lives</h3>
+<p>Critical distinction for a one-time-license model:</p>
+<ul>
+<li>A <strong>license-verification public key</strong> (Ed25519/RSA public key used to verify a signed license token offline) is <strong>public by design</strong> — safe to commit and safe to inline. This is the recommended secret-free approach: the extension ships the public key, the server signs license tokens with the private key, the extension verifies signatures locally (it already depends on <code>@noble/hashes</code> 2.2.0, and <code>@noble/ed25519</code> would pair with it for offline verification). No runtime server round-trip needed after first redemption.</li>
+<li>A <strong>provider publishable key</strong> (e.g. a Stripe/Lemon Squeezy <em>publishable</em> key) is also non-secret and can be inlined, but is only relevant if checkout happens in-extension — which §2.1 recommends against.</li>
+<li>A <strong>provider secret key / signing private key</strong> must <strong>NEVER</strong> be in the extension build. The extension ships to users' machines; anything in <code>dist/</code> is fully readable. The private signing key lives only on the server / in CI secrets for the server, never in this repo's build.</li>
+</ul>
+
+<h3>How to inject it (matching existing patterns)</h3>
+<p>Two viable mechanisms, in order of preference:</p>
+<ol>
+<li><strong>Vite <code>define</code></strong> (matches <code>__TOTEM_APP_VERSION__</code> exactly): add <code>__TOTEM_LICENSE_PUBLIC_KEY__: JSON.stringify(process.env.TOTEM_LICENSE_PUBLIC_KEY ?? &lt;committed-default&gt;)</code> in <code>vite.config.ts</code>, declare it in <code>src/vite-env.d.ts</code>. Because the key is public, the simplest correct choice is to <span class="hl">commit the public key as a constant</span> and skip env entirely — no secret-management surface, reproducible builds, and CI needs no new secrets.</li>
+<li><strong><code>import.meta.env</code> via <code>VITE_</code> prefix</strong> — Vite auto-exposes <code>VITE_</code>-prefixed env vars to client code. Would require adding a <code>.env</code>/<code>.env.production</code> (gitignored) and a CI env var. Only worth it if the injected value is environment-specific (e.g. a staging vs prod verify URL).</li>
+</ol>
+<div class="takeaway"><div class="takeaway-label">MUST NOT ENTER dist/</div> Any private signing key, provider secret API key, webhook signing secret, or admin token. None belong in the extension build — they live in the separate license-server / payment-webhook deployment. If a per-build secret is ever introduced, add it to <code>.gitignore</code> (e.g. <code>.env.production</code>) and to GitHub Actions repo secrets for the build job; <code>release-extension.yml</code> passes no secrets to the build today, so a secret would need an explicit <code>env:</code> block.</div>
+
+<h2 id="cws-review-policy-friction-a-payment-integration-adds">CWS review / policy friction a payment integration adds</h2>
+<p>The repo already has a heavy compliance apparatus (<code>PUBLISH.md</code>, <code>plans/chrome-web-store-listing.md</code>, <code>plans/chrome-web-store-dashboard-update-packet.md</code>, the featured-readiness verifier). Payments add the following on top:</p>
+<ol>
+<li><strong>New permission justifications.</strong> Each added permission/host needs a written justification in the CWS dashboard (the pattern is already established in <code>PUBLISH.md</code> lines 83–94). For a new verify host: <em>"Validates a one-time Pro license by fetching an entitlement token from our own endpoint; no browsing data is sent, only an opaque license key."</em> If using <code>optional_host_permissions</code>, note it is requested only at upgrade time.</li>
+<li><strong>Single-purpose policy.</strong> CWS requires one narrow purpose. Adding <em>payment/account</em> features risks a reviewer reading it as a second purpose. Mitigation: frame Pro as the <strong>same</strong> purpose (reading/searching/exporting your bookmarks) with more capability, not a new product. License redemption is configuration, not a separate feature surface.</li>
+<li><strong>Privacy-practices disclosure update.</strong> The dashboard "Privacy practices" tab (today certifies <em>no data sold, all local</em> — <code>PUBLISH.md</code> 97–104) must be updated: a license check transmits the <strong>license key</strong> (and possibly an extension-instance id) to your endpoint. You must (a) disclose this data flow, (b) keep the "no analytics/telemetry, no third-party tracking" claims true, (c) ensure the privacy policy at <code>usetotem.xyz/privacy/</code> (referenced by <code>verify-cws-featured-readiness.mjs</code>) is updated to describe license validation. The local-first claim in the store description (<code>"no Totem account, no server"</code>) becomes <strong>literally false</strong> the moment a verify endpoint exists — the listing copy and <code>manifest.description</code> (which the preflight pins to an exact string) must be reworded (e.g. "no account required; bookmarks stay on-device" rather than "no server").</li>
+<li><strong>"Paid features must work" / no deceptive behavior.</strong> CWS disallows charging for things that don't function and requires clear disclosure of paid features. The store listing should state Pro is a paid upgrade and what it unlocks.</li>
+<li><strong>Remotely-hosted-code rejection risk.</strong> If any payment-provider <code>&lt;script&gt;</code> or remote SDK is loaded, near-automatic rejection. Keep it data-only.</li>
+</ol>
+<p><strong>Pipeline additions required:</strong></p>
+<ul>
+<li>Update <code>scripts/verify-cws-featured-readiness.mjs</code> to allow the new host/permission (otherwise <code>cws:featured:preflight</code> and the release flow that depends on a clean manifest will fail).</li>
+<li>Update <code>PUBLISH.md</code> permission-justification list and the dashboard packet doc with the new entries.</li>
+<li>Update the privacy policy page + the pinned <code>manifest.description</code> / listing copy.</li>
+<li>Add a build-time check (optional but wise) asserting no secret-looking strings (private keys) leaked into <code>dist/</code> before zipping — a grep guard in <code>package-extension.mjs</code>.</li>
+</ul>
+
+<h2 id="one-build-runtime-gated-vs-separate-free-pro-builds">One build (runtime-gated) vs separate Free/Pro builds</h2>
+<div class="takeaway"><div class="takeaway-label">RECOMMENDATION</div> ONE build, entitlement-gated at runtime. Strongly.</div>
+<p>Reasoning grounded in the current pipeline:</p>
+<ol>
+<li><strong>The pipeline is architecturally single-artifact.</strong> Versioning (<code>check-version-sync</code>, <code>prepare-release</code>), packaging (<code>package-extension.mjs</code> reads one <code>dist/manifest.json</code>, produces one <code>totem-v&lt;version&gt;.zip</code>), the release workflow (uploads <code>release/*.zip</code>, validates one tag&harr;manifest version), and the featured-readiness verifier (pins one manifest) all assume exactly one artifact. A second "Pro" build would mean forking version sync, doubling the zip step, duplicating the manifest pin, and managing two CWS listings — a large pipeline rewrite for no user benefit.</li>
+<li><strong>CWS distributes one item.</strong> A free-on-store extension that unlocks Pro is the standard, frictionless model: one listing, one review, one ID (<code>acpkgdfhoaalmnhjifhneghcgfnjkglo</code>, pinned in the verifier). Separate builds imply either two store items (more review surface, confusing) or sideloaded Pro builds (kills the "install from the Web Store" UX and breaks auto-update).</li>
+<li><strong>The gating surface already exists locally.</strong> State lives in Zustand + <code>chrome.storage.local</code> and IndexedDB. An entitlement flag (<code>isPro</code>) fits naturally as another stored value, checked at the boundaries of the Pro features. The Pro-gated capabilities are already discrete modules — export lives entirely in <code>src/lib/export/*</code> (e.g. <code>quick-export.ts</code>, <code>tweet-export.ts</code>, <code>stream-zip.ts</code>, <code>article-to-markdown.ts</code>), so gating is a small set of guard checks, not a build-time code split. There is no per-build code difference to justify two artifacts.</li>
+<li><strong>No secret needs to differ per build.</strong> Because license verification uses a <strong>public</strong> key (offline signature verification), both free and pro users run identical code; the only difference is whether a valid signed license is present in storage. Code is identical, entitlement is data.</li>
+<li><strong>Optional-permission hygiene reinforces one build.</strong> With <code>optional_host_permissions</code> for the verify origin, the default install is byte-identical in footprint to today's free experience; the payment host is only requested when a user upgrades. One manifest, one build, graceful free path.</li>
+</ol>
+<div class="callout"><strong>Net:</strong> ship one zip; add an <code>isPro</code> entitlement resolved from a locally-verified signed license; gate <code>src/lib/export/*</code> (and the other Pro modules) behind it; do not fork the build/release pipeline.</div>
+
+<h2 id="concrete-change-checklist-if-when-implemented">Concrete change checklist (if/when implemented)</h2>
+<table>
+<thead><tr><th>File / target</th><th>Change</th></tr></thead>
+<tbody>
+<tr><td><code>vite.config.ts</code></td><td>Add <code>__TOTEM_LICENSE_PUBLIC_KEY__</code> to <code>define</code> (or just commit a constant — key is public).</td></tr>
+<tr><td><code>src/vite-env.d.ts</code></td><td>Declare the new global.</td></tr>
+<tr><td><code>public/manifest.json</code></td><td>Add verify origin to <code>optional_host_permissions</code> (preferred) or <code>host_permissions</code>; add explicit <code>connect-src 'self' https://x.com https://api.usetotem.xyz</code> to the CSP; reword <code>description</code> away from "no server".</td></tr>
+<tr><td><code>scripts/verify-cws-featured-readiness.mjs</code></td><td>Loosen the manifest pins to permit the new host/permission and the new description string.</td></tr>
+<tr><td><code>PUBLISH.md</code> + <code>plans/chrome-web-store-dashboard-update-packet.md</code></td><td>Add permission justification + privacy disclosure for license validation.</td></tr>
+<tr><td><code>usetotem.xyz/privacy/</code></td><td>Document the license-key data flow.</td></tr>
+<tr><td><code>scripts/package-extension.mjs</code></td><td>(optional) Add a guard grepping <code>dist/</code> for private-key patterns before zipping.</td></tr>
+<tr><td>Dependency</td><td>Add <code>@noble/ed25519</code> (pairs with existing <code>@noble/hashes</code>) for offline license-signature verification — no runtime server dependency after redemption.</td></tr>
+</tbody>
+</table>
+<nav class="pager"><a class="pager-link prev" href="appendix-b-features-export.html"><span class="pager-eyebrow">Previous</span><span class="pager-title">Features &amp; Export Surface</span></a><a class="pager-link next" href="appendix-d-site-distribution.html"><span class="pager-eyebrow">Next</span><span class="pager-title">Site &amp; Distribution</span></a></nav>
+<footer class="page-foot">Totem · premium-monetization research · compiled with kami</footer>
+</main>
+<aside class="toc"><div class="toc-label">On this page</div><a href="#how-the-extension-is-built-and-packaged-today">How the extension is built and packaged today</a>
+<a href="#manifest-implications-of-adding-payments-licensing">Manifest implications of adding payments/licensing</a>
+<a href="#build-time-secrets-env-injection">Build-time secrets & env injection</a>
+<a href="#cws-review-policy-friction-a-payment-integration-adds">CWS review / policy friction a payment integration adds</a>
+<a href="#one-build-runtime-gated-vs-separate-free-pro-builds">One build (runtime-gated) vs separate Free/Pro builds</a>
+<a href="#concrete-change-checklist-if-when-implemented">Concrete change checklist (if/when implemented)</a></aside>
+</div>
+</body>
+</html>

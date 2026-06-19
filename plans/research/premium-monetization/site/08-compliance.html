@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chrome Web Store Compliance · Totem Premium</title>
+<meta name="generator" content="Kami">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="topbar">
+  <a class="wordmark" href="index.html">Totem <span>Premium Conversion</span></a>
+  <div class="topbar-meta">Research &amp; execution plan · v1.0 · 2026.06</div>
+</header>
+<div class="layout">
+<nav class="sidebar" aria-label="Sections">
+<a class="side-brand" href="index.html">Totem <span>Premium</span></a>
+<div class="side-group"><div class="side-group-label">Overview</div>
+<a class="side-link" href="index.html">Home</a>
+</div>
+<div class="side-group"><div class="side-group-label">The Plan</div>
+<a class="side-link" href="02-the-model.html">The Model</a>
+<a class="side-link" href="03-features.html">Features &amp; Limits</a>
+<a class="side-link" href="04-tech-stack.html">Tech Stack</a>
+<a class="side-link" href="05-payments.html">Payment Gateway</a>
+<a class="side-link" href="06-license.html">License Architecture</a>
+<a class="side-link" href="07-system-changes.html">System Changes</a>
+<a class="side-link" href="08-compliance.html" aria-current="page">CWS Compliance</a>
+<a class="side-link" href="09-paywall-ux.html">Paywall UX</a>
+<a class="side-link" href="10-rollout.html">Rollout &amp; Decisions</a>
+</div>
+<div class="side-group"><div class="side-group-label">Review</div>
+<a class="side-link" href="11-adversarial-review.html">Adversarial Review</a>
+</div>
+<div class="side-group"><div class="side-group-label">Appendices</div>
+<a class="side-link" href="appendix-a-data-sync.html">A · Data &amp; Sync</a>
+<a class="side-link" href="appendix-b-features-export.html">B · Features &amp; Export</a>
+<a class="side-link" href="appendix-c-build-release.html">C · Build &amp; Release</a>
+<a class="side-link" href="appendix-d-site-distribution.html">D · Site &amp; Dist.</a>
+<a class="side-link" href="appendix-e-ui-state-upsell.html">E · UI &amp; Upsell</a>
+<a class="side-link" href="appendix-f-payments-compared.html">F · Gateways</a>
+<a class="side-link" href="appendix-g-license-arch.html">G · License &amp; DRM</a>
+<a class="side-link" href="appendix-h-market-discourse.html">H · Market Discourse</a>
+<a class="side-link" href="appendix-i-cws-policy-ux.html">I · CWS Policy</a>
+</div>
+<div class="side-group"><div class="side-group-label">Reference</div>
+<a class="side-link" href="appendix-j-references.html">J · References</a>
+</div>
+</nav>
+<main class="content">
+<div class="chapter-eyebrow">08 · Store</div><h1 class="page-title">Chrome Web Store Compliance</h1><p class="lead">Native Chrome Web Store payments died <strong>Feb 1 2021</strong> — an external processor is now mandatory, and every item below exists to keep the listing compliant once Pro ships.</p>
+
+<h2 id="the-checklist">The checklist</h2>
+
+<ul>
+<li>Checkout happens <strong>off-extension</strong> (web/MoR-hosted), not a fake-native in-extension purchase.</li>
+<li>License validation returns <strong>JSON/signed data only</strong> — no fetched JS/WASM, no <code>eval</code>. Declare <strong>remote code = No</strong> (true).</li>
+<li>All Pro feature <em>logic</em> ships in the package; the license result only flips local flags ("full functionality discernible from submitted code").</li>
+<li>Pro features stay within the <strong>single purpose</strong> (read/search/export your X bookmarks). Don't add an unrelated second product.</li>
+<li><strong>Privacy practices tab:</strong> update data-collected to include <strong>PII (email) + auth info (license key)</strong>; per-permission justifications; the 3 Limited-Use certifications.</li>
+<li><strong>Privacy policy</strong> on <code>usetotem.xyz</code> discloses: license/email sent to <code>&lt;MoR&gt;</code> for validation, not sold, not used for ads; <strong>bookmark content never transmitted</strong>. (With offline keys, even the email/key may never leave the device — keep the policy honest to whichever path ships.)</li>
+<li>Store listing states <strong>free core + optional one-time Pro unlock</strong> and lists Pro features (Deceptive-Installation-Tactics rule: don't advertise a headline feature then reveal at point-of-use that it's paid without prior disclosure).</li>
+<li><span class="tag">ADVERSARIAL-REVIEW FLAG</span> <strong>Featured screenshots disclose Pro.</strong> The readiness script pins the screenshot set, and <code>04-export-twitter-bookmarks-markdown-csv-notion.png</code> literally advertises export — gating export while a featured screenshot sells it is the exact "advertise-then-paywall" pattern §266 prohibits. Mitigation: the <strong>free export allowance</strong> (export your first ~25) keeps the screenshot <em>truthful</em> (export genuinely works free), and the listing copy must label unlimited export / preservation / bulk as Pro. Re-shoot or annotate the screenshot if it implies unlimited export is free.</li>
+<li>When activation arrives via <code>onMessageExternal</code> from the site, the SW still <strong>verifies the signature on-device</strong> before granting Pro — never grant entitlement on the page's message alone (a reviewer reading site&rarr;extension entitlement-granting as remote control is a rejection vector).</li>
+<li>New host permission (if any) scoped narrowly (never <code>&lt;all_urls&gt;</code>), justified in the dashboard, ideally <code>optional_host_permissions</code>.</li>
+</ul>
+
+<div class="callout">Native CWS payments died <strong>Feb 1 2021</strong> — external processor is mandatory.</div>
+<nav class="pager"><a class="pager-link prev" href="07-system-changes.html"><span class="pager-eyebrow">Previous</span><span class="pager-title">Internal System Changes — File by File</span></a><a class="pager-link next" href="09-paywall-ux.html"><span class="pager-eyebrow">Next</span><span class="pager-title">Paywall UX — Moments, Copy, Anti-Patterns</span></a></nav>
+<footer class="page-foot">Totem · premium-monetization research · compiled with kami</footer>
+</main>
+
+</div>
+</body>
+</html>

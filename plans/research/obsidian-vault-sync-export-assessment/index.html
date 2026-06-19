@@ -1,0 +1,969 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="generator" content="Kami">
+  <meta name="description" content="Assessment of whether Totem's current export is Obsidian friendly and how Totem should sync X bookmarks into an Obsidian vault.">
+  <meta name="keywords" content="Totem, Obsidian, vault sync, Markdown export, File System Access, X bookmarks">
+  <title>Totem Export and Obsidian Vault Sync Assessment</title>
+  <style>
+    :root {
+      --paper: #f5f4ed;
+      --sheet: #fbfaf6;
+      --ink: #141413;
+      --muted: #595852;
+      --soft: #74736c;
+      --line: #dedbd0;
+      --line-soft: #ebe8dd;
+      --accent: #1b365d;
+      --accent-2: #2d5a8a;
+      --ok: #245c3a;
+      --warn: #8a5a14;
+      --bad: #7d2c2c;
+      --mono: "SFMono-Regular", "JetBrains Mono", Consolas, monospace;
+      --serif: Charter, Georgia, Palatino, "Times New Roman", serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    html {
+      background: var(--paper);
+      color: var(--ink);
+      font-family: var(--serif);
+      font-size: 16px;
+      line-height: 1.55;
+    }
+
+    body {
+      margin: 0;
+      background: var(--paper);
+    }
+
+    a {
+      color: var(--accent-2);
+      text-decoration: none;
+    }
+
+    a:hover {
+      color: var(--accent);
+      text-decoration: underline;
+      text-underline-offset: 0.18em;
+    }
+
+    .page {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 48px 24px 64px;
+    }
+
+    header {
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 28px;
+      margin-bottom: 32px;
+    }
+
+    .eyebrow {
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      margin: 0 0 12px;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      color: var(--ink);
+      font-size: clamp(34px, 5vw, 58px);
+      font-weight: 500;
+      letter-spacing: 0;
+      line-height: 1.02;
+      margin: 0 0 18px;
+      max-width: 900px;
+    }
+
+    .lede {
+      color: var(--muted);
+      font-size: 20px;
+      line-height: 1.45;
+      margin: 0;
+      max-width: 820px;
+    }
+
+    .meta {
+      color: var(--soft);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 18px;
+      font-size: 13px;
+      margin-top: 18px;
+    }
+
+    section {
+      margin: 34px 0;
+    }
+
+    h2 {
+      border-left: 3px solid var(--accent);
+      color: var(--ink);
+      font-size: 25px;
+      font-weight: 500;
+      line-height: 1.25;
+      margin: 0 0 16px;
+      padding-left: 12px;
+    }
+
+    h3 {
+      color: var(--accent);
+      font-size: 18px;
+      font-weight: 500;
+      margin: 22px 0 8px;
+    }
+
+    p {
+      color: var(--muted);
+      margin: 0 0 14px;
+      max-width: 820px;
+    }
+
+    ul, ol {
+      color: var(--muted);
+      margin: 0 0 16px;
+      padding-left: 22px;
+    }
+
+    li { margin: 5px 0; }
+
+    code {
+      background: var(--sheet);
+      border: 1px solid var(--line-soft);
+      border-radius: 4px;
+      color: var(--accent);
+      font-family: var(--mono);
+      font-size: 0.88em;
+      padding: 0.08em 0.32em;
+    }
+
+    pre {
+      background: var(--sheet);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      color: var(--ink);
+      font-family: var(--mono);
+      font-size: 13px;
+      line-height: 1.5;
+      margin: 14px 0 18px;
+      overflow-x: auto;
+      padding: 16px;
+      white-space: pre;
+    }
+
+    pre code {
+      background: transparent;
+      border: 0;
+      color: inherit;
+      padding: 0;
+    }
+
+    .grid {
+      display: grid;
+      gap: 16px;
+    }
+
+    .grid.cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid.cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+    .callout {
+      background: var(--sheet);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 18px;
+    }
+
+    .callout strong {
+      color: var(--ink);
+      display: block;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .callout p:last-child { margin-bottom: 0; }
+
+    .thesis {
+      border-top: 3px solid var(--accent);
+      padding-top: 16px;
+    }
+
+    .score {
+      align-items: center;
+      display: grid;
+      gap: 10px;
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .score .label {
+      color: var(--soft);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .score .value {
+      color: var(--accent);
+      font-size: 40px;
+      font-variant-numeric: tabular-nums;
+      line-height: 1;
+    }
+
+    .badge {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--soft);
+      display: inline-flex;
+      font-size: 12px;
+      line-height: 1;
+      margin: 2px 4px 2px 0;
+      padding: 6px 9px;
+    }
+
+    .badge.ok {
+      background: #eef5ee;
+      border-color: #cddfce;
+      color: var(--ok);
+    }
+
+    .badge.warn {
+      background: #fbf1df;
+      border-color: #e8d3a9;
+      color: var(--warn);
+    }
+
+    .badge.bad {
+      background: #f8e8e5;
+      border-color: #e1c1bd;
+      color: var(--bad);
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      margin: 16px 0 22px;
+    }
+
+    table {
+      border-collapse: collapse;
+      min-width: 760px;
+      width: 100%;
+    }
+
+    th, td {
+      border-bottom: 1px solid var(--line);
+      padding: 10px 12px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    td {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    td strong {
+      color: var(--ink);
+      font-weight: 600;
+    }
+
+    .source-list {
+      columns: 2;
+      column-gap: 28px;
+      font-size: 14px;
+    }
+
+    .source-list li {
+      break-inside: avoid;
+      margin-bottom: 10px;
+    }
+
+    .note {
+      border-left: 2px solid var(--line);
+      color: var(--soft);
+      font-size: 14px;
+      margin: 16px 0;
+      padding-left: 12px;
+    }
+
+    .path {
+      color: var(--soft);
+      font-family: var(--mono);
+      font-size: 12px;
+    }
+
+    @media (max-width: 860px) {
+      .page { padding: 32px 18px 48px; }
+      .grid.cols-2, .grid.cols-3 { grid-template-columns: 1fr; }
+      .source-list { columns: 1; }
+      table { min-width: 680px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header>
+      <p class="eyebrow">Technical research report &middot; v2 (deep verification)</p>
+      <h1>Totem export and Obsidian vault sync assessment</h1>
+      <p class="lede">Totem's current export is already readable inside Obsidian, but it is not yet an Obsidian-native sync experience. The right first integration is a local vault writer using the File System Access API, not an Obsidian cloud integration, a <code>obsidian://</code> URI loop, or the Local REST API.</p>
+      <div class="meta">
+        <span>Generated: June 19, 2026</span>
+        <span>v2 update: deep multi-source verification + 180-day community scan</span>
+        <span>Repo: <code>/Users/ankit/Documents/make/totem</code></span>
+      </div>
+    </header>
+
+    <section>
+      <div class="callout thesis">
+        <strong>What v2 adds</strong>
+        <p>The v1 thesis below held up under adversarial verification across six integration mechanisms, the competitor field, and every common Obsidian sync transport. This v2 update adds: a <a href="#verified">verified mechanism scorecard</a> (each load-bearing claim refuted-or-confirmed against primary sources), <a href="#precedent">what the best read-it-later tools actually do</a> and the one pattern Totem must copy, <a href="#transport">sync-transport safety rules</a> for writing into a folder some cloud daemon is watching, and a <a href="#changes">concrete change surface</a> mapped to Totem's real files. Net conclusion is unchanged and now higher-confidence: <strong>a File System Access local vault writer, run from the new-tab page, idempotent and keyed by tweet ID.</strong></p>
+      </div>
+    </section>
+
+    <section class="grid cols-3">
+      <div class="callout thesis">
+        <strong>Thesis</strong>
+        <p>Ship Obsidian as a local destination: Totem writes Markdown files into a user-selected vault folder, then the user's existing Obsidian Sync, iCloud, Dropbox, Git, Syncthing, or other setup moves those files across devices.</p>
+      </div>
+      <div class="callout score">
+        <span class="label">Current export fit</span>
+        <span class="value">7/10</span>
+        <p>Good Markdown and ZIP structure. Missing direct vault write, stable sync paths, richer properties, media localization, and idempotent update rules.</p>
+      </div>
+      <div class="callout">
+        <strong>Short answer</strong>
+        <p>Use local first. There is no reason for Totem v1 to know whether the user uses Obsidian Sync or another cloud provider. Obsidian's model is still local files first; cloud sync is layered behind the vault.</p>
+      </div>
+    </section>
+
+    <section>
+      <h2>What Obsidian Expects</h2>
+      <p>Official Obsidian docs define a vault as a folder on the user's local file system. Notes are Markdown-formatted plain text files, Obsidian creates a local <code>.obsidian</code> configuration folder, and the app refreshes its vault when external files change. That is the product opportunity: Totem does not need an Obsidian account connection to create useful Obsidian notes.</p>
+      <p>Obsidian also supports both Markdown links and wikilinks. Since Obsidian explicitly recommends Markdown links when interoperability matters, Totem does not need to convert every link to <code>[[wikilink]]</code> syntax for v1. YAML front matter maps to Obsidian Properties, so Totem should invest there first.</p>
+      <div class="note">Implication: the integration boundary is the local folder, not a proprietary cloud API. Obsidian Sync creates a remote vault for the user's devices, but Totem should write to the local vault that Obsidian already indexes.</div>
+    </section>
+
+    <section>
+      <h2>Current Export Audit</h2>
+      <p>Totem has a strong export foundation. The library export writes one Markdown file per bookmark, a Markdown index, CSV, JSONL canonical data, checksums, and a manifest. Reader export can copy or download Markdown for a single item. The export tests passed during this research pass: <code>51 passed</code> across <code>quick-export.test.ts</code> and <code>article-export.test.ts</code>.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Obsidian criterion</th>
+              <th>Current status</th>
+              <th>Evidence</th>
+              <th>Gap to close</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Markdown files</strong></td>
+              <td><span class="badge ok">Good</span></td>
+              <td>ZIP emits <code>bookmarks/*.md</code> and <code>readme.md</code> in <a href="../../../src/lib/export/quick-export.ts">quick-export.ts</a>.</td>
+              <td>Expose an Obsidian-specific folder layout, not just a ZIP archive.</td>
+            </tr>
+            <tr>
+              <td><strong>YAML properties</strong></td>
+              <td><span class="badge warn">Partial</span></td>
+              <td><a href="../../../src/lib/export/article-to-markdown.ts">article-to-markdown.ts</a> writes <code>title</code>, <code>source</code>, <code>exported</code>, and <code>author</code>.</td>
+              <td>Add typed fields: <code>tweet_id</code>, <code>created_at</code>, <code>bookmarked_at</code>, <code>kind</code>, <code>status</code>, <code>tags</code>, and ISO dates.</td>
+            </tr>
+            <tr>
+              <td><strong>Readable body</strong></td>
+              <td><span class="badge ok">Good</span></td>
+              <td>Renderer supports headings, lists, blockquotes, code fences, media blocks, and Markdown links.</td>
+              <td>Add optional Obsidian callouts or sections for highlights and notes.</td>
+            </tr>
+            <tr>
+              <td><strong>Internal navigation</strong></td>
+              <td><span class="badge warn">Partial</span></td>
+              <td><code>readme.md</code> links to every bookmark file using relative Markdown links.</td>
+              <td>Add stable index pages, author pages, saved-search digest pages, or Dataview-friendly properties.</td>
+            </tr>
+            <tr>
+              <td><strong>Stable filenames for sync</strong></td>
+              <td><span class="badge warn">Partial</span></td>
+              <td>Current filenames use an ordinal and slug, with collision fallback to tweet ID.</td>
+              <td>For sync, use tweet ID as the stable identity so incremental writes do not churn paths.</td>
+            </tr>
+            <tr>
+              <td><strong>Media durability</strong></td>
+              <td><span class="badge warn">Partial</span></td>
+              <td>Markdown embeds remote image/video preview URLs and source links.</td>
+              <td>Keep remote media in v1; consider local attachments later for durable vault backups.</td>
+            </tr>
+            <tr>
+              <td><strong>Highlights and reading state</strong></td>
+              <td><span class="badge warn">Partial</span></td>
+              <td>Highlights and reading progress are exported as JSONL and counted in the UI summary.</td>
+              <td>Render user highlights and notes into the corresponding Markdown note, not only JSONL.</td>
+            </tr>
+            <tr>
+              <td><strong>Direct vault sync</strong></td>
+              <td><span class="badge bad">Missing</span></td>
+              <td>Current export uses <code>showSaveFilePicker</code> for a ZIP or anchor download fallback.</td>
+              <td>Add a directory destination using <code>showDirectoryPicker({ mode: "readwrite" })</code>.</td>
+            </tr>
+            <tr>
+              <td><strong>Idempotent updates</strong></td>
+              <td><span class="badge bad">Missing</span></td>
+              <td>The ZIP manifest checksums files, but no vault manifest tracks generated note ownership.</td>
+              <td>Write a Totem-owned manifest inside the vault subfolder and never delete user files blindly.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section>
+      <h2>How Vault Sync Should Work</h2>
+      <p>The first Obsidian integration should be a manual local sync destination. It should not ask for an Obsidian account, should not try to write to Obsidian's remote vault, and should not assume which cloud provider the user uses.</p>
+      <div class="grid cols-2">
+        <div class="callout">
+          <strong>Connect flow</strong>
+          <ol>
+            <li>User clicks <code>Connect Obsidian vault</code>.</li>
+            <li>Totem calls <code>showDirectoryPicker({ mode: "readwrite", id: "totem-obsidian-vault" })</code>.</li>
+            <li>Totem checks for <code>.obsidian</code> as a vault signal, but allows "use this folder anyway" if absent.</li>
+            <li>Totem stores the <code>FileSystemDirectoryHandle</code> in account-scoped IndexedDB.</li>
+            <li>Every sync run calls <code>queryPermission</code> and <code>requestPermission</code> if needed.</li>
+          </ol>
+        </div>
+        <div class="callout">
+          <strong>Write flow</strong>
+          <ol>
+            <li>Hydrate missing full content if the user chooses full sync.</li>
+            <li>Render notes with an Obsidian-specific Markdown renderer.</li>
+            <li>Write only under a Totem-owned folder, for example <code>Totem/</code>.</li>
+            <li>Update an internal manifest with paths, tweet IDs, hashes, and last sync time.</li>
+            <li>Open the result with an <code>obsidian://open</code> URI when the user asks.</li>
+          </ol>
+        </div>
+      </div>
+
+      <h3>Recommended folder shape</h3>
+      <pre><code>Vault/
+  Totem/
+    Index.md
+    Digests/
+      2026-06-19-todays-read.md
+    Bookmarks/
+      2026/
+        1792345678901234567-guide-to-local-first-bookmarks.md
+    Authors/
+      ankit.md
+    _totem-sync.json</code></pre>
+
+      <p>The current export uses ordinal prefixes because a ZIP is a point-in-time artifact. Sync should not. A synced note needs stable identity, and the natural identity is <code>tweetId</code>. Sort order belongs in properties and index pages, not in the path.</p>
+
+      <h3>Recommended note properties</h3>
+      <pre><code>---
+title: "Guide to local-first bookmarks"
+source: https://x.com/example/status/1792345678901234567
+tweet_id: "1792345678901234567"
+author: "Example Person (@example)"
+author_handle: example
+kind: thread
+created_at: 2026-06-18T12:20:00Z
+bookmarked_at: 2026-06-19T06:34:00Z
+exported_at: 2026-06-19T10:02:05Z
+reading_status: unread
+tags:
+  - totem
+  - x-bookmark
+  - x-thread
+---
+
+# Guide to local-first bookmarks
+
+[Open on X](https://x.com/example/status/1792345678901234567)
+
+...rendered tweet, thread, article, media links, highlights, and notes...</code></pre>
+    </section>
+
+    <section>
+      <h2>Local or Cloud?</h2>
+      <p>For Totem v1, the answer should be local. Obsidian cloud sync is still organized around local vaults connected to remote vaults. The local folder is the thing a browser extension can safely and transparently write. Obsidian Sync, iCloud Drive, Dropbox, Syncthing, Git, Remotely Save, or another provider is the user's separate transport layer.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Question</th>
+              <th>Recommendation</th>
+              <th>Reason</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Should Totem detect whether the vault uses Obsidian Sync?</strong></td>
+              <td>No for v1.</td>
+              <td>The browser sees a folder handle, not a reliable provider identity. Detection would be fragile and unnecessary.</td>
+            </tr>
+            <tr>
+              <td><strong>Should Totem write directly to Obsidian's cloud remote vault?</strong></td>
+              <td>No.</td>
+              <td>Obsidian's public model is local files plus optional Sync. There is no product need to bypass the user's local vault.</td>
+            </tr>
+            <tr>
+              <td><strong>What should the user-facing copy say?</strong></td>
+              <td>"Totem writes Markdown into your local vault. If your vault already syncs, Obsidian or your sync provider will sync those files."</td>
+              <td>This keeps Totem's local-first promise and avoids implying Totem runs a cloud sync service.</td>
+            </tr>
+            <tr>
+              <td><strong>What if the user uses multiple devices?</strong></td>
+              <td>Manual sync from one primary device in v1; warn before a second Totem install writes to the same managed folder.</td>
+              <td>Multiple writers against the same folder can create conflicts, especially when cloud sync is also moving files.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="note">Obsidian itself warns that syncing is not backup and recommends care when combining Obsidian Sync with cloud storage providers. Totem should be framed as a file writer, not another competing sync provider.</div>
+    </section>
+
+    <section id="verified">
+      <h2>Verified Mechanism Scorecard</h2>
+      <p>Six ways an extension can get content into a vault were researched in parallel and each mechanism's riskiest claim was then handed to an independent skeptic to refute against primary sources. The picture is unusually clear: only one mechanism scales to thousands of repeatable writes from a Chromium extension.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Mechanism</th>
+              <th>Bulk-sync verdict</th>
+              <th>Why (verified)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>File System Access API</strong><br><span class="path">showDirectoryPicker → write .md</span></td>
+              <td><span class="badge ok">Primary path</span></td>
+              <td>The new-tab override is a full top-level document, which is the <em>working</em> side of the documented picker bug. Directory handles are structured-cloneable and persist in IndexedDB. No server, works whether or not Obsidian is open, no rate limit. Chromium-desktop only, which is exactly Totem's surface.</td>
+            </tr>
+            <tr>
+              <td><strong>obsidian:// URI</strong><br><span class="path">new / Advanced URI</span></td>
+              <td><span class="badge warn">Single-item only</span></td>
+              <td>Structurally one note per invocation. Inline content rides in the URL and silently fails past ~2k chars on Chrome/Windows — the exact failure that forced Obsidian's own Web Clipper onto a clipboard handoff. Every fire foregrounds the Obsidian window (no suppression flag exists). Good for a "send this one tweet" button; unusable for a library.</td>
+            </tr>
+            <tr>
+              <td><strong>Obsidian Web Clipper model</strong><br><span class="path">dual-channel clipboard + URI</span></td>
+              <td><span class="badge warn">Reuse data model only</span></td>
+              <td>Clipboard holds one payload at a time, so it is structurally single-item. Worth copying its <em>templates → typed YAML Properties</em> mapping so Totem notes index natively, not its runtime.</td>
+            </tr>
+            <tr>
+              <td><strong>Local REST API plugin</strong><br><span class="path">PUT/POST/PATCH localhost</span></td>
+              <td><span class="badge warn">Power-user opt-in</span></td>
+              <td>CORS is open (<code>*</code>), so that is not the blocker. HTTPS uses a self-signed cert that extension <code>fetch()</code> cannot bypass (must be trusted in the OS store first); only the off-by-default plaintext <code>:27123</code> path works cleanly. Desktop-only, Obsidian must be open, multi-step setup. <em>Note: the LNA claim was corrected — properly-permissioned extensions are exempt from the Chrome 142 prompt, per a Chromium engineer.</em></td>
+            </tr>
+            <tr>
+              <td><strong>In-Obsidian community plugin</strong></td>
+              <td><span class="badge warn">Later / optional</span></td>
+              <td>This is how Readwise/Matter/Raindrop do bulk sync — but they pull a <em>cloud API</em>. Totem already holds the data locally, so it can skip the plugin and the API entirely. Copy the algorithm, not the architecture.</td>
+            </tr>
+            <tr>
+              <td><strong>Cloud API round-trip</strong></td>
+              <td><span class="badge bad">Avoid</span></td>
+              <td>Omnivore's Obsidian plugin died the moment its cloud API went offline (Nov 2024). A local-first tool must never route the Obsidian path through a server it can lose.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <h3>Four corrections the verification pass produced</h3>
+      <ul>
+        <li><strong>The picker bug is popup-only, not extension-wide.</strong> <code>showDirectoryPicker()</code> throws <code>AbortError</code> in an action <em>popup</em> even after the user picks a folder (Chromium 40240444 / WICG #314, still open July 2025), but succeeds in a full tab. Totem's new-tab page is a full tab — so it is unaffected, provided Totem never triggers the picker from a popup.</li>
+        <li><strong>The handle survives a restart; the write permission does not.</strong> A handle reloaded from IndexedDB typically reports <code>queryPermission === 'prompt'</code>. Regaining write access needs <code>requestPermission({mode:'readwrite'})</code> <em>inside a user gesture</em> — it cannot be done silently or from the MV3 service worker. So re-sync must be a click on the new-tab page.</li>
+        <li><strong>"Allow on every visit" for a <code>chrome-extension://</code> origin is unconfirmed.</strong> Chrome 122+ persistent permissions exist, but no primary source confirms the indefinite grant is honored for extension origins specifically (PWAs get it by default). Design for a possible per-session re-prompt; treat unattended re-sync as a thing to verify empirically, not assume.</li>
+        <li><strong>File writes are not guaranteed atomic across devices.</strong> The spec says changes land on close() and are "typically" written via a temp file, but atomicity is non-normative ("try to ensure"). So every note must be self-contained — no note may depend on another arriving first — because every sync transport propagates files one at a time.</li>
+      </ul>
+    </section>
+
+    <section id="precedent">
+      <h2>What the Best Tools Actually Do</h2>
+      <p>Across Readwise, Readwise Mirror, Matter, and Raindrop, the dominant bulk-sync shape is identical and battle-tested: an idempotent, ID-keyed write loop with a last-sync cursor. The only thing Totem should drop is their shared weakness — the cloud API.</p>
+      <div class="grid cols-2">
+        <div class="callout">
+          <strong>The pattern to copy</strong>
+          <ul>
+            <li><strong>Stable per-item ID</strong> in YAML frontmatter as the join key (Raindrop's <code>raindrop_id</code>). For Totem this is <code>tweet_id</code>. Join on the property, not the filename, so user renames never trigger re-creation.</li>
+            <li><strong>A content map + last-sync cursor</strong> (Matter's <code>contentMap</code>: id → file): on each run decide create / update / skip per item.</li>
+            <li><strong>Content-hash skip</strong> so steady-state re-syncs touch only changed notes — a huge win at thousands of items and minimal sync churn.</li>
+            <li><strong>Choose a write model:</strong> append-only protects hand edits (official Readwise); mirror/overwrite guarantees convergence (Readwise Mirror, ~5,067 highlights in ~20s) at the cost of editability. Totem can default to overwrite-in-a-managed-subfolder.</li>
+          </ul>
+        </div>
+        <div class="callout">
+          <strong>Totem's structural advantages</strong>
+          <ul>
+            <li><strong>No API, so no rate limit.</strong> Every surveyed tool throttles around a cloud quota (Raindrop 120/min); Totem reads from local IndexedDB and is bounded only by per-file write overhead.</li>
+            <li><strong>No backend to lose.</strong> Omnivore proves cloud-dependent integrations have a catastrophic single point of failure; Totem's feature survives indefinitely because it writes from local data.</li>
+            <li><strong>A vault is just a folder of <code>.md</code>.</strong> Obsidian auto-refreshes external changes, so direct file writes are a first-class, supported ingestion path — no plugin, no running app required.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="note">Direct competitors exist (an X Bookmarks Sync Obsidian plugin, Tweet-to-Markdown, a x-bookmark-to-obsidian Chrome extension), but none has shipped a polished, local-first, batch new-tab experience. The niche is contested, not taken.</div>
+    </section>
+
+    <section id="transport">
+      <h2>Sync Transport: Assume the Worst, Write Safe</h2>
+      <p>Totem cannot detect which engine (if any) watches the chosen folder — there is no API to ask "is this iCloud or Dropbox?", and a folder can be watched by more than one. From the sync engine's view, a file Totem writes is indistinguishable from one the user typed, so it will be replicated, conflict-resolved, and — critically — its deletion will be propagated. The only safe design is provider-agnostic and defensive.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Transport</th>
+              <th>Conflict behavior</th>
+              <th>Risk to an external writer</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Obsidian Sync</strong> (paid)</td>
+              <td>Markdown-aware merge (diff-match-patch); optional "create conflict file"</td>
+              <td>Best case. Hand-editing a Totem note while Totem rewrites it can duplicate text — mitigated by a "do not hand-edit" managed subfolder.</td>
+            </tr>
+            <tr>
+              <td><strong>iCloud Drive</strong></td>
+              <td>Silent last-writer; duplicate "(1)" files</td>
+              <td>Hostile. The daemon uploads mid-write (propagates partial states); "Optimize Storage" can dehydrate files so they <em>look</em> deleted.</td>
+            </tr>
+            <tr>
+              <td><strong>Dropbox / Google Drive / OneDrive</strong></td>
+              <td>Conflicted-copy files; no content merge</td>
+              <td>Desktop-OK, weak/again-risky on mobile. OneDrive Files On-Demand and Drive have documented "looks deleted / permanent loss" paths.</td>
+            </tr>
+            <tr>
+              <td><strong>Syncthing / Git</strong></td>
+              <td>Keeps both versions (<code>.sync-conflict</code> / merge markers)</td>
+              <td>Safer — nothing silently lost. Git mobile cannot resolve conflicts; raw <code>&lt;&lt;&lt;&lt;&lt;</code> markers can appear.</td>
+            </tr>
+            <tr>
+              <td><strong>LiveSync / Remotely Save</strong> (plugin)</td>
+              <td>CouchDB multi-revision / plugin-level diff</td>
+              <td>Ingests Totem's writes only when Obsidian is open and re-scans. A big import may need the user to open Obsidian once.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <h3>The safe-write rules (ordered by importance)</h3>
+      <ol>
+        <li><strong>Write only inside a Totem-owned subfolder</strong> (<code>&lt;vault&gt;/Totem/</code>). Never touch files outside it. Tell the user it is Totem-managed and not to hand-edit it.</li>
+        <li><strong>Idempotent create-or-update keyed by tweet ID</strong> embedded in both filename and frontmatter; join on the frontmatter ID.</li>
+        <li><strong>Never delete.</strong> If a bookmark disappears upstream, mark it (<code>totem_status: removed</code>) rather than removing the file — a delete would replicate to every device, and placeholder/dehydrated files only <em>look</em> deleted.</li>
+        <li><strong>Atomic, self-contained files.</strong> Write via <code>createWritable</code> (flushes on close); make every note independently valid so a partially propagated batch never breaks.</li>
+        <li><strong>Manifest is canonical in IndexedDB</strong> (<code>{tweetId → filename, contentHash, lastWritten}</code>), never authoritatively in the vault, so a stale/dehydrated vault manifest can never drive a deletion.</li>
+        <li><strong>Throttle/batch writes</strong> with the content-hash skip, so steady-state syncs touch only changed notes and minimize the window for a daemon to read partial state.</li>
+      </ol>
+    </section>
+
+    <section>
+      <h2>Integration Options</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Option</th>
+              <th>How it works</th>
+              <th>Fit</th>
+              <th>Use when</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Current ZIP export</strong></td>
+              <td>User downloads ZIP and unzips <code>bookmarks/*.md</code> into a vault.</td>
+              <td><span class="badge warn">Okay fallback</span></td>
+              <td>Immediate compatibility, no new permissions, works everywhere downloads work.</td>
+            </tr>
+            <tr>
+              <td><strong>Obsidian ZIP preset</strong></td>
+              <td>Same download model, but with <code>Totem/</code> folder, richer YAML properties, stable paths, and index notes.</td>
+              <td><span class="badge ok">Fast win</span></td>
+              <td>Before true sync; validates the note shape with Obsidian users.</td>
+            </tr>
+            <tr>
+              <td><strong>Local vault writer</strong></td>
+              <td>Use File System Access directory handles to write directly into a selected vault folder.</td>
+              <td><span class="badge ok">Best v1</span></td>
+              <td>Chrome desktop extension, local-first positioning, no backend, repeatable manual sync.</td>
+            </tr>
+            <tr>
+              <td><strong>Obsidian URI</strong></td>
+              <td>Use <code>obsidian://new</code> or <code>obsidian://open</code> to create/open notes.</td>
+              <td><span class="badge warn">Helper only</span></td>
+              <td>Opening a written note, creating a single digest, or clipboard handoff. Not for bulk library sync.</td>
+            </tr>
+            <tr>
+              <td><strong>Obsidian plugin</strong></td>
+              <td>A community plugin inside Obsidian imports/pulls from Totem export data or a local bridge.</td>
+              <td><span class="badge warn">Later</span></td>
+              <td>Power-user workflows, mobile inside Obsidian, advanced merge UI. Higher install and trust friction.</td>
+            </tr>
+            <tr>
+              <td><strong>Cloud destinations</strong></td>
+              <td>Notion, Readwise, Sheets, Zotero, email, or hosted scheduled sync.</td>
+              <td><span class="badge bad">Not Obsidian v1</span></td>
+              <td>Paid automation after local digest and Obsidian note generation prove value.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section>
+      <h2>Implementation Shape</h2>
+      <p>Build this as a destination layer, not as a special case inside the existing ZIP exporter. That keeps the current export stable and lets future destinations share the same renderer and planning primitives.</p>
+
+      <h3>New modules</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Module</th>
+              <th>Purpose</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>src/lib/export/obsidian-note.ts</code></td>
+              <td>Convert a bookmark/detail/highlight/progress bundle into an Obsidian note with richer YAML and a stable body.</td>
+            </tr>
+            <tr>
+              <td><code>src/lib/export/obsidian-paths.ts</code></td>
+              <td>Generate safe, stable vault-relative paths from tweet IDs, dates, handles, and slugs.</td>
+            </tr>
+            <tr>
+              <td><code>src/lib/sync-destinations/obsidian-local.ts</code></td>
+              <td>Own File System Access permissions, directory handles, writes, manifest updates, and conflict handling.</td>
+            </tr>
+            <tr>
+              <td><code>src/db/sync-destinations.ts</code></td>
+              <td>Persist account-scoped destination config and serialized directory handles.</td>
+            </tr>
+            <tr>
+              <td><code>src/components/ObsidianSyncModal.tsx</code></td>
+              <td>Connect vault, preview plan, sync now, show last result, and open in Obsidian.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Destination contract</h3>
+      <pre><code>type SyncDestinationKind = "obsidian-local";
+
+interface SyncPlanItem {
+  tweetId: string;
+  path: string;
+  action: "create" | "update" | "skip" | "conflict";
+  reason?: string;
+}
+
+interface ObsidianLocalDestination {
+  kind: "obsidian-local";
+  accountId: string;
+  vaultName?: string;
+  rootHandle: FileSystemDirectoryHandle;
+  connectedAt: number;
+  lastSyncedAt?: number;
+}
+
+interface TotemVaultManifestEntry {
+  tweetId: string;
+  path: string;
+  sourceUrl: string;
+  lastWrittenHash: string;
+  lastRenderedAt: string;
+  lastSeenSourceHash: string;
+}</code></pre>
+
+      <h3>Conflict policy</h3>
+      <ul>
+        <li>Write only under <code>Totem/</code>; never touch user-authored files elsewhere.</li>
+        <li>If a note exists and its hash matches the manifest, Totem may overwrite it with updated generated content.</li>
+        <li>If a note exists and the user has changed it, preserve it and write the new generated version under <code>Totem/Conflicts/</code> or ask before replacing.</li>
+        <li>Do not delete notes in v1. If a bookmark disappears or becomes unavailable, mark it in properties on safe updates.</li>
+        <li>Store a device ID in the manifest and warn if another Totem install appears to own the folder.</li>
+      </ul>
+    </section>
+
+    <section id="changes">
+      <h2>Concrete Change Surface</h2>
+      <p>Mapped against Totem's actual code. The export pipeline already does the hard parts — it renders one Markdown file per bookmark, streams a ZIP via <code>client-zip</code>, hashes every entry, and even uses <code>showSaveFilePicker</code> + <code>createWritable</code> today. The Obsidian writer reuses that rendering and adds a directory destination plus an idempotency layer. Nothing here requires a new permission in <code>manifest.json</code> (File System Access needs none).</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>File</th>
+              <th>Change</th>
+              <th>Grounding</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>src/lib/export/obsidian-note.ts</code> <span class="badge ok">new</span></td>
+              <td>Render a bookmark → Obsidian note: richer typed YAML Properties + highlights as <code>&gt; [!quote]</code> callouts.</td>
+              <td>Reuse <code>resolveReaderExportArticle</code> (tweet-export.ts:185) + <code>getArticleMarkdownString</code> (article-download.ts:24) + <code>getHighlightsByTweetId</code> (db/index.ts:869). Current frontmatter (article-to-markdown.ts:31) emits only title/source/exported/author — extend it.</td>
+            </tr>
+            <tr>
+              <td><code>src/lib/export/obsidian-paths.ts</code> <span class="badge ok">new</span></td>
+              <td>Stable vault-relative path keyed on <code>tweetId</code> (not the ordinal+slug the ZIP uses).</td>
+              <td>Reuse the slug helper; replace <code>makeBookmarkMarkdownPath</code>'s ordinal scheme (quick-export.ts:147) which is anti-idempotent by design.</td>
+            </tr>
+            <tr>
+              <td><code>src/lib/sync/obsidian-local.ts</code> <span class="badge ok">new</span></td>
+              <td>The directory writer: <code>getDirectoryHandle</code>/<code>getFileHandle</code>/<code>createWritable</code> + <code>queryPermission</code>/<code>requestPermission</code> gating + manifest diff (create/update/skip).</td>
+              <td>Mirrors the <code>openWritable</code> pattern already in quick-export.ts:284; iterate items via <code>iterateBookmarks</code> (db/index.ts:499).</td>
+            </tr>
+            <tr>
+              <td><code>src/db/index.ts</code> <span class="badge warn">edit</span></td>
+              <td>Add a <code>sync_destinations</code> store (serialized dir handle + manifest), keyed by accountId.</td>
+              <td>Bump <code>DB_VERSION</code> 9 → 10 in <a href="../../../src/lib/constants/db.ts">constants/db.ts:5</a>; account scoping is already per-database via <code>getDbNameForAccount</code> (db/index.ts:119).</td>
+            </tr>
+            <tr>
+              <td><code>src/vite-env.d.ts</code> <span class="badge warn">edit</span></td>
+              <td>Add <code>showDirectoryPicker</code>, <code>FileSystemDirectoryHandle</code>, and <code>queryPermission/requestPermission</code> typings.</td>
+              <td>Current typings (vite-env.d.ts:5–27) only cover <code>showSaveFilePicker</code>; the directory + permission types are missing.</td>
+            </tr>
+            <tr>
+              <td><code>src/components/ObsidianSyncModal.tsx</code> <span class="badge ok">new</span></td>
+              <td>Connect vault, preview plan, sync-now, last-result. Built on Base UI dialog, mirroring the ExportModal phase machine.</td>
+              <td>Wrap <code>ui/Modal.tsx</code> (@base-ui/react/dialog); follow <code>ExportModal.tsx</code> structure.</td>
+            </tr>
+            <tr>
+              <td><code>src/components/SettingsModal.tsx</code> <span class="badge warn">edit</span></td>
+              <td>Add a "Sync to Obsidian" row under Storage, next to the bulk-export entry.</td>
+              <td>Bulk-export entry lives at SettingsModal.tsx:347–394.</td>
+            </tr>
+            <tr>
+              <td><code>src/App.tsx</code> <span class="badge warn">edit</span></td>
+              <td>Add <code>obsidianSyncOpen</code> state and render the modal; pass the active account.</td>
+              <td>Mirror the existing <code>exportOpen</code> wiring (App.tsx:120/708/713).</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="note">Two constraints from the verification pass shape the wiring: the picker/permission call must originate from the new-tab document (never the service worker or an action popup), and re-sync must be user-initiated so <code>requestPermission</code> has a gesture. Both fit Totem because all of this UI lives on the new-tab page already. The gap is also acknowledged in <a href="../../blog-pipeline.md">plans/blog-pipeline.md</a> ("no native one-click vault sync yet") and <a href="../../next-release-growth-checklist.md">next-release-growth-checklist.md</a> ("Add Obsidian export preset or plugin integration").</div>
+    </section>
+
+    <section>
+      <h2>Phased Recommendation</h2>
+      <div class="grid cols-2">
+        <div class="callout">
+          <strong>Phase 1: Obsidian export preset</strong>
+          <p>Add a second ZIP shape that produces <code>Totem/</code> with stable tweet-ID filenames, richer YAML, an index note, and highlights in Markdown. This is low-risk because it reuses the current ZIP path.</p>
+        </div>
+        <div class="callout">
+          <strong>Phase 2: Manual local sync</strong>
+          <p>Add "Sync to Obsidian vault" using a selected folder handle. Keep it user-triggered first. Use the same renderer as the Obsidian ZIP preset.</p>
+        </div>
+        <div class="callout">
+          <strong>Phase 3: Digest workflows</strong>
+          <p>Create daily or saved-search digests under <code>Totem/Digests/</code>. Digests are more useful than dumping thousands of raw bookmark notes without context.</p>
+        </div>
+        <div class="callout">
+          <strong>Phase 4: Optional plugin or paid cloud</strong>
+          <p>Only after local sync is useful, consider an Obsidian plugin, scheduled digests, Notion, Readwise, Sheets, or other cloud adapters.</p>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Open Decisions</h2>
+      <ul>
+        <li>Should v1 write one note per bookmark, digest notes only, or both? My recommendation: both, but default the UI around digests.</li>
+        <li>Should notes include downloaded media? My recommendation: external media links in v1, local attachments later.</li>
+        <li>Should user edits be supported in generated notes? My recommendation: yes, by hash-based conflict protection, not by trying to merge Markdown intelligently in v1.</li>
+        <li>Should Totem auto-sync in the background? My recommendation: no for v1. Directory permissions and multi-device conflict risk make manual sync the right starting point.</li>
+        <li>Should current ZIP export change? My recommendation: keep v1 frozen; add an Obsidian preset rather than breaking the importable archive contract.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Evidence Notes</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Claim</th>
+              <th>Evidence</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Totem is local-first, with no Totem account or server.</td>
+              <td><a href="../../../public/manifest.json">public/manifest.json</a> describes the extension as local-first and offline-enabled. <a href="../../../ARCHITECTURE.md">ARCHITECTURE.md</a> says IndexedDB owns persisted bookmark data.</td>
+            </tr>
+            <tr>
+              <td>Current export already emits Markdown and a manifest.</td>
+              <td><a href="../../../src/lib/export/quick-export.ts">quick-export.ts</a> writes <code>readme.md</code>, <code>bookmarks.csv</code>, JSONL stores, per-bookmark Markdown files, and <code>manifest.json</code>.</td>
+            </tr>
+            <tr>
+              <td>Current Markdown has useful Obsidian-compatible syntax.</td>
+              <td><a href="../../../src/lib/export/article-to-markdown.ts">article-to-markdown.ts</a> builds YAML front matter, headings, lists, blockquotes, code fences, images, and links.</td>
+            </tr>
+            <tr>
+              <td>Current reader export supports copy/download Markdown.</td>
+              <td><a href="../../../src/lib/export/article-download.ts">article-download.ts</a> exposes clipboard copy and <code>text/markdown</code> download helpers.</td>
+            </tr>
+            <tr>
+              <td>Prior internal planning already identified Obsidian as the best first local destination.</td>
+              <td><a href="../next-release-knowledge-digests-sync-plan.html">next-release-knowledge-digests-sync-plan.html</a> recommends writing Markdown to a user-selected vault folder through File System Access.</td>
+            </tr>
+            <tr>
+              <td>The separate Obsidian research folder emphasizes sync conflicts and the difference between sync and backup.</td>
+              <td><span class="path">/Users/ankit/Documents/research-ideas/obsidian-research/sync-methods.html</span> compares Obsidian Sync, Syncthing, Remotely Save, LiveSync, Git, iCloud, Dropbox, and other methods.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section>
+      <h2>Sources</h2>
+      <ol class="source-list">
+        <li>Obsidian Help, "How Obsidian stores data." Accessed June 19, 2026. <a href="https://obsidian.md/help/Files%2Band%2Bfolders/How%2BObsidian%2Bstores%2Bdata">https://obsidian.md/help/Files%2Band%2Bfolders/How%2BObsidian%2Bstores%2Bdata</a></li>
+        <li>Obsidian Help, "Manage vaults." Accessed June 19, 2026. <a href="https://obsidian.md/help/manage-vaults">https://obsidian.md/help/manage-vaults</a></li>
+        <li>Obsidian Help, "Accepted file formats." Accessed June 19, 2026. <a href="https://obsidian.md/help/Files%2Band%2Bfolders/Accepted%2Bfile%2Bformats">https://obsidian.md/help/Files%2Band%2Bfolders/Accepted%2Bfile%2Bformats</a></li>
+        <li>Obsidian Help, "Properties." Accessed June 19, 2026. <a href="https://obsidian.md/help/Editing%2Band%2Bformatting/Properties">https://obsidian.md/help/Editing%2Band%2Bformatting/Properties</a></li>
+        <li>Obsidian Help, "Internal links." Accessed June 19, 2026. <a href="https://obsidian.md/help/Linking%2Bnotes%2Band%2Bfiles/Internal%2Blinks">https://obsidian.md/help/Linking%2Bnotes%2Band%2Bfiles/Internal%2Blinks</a></li>
+        <li>Obsidian Help, "Obsidian URI." Accessed June 19, 2026. <a href="https://obsidian.md/help/Extending%2BObsidian/Obsidian%2BURI">https://obsidian.md/help/Extending%2BObsidian/Obsidian%2BURI</a></li>
+        <li>Obsidian Help, "Introduction to Obsidian Sync." Accessed June 19, 2026. <a href="https://obsidian.md/help/Obsidian%2BSync/Introduction%2Bto%2BObsidian%2BSync">https://obsidian.md/help/Obsidian%2BSync/Introduction%2Bto%2BObsidian%2BSync</a></li>
+        <li>Obsidian Help, "Set up Obsidian Sync." Accessed June 19, 2026. <a href="https://obsidian.md/help/Obsidian%2BSync/Set%2Bup%2BObsidian%2BSync">https://obsidian.md/help/Obsidian%2BSync/Set%2Bup%2BObsidian%2BSync</a></li>
+        <li>Obsidian Help, "Plans and storage limits." Accessed June 19, 2026. <a href="https://obsidian.md/help/Obsidian%2BSync/Plans%2Band%2Bstorage%2Blimits">https://obsidian.md/help/Obsidian%2BSync/Plans%2Band%2Bstorage%2Blimits</a></li>
+        <li>Obsidian Help, "Security and privacy." Accessed June 19, 2026. <a href="https://obsidian.md/help/Obsidian%2BSync/Security%2Band%2Bprivacy">https://obsidian.md/help/Obsidian%2BSync/Security%2Band%2Bprivacy</a></li>
+        <li>Obsidian Pricing. Accessed June 19, 2026. <a href="https://obsidian.md/pricing">https://obsidian.md/pricing</a></li>
+        <li>Chrome for Developers, "The File System Access API: simplifying access to local files." Published August 19, 2024; accessed June 19, 2026. <a href="https://developer.chrome.com/docs/capabilities/web-apis/file-system-access">https://developer.chrome.com/docs/capabilities/web-apis/file-system-access</a></li>
+        <li>MDN Web Docs, "Window: showDirectoryPicker() method." Last modified November 30, 2025; accessed June 19, 2026. <a href="https://developer.mozilla.org/en-US/docs/Web/API/Window/showDirectoryPicker">https://developer.mozilla.org/en-US/docs/Web/API/Window/showDirectoryPicker</a></li>
+        <li>MDN Web Docs, "File System API." Accessed June 19, 2026. <a href="https://developer.mozilla.org/en-US/docs/Web/API/File_System_API">https://developer.mozilla.org/en-US/docs/Web/API/File_System_API</a></li>
+        <li>Obsidian Developer Docs, "Vault." Accessed June 19, 2026. <a href="https://docs.obsidian.md/Plugins/Vault">https://docs.obsidian.md/Plugins/Vault</a></li>
+        <li>GoogleChromeLabs, "browser-fs-access." Accessed June 19, 2026. <a href="https://github.com/GoogleChromeLabs/browser-fs-access">https://github.com/GoogleChromeLabs/browser-fs-access</a></li>
+        <li>WICG/file-system-access, issue #314 — showDirectoryPicker fails in extension popup. <a href="https://github.com/WICG/file-system-access/issues/314">github.com/WICG/file-system-access/issues/314</a></li>
+        <li>Chromium issue 40240444 — showDirectoryPicker fails in extensions (popup-specific; works in a full tab). <a href="https://issues.chromium.org/issues/40240444">issues.chromium.org/issues/40240444</a></li>
+        <li>Chrome for Developers, "Persistent permissions for the File System Access API." <a href="https://developer.chrome.com/blog/persistent-permissions-for-the-file-system-access-api">developer.chrome.com/blog/persistent-permissions-for-the-file-system-access-api</a></li>
+        <li>WHATWG File System Standard — createWritable atomicity ("typically… temporary file", non-normative). <a href="https://fs.spec.whatwg.org/">fs.spec.whatwg.org</a></li>
+        <li>MDN, "FileSystemHandle: requestPermission()" — Window context + transient activation required. <a href="https://developer.mozilla.org/en-US/docs/Web/API/FileSystemHandle/requestPermission">developer.mozilla.org/.../requestPermission</a></li>
+        <li>Chrome for Developers, "Local Network Access" + Chrome 142 release notes (properly-permissioned extensions exempt). <a href="https://developer.chrome.com/blog/local-network-access">developer.chrome.com/blog/local-network-access</a></li>
+        <li>obsidianmd/obsidian-clipper — source + issue #828 (canceled protocol dialog silently drops the clip). <a href="https://github.com/obsidianmd/obsidian-clipper/issues/828">github.com/obsidianmd/obsidian-clipper/issues/828</a></li>
+        <li>Obsidian Help, "Troubleshoot Web Clipper" — Legacy mode URL-length limit; clipboard handoff requires Obsidian 1.7.2+. <a href="https://obsidian.md/help/web-clipper/troubleshoot">obsidian.md/help/web-clipper/troubleshoot</a></li>
+        <li>Vinzent03, "Advanced URI — Writing actions." <a href="https://vinzent03.github.io/obsidian-advanced-uri/actions/writing">vinzent03.github.io/obsidian-advanced-uri/actions/writing</a></li>
+        <li>coddingtonbear/obsidian-local-rest-api — README + OpenAPI (self-signed cert, :27123/:27124, isDesktopOnly). <a href="https://github.com/coddingtonbear/obsidian-local-rest-api">github.com/coddingtonbear/obsidian-local-rest-api</a></li>
+        <li>getmatterapp/obsidian-matter — main.ts (contentMap id→file, lastSync, create/update/skip). <a href="https://github.com/getmatterapp/obsidian-matter/blob/master/src/main.ts">github.com/getmatterapp/obsidian-matter/.../main.ts</a></li>
+        <li>kaiiiz/obsidian-raindrop-highlights-plugin — frontmatter ID dedup, incremental + full sync. <a href="https://github.com/kaiiiz/obsidian-raindrop-highlights-plugin/blob/main/README.md">github.com/kaiiiz/obsidian-raindrop-highlights-plugin</a></li>
+        <li>jsonMartin/readwise-mirror — mirror/overwrite model (~5,067 highlights in ~20s). <a href="https://github.com/jsonMartin/readwise-mirror">github.com/jsonMartin/readwise-mirror</a></li>
+        <li>"Omnivore API no longer synchronizing with Obsidian" — Obsidian Forum (cloud-API single point of failure). <a href="https://forum.obsidian.md/t/omnivore-api-no-longer-synchronizing-with-obsidian-anyone-else-experiencing-this/86950">forum.obsidian.md/t/…/86950</a></li>
+        <li>Obsidian Help, "Troubleshoot Obsidian Sync" — diff-match-patch merge; warning against two sync services on one vault. <a href="https://obsidian.md/help/sync/troubleshoot">obsidian.md/help/sync/troubleshoot</a></li>
+      </ol>
+    </section>
+  </main>
+</body>
+</html>

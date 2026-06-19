@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Site & Distribution · Totem Premium</title>
+<meta name="generator" content="Kami">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="topbar">
+  <a class="wordmark" href="index.html">Totem <span>Premium Conversion</span></a>
+  <div class="topbar-meta">Research &amp; execution plan · v1.0 · 2026.06</div>
+</header>
+<div class="layout">
+<nav class="sidebar" aria-label="Sections">
+<a class="side-brand" href="index.html">Totem <span>Premium</span></a>
+<div class="side-group"><div class="side-group-label">Overview</div>
+<a class="side-link" href="index.html">Home</a>
+</div>
+<div class="side-group"><div class="side-group-label">The Plan</div>
+<a class="side-link" href="02-the-model.html">The Model</a>
+<a class="side-link" href="03-features.html">Features &amp; Limits</a>
+<a class="side-link" href="04-tech-stack.html">Tech Stack</a>
+<a class="side-link" href="05-payments.html">Payment Gateway</a>
+<a class="side-link" href="06-license.html">License Architecture</a>
+<a class="side-link" href="07-system-changes.html">System Changes</a>
+<a class="side-link" href="08-compliance.html">CWS Compliance</a>
+<a class="side-link" href="09-paywall-ux.html">Paywall UX</a>
+<a class="side-link" href="10-rollout.html">Rollout &amp; Decisions</a>
+</div>
+<div class="side-group"><div class="side-group-label">Review</div>
+<a class="side-link" href="11-adversarial-review.html">Adversarial Review</a>
+</div>
+<div class="side-group"><div class="side-group-label">Appendices</div>
+<a class="side-link" href="appendix-a-data-sync.html">A · Data &amp; Sync</a>
+<a class="side-link" href="appendix-b-features-export.html">B · Features &amp; Export</a>
+<a class="side-link" href="appendix-c-build-release.html">C · Build &amp; Release</a>
+<a class="side-link" href="appendix-d-site-distribution.html" aria-current="page">D · Site &amp; Dist.</a>
+<a class="side-link" href="appendix-e-ui-state-upsell.html">E · UI &amp; Upsell</a>
+<a class="side-link" href="appendix-f-payments-compared.html">F · Gateways</a>
+<a class="side-link" href="appendix-g-license-arch.html">G · License &amp; DRM</a>
+<a class="side-link" href="appendix-h-market-discourse.html">H · Market Discourse</a>
+<a class="side-link" href="appendix-i-cws-policy-ux.html">I · CWS Policy</a>
+</div>
+<div class="side-group"><div class="side-group-label">Reference</div>
+<a class="side-link" href="appendix-j-references.html">J · References</a>
+</div>
+</nav>
+<main class="content">
+<div class="chapter-eyebrow">Appendix D</div><h1 class="page-title">Site &amp; Distribution</h1><p class="lead">The marketing site at <code>apps/site/</code> is a 100% static Astro build deployed to Vercel with no adapter and no server runtime. As shipped it cannot host a license-issuing or verification endpoint — the funnel must lean on a merchant-of-record while the site stays pure static.</p>
+
+<h2 id="site-architecture-build-and-deploy">Site architecture, build, and deploy</h2>
+
+<p>The Astro config at <code>apps/site/astro.config.mjs</code> sets <code>site: "https://usetotem.xyz"</code>, <span class="hl"><code>output: "static"</code> (line 10)</span>, <code>outDir: "../../dist-website"</code> (line 11), <code>trailingSlash: "ignore"</code>, <code>build.format: "directory"</code>, and <code>build.assets: "assets"</code>. Integrations are <code>@astrojs/react</code> (React 19 islands), <code>@astrojs/sitemap</code> (with a <code>filter</code>/<code>serialize</code> that excludes <code>/uninstall-feedback/</code> and sets per-page <code>changefreq</code>/<code>priority</code>), and <code>@tailwindcss/vite</code>. The Markdown pipeline is <code>remark-gfm</code> plus a custom rehype plugin <code>rehypeBlogLinks</code> (see the SEO section), footnotes labeled "Sources", and <code>smartypants: true</code>.</p>
+
+<div class="callout"><strong>No Astro adapter is configured and none is installed.</strong> <code>find src/pages -name "*.ts" -o -name "*.js"</code> returns nothing (no Astro endpoints / API routes); <code>node_modules/@astrojs/vercel</code> is absent; there is no <code>middleware.*</code> file. This is a pure static-site-generator setup.</p></div>
+
+<p>The package <code>apps/site/package.json</code> is named <code>@totem/site</code>, with deps <code>astro ^5.18.2</code>, <code>@astrojs/react ^4.4.2</code>, <code>@astrojs/sitemap</code>, <code>tailwindcss v4</code>, <code>remark-gfm</code>, and <code>unist-util-visit</code>. Scripts: <code>dev</code> / <code>build</code> / <code>preview</code> / <code>check</code> (<code>astro check</code>). It is a workspace package; the root <code>package.json</code> drives it via <code>pnpm build:website</code> (<code>pnpm --filter @totem/site build</code>) and <code>pnpm package:website</code>.</p>
+
+<h3>How pages are authored</h3>
+
+<p>Two patterns live under <code>apps/site/src/pages/</code>. The first is <strong>Astro pages wrapping a shared layout</strong>, each importing <code>BaseLayout.astro</code> and passing SEO props:</p>
+
+<ul>
+<li><code>index.astro</code> — landing; reads root <code>package.json</code> version, pulls 3 recent blog posts via <code>getCollection("blog")</code>, injects <code>SoftwareApplication</code> JSON-LD (currently <code>offers.price: "0"</code>, <code>isAccessibleForFree: true</code> — this JSON-LD will need updating when a paid tier ships), and renders the <code>&lt;LandingPage&gt;</code> React island.</li>
+<li><code>privacy.astro</code> → <code>&lt;PrivacyPage&gt;</code> island; <code>how-it-works.astro</code>; <code>demo.astro</code> → <code>&lt;DemoNewTabApp client:only="react"&gt;</code> with <code>showChrome={false}</code>.</li>
+<li><code>export-format/v1.astro</code> — a fully hand-authored long-form HTML doc page (no React island). <strong>This is the best template to copy for a new <code>/pricing</code> or <code>/manage-license</code> static content page</strong> — it shows the prose/article pattern, the in-page TOC, and <code>BaseLayout</code> SEO wiring.</li>
+<li><code>uninstall-feedback.astro</code> — <strong>the closest existing precedent for a "form" page.</strong> It is a static page with a <code>&lt;form&gt;</code>, a client <code>&lt;script&gt;</code> that assembles a <code>mailto:</code>/Gmail compose URL, and <code>robots="noindex, follow"</code>. It demonstrates an interactive page with no backend (everything client-side or handed off to an external service). A "paste your license key" page would follow exactly this shape.</li>
+</ul>
+
+<p>The second pattern is <strong>content collections</strong> for the blog: <code>src/content.config.ts</code> defines a <code>blog</code> collection via <code>glob({ pattern: "**/*.md", base: "./src/content/blog" })</code> with a Zod schema (<code>title</code>, <code>slug?</code>, <code>description</code>, <code>publishedAt?</code>, <code>draft?</code>, <code>canonicalKeyword?</code>). Markdown files live in <code>src/content/blog/*.md</code> and render through <code>src/pages/blog/[slug].astro</code> (<code>getStaticPaths</code> + <code>render(post)</code>), plus <code>src/pages/blog/index.astro</code> for the list.</p>
+
+<h3>Layout &amp; shared chrome</h3>
+
+<p><code>src/layouts/BaseLayout.astro</code> is the single SEO/HTML shell. Props: <code>title</code>, <code>description</code>, <code>canonical</code>, <code>og</code>, <code>twitter</code>, <code>spaceGrotesk</code>, <code>embedGuardGa</code>, <code>showChrome</code>, <code>page</code>, <code>bodyClass</code>, <code>robots</code>. It renders <code>&lt;head&gt;</code> (fonts via Google Fonts, canonical, OG/Twitter, Organization+WebSite JSON-LD), then conditionally wraps content with <code>SiteHeader</code> + <code>SiteFooter</code> when <code>showChrome</code> is true. It also inlines the Google Analytics (gtag <code>G-VBKV6TVM6W</code>) loader — an <code>embedGuardGa</code> variant suppresses GA inside iframes/<code>?embed</code>.</p>
+
+<p>Under <code>src/components/</code> sit <code>SiteHeader.astro</code>, <code>SiteFooter.astro</code>, <code>Favicon.astro</code>, and <code>BlogPostCta.astro</code>. The header/footer pull all copy and links from <code>src/react/site-content.ts</code>. React islands live in <code>src/react/SiteApp.tsx</code> (exports <code>LandingPage</code>, <code>PrivacyPage</code>, <code>HowItWorksPage</code>) and <code>src/react/demo/</code>. Site copy/config is centralized in <span class="hl"><code>src/react/site-content.ts</code></span> — the single source of truth for <code>SITE_LINKS</code>, <code>SITE_COPY</code>, install URLs, and feature blurbs.</p>
+
+<h3>Build &amp; deploy on Vercel</h3>
+
+<p><code>vercel.json</code> at the repo root sets <code>framework: "astro"</code>, <code>installCommand: "pnpm install --frozen-lockfile"</code>, <strong><code>buildCommand: "pnpm build:website"</code></strong>, <strong><code>outputDirectory: "dist-website"</code></strong>, <code>cleanUrls: true</code>, and <code>trailingSlash: false</code>. There is one redirect: <code>/website/:path*</code> → <code>/:path*</code> (temporary).</p>
+
+<p>Because <code>output: "static"</code> plus no adapter, Vercel serves <code>dist-website/</code> as <strong>static files on the CDN only</strong>. There is no Vercel Functions deployment from this project today. The <code>cleanUrls</code>/redirects/headers in <code>vercel.json</code> are the only "server-ish" config, and they are edge/CDN config, not compute.</p>
+
+<div class="takeaway"><div class="takeaway-label">STATIC-SITE CONSTRAINT</div> The site can serve static HTML/CSS/JS and CDN-level redirects, but it cannot run server endpoints or Vercel Functions as configured. To host a license endpoint <em>here</em> you would need to <code>npm i @astrojs/vercel</code>, set <code>output: "server"</code> or <code>"hybrid"</code>, add <code>adapter: vercel()</code>, and write Astro endpoints under <code>src/pages/api/*.ts</code> — introducing a server runtime, secrets management (signing key), and a DB/KV for license records, which breaks "no Totem server" purity.</div>
+
+<p>The recommended alternative is a <span class="hl">merchant-of-record SaaS</span> (Gumroad / Lemon Squeezy / Polar) that issues and verifies license keys via <em>their</em> API/webhooks, leaving this site static. License <em>verification</em> in the extension can then be a stateless signed-token check or a call to the MoR's verify API from the extension itself.</p>
+
+<h2 id="where-the-purchase-funnel-pages-live">Where the purchase-funnel pages live</h2>
+
+<p>All new pages slot into <code>apps/site/src/pages/</code> and reuse <code>BaseLayout.astro</code> + <code>SiteHeader</code>/<code>SiteFooter</code>. Concrete placement:</p>
+
+<table>
+<thead><tr><th>Page</th><th>File &amp; path</th><th>Reuse / template</th></tr></thead>
+<tbody>
+<tr><td><strong>Pricing</strong></td><td><code>src/pages/pricing.astro</code> → <code>/pricing</code></td><td>New React island in <code>SiteApp.tsx</code> <em>or</em> hand-authored like <code>export-format/v1.astro</code>. Add <code>"pricing"</code> to the <code>SitePageKey</code> union in <code>BaseLayout.astro</code> and the <code>page</code> prop type in <code>SiteHeader.astro</code>/<code>SiteFooter.astro</code>. Add a nav link in <code>SiteFooter.astro</code> (and header CTA copy in <code>site-content.ts</code>).</td></tr>
+<tr><td><strong>Checkout entry</strong></td><td>Usually not a page</td><td>The "Buy" button links out to the MoR hosted checkout (Gumroad/Lemon Squeezy/Polar overlay or hosted page). The button lives on <code>pricing.astro</code> (and optionally a CTA in <code>BlogPostCta.astro</code>). If an overlay widget is used, it is a <code>&lt;script&gt;</code> island on <code>pricing.astro</code>.</td></tr>
+<tr><td><strong>Post-purchase / license delivery</strong></td><td><code>src/pages/upgrade/success.astro</code> → <code>/upgrade/success</code></td><td>Set <code>robots="noindex, follow"</code> like <code>uninstall-feedback.astro</code>. The MoR's <code>success_url</code> redirects here with the license key/token in the query string; a client <code>&lt;script&gt;</code> reads <code>location.search</code>, displays the key, offers "copy" and a deep-link button back into the extension. Pure client-side — no backend.</td></tr>
+<tr><td><strong>Manage license</strong></td><td><code>src/pages/manage-license.astro</code> → <code>/manage-license</code> (or <code>/license</code>)</td><td>Static page with a "paste your key" form + "verify"/"check status" that calls the MoR verify API client-side (or links to the MoR's customer portal). Pattern mirrors <code>uninstall-feedback.astro</code> (static page + client <code>&lt;script&gt;</code>, no server).</td></tr>
+</tbody>
+</table>
+
+<p>Components and layouts to reuse directly:</p>
+
+<ul>
+<li><code>BaseLayout.astro</code> for every page (SEO, OG, GA, header/footer).</li>
+<li><code>BlogPostCta.astro</code> is the model for a reusable "Upgrade to Pro" CTA card — it already does UTM-decorated CTA URLs derived from <code>SITE_LINKS.installUrl</code>.</li>
+<li><code>uninstall-feedback.astro</code> for any <strong>form + client-script, no-backend</strong> page (success page, paste-a-key page).</li>
+<li><code>export-format/v1.astro</code> for <strong>long-form static content</strong> (a detailed pricing/FAQ/feature-comparison page).</li>
+<li>Centralize all new URLs (checkout URL, success URL, manage URL, MoR product IDs) in <code>src/react/site-content.ts</code> under <code>SITE_LINKS</code>, matching the existing <code>chromeWebStoreInstallUrl</code>/<code>installUrl</code> pattern.</li>
+</ul>
+
+<h2 id="extension-site-handoff">Extension ↔ site handoff</h2>
+
+<h3>What exists today (one-directional, marketing-only)</h3>
+
+<p><strong>Site → extension (install):</strong> Everything funnels to the Chrome Web Store. <code>site-content.ts</code> defines <code>chromeWebStoreListingUrl = https://chromewebstore.google.com/detail/acpkgdfhoaalmnhjifhneghcgfnjkglo</code> and <code>chromeWebStoreInstallUrl</code> = that listing + <code>?utm_source=usetotem.xyz&amp;utm_medium=referral&amp;utm_campaign=site_install</code>. <code>installUrl</code> resolves to the CWS install URL (falling back to <code>github.com/nnnkit/totem/releases/latest</code> only if the CWS URL were empty). The header, footer, landing CTAs, and <code>BlogPostCta.astro</code> all link to <code>installUrl</code> with <code>target="_blank"</code>.</p>
+
+<p><strong>Extension → site (only two hard-coded links):</strong></p>
+<ul>
+<li><code>src/lib/constants/growth.ts</code>: <code>PRIVACY_POLICY_URL = https://usetotem.xyz/privacy</code> (rendered in <code>OnboardingModal.tsx</code>), and <code>UNINSTALL_FEEDBACK_URL = https://usetotem.xyz/uninstall-feedback?utm_source=extension&amp;utm_medium=uninstall&amp;utm_campaign=feedback</code>. The uninstall URL is wired via <code>chrome.runtime.setUninstallURL(...)</code> in <code>src/service-worker/index.ts</code> (<code>configureUninstallFeedback</code>, called from <code>registerReleaseFoundationHooks</code>).</li>
+<li><code>src/lib/export/quick-export.ts</code> embeds <code>https://usetotem.xyz/export-format/v1</code> as a doc link inside exported ZIPs.</li>
+</ul>
+
+<p><strong>Install-time behavior:</strong> On <code>chrome.runtime.onInstalled</code> with <code>reason === "install"</code>, the service worker opens an in-extension tab (<code>newtab.html?utm_source=extension&amp;utm_medium=oninstall&amp;utm_campaign=first_launch</code>), <strong>not</strong> the marketing site (<code>openFirstLaunchTab</code> in <code>src/service-worker/index.ts</code>). So there is no existing "open the site from the extension" deep-link beyond privacy/uninstall.</p>
+
+<div class="callout">There is currently <strong>no <code>pricing</code>, <code>license</code>, <code>upgrade</code>, <code>checkout</code>, or payment-provider reference anywhere</strong> in <code>src/</code> or <code>apps/site/src/</code> (confirmed by grep). The only <code>premium_*</code> hit is <code>premium_content_api_read_enabled: false</code> in <code>api-proxy.ts</code>, an X GraphQL feature flag unrelated to Totem monetization. <span class="tag">GREENFIELD</span></div>
+
+<h3>Wiring "upgrade in extension → checkout on site → license back to extension"</h3>
+
+<p>There is no extension custom URL scheme today, so the handoff must use standard web URLs plus a paste-key fallback. Recommended flow:</p>
+
+<ol>
+<li><strong>Upgrade entry (extension):</strong> An "Upgrade to Pro" button in the new-tab UI / settings calls <code>chrome.tabs.create({ url: PRICING_URL })</code> where <code>PRICING_URL = https://usetotem.xyz/pricing?utm_source=extension&amp;utm_medium=upgrade&amp;utm_campaign=pro</code> (add to <code>growth.ts</code>, mirroring <code>UNINSTALL_FEEDBACK_URL</code>). Optionally append the extension's stable install id / a nonce as a query param so the success page can build a return deep link.</li>
+<li><strong>Checkout (site → MoR):</strong> The <code>/pricing</code> "Buy" button opens the MoR hosted checkout. MoR handles payment, tax (merchant-of-record), and license-key generation — no Totem server required.</li>
+<li><strong>License delivery (MoR → site success page):</strong> Configure the MoR <code>success_url = https://usetotem.xyz/upgrade/success</code>. The MoR appends the license key (or order token) to the redirect. The static success page (<code>src/pages/upgrade/success.astro</code>, <code>noindex</code>) reads <code>location.search</code> client-side and shows the key + copy button.</li>
+<li><strong>Return to extension — three layered mechanisms, in preference order:</strong>
+<ul>
+<li><strong>(a) <code>chrome.runtime.sendMessage(EXTENSION_ID, {type:"TOTEM_LICENSE", key})</code> from the web page</strong> — requires adding <code>externally_connectable</code> (with <code>matches: ["https://usetotem.xyz/*"]</code>) to the extension manifest and an <code>onMessageExternal</code> handler. Cleanest one-click activation; the success page JS posts the key straight into the extension.</li>
+<li><strong>(b) Deep-link button</strong> <code>chrome-extension://&lt;id&gt;/newtab.html?license=&lt;key&gt;</code> (or a custom action) that the success page renders; the new-tab boot reads <code>?license=</code> and stores/validates it. Works without <code>externally_connectable</code> but exposes the key in a URL.</li>
+<li><strong>(c) Paste-a-key fallback (always ship this):</strong> a field in extension Settings + the <code>/manage-license</code> page where the user pastes the key manually. The robust, no-coupling path, mirroring the existing <code>uninstall-feedback.astro</code> "static page + client script, no backend" pattern.</li>
+</ul></li>
+<li><strong>Verification (extension):</strong> The extension validates the key either offline (verify an Ed25519/HMAC signature against a public key bundled in the extension — keeps "no Totem server" intact) or by calling the MoR's license-verify API directly from the service worker. Store the unlocked state in <code>chrome.storage.local</code> alongside existing runtime/auth keys. No Totem backend in the loop.</li>
+</ol>
+
+<div class="takeaway"><div class="takeaway-label">MANIFEST NOTE</div> Whichever of (a)/(b) is chosen, the work is on the <strong>extension side</strong> (manifest <code>externally_connectable</code> and/or an <code>onMessageExternal</code>/URL-param handler). The site side stays static — the success/manage pages are ordinary Astro static pages with client <code>&lt;script&gt;</code> glue.</div>
+
+<h2 id="seo-utm-ref-decoration-the-funnel-must-preserve">SEO / UTM / ref decoration the funnel must preserve</h2>
+
+<p>The site already has a consistent attribution scheme; a purchase funnel must not strip it.</p>
+
+<p>The <strong>blog link rehype plugin</strong> at <code>apps/site/src/lib/rehype-blog-links.mjs</code> (registered in <code>astro.config.mjs</code>) rewrites every <code>&lt;a&gt;</code> in blog Markdown at build time:</p>
+<ul>
+<li><strong>Internal links</strong> to <code>usetotem.xyz</code> / <code>www.usetotem.xyz</code> get <code>utm_source=blog</code>, <code>utm_medium=referral</code>, <code>utm_campaign=blog_post</code>, and <code>utm_content=&lt;post-slug&gt;</code>. <strong>Important for the funnel:</strong> a "Buy/Upgrade" link in a blog post pointing at <code>/pricing</code> is auto-decorated with these blog UTMs — desirable, keep it.</li>
+<li><strong>External links</strong> (non-Totem hosts) get <code>utm_source=usetotem.xyz</code>, <code>utm_medium=referral</code>, <code>utm_campaign=blog</code>, <strong>and <code>ref=usetotem.xyz</code></strong>, plus <code>target="_blank"</code> + <code>rel="noopener noreferrer"</code>. The MoR checkout domain (e.g. <code>gumroad.com</code>) is external, so blog links to it are decorated this way automatically.</li>
+</ul>
+
+<p><strong>Hand-built CTA UTM derivation:</strong> <code>BlogPostCta.astro</code> takes the base <code>installUrl</code> and rewrites <code>utm_campaign=site_install</code> → <code>utm_campaign=blog_post_cta&amp;utm_content=&lt;slug&gt;</code>. A Pro CTA card should follow the same derive-from-base pattern so campaigns stay attributable.</p>
+
+<p><strong>Install URL canonical params:</strong> <code>chromeWebStoreInstallUrl</code> carries <code>utm_source=usetotem.xyz&amp;utm_medium=referral&amp;utm_campaign=site_install</code>. Any new "Upgrade" link from the site should use a parallel campaign (e.g. <code>utm_campaign=pricing</code> / <code>pro_upgrade</code>) so funnel analytics separate install vs upgrade.</p>
+
+<p><strong>Extension-originated UTMs:</strong> extension→site links already tag <code>utm_source=extension</code> (<code>utm_medium=uninstall|oninstall|upgrade</code>). Keep the <code>utm_source=extension&amp;utm_medium=upgrade&amp;utm_campaign=pro</code> convention for the new pricing deep-link so in-extension conversions are distinguishable from organic.</p>
+
+<p><strong>Analytics:</strong> GA4 (<code>G-VBKV6TVM6W</code>) is loaded in <code>BaseLayout.astro</code> for every page, so <code>/pricing</code> and <code>/upgrade/success</code> get pageview tracking for free; the funnel should set up GA events/conversions on the success page. (Per the project's local-first stance, GA is on the marketing site, not the extension.)</p>
+
+<p><strong>Sitemap:</strong> the <code>astro.config.mjs</code> sitemap <code>filter</code> excludes <code>/uninstall-feedback/</code>. The <span class="hl"><code>/upgrade/success</code> page should likewise be excluded</span> (and <code>noindex</code>); <code>/pricing</code> should be included (a real indexable page) and will inherit the default <code>priority: 0.8, changefreq: monthly</code>.</p>
+
+<p><strong>Structured data caveat:</strong> <code>index.astro</code>'s <code>SoftwareApplication</code> JSON-LD currently declares <code>offers.price: "0"</code> / <code>isAccessibleForFree: true</code>. When Pro ships, update this (or add an <code>offers</code> array reflecting the free + $19 lifetime tiers) to keep rich-result data truthful.</p>
+
+<h2 id="key-file-references">Key file references</h2>
+
+<table class="compact striped">
+<thead><tr><th>File</th><th>Role</th></tr></thead>
+<tbody>
+<tr><td><code>apps/site/astro.config.mjs</code></td><td>Static output, no adapter, markdown pipeline, sitemap filter.</td></tr>
+<tr><td><code>vercel.json</code> (repo root)</td><td>Vercel build/output config, <code>cleanUrls</code>, redirects (CDN-only, no functions).</td></tr>
+<tr><td><code>apps/site/src/layouts/BaseLayout.astro</code></td><td>Shared SEO/HTML shell + GA; add <code>pricing</code> to <code>SitePageKey</code>.</td></tr>
+<tr><td><code>apps/site/src/react/site-content.ts</code></td><td><code>SITE_LINKS</code> / <code>SITE_COPY</code>, install URLs (add checkout/license URLs here).</td></tr>
+<tr><td><code>apps/site/src/pages/uninstall-feedback.astro</code></td><td>Template for a no-backend form/paste-key page.</td></tr>
+<tr><td><code>apps/site/src/pages/export-format/v1.astro</code></td><td>Template for a long-form static content page.</td></tr>
+<tr><td><code>apps/site/src/components/BlogPostCta.astro</code></td><td>UTM-derived CTA card model.</td></tr>
+<tr><td><code>apps/site/src/lib/rehype-blog-links.mjs</code></td><td>Build-time UTM/<code>ref</code> link decoration (internal + external).</td></tr>
+<tr><td><code>apps/site/src/content.config.ts</code> + <code>src/pages/blog/[slug].astro</code></td><td>Content-collection authoring.</td></tr>
+<tr><td><code>src/lib/constants/growth.ts</code></td><td>Extension's hard-coded site URLs (<code>PRIVACY_POLICY_URL</code>, <code>UNINSTALL_FEEDBACK_URL</code>); add <code>PRICING_URL</code> here.</td></tr>
+<tr><td><code>src/service-worker/index.ts</code></td><td><code>setUninstallURL</code>, <code>onInstalled</code> first-launch tab (opens in-extension newtab, not site), <code>chrome.tabs.create</code> usage; site of any future <code>onMessageExternal</code>/license handoff handler.</td></tr>
+</tbody>
+</table>
+<nav class="pager"><a class="pager-link prev" href="appendix-c-build-release.html"><span class="pager-eyebrow">Previous</span><span class="pager-title">Build &amp; Release Pipeline</span></a><a class="pager-link next" href="appendix-e-ui-state-upsell.html"><span class="pager-eyebrow">Next</span><span class="pager-title">UI State &amp; Upsell Surfaces</span></a></nav>
+<footer class="page-foot">Totem · premium-monetization research · compiled with kami</footer>
+</main>
+<aside class="toc"><div class="toc-label">On this page</div><a href="#site-architecture-build-and-deploy">Site architecture, build, and deploy</a>
+<a href="#where-the-purchase-funnel-pages-live">Where the purchase-funnel pages live</a>
+<a href="#extension-site-handoff">Extension ↔ site handoff</a>
+<a href="#seo-utm-ref-decoration-the-funnel-must-preserve">SEO / UTM / ref decoration the funnel must preserve</a>
+<a href="#key-file-references">Key file references</a></aside>
+</div>
+</body>
+</html>

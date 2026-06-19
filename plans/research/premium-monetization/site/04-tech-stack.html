@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tech Stack — What Is New · Totem Premium</title>
+<meta name="generator" content="Kami">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="topbar">
+  <a class="wordmark" href="index.html">Totem <span>Premium Conversion</span></a>
+  <div class="topbar-meta">Research &amp; execution plan · v1.0 · 2026.06</div>
+</header>
+<div class="layout">
+<nav class="sidebar" aria-label="Sections">
+<a class="side-brand" href="index.html">Totem <span>Premium</span></a>
+<div class="side-group"><div class="side-group-label">Overview</div>
+<a class="side-link" href="index.html">Home</a>
+</div>
+<div class="side-group"><div class="side-group-label">The Plan</div>
+<a class="side-link" href="02-the-model.html">The Model</a>
+<a class="side-link" href="03-features.html">Features &amp; Limits</a>
+<a class="side-link" href="04-tech-stack.html" aria-current="page">Tech Stack</a>
+<a class="side-link" href="05-payments.html">Payment Gateway</a>
+<a class="side-link" href="06-license.html">License Architecture</a>
+<a class="side-link" href="07-system-changes.html">System Changes</a>
+<a class="side-link" href="08-compliance.html">CWS Compliance</a>
+<a class="side-link" href="09-paywall-ux.html">Paywall UX</a>
+<a class="side-link" href="10-rollout.html">Rollout &amp; Decisions</a>
+</div>
+<div class="side-group"><div class="side-group-label">Review</div>
+<a class="side-link" href="11-adversarial-review.html">Adversarial Review</a>
+</div>
+<div class="side-group"><div class="side-group-label">Appendices</div>
+<a class="side-link" href="appendix-a-data-sync.html">A · Data &amp; Sync</a>
+<a class="side-link" href="appendix-b-features-export.html">B · Features &amp; Export</a>
+<a class="side-link" href="appendix-c-build-release.html">C · Build &amp; Release</a>
+<a class="side-link" href="appendix-d-site-distribution.html">D · Site &amp; Dist.</a>
+<a class="side-link" href="appendix-e-ui-state-upsell.html">E · UI &amp; Upsell</a>
+<a class="side-link" href="appendix-f-payments-compared.html">F · Gateways</a>
+<a class="side-link" href="appendix-g-license-arch.html">G · License &amp; DRM</a>
+<a class="side-link" href="appendix-h-market-discourse.html">H · Market Discourse</a>
+<a class="side-link" href="appendix-i-cws-policy-ux.html">I · CWS Policy</a>
+</div>
+<div class="side-group"><div class="side-group-label">Reference</div>
+<a class="side-link" href="appendix-j-references.html">J · References</a>
+</div>
+</nav>
+<main class="content">
+<div class="chapter-eyebrow">04 · Stack</div><h1 class="page-title">Tech Stack — What Is New</h1><p class="lead">Totem stays exactly as it is — MV3, React 19, Zustand, IndexedDB/<code>idb</code>, Vite, Astro site. The premium layer adds a <span class="hl">small, deliberately boring</span> surface on top.</p>
+
+<h2 id="the-added-surface">The added surface</h2>
+
+<p>Nothing here replaces the existing stack; each row is a narrow, self-contained addition chosen to preserve the local-first, no-server ethos.</p>
+
+<table>
+<thead>
+<tr><th>Concern</th><th>Choice</th><th>Why</th></tr>
+</thead>
+<tbody>
+<tr>
+<td>Checkout + tax</td>
+<td><strong>Merchant-of-record: Lemon Squeezy</strong> (primary) or <strong>Polar</strong> (cost-optimized)</td>
+<td>MoR remits global VAT/GST, so the solo dev never registers for tax anywhere. No Totem billing server.</td>
+</tr>
+<tr>
+<td>License issuance</td>
+<td><strong>Keyforge</strong> (turnkey, signs Ed25519/JWT, plugs into LS/Polar) <strong>or</strong> a tiny serverless Ed25519 signer fired by the MoR webhook</td>
+<td>Produces an <strong>offline-verifiable signed key</strong>; the private key never touches the extension.</td>
+</tr>
+<tr>
+<td>License verification</td>
+<td><strong><code>@noble/ed25519</code></strong> in the service worker, public key embedded at build time</td>
+<td>Pure local crypto. ~5KB, audited, pairs with the <code>@noble/hashes 2.2.0</code> already present. <strong>No network, no new host permission.</strong></td>
+</tr>
+<tr>
+<td>Entitlement storage</td>
+<td>New SW-owned <code>chrome.storage.local</code> key <code>CS_ENTITLEMENT</code></td>
+<td>Single-writer, reset-surviving, rides the existing reactive snapshot channel.</td>
+</tr>
+<tr>
+<td>Pricing/license pages</td>
+<td>New static Astro pages on <code>usetotem.xyz</code></td>
+<td>Site is 100% static; pages are static + client <code>&lt;script&gt;</code>, no backend.</td>
+</tr>
+</tbody>
+</table>
+
+<h2 id="no-new-runtime-dependency-on-a-third-party-server">No new runtime dependency on a third-party server</h2>
+
+<p>The MoR/signer is touched <strong>only by the buyer's browser at checkout</strong> — never by the extension. That is the whole point: it preserves the <span class="hl">"no server" claim verbatim</span>.</p>
+
+<div class="takeaway">
+<div class="takeaway-label">NET EFFECT</div>
+The extension makes zero license network calls once activated. Every new moving part lives at issuance/checkout time, in the buyer's browser — not in <code>dist/</code>, not in the runtime trust chain.
+</div>
+<nav class="pager"><a class="pager-link prev" href="03-features.html"><span class="pager-eyebrow">Previous</span><span class="pager-title">Free vs Pro — Features &amp; Limits</span></a><a class="pager-link next" href="05-payments.html"><span class="pager-eyebrow">Next</span><span class="pager-title">Payment Gateway — The Decision</span></a></nav>
+<footer class="page-foot">Totem · premium-monetization research · compiled with kami</footer>
+</main>
+
+</div>
+</body>
+</html>

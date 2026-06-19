@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2026 Market Discourse · Totem Premium</title>
+<meta name="generator" content="Kami">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="topbar">
+  <a class="wordmark" href="index.html">Totem <span>Premium Conversion</span></a>
+  <div class="topbar-meta">Research &amp; execution plan · v1.0 · 2026.06</div>
+</header>
+<div class="layout">
+<nav class="sidebar" aria-label="Sections">
+<a class="side-brand" href="index.html">Totem <span>Premium</span></a>
+<div class="side-group"><div class="side-group-label">Overview</div>
+<a class="side-link" href="index.html">Home</a>
+</div>
+<div class="side-group"><div class="side-group-label">The Plan</div>
+<a class="side-link" href="02-the-model.html">The Model</a>
+<a class="side-link" href="03-features.html">Features &amp; Limits</a>
+<a class="side-link" href="04-tech-stack.html">Tech Stack</a>
+<a class="side-link" href="05-payments.html">Payment Gateway</a>
+<a class="side-link" href="06-license.html">License Architecture</a>
+<a class="side-link" href="07-system-changes.html">System Changes</a>
+<a class="side-link" href="08-compliance.html">CWS Compliance</a>
+<a class="side-link" href="09-paywall-ux.html">Paywall UX</a>
+<a class="side-link" href="10-rollout.html">Rollout &amp; Decisions</a>
+</div>
+<div class="side-group"><div class="side-group-label">Review</div>
+<a class="side-link" href="11-adversarial-review.html">Adversarial Review</a>
+</div>
+<div class="side-group"><div class="side-group-label">Appendices</div>
+<a class="side-link" href="appendix-a-data-sync.html">A · Data &amp; Sync</a>
+<a class="side-link" href="appendix-b-features-export.html">B · Features &amp; Export</a>
+<a class="side-link" href="appendix-c-build-release.html">C · Build &amp; Release</a>
+<a class="side-link" href="appendix-d-site-distribution.html">D · Site &amp; Dist.</a>
+<a class="side-link" href="appendix-e-ui-state-upsell.html">E · UI &amp; Upsell</a>
+<a class="side-link" href="appendix-f-payments-compared.html">F · Gateways</a>
+<a class="side-link" href="appendix-g-license-arch.html">G · License &amp; DRM</a>
+<a class="side-link" href="appendix-h-market-discourse.html" aria-current="page">H · Market Discourse</a>
+<a class="side-link" href="appendix-i-cws-policy-ux.html">I · CWS Policy</a>
+</div>
+<div class="side-group"><div class="side-group-label">Reference</div>
+<a class="side-link" href="appendix-j-references.html">J · References</a>
+</div>
+</nav>
+<main class="content">
+<div class="chapter-eyebrow">Appendix H</div><h1 class="page-title">2026 Market Discourse</h1><p class="lead">What builders actually said in the last six months of 2026 about charging for Chrome extensions: one-time versus subscription, the conversion numbers behind it, and the backlash waiting for anyone who bolts a paywall onto a free tool.</p>
+
+<h2 id="the-headline-signal-one-time-wins-for-tools-subscriptions-win-for-server-cost">The headline signal: one-time wins for tools, subscriptions win for server-cost</h2>
+<p>The strongest recurring theme across 2026 builder posts is that <span class="hl">subscription fatigue is real for client-side utility extensions</span>, and one-time / lifetime pricing converts materially better for them. The crucial qualifier: this is category-dependent, not universal. Subscriptions still dominate the high-revenue and professional/server-cost tiers.</p>
+
+<div class="callout">Pattern across every 2026 source: one-time wins for self-contained client-side utilities; subscription wins where there is ongoing or server-backed value.</div>
+
+<h3>First-party builder evidence (highest weight)</h3>
+<p><strong>"Real Numbers: Freemium Chrome Extension Monetization After 6 Months"</strong> — DEV Community, by ktg0215, ~May 6 2026. A solo dev running <strong>5 extensions on ExtensionPay</strong>. <span class="tag">VERIFIED</span> Real numbers:</p>
+<ul>
+<li>Overall free→paid conversion: <strong>0.8%</strong> across all 5 extensions; best (Japanese Font Finder) <strong>~1.4%</strong>, worst (PaletteGrab) <strong>0.3%</strong>.</li>
+<li><strong>MRR ~$180/mo</strong>, up from <strong>$60/mo</strong> three months prior, <strong>$0</strong> six months prior.</li>
+<li>Payment-flow completion: <strong>~60–70%</strong> of users who click "Upgrade" finish paying.</li>
+<li>Pricing spread: Procshot $4.99/mo (free: 2 guides/mo), Japanese Font Finder $2.99/mo (free: 30 inspections/day), <strong>PaletteGrab $3.99 one-time</strong> (free: 10 colors), AdLegalCheck $9.99/mo (free: 3 scans/mo).</li>
+</ul>
+<blockquote>One-time pricing for utility tools increased conversions 60% over monthly subscriptions for PaletteGrab.<span class="cite"> - DEV "Real Numbers", ktg0215, May 6 2026</span></blockquote>
+<p>On upgrade-prompt copy: prompt→upgrade conversion was <strong>2% with a basic alert, 8% when the prompt showed a value proposition with benefits listed</strong> — a 4x lift from copy alone.</p>
+<blockquote>The free limit should be just below the threshold for your power user's typical session.<span class="cite"> - DEV "Real Numbers", May 6 2026</span></blockquote>
+
+<p><strong>"Why Lifetime Pricing Converts Better Than Subscriptions for Chrome Extensions"</strong> — Medium, by Soraia, <strong>March 2 2026</strong>. Builder of the MiroMiro extension (design-asset extraction, 5,000+ installs). Was subscriptions-only at €5/mo; adding a prominent lifetime option produced <strong>"5 paying customers in a row"</strong> where conversions previously came "weeks or months" apart.</p>
+<blockquote>People don't cancel because they're unhappy. They cancel because they look at subscriptions and think, "wait, what is this again?"<span class="cite"> - Soraia, Medium, Mar 2 2026</span></blockquote>
+<blockquote>Chrome extensions aren't SaaS apps. They're tools. And people prefer to buy tools once.<span class="cite"> - Soraia, Medium, Mar 2 2026</span></blockquote>
+
+<p><strong>ExtPay user quote</strong> (chromium-extensions Google Group, ExtPay 3.1 announcement thread, posted <strong>March 24 2025</strong>; also reproduced on extensionpay.com):</p>
+<blockquote>It took less than an hour to set up and test it. It hasn't been under a year and I'm already going to pass $4,000 in annual subscriptions.<span class="cite"> - chromium-extensions Google Group, Mar 24 2025</span></blockquote>
+<p>Another commonly cited line: a builder "wouldn't have tried to monetize using Stripe directly" but found ExtPay easy.</p>
+
+<h3>The counter-signal: don't over-index on lifetime</h3>
+<p>Subscriptions clearly still dominate the high-revenue tier and professional/server-cost categories. <strong>NicheCheck, "Most Profitable Chrome Extensions: 2026 Revenue Breakdown by Category"</strong> (Feb 22 2026) reports top-10% performers:</p>
+<table class="striped">
+<thead><tr><th>Category</th><th>Top-10% revenue</th><th>Model</th></tr></thead>
+<tbody>
+<tr><td>SEO &amp; Marketing</td><td>$10k–$50k/mo</td><td>subscription $15–$30/mo</td></tr>
+<tr><td>Developer Tools</td><td>$5k–$30k/mo</td><td>subscription $6–$8/mo</td></tr>
+<tr><td>AI-Powered</td><td>$5k–$25k/mo</td><td>subscription $10–$20/mo</td></tr>
+<tr><td>Productivity</td><td>$3k–$15k/mo</td><td>freemium $3–$7/mo</td></tr>
+<tr><td>Privacy &amp; Security</td><td>$1k–$8k/mo</td><td>hybrid (freemium + donations + enterprise)</td></tr>
+</tbody>
+</table>
+<p>NicheCheck states "recurring subscriptions dominate profitable extensions" and that <strong>"Annual plans (typically at a 30–40% discount) reduce churn by 50–60%."</strong> Freemium conversion benchmark: <strong>1–3% of the active user base</strong> (not installs).</p>
+
+<p><strong>chromegoldmine, "Chrome Extension Revenue Benchmarks by User Count"</strong> (March 26 2026) — benchmark by active users:</p>
+<table class="compact">
+<thead><tr><th>Active users</th><th>Freemium</th><th>Subscription</th><th>One-time / LTD</th></tr></thead>
+<tbody>
+<tr><td>2k–10k</td><td>$50–$500/mo</td><td>$100–$1,500/mo</td><td>$1,000–$10,000 cumulative</td></tr>
+<tr><td>10k–50k</td><td>—</td><td>$500–$7,500/mo</td><td>$5,000–$30,000</td></tr>
+<tr><td>50k–200k+</td><td>—</td><td>$20k–$200k+/mo</td><td>"less practical at scale"</td></tr>
+</tbody>
+</table>
+<p>Named high-revenue extensions (all subscription/affiliate, not one-time): <strong>GMass ~$5.4M/yr (~$200k MRR)</strong>, <strong>Browse AI $1.3M/yr</strong>, <strong>Momentum ~$996k/yr</strong>, <strong>SkyVerge $4.2M/yr</strong>. Reddit case cited: <strong>50,000 users → $21K ARR (~$1,750/mo), sub-1% conversion.</strong></p>
+<blockquote>Your revenue-per-user goes up as you get better at converting, not as your user count grows.<span class="cite"> - chromegoldmine, Mar 26 2026</span></blockquote>
+<p>Conversion mechanics: users shown a paywall <strong>mid-task convert at "3–5x the rate"</strong> of install-time prompts.</p>
+
+<p><strong>ExtensionPay's "8 extensions with impressive revenue" roundup</strong> (older data, instructive by category): CSS Scan <strong>$100k+ on a $69 one-time</strong> (dev tool — one-time worked); Spider <strong>$10k in 2 months at $38 one-time</strong>; versus subscription winners GMass ($130k/mo at $8–$20/mo), Closet Tools ($42k/mo at $30/mo), BlackMagic by Tony Dinh (~$3k/mo subscription).</p>
+
+<div class="takeaway"><div class="takeaway-label">SYNTHESIS</div> A local-first, low-marginal-cost client-side tool sits squarely in the bucket where one-time/lifetime converts best — but one-time structurally caps revenue at "new buyers per month" and is explicitly "less practical at scale." The conventional escape hatch: keep the core unlock one-time, layer a small separate subscription only on a genuinely server-backed feature later.</div>
+
+<h2 id="free-tier-gating-that-converts-without-backlash">Free-tier gating that converts without backlash</h2>
+<p>Clear, repeated 2026 consensus on how to introduce paid tiers:</p>
+<ol>
+<li><strong>Launch freemium from day one — never bolt a paywall onto an already-free extension.</strong> ExtensionFast (Dec 5 2025): "Adding a paywall retroactively generates negative reviews." Launch with the free/paid split from the first public version.</li>
+<li><strong>Feature-gating beats usage caps for most tools.</strong> ExtensionFast (Feb 22 2026): "Feature gating works better than usage limits in most cases. Locking a specific high-value feature behind the paid tier is clearer and less frustrating" than punishing caps like "5 uses/day."</li>
+<li><strong>Trigger the upsell at the moment of delight or pain, mid-workflow — not at install.</strong> Contextual prompts convert <strong>3–5x</strong> better (chromegoldmine, Fungies, NicheCheck, all 2026). ExtensionFast example copy: "Liked that? Unlock unlimited conversions for just $4/month."</li>
+<li><strong>Upsell copy matters as much as placement</strong> — recall the DEV "Real Numbers" jump from <strong>2%→8%</strong> purely by listing benefits instead of a bare alert.</li>
+<li><strong>Set the free limit just below the power-user's typical session</strong> (DEV "Real Numbers") — but feature-gating is preferred over any cap.</li>
+</ol>
+
+<div class="callout">⚠️ Retroactive-paywall risk for a currently-free, open-source tool: the move from free→freemium must <strong>grandfather existing users</strong> and gate only genuinely new value, or it invites 1-star reviews. ExtensionFast, Dec 2025.</div>
+
+<h3>Realistic internal expectations</h3>
+<p>Freemium converts <strong>~1–3% of active users</strong> (0.8% observed across one real 5-extension portfolio); payment-flow completion <strong>~60–70%</strong>. Do not model off install counts.</p>
+
+<h2 id="contradictions-that-challenge-the-lifetime-always-wins-brief">Contradictions that challenge the "lifetime always wins" brief</h2>
+<ol>
+<li><strong>"Lifetime always wins" is too strong.</strong> It wins for client-side utility tools but subscriptions dominate every high-revenue professional category (SEO, dev tools, AI) and the entire $5k–$200k/mo tier; one-time is explicitly "less practical at scale." (NicheCheck, chromegoldmine, 2026.)</li>
+<li><strong>Retroactive paywalls cause review backlash</strong> — the single biggest execution risk for a currently free and open-source tool. (ExtensionFast, Dec 2025.)</li>
+<li><strong>Open-source + paid is a tension.</strong> If code is on GitHub, a license check is trivially bypassable; the moat becomes convenience, trust/updates, and data that only accrues for active paid users. Builders lean on merchant-of-record + "support the maintainer" framing over hard DRM. Polar.sh explicitly positions for OSS monetization.</li>
+<li><strong>ExtPay is convenient but is itself a hosted third party and not a merchant of record</strong> — a subtle ethos compromise for a "no server, local-first" brand, and it leaves global tax on you.</li>
+<li><strong>Polar's 2026 repricing</strong> erodes the "cheapest developer-first MoR" narrative — the flat 4% is now gated behind a $20–$400/mo plan; re-check live fees before committing. (Dodo review, 2026.)</li>
+</ol>
+
+<h2 id="source-index">Source index</h2>
+<ul>
+<li>DEV — Real Numbers: Freemium after 6 months — ~May 6 2026 — <code>dev.to/ktg0215/real-numbers-freemium-chrome-extension-monetization-after-6-months-5hga</code></li>
+<li>Medium (Soraia) — Why Lifetime Converts Better — Mar 2 2026</li>
+<li>chromium-extensions Google Group — ExtPay 3.1 / "$4,000 in annual subscriptions" — Mar 24 2025</li>
+<li>chromegoldmine — Revenue Benchmarks by User Count — Mar 26 2026</li>
+<li>NicheCheck — Most Profitable Extensions by Category — Feb 22 2026</li>
+<li>ExtensionPay — 8 Extensions with Impressive Revenue</li>
+<li>ExtensionFast — How to Price Your Chrome Extension — Feb 22 2026</li>
+<li>ExtensionFast — First $100 (gating/paywall placement) — Dec 5 2025</li>
+</ul>
+<nav class="pager"><a class="pager-link prev" href="appendix-g-license-arch.html"><span class="pager-eyebrow">Previous</span><span class="pager-title">License Architecture &amp; DRM Stance</span></a><a class="pager-link next" href="appendix-i-cws-policy-ux.html"><span class="pager-eyebrow">Next</span><span class="pager-title">CWS Policy &amp; Paywall UX</span></a></nav>
+<footer class="page-foot">Totem · premium-monetization research · compiled with kami</footer>
+</main>
+<aside class="toc"><div class="toc-label">On this page</div><a href="#the-headline-signal-one-time-wins-for-tools-subscriptions-win-for-server-cost">The headline signal: one-time wins for tools, subscriptions win for server-cost</a>
+<a href="#free-tier-gating-that-converts-without-backlash">Free-tier gating that converts without backlash</a>
+<a href="#contradictions-that-challenge-the-lifetime-always-wins-brief">Contradictions that challenge the "lifetime always wins" brief</a>
+<a href="#source-index">Source index</a></aside>
+</div>
+</body>
+</html>

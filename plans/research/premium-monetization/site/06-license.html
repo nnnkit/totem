@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>License & Entitlement Architecture · Totem Premium</title>
+<meta name="generator" content="Kami">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="topbar">
+  <a class="wordmark" href="index.html">Totem <span>Premium Conversion</span></a>
+  <div class="topbar-meta">Research &amp; execution plan · v1.0 · 2026.06</div>
+</header>
+<div class="layout">
+<nav class="sidebar" aria-label="Sections">
+<a class="side-brand" href="index.html">Totem <span>Premium</span></a>
+<div class="side-group"><div class="side-group-label">Overview</div>
+<a class="side-link" href="index.html">Home</a>
+</div>
+<div class="side-group"><div class="side-group-label">The Plan</div>
+<a class="side-link" href="02-the-model.html">The Model</a>
+<a class="side-link" href="03-features.html">Features &amp; Limits</a>
+<a class="side-link" href="04-tech-stack.html">Tech Stack</a>
+<a class="side-link" href="05-payments.html">Payment Gateway</a>
+<a class="side-link" href="06-license.html" aria-current="page">License Architecture</a>
+<a class="side-link" href="07-system-changes.html">System Changes</a>
+<a class="side-link" href="08-compliance.html">CWS Compliance</a>
+<a class="side-link" href="09-paywall-ux.html">Paywall UX</a>
+<a class="side-link" href="10-rollout.html">Rollout &amp; Decisions</a>
+</div>
+<div class="side-group"><div class="side-group-label">Review</div>
+<a class="side-link" href="11-adversarial-review.html">Adversarial Review</a>
+</div>
+<div class="side-group"><div class="side-group-label">Appendices</div>
+<a class="side-link" href="appendix-a-data-sync.html">A · Data &amp; Sync</a>
+<a class="side-link" href="appendix-b-features-export.html">B · Features &amp; Export</a>
+<a class="side-link" href="appendix-c-build-release.html">C · Build &amp; Release</a>
+<a class="side-link" href="appendix-d-site-distribution.html">D · Site &amp; Dist.</a>
+<a class="side-link" href="appendix-e-ui-state-upsell.html">E · UI &amp; Upsell</a>
+<a class="side-link" href="appendix-f-payments-compared.html">F · Gateways</a>
+<a class="side-link" href="appendix-g-license-arch.html">G · License &amp; DRM</a>
+<a class="side-link" href="appendix-h-market-discourse.html">H · Market Discourse</a>
+<a class="side-link" href="appendix-i-cws-policy-ux.html">I · CWS Policy</a>
+</div>
+<div class="side-group"><div class="side-group-label">Reference</div>
+<a class="side-link" href="appendix-j-references.html">J · References</a>
+</div>
+</nav>
+<main class="content">
+<div class="chapter-eyebrow">06 · License</div><h1 class="page-title">License &amp; Entitlement Architecture</h1><p class="lead">A paid unlock has to survive resets, account switches, and offline launches while never violating the MV3 ban on remote code. The architecture leans on seams that already exist: a service-worker trust boundary, a reactive snapshot channel, and pure local crypto.</p>
+
+<h2 id="5-1-end-to-end-flow">5.1 End-to-end flow</h2>
+
+<p>From the buyer's click to the gated feature flipping on, seven stages carry a signed key through purchase, verification, persistence, and propagation.</p>
+
+<pre><code>1. PURCHASE   Buyer clicks "Upgrade — $19 lifetime" in the extension
+              → opens usetotem.xyz/pricing → MoR hosted checkout
+              (Lemon Squeezy / Polar = merchant of record; card + VAT handled)
+                    │
+2. ISSUE      On paid order, Keyforge / serverless signer produces an
+              Ed25519-signed key:  base64(payload).base64(sig)
+              payload = { v, email, plan:"pro-lifetime", order, exp:null, feat:[...] }
+              Emailed to buyer + shown on usetotem.xyz/upgrade/success
+                    │
+3. ACTIVATE   Buyer returns to extension. Three layered paths:
+              (a) one-click: success page → externally_connectable → onMessageExternal
+              (b) deep link: chrome-extension://&lt;id&gt;/newtab.html?license=&lt;key&gt;
+              (c) paste-a-key fallback in Settings (always shipped)
+                    │
+4. VERIFY     Service worker: ed.verify(sig, payload, EMBEDDED_PUBKEY) + exp check.
+              Pure local crypto. Zero network. MV3-safe (no remote code).
+                    │
+5. PERSIST    SW writes CS_ENTITLEMENT to chrome.storage.local
+              { isPro, plan, email, order, feat, verifiedAt } + raw key.
+              Stamped into RuntimeSnapshot.
+                    │
+6. PROPAGATE  CS_RUNTIME_STATE_V2 change → chrome.storage.onChanged →
+              applyRuntimeSnapshot → Zustand → useIsPro() → every open
+              tab/reader flips to Pro on the same event-loop tick.
+                    │
+7. GATES      Export / preservation / bulk / filters / annotations read isPro.
+              Re-verified from the stored key on each launch (offline, cheap).</code></pre>
+
+<h2 id="5-2-where-the-entitlement-lives-resolving-the-storage-tension">5.2 Where the entitlement lives — resolving the storage tension</h2>
+
+<p>The research surfaced two candidate patterns. <strong>Use the SW-owned one as authoritative</strong>; it's what makes payment "work flawlessly" across reset and account-switch and is reactive everywhere.</p>
+
+<h3>Authoritative — SW-owned write</h3>
+
+<p>The SW writes <span class="hl"><code>CS_ENTITLEMENT</code></span> (<code>"totem_entitlement"</code>) to <code>chrome.storage.local</code>, declared in <code>src/service-worker/storage-keys-sw.ts</code> → the existing <code>storage-invariants.test.ts</code> makes the SW the <em>only</em> writer for free. The SW is the right owner because it's the trust boundary and the thing that verifies the signature.</p>
+
+<h3>Reset-surviving</h3>
+
+<p>Keep <code>CS_ENTITLEMENT</code> <strong>out of both reset lists</strong> in <code>src/lib/reset.ts</code> (mirror how auth headers are deliberately preserved). "Reset app" and account-switching must never revoke a paid unlock — it's a <strong>device-global, account-independent</strong> fact, not a per-account one. <strong>Never</strong> store it in IndexedDB (account-scoped and wiped) or the per-account sync orchestrator map.</p>
+
+<h3>Reactive — the ~6 wiring points</h3>
+
+<p>The <code>CS_RUNTIME_STATE_V2 → onChanged → applyRuntimeSnapshot</code> channel already exists and the propagation is <strong>automatic</strong>, but the snapshot is deserialized <strong>field-by-field</strong> (not spread), so <code>isPro</code> needs <strong>~6 explicit wiring points</strong> — minimal, but not "free":</p>
+
+<ol>
+<li>Add the field to <code>RuntimeSnapshotData</code> (<code>src/types/messages.ts</code>).</li>
+<li>Populate it in <code>buildRuntimeSnapshot</code> (<code>src/service-worker/auth.ts</code>).</li>
+<li>Read it in <code>normalizeAuthPayloadFromSnapshot</code>.</li>
+<li>Add it to the <code>AuthPayload</code> interface.</li>
+<li>Set it in <code>applyAuthPayload</code>.</li>
+<li>Expose <code>useIsPro()</code> in <code>src/stores/selectors.ts</code>.</li>
+</ol>
+
+<div class="callout">Keep <code>applyRuntimeSnapshot</code>'s <code>allowHydration:false</code> guard. An <code>isPro</code> flip must never trigger a sync or re-hydration.</div>
+
+<h3>Optional cross-device follow</h3>
+
+<p>Additionally mirror to a new <code>chrome.storage.sync</code> key (also SW-written, also off the reset list) so the unlock follows the user to a new machine without re-pasting. The local key stays authoritative.</p>
+
+<blockquote>The simpler "clone <code>useTheme.ts</code> into <code>usePro.ts</code> over <code>chrome.storage.sync</code>" pattern (from the UI report) is a fine MVP shortcut for the UI read, but the <em>writer</em> must be the SW after verification — a bare synced boolean is trivially forgeable and is wiped on reset. Use the snapshot/<code>useIsPro()</code> read path, SW-owned write.<span class="cite"> - UI report</span></blockquote>
+
+<h2 id="5-3-mv3-compliance-the-load-bearing-constraint">5.3 MV3 compliance — the load-bearing constraint</h2>
+
+<p>MV3 bans <strong>remotely-hosted code</strong>, not remote <strong>data</strong>. Both options here are valid.</p>
+
+<ul>
+<li><span class="tag">VERIFIED</span> <strong>Pure local crypto</strong> (verify a pasted signed key) → no network at all → trivially compliant.</li>
+<li><span class="tag">VERIFIED</span> <strong>Data fetch</strong> (call an MoR validate endpoint → receive JSON) → fetching <em>data</em>, explicitly allowed.</li>
+</ul>
+
+<p>What you must <strong>never</strong> do: fetch a JS "validator" or a script that <em>implements</em> a Pro feature and <code>eval</code>/import it. All Pro feature logic ships in the package and is merely <em>toggled</em> by <code>isPro</code>.</p>
+
+<div class="takeaway"><div class="takeaway-label">WHY ONE BUILD</div> This is why "one build, runtime-gated" is also the compliant design — every feature is in the bundle, and only the <code>isPro</code> flag decides whether it runs.</div>
+<nav class="pager"><a class="pager-link prev" href="05-payments.html"><span class="pager-eyebrow">Previous</span><span class="pager-title">Payment Gateway — The Decision</span></a><a class="pager-link next" href="07-system-changes.html"><span class="pager-eyebrow">Next</span><span class="pager-title">Internal System Changes — File by File</span></a></nav>
+<footer class="page-foot">Totem · premium-monetization research · compiled with kami</footer>
+</main>
+<aside class="toc"><div class="toc-label">On this page</div><a href="#5-1-end-to-end-flow">5.1 End-to-end flow</a>
+<a href="#5-2-where-the-entitlement-lives-resolving-the-storage-tension">5.2 Where the entitlement lives — resolving the storage tension</a>
+<a href="#5-3-mv3-compliance-the-load-bearing-constraint">5.3 MV3 compliance — the load-bearing constraint</a></aside>
+</div>
+</body>
+</html>
