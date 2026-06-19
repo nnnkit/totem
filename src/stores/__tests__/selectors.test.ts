@@ -30,6 +30,7 @@ function makeState(overrides: Partial<RuntimeState> = {}): RuntimeState {
     syncGeneration: 1,
     readerActive: false,
     prefetchStatus: "idle",
+    lastSyncAt: 0,
     actions: {
       boot: noop,
       dispose: vi.fn(),
@@ -112,5 +113,13 @@ describe("runtime selectors", () => {
     });
 
     expect(selectRuntimeMode(state)).toBe("online_ready");
+  });
+
+  it("shows empty_can_sync before first sync and empty_synced_clean after sync confirmed 0 bookmarks", () => {
+    const neverSynced = makeState({ bookmarks: [], lastSyncAt: 0 });
+    expect(selectFooterState(neverSynced, false)).toBe("empty_can_sync");
+
+    const syncedEmpty = makeState({ bookmarks: [], lastSyncAt: 1750000000000 });
+    expect(selectFooterState(syncedEmpty, false)).toBe("empty_synced_clean");
   });
 });

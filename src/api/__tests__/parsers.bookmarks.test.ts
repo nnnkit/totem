@@ -283,6 +283,15 @@ describe("parseBookmarkPagePayload", () => {
     });
   });
 
+  it("signals stopOnEmptyResponse when instructions array is empty (zero-bookmark account)", () => {
+    const result = parseBookmarkPagePayload(makePayload([]));
+    expect(result).toEqual({
+      bookmarks: [],
+      cursor: null,
+      stopOnEmptyResponse: true,
+    });
+  });
+
   it("preserves bookmarked state from bookmark timeline rows", () => {
     const payload = makePayload([
       {

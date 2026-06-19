@@ -9,8 +9,6 @@ A Chrome extension that replaces your new tab with a calm reading queue built fr
   src/              # Extension source (React + Vite)
   apps/
     site/           # Marketing website + interactive demo (@totem/site, Astro)
-  packages/
-    x-twitter-extension-core/  # Shared X/Twitter extension primitives
   scripts/          # Build, release, and packaging scripts
 ```
 
@@ -20,7 +18,6 @@ Workspace packages:
 |-----------|------|---------|
 | `.` | `totem` | Chrome extension (new tab page) |
 | `apps/site` | `@totem/site` | Public website with live demo |
-| `packages/x-twitter-extension-core` | `@make/x-twitter-extension-core` | Shared auth, URL parsing, and GraphQL query-id primitives |
 
 The website (Astro) renders blog posts statically and uses React islands for interactive surfaces (the demo, etc.). Interactive components import from the extension's `src/` via relative paths so both targets share one rendering layer.
 

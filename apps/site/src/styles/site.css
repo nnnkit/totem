@@ -1344,3 +1344,75 @@
     }
   }
 }
+
+/* ── Blog footnotes → a quiet "Sources" section ──
+   Unlayered on purpose: Tailwind's prose-* variants (font-serif, mt-12,
+   text-2xl) live in the utilities layer and would otherwise override the
+   heading. Unlayered author rules beat every @layer, so these win. */
+
+.prose [data-footnotes] {
+  margin-top: 3.5rem;
+  padding-top: 1.75rem;
+  border-top: 1px solid rgb(229 229 229);
+}
+
+.prose .blog-sources-title {
+  margin: 0 0 1.25rem;
+  font-family: var(--font-site-sans, ui-sans-serif, system-ui, sans-serif);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgb(115 115 115);
+}
+
+.prose [data-footnotes] ol {
+  margin: 0;
+  padding-left: 1.35rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  font-size: 0.78rem;
+  line-height: 1.6;
+  color: rgb(115 115 115);
+}
+
+.prose [data-footnotes] li {
+  margin: 0;
+  padding-left: 0.15rem;
+}
+
+.prose [data-footnotes] li::marker {
+  color: rgb(180 180 180);
+  font-weight: 400;
+}
+
+.prose [data-footnotes] li p {
+  margin: 0;
+}
+
+.prose [data-footnotes] a:not([data-footnote-backref]) {
+  color: rgb(82 82 82);
+  font-weight: 400;
+  text-decoration: underline;
+  text-decoration-color: rgb(212 212 212);
+  text-underline-offset: 2px;
+  transition: color 150ms ease, text-decoration-color 150ms ease;
+}
+
+.prose [data-footnotes] a:not([data-footnote-backref]):hover {
+  color: rgb(23 23 23);
+  text-decoration-color: currentColor;
+}
+
+.prose [data-footnotes] a[data-footnote-backref] {
+  margin-left: 0.3rem;
+  color: rgb(196 196 196);
+  font-size: 0.7rem;
+  text-decoration: none;
+  transition: color 150ms ease;
+}
+
+.prose [data-footnotes] a[data-footnote-backref]:hover {
+  color: rgb(82 82 82);
+}

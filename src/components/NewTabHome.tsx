@@ -569,6 +569,25 @@ function FooterCard({
           </p>
         </>
       );
+    case "empty_synced_clean":
+      return (
+        <article className={cardCentered}>
+          <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
+            No bookmarks on this account
+          </p>
+          <p className="mt-4 text-pretty text-base text-home-empty">
+            Your X account has no bookmarks yet. Save posts on X and they&rsquo;ll appear here.
+          </p>
+          <Button
+            type="button"
+            onClick={onSync}
+            disabled={syncButton.disabled}
+            className="mt-6 border-0 bg-home-accent text-white hover:opacity-90"
+          >
+            Check again
+          </Button>
+        </article>
+      );
     case "syncing_bootstrap":
       return (
         <article className={cardCentered}>

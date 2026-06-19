@@ -96,6 +96,7 @@ export type FooterState =
   | "syncing_bootstrap"
   | "sync_error"
   | "empty_can_sync"
+  | "empty_synced_clean"
   | "empty_offline";
 
 export interface ReaderAvailabilityState {
@@ -112,6 +113,7 @@ interface AuthPayload {
   accountContextId: string | null;
   bookmarksApi: ApiCapabilityState;
   detailApi: ApiCapabilityState;
+  lastSyncAt: number;
 }
 
 interface ActiveSyncController {
@@ -167,6 +169,7 @@ export interface RuntimeState {
   syncGeneration: number;
   readerActive: boolean;
   prefetchStatus: "idle" | "running" | "paused";
+  lastSyncAt: number;
   actions: RuntimeActions;
 }
 
@@ -214,6 +217,7 @@ function normalizeAuthPayloadFromSnapshot(snapshot: RuntimeSnapshot): AuthPayloa
     accountContextId: snapshot.accountContextId,
     bookmarksApi,
     detailApi,
+    lastSyncAt: snapshot.cacheSummary?.lastSyncAt ?? 0,
   };
 }
 
@@ -241,6 +245,7 @@ function normalizeAuthPayloadFromStatus(status: AuthStatus): AuthPayload {
         : null,
     bookmarksApi,
     detailApi,
+    lastSyncAt: 0,
   };
 }
 
@@ -369,6 +374,7 @@ function createInitialState(actions: RuntimeActions): RuntimeState {
     syncGeneration: 0,
     readerActive: false,
     prefetchStatus: "idle",
+    lastSyncAt: 0,
     actions,
   };
 }
@@ -701,6 +707,9 @@ export function createRuntimeStore() {
         detailedIdsLoaded: needsHydration ? false : state.detailedIdsLoaded,
         bookmarks: needsHydration ? [] : state.bookmarks,
         detailedTweetIds: needsHydration ? new Set<string>() : state.detailedTweetIds,
+        // Take the max: SW can push a snapshot after Date.now() already advanced
+        // lastSyncAt in this session, and we never want to regress it.
+        lastSyncAt: payload.lastSyncAt > state.lastSyncAt ? payload.lastSyncAt : state.lastSyncAt,
         syncStatus:
           phase === "need_login" && state.syncStatus === "syncing"
             ? "idle"
@@ -983,6 +992,7 @@ export function createRuntimeStore() {
               syncStatus: "idle",
               syncJobKind: "none",
               syncBlockedReason: null,
+              lastSyncAt: Date.now(),
             });
             completionStatus = "success";
           }
@@ -1414,6 +1424,7 @@ export function selectFooterState(
   if (syncUiState.isBlocking) return "syncing_bootstrap";
   if (state.syncStatus === "error" || state.syncStatus === "reauthing") return "sync_error";
   if (mode === "offline_cached") return "empty_offline";
+  if (state.lastSyncAt > 0 && state.bookmarks.length === 0) return "empty_synced_clean";
   return "empty_can_sync";
 }
 

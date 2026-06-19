@@ -2,11 +2,30 @@ import {
   getCookieHeaderValue,
   normalizeAuthState,
   parseTwidUserId,
-} from "./pure";
-import type { AuthState, AuthStatus, CookiesLike, StorageAreaLike } from "./types";
+} from "./sw-pure";
+import type { AuthState, SessionState } from "../types/auth";
+
+export interface StorageAreaLike {
+  get(
+    keys?: string | string[] | Record<string, unknown> | null,
+  ): Promise<Record<string, unknown>>;
+  set(items: Record<string, unknown>): Promise<void>;
+  remove(keys: string | string[]): Promise<void>;
+}
+
+export interface CookiesLike {
+  get(details: {
+    url: string;
+    name: string;
+  }): Promise<{ value?: string } | null | undefined>;
+}
 
 export type CoreDiagnosticEvent =
-  | { type: "auth.live_twid.present"; userId: string; source: "x.com" | "twitter.com" }
+  | {
+      type: "auth.live_twid.present";
+      userId: string;
+      source: "x.com" | "twitter.com";
+    }
   | { type: "auth.live_twid.missing" }
   | { type: "auth.cookie_unavailable"; reason: string }
   | { type: "auth.cookie_error"; reason: string }
@@ -25,6 +44,14 @@ export interface TwitterAuthStorageKeys {
   userId: string;
   authHeaders: string;
   authState: string;
+}
+
+export interface TwitterAuthStatus {
+  hasUser: boolean;
+  hasAuth: boolean;
+  userId: string | null;
+  authState: AuthState;
+  sessionState: SessionState;
 }
 
 export interface GetTwitterAuthStatusOptions {
@@ -243,7 +270,8 @@ export async function readLiveTwid(
     { source: "x.com", url: "https://x.com/" },
     { source: "twitter.com", url: "https://twitter.com/" },
   ];
-  const present: Array<{ userId: string; source: "x.com" | "twitter.com" }> = [];
+  const present: Array<{ userId: string; source: "x.com" | "twitter.com" }> =
+    [];
   const errors: string[] = [];
 
   for (const read of reads) {
@@ -302,7 +330,10 @@ export interface TwidCookieChangeInfo {
 }
 
 export type TwidCookieChangeClassification =
-  | { action: "ignore"; reason: "not_twid" | "not_x_domain" | "overwrite_removed" }
+  | {
+      action: "ignore";
+      reason: "not_twid" | "not_x_domain" | "overwrite_removed";
+    }
   | { action: "present"; userId: string }
   | { action: "verify_missing"; reason: string };
 
@@ -339,8 +370,12 @@ export async function getTwitterAuthStatus({
   cookies,
   markLoggedOut,
   onEvent,
-}: GetTwitterAuthStatusOptions): Promise<AuthStatus> {
-  const stored = await storage.get([keys.userId, keys.authHeaders, keys.authState]);
+}: GetTwitterAuthStatusOptions): Promise<TwitterAuthStatus> {
+  const stored = await storage.get([
+    keys.userId,
+    keys.authHeaders,
+    keys.authState,
+  ]);
 
   let userId: string | null =
     typeof stored[keys.userId] === "string" && stored[keys.userId]

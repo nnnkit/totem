@@ -73,7 +73,7 @@ A public privacy policy URL is **mandatory** given the permissions we request. M
 
 ```json
 {
-  "homepage_url": "https://usetotem.app",
+  "homepage_url": "https://usetotem.xyz/",
   "offline_enabled": true
 }
 ```
@@ -85,6 +85,8 @@ For the Web Store submission form, write a justification for each permission:
 - [ ] **storage** — "Stores bookmark data, reading progress, highlights, and user settings locally. Uses chrome.storage.sync for cross-device settings only."
 - [ ] **webRequest** — "Passively observes x.com API requests to capture authentication headers needed to fetch the user's own bookmarks. No requests are blocked or modified via webRequest."
 - [ ] **declarativeNetRequest** — "Adds required headers to API requests made to x.com so bookmark fetch requests are properly authenticated."
+- [ ] **scripting** — "Registers or removes the optional Open in Totem content script on x.com when the user enables or disables that setting."
+- [ ] **cookies** — "Reads the x.com session/account cookie locally to identify the active X account, scope the local bookmark cache, and detect logout/account changes."
 - [ ] **https://x.com/*** — "Needed to run content scripts that detect the logged-in user and capture bookmark create/delete events in real-time. The extension only interacts with x.com."
 - [ ] **topSites (optional)** — "Displays the user's most visited sites on the new tab page, only when the user enables this feature."
 - [ ] **favicon (optional)** — "Shows website favicons next to top sites and links in the new tab page."
@@ -153,7 +155,7 @@ Fetching x.com JavaScript bundles and regex-extracting query IDs looks like scra
 
 **File:** public/manifest.json
 
-- [ ] Add homepage_url pointing to wherever the privacy policy lives
+- [ ] Keep `homepage_url` pointed at `https://usetotem.xyz/`
 
 #### 6. Review all permissions — remove anything unnecessary
 
@@ -205,6 +207,8 @@ Needs to be a publicly accessible page. Options:
 
 Once all the above is done:
 
+- [ ] Run `pnpm cws:featured:preflight` to verify the manifest, release ZIP, CWS assets, and dashboard copy plan.
+- [ ] Use `plans/chrome-web-store-dashboard-update-packet.md` as the source for dashboard fields, assets, privacy practices, and permission justifications.
 - [ ] Run pnpm build and verify clean build
 - [ ] Test the dist/ output as an unpacked extension in Chrome
 - [ ] Test all core flows: auth, sync, reading, highlights, settings
@@ -216,3 +220,4 @@ Once all the above is done:
 - [ ] Link privacy policy URL
 - [ ] Submit for review
 - [ ] Expected review time: 1-3 business days (can be longer for extensions with sensitive permissions — ours will likely take longer)
+- [ ] After approval, run `pnpm cws:featured:live` and only submit the Featured badge nomination after it passes.
