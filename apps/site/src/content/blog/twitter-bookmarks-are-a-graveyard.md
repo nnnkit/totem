@@ -139,8 +139,19 @@ But Twitter makes it sharper because the thing you saved lives inside the same a
       <p class="mt-2 text-sm leading-relaxed text-neutral-800">The real problem isn't saving — it's returning. Bookmarks turn into a graveyard; open tabs pile up either way.</p>
       <a href="https://www.reddit.com/r/productivity/comments/1t9m3dl/whats_your_actual_system_for_saving_links_you/" target="_blank" rel="noopener noreferrer" class="mt-3 inline-block text-xs font-medium text-neutral-500 underline underline-offset-2 transition-colors hover:text-neutral-900">Read the thread →</a>
     </figure>
+    <figure class="rounded-xl border border-neutral-200 bg-neutral-50 p-5">
+      <figcaption class="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
+        <span class="font-semibold text-neutral-700">Hacker News</span>
+        <span class="text-neutral-400">·</span>
+        <span class="text-neutral-500">Ask HN: Does a good "read it later" app exist?</span>
+      </figcaption>
+      <p class="mt-2 text-sm leading-relaxed text-neutral-800">Bookmarks and open tabs <span class="font-medium text-neutral-900">"meaning to read for weeks or months,"</span> hoping a <span class="font-medium text-neutral-900">"daily reading list"</span> gives a bite-sized chunk to work through.</p>
+      <a href="https://news.ycombinator.com/item?id=46880866" target="_blank" rel="noopener noreferrer" class="mt-3 inline-block text-xs font-medium text-neutral-500 underline underline-offset-2 transition-colors hover:text-neutral-900">Read the thread →</a>
+    </figure>
   </div>
 </div>
+
+It is not only a Reddit complaint, and not only a Twitter one. A February 2026 "Ask HN" thread asked whether a good read-it-later app even exists, describing the same pile of bookmarks and open tabs unread "for weeks or months."[^hn-readlater] When the poster described the tool they actually wanted, it was return mechanics, not storage: dump a tab into a backlog, get reminded, snooze an item, or drop it.[^hn-readlater] Nobody asked for more folders.
 
 ## Organization Does Not Fix The Core Problem
 
@@ -208,6 +219,8 @@ You do not need to copy those rules exactly.
 But the principle is right.
 
 If something is meant to be read later, it needs a later.
+
+There is a second reason the queue-versus-archive line matters: the cloud queues keep dying. Pocket, the best-known read-later app, shut down in 2025 — apps pulled from stores in May, the service stopped in July, and the export window closed before user data was deleted.[^pocket-shutdown] (Omnivore went the same way in late 2024.) That is why the HN thread above is skeptical of server-based read-later apps, and why a queue you keep locally is worth preferring — not because local is fancier, but because it does not get switched off.
 
 ## What Actually Helps
 
@@ -292,3 +305,5 @@ Start by giving saved posts a return path.
 [^reddit-obsidian]: Reddit, r/ObsidianMD, ["Is there an alternative way to download tweets to Obsidian beside tweet to markdown plugin?"](https://www.reddit.com/r/ObsidianMD/comments/13j14p8/is_there_an_alternative_way_to_download_tweets_to/), accessed June 19, 2026.
 [^reddit-saving-links]: Reddit, r/productivity, ["What's your actual system for saving links you want to read later?"](https://www.reddit.com/r/productivity/comments/1t9m3dl/whats_your_actual_system_for_saving_links_you/), accessed June 19, 2026.
 [^reddit-dm-storage-bin]: Reddit, r/digitalminimalism, ["I stopped using read later as a storage bin"](https://www.reddit.com/r/digitalminimalism/comments/1rbg4v1/i_stopped_using_read_later_as_a_storage_bin/), accessed June 19, 2026.
+[^hn-readlater]: Hacker News, ["Ask HN: Does a good 'read it later' app exist?"](https://news.ycombinator.com/item?id=46880866), February 4, 2026, accessed June 19, 2026.
+[^pocket-shutdown]: Mozilla Support, ["The future of Pocket"](https://support.mozilla.org/en-US/kb/future-of-pocket), accessed June 19, 2026.

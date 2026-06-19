@@ -55,6 +55,8 @@ Most one-click bookmark exporters aim here. They give you CSV, XLSX, or JSON. A 
 
 This is the first export that becomes useful outside X. You can filter by author. You can sort old saves. You can search text in a spreadsheet. You can import rows into another database.
 
+This is also where most third-party exporters stop. The open-source tools people reach for — xarchive, prinsss/twitter-web-exporter — output flat rows of tweet text, author, media URLs, quoted tweet, and metrics (xarchive as JSON, prinsss as JSON, CSV, or HTML).[^xarchive][^prinsss] That is genuinely useful, and prinsss can even pull bookmarks past the official API's ~800 cap by reading the web app directly.[^prinsss] But the export unit stays the individual tweet. None of them reassemble a multi-tweet thread into one readable document, so a thread you saved comes back as scattered fragments.
+
 But it still reads like data.
 
 A CSV is good for triage. It is not good for sitting down and reading a thread.
@@ -135,17 +137,19 @@ That distinction is important.
 
 If you need a file right now, basic export is the honest answer. If you are making a backup you expect to trust later, full export is the better answer. It takes longer because it is trying to turn more bookmark IDs into readable material.
 
+This is not a Totem quirk. prinsss exposes an explicit "Include all metadata" toggle for the same reason — the full field set "could significantly increase the size of the exported data."[^prinsss] Light index versus heavy complete dataset is a tension every exporter runs into, not a marketing choice.
+
 ## What does not get exported
 
 A good export should also say what it does not promise.
 
 Totem export does not include your X password, session cookies, or a Totem server account. Totem does not have a server account system.
 
-It does not replace the official X account archive. If you need your posts, DMs, media uploads, ads data, or account-level history, request the X archive separately.[^x-archive]
+It does not replace the official X account archive. If you need your posts, DMs, media uploads, ads data, or account-level history, request the X archive separately.[^x-archive] But the reverse is worth saying plainly: the official archive will not back up your bookmarks. X has no native bookmark export, and the account archive excludes bookmarks entirely — a fact that two separate exporter projects state independently, and the reason those projects exist at all.[^xarchive][^prinsss]
 
 It does not magically recover bookmarks Totem never saw. If X only exposes a recent window and Totem did not already capture older items, a later export cannot invent them.
 
-It does not bundle every remote media file as an offline media archive. CSV and Markdown can include media URLs and image references, but the ZIP is primarily a bookmark and reading-data export, not a full media mirror.
+It does not bundle every remote media file as an offline media archive. CSV and Markdown can include media URLs and image references, but the ZIP is primarily a bookmark and reading-data export, not a full media mirror. This holds across tools for a concrete reason: media export is usually a separate ZIP with hard browser-memory ceilings — prinsss notes roughly 2GB in Chrome and 800MB in Firefox.[^prinsss] That is why data exports keep media as URLs rather than embedding the files.
 
 It does not overwrite existing data on import. Totem's importer is additive: existing rows are counted as already present and skipped.
 
@@ -187,3 +191,5 @@ For the method-by-method comparison, start with [how to export your X / Twitter 
 
 [^totem-format]: Totem, [Export Format v1](/export-format/v1), documents the ZIP layout, JSONL stores, CSV columns, Markdown files, and import contract.
 [^x-archive]: X Help Center, ["How to download your X archive and Posts"](https://help.x.com/managing-your-account/how-to-download-your-twitter-archive).
+[^xarchive]: GitHub, [sytelus/xarchive](https://github.com/sytelus/xarchive) — README: "X.com has no bookmark export. The official data archive excludes bookmarks entirely," and the rich-data export captures full text, author info, media URLs, engagement metrics, quoted tweets, and entities. Accessed June 19, 2026.
+[^prinsss]: GitHub, [prinsss/twitter-web-exporter](https://github.com/prinsss/twitter-web-exporter) — README and FAQ: exports JSON, CSV, and HTML; bookmarks can be pulled past the official ~800 API limit via the web app; "Include all metadata" is an opt-in toggle because it "could significantly increase the size of the exported data"; media downloads to a separate ZIP with browser-memory limits (~2GB Chrome, ~800MB Firefox); "The archive also does not contain your bookmarks." Accessed June 19, 2026.

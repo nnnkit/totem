@@ -38,7 +38,9 @@ If the job is one source, you do not need a whole-library backup. If the job is 
 
 X has bookmark search in some surfaces. If it is available in your account, use it for quick retrieval.
 
-But native search has a simple limitation: it still keeps you inside X. You find the post, then you are back in the feed-shaped place where the bookmark was buried.
+But it is narrower than it looks. The keyword search bar at the top of the Bookmarks page is an X Premium feature; on a free account there is no search bar, no filter, and no sort — you can only scroll.[^readstash] And even on Premium it is recent-biased: it filters recent bookmarks reasonably but slows down once you have hundreds saved.[^readstash] There are no operators for author, domain, media type, thread, or age.
+
+Native search also has a simpler limitation: it keeps you inside X. You find the post, then you are back in the feed-shaped place where the bookmark was buried.
 
 It also does not answer export questions:
 
@@ -49,6 +51,8 @@ It also does not answer export questions:
 - Which bookmarks have I already started reading?
 
 That is where a local bookmark reader is different. It can search the local library, then export the library as CSV, Markdown, and importable data.
+
+The whole cottage industry of third-party tools — Twillot, xarchive, BookmarQ, Dewey, and others — exists to add exactly this: author filters, real search, and export that native bookmarks lack. The operators below are not a novelty. They are the feature people keep going looking for.
 
 If you want to search before you export, [install Totem for Chrome](https://chromewebstore.google.com/detail/acpkgdfhoaalmnhjifhneghcgfnjkglo?utm_source=blog&utm_medium=inline_cta&utm_campaign=search-twitter-bookmarks-before-export) and use the local library as the place where Twitter bookmarks become searchable.
 
@@ -130,6 +134,8 @@ until:2025-12-31
 Old bookmarks are the ones most likely to need context.
 
 If you search `older_than:1y` and the results are still meaningful, export sooner rather than later. If you open them and cannot remember why half of them mattered, the problem is not export. The problem is that the save lost its context.
+
+This is the failure mode people describe when they finally open the pile: hundreds or thousands of saves, and no memory of why most of them mattered. That is structural, not a discipline problem. The age search is how you check which end of that you are on before you commit to a file.
 
 ### Combine searches
 
@@ -217,6 +223,8 @@ Search changes the emotional shape of export.
 
 Without search, export feels like panic: "Get everything out before I lose it."
 
+That panic is not hypothetical. Pocket — Mozilla's read-later app — shut down on July 8, 2025, with data export disabled and deletion beginning November 12, 2025.[^pocket] A saved pile can simply stop existing. That is the fear that turns "back up my bookmarks" into a 2 a.m. emergency.
+
 With search, export becomes calmer: "I know what is here. I know what I care about. Now I want a local copy."
 
 That is the better order.
@@ -226,3 +234,5 @@ Search first. Export second. Read eventually.
 For the method comparison, read [how to export your X / Twitter bookmarks](/blog/how-to-export-twitter-bookmarks). For what the ZIP actually contains, read [what gets exported when you export Twitter bookmarks](/blog/what-gets-exported-twitter-bookmarks).
 
 [^serp-search]: DataForSEO SERP pull, US/en, May 28, 2026: `tmp/dataforseo/serp-export-launch-twitter-bookmarks-search-2026-05-28.json`. The query showed mixed results across utility sites, Chrome extensions, Reddit support threads, Dewey, Tweetsmash, Product Hunt, and news coverage of X bookmark search.
+[^readstash]: ReadStash, ["Twitter Bookmarks: Complete Guide"](https://readstash.app/blog/twitter-bookmarks-complete-guide) — bookmark search is an X Premium feature (free accounts get no search, filter, or sort), and keyword search slows once you have hundreds saved; accessed June 19, 2026.
+[^pocket]: Mozilla Support, ["Pocket has shut down"](https://support.mozilla.org/en-US/kb/future-of-pocket) — Pocket shut down July 8, 2025; data export disabled and deletion began November 12, 2025; accessed June 19, 2026.

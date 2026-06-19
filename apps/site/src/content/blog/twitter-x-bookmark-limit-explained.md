@@ -46,6 +46,8 @@ This is plausibly correct *about underlying storage*. Third-party tools that scr
 
 That gap between "what X published" and "what users actually experience" is the entire reason this confusion exists.
 
+This split is stable, not a one-off. Search "twitter bookmark limit" in any given month and you'll find tool-makers saying "the limit was removed" sitting right next to how-to blogs saying "the limit is ~800" — and both are technically right, because they're describing different layers. Storage looks uncapped; the display/API window does not. X has never issued an official statement reconciling the two, so every explainer (ours included) is reverse-engineering behavior. The contradiction outlives any single post.
+
 ## Why this feels like deletion
 
 It feels like deletion because the failure mode is silent. From [Saverything's writeup](https://saverything.com/en/blog/twitter-bookmarks-limit/):
@@ -57,6 +59,8 @@ It feels like deletion because the failure mode is silent. From [Saverything's w
 > "the icon may still briefly animate as if the save was successful. But if you navigate to your bookmarks list, the tweet is not there."[^saverything]
 
 That last point is the cruel one: the bookmark button gives you the success animation even when the bookmark won't show up in your list afterward. The interaction is dishonest about its state.
+
+This isn't just our read. Dewey — a paid rival that sells the fix — tells *its own readers* the same thing: the limit "stands at around 800 bookmarks," and that bookmarks can also go missing because "when a tweet is deleted, it disappears from your bookmarks too," or "after a major update, you might find your bookmarks temporarily inaccessible or seemingly gone."[^dewey] When a competitor who profits from the problem independently documents the same ~800 ceiling and the same causes, that's a tell: it's the platform's behavior, not a Totem talking point.
 
 People notice eventually. Carmel Heydarian wrote up the moment it clicked:
 
@@ -81,6 +85,8 @@ Even under 800, bookmarks can vanish for a second reason that has nothing to do 
 > "**No message. No notification. Nothing.**"[^colen]
 
 Bookmarks aren't snapshots — they're pointers. If the underlying tweet gets deleted, deactivated, taken down, or goes private (and you don't follow that account), the pointer goes with it. Your record of *what you saved* depends on someone else not changing their mind.
+
+(And no, they aren't suddenly *public* either. A July 2025 screenshot claiming non-Premium bookmarks were about to be made public went viral; fact-checks confirmed it was fake, with no official X announcement behind it.[^public-hoax] If you searched "bookmarks disappeared" in a panic, that rumor probably isn't your problem.)
 
 ## A new wrinkle (October 2025): "Clear all" disappeared from desktop
 
@@ -112,7 +118,7 @@ If those options are missing, you have two choices:
   - [Twitter Remove All Bookmarks](https://chromewebstore.google.com/detail/twitter-remove-all-bookma/iihkahkpecadocofnadfnlppjhgbpndk) — paid Chrome extension.
   - [x-cleanup-tool](https://x-cleanup-tool.pages.dev/en/) — bookmarklet, no install required.
 
-For posterity: X *did* recently add **search within bookmarks** for X Premium users[^bookmark-search] — the longest-requested fix to this whole feature. Useful, paywalled.
+For posterity: X *did* recently add **search within bookmarks** for X Premium users[^bookmark-search] — the longest-requested fix to this whole feature. Useful, paywalled. And slow: a thread citing ~65 million bookmarks saved per day prompted Musk to reply that bookmarks "will be searchable soon" — back in **December 2023**.[^searchable] Search only later landed, and only for Premium. The most-used, most-requested fix took roughly two years and arrived behind a subscription.
 
 ## What to do if you want your old bookmarks back
 
@@ -152,3 +158,6 @@ We made one — [Totem](https://chromewebstore.google.com/detail/acpkgdfhoaalmnh
 [^idb]: iDownloadBlog, ["How to remove all Twitter bookmarks at once"](https://www.idownloadblog.com/2022/05/31/how-to-remove-all-twitter-bookmarks-at-once/).
 [^helpx]: [help.x.com — About Bookmarks](https://help.x.com/en/using-x/bookmarks): "To remove a saved Bookmark, tap the share icon from the post within your Bookmarks timeline and select Remove post from Bookmarks."
 [^bookmark-search]: Inquirer USA, ["X (Formerly Twitter) Now Allows You to Search Through Your Bookmarks"](https://usa.inquirer.net/152912/x-formerly-twitter-now-allows-you-to-search-through-your-bookmarks).
+[^dewey]: Dewey, ["Why Did My Twitter Bookmarks Disappear? Discover Causes & Solutions Today"](https://getdewey.co/blog/why-did-my-twitter-bookmarks-disappear-discover-causes-solutions-today/) (December 15, 2024), accessed June 19, 2026.
+[^searchable]: Neowin, ["Searchable bookmarks are coming to X (formerly Twitter), confirms Elon Musk"](https://www.neowin.net/news/searchable-bookmarks-are-coming-to-x-formerly-twitter-confirms-elon-musk/), reporting Musk's [December 11, 2023 reply](https://x.com/elonmusk/status/1734069028241444976) ("They will be searchable soon") to a thread citing ~65 million bookmarks per day. Accessed June 19, 2026.
+[^public-hoax]: LatestLY, ["Fact Check: Will Bookmarks Be Made Public for Accounts Not Subscribed to X Premium?"](https://www.latestly.com/social-viral/fact-check/fact-check-will-bookmarks-be-made-public-for-accounts-not-subscribed-to-x-premium-as-screenshot-of-fake-post-goes-viral-know-the-truth-here-6988762.html), accessed June 19, 2026.

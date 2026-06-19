@@ -66,7 +66,14 @@ Use **Raindrop.io** if you want bookmarks-and-articles in one place with a visua
 
 ### Branch 2 — "I want self-hosted / open source / 'this can't shut down on me'"
 
-After Pocket, after Omnivore (acquired by ElevenLabs in late October 2024 and shut down November 15, 2024[^elevenlabs]), this branch is increasingly busy. Three live options:
+After Pocket, after Omnivore (acquired by ElevenLabs in late October 2024 and shut down November 15, 2024[^elevenlabs]), this branch is increasingly busy.
+
+Omnivore is the cautionary tale that makes this branch worth taking seriously. It gave users only about a two-week export window; after November 15, 2024, all hosted user data — saved articles, highlights, notes — was deleted with no recovery.[^heise] The most-shared independent-maker post-mortem was Steph Ango's (Obsidian's CEO):
+
+> "Many people enjoyed Omnivore because it was free, but being free was part of its demise… As a user you must demand a way to pay makers for the products you love."
+> — kepano, [X](https://x.com/kepano/status/1851555417165598790)
+
+A free cloud read-later service with no revenue is a queue that can be switched off. The only versions that can't are the ones you host or store yourself. Three live options:
 
 - **Wallabag** — free if self-hosted, €11/year for the hosted `wallabag.it`.[^wallabag] Pocket CSV import works.
 - **Readeck** — newer, self-hosted only, very nice UI.
@@ -107,6 +114,8 @@ Or in the words of a developer who built a tool because his X bookmarks broke hi
 > — enzovarela, [Show HN](https://news.ycombinator.com/item?id=47384765)
 
 This is the use case Pocket was *not* great at. Twitter thread compilation in Readwise Reader is good but lives behind a $9.99/mo paywall. Instapaper, Raindrop, Wallabag — they all save the URL, not the thread. And none of them ever lived where you actually start your day: a new browser tab.
+
+This keeps surfacing in PKM communities on its own. One r/PKMS thread describes trying Raindrop and other bookmark managers and finding they can't pull a tweet's image, video, or text metadata — you keep the link but lose the visual and textual reference, which the poster says defeats the purpose.[^pkms-twitter] A saved URL to a media-heavy thread is a dead reference once you're not looking at the original.
 
 That's the wedge our extension, **Totem**, fills. More on it below — and an honest disclaimer about who it's *not* right for.
 
@@ -149,7 +158,7 @@ Mozilla said the way people save content has evolved. If your saving has shifted
 
 ## What to do today
 
-1. **Migrate before October-equivalent windows close on the next tool.** Pocket gave four months. The next tool that shuts down may give less.
+1. **Migrate before the export window closes on the next tool.** The two big shutdowns set very different precedents: Pocket gave months of export; Omnivore gave roughly two weeks before permanent deletion.[^heise] The next tool's window may look more like Omnivore's than Pocket's — and there will be a next tool. People are still launching read-later apps positioned explicitly around the gap, like "Reeed… built after Pocket shut down," a Show HN from June 2026.[^reeed] The churn is not a closed chapter.
 2. **Pick by what you save**, not by what the listicle ranks. Use the decision tree above.
 3. **If a third or more of what you save is from X**, install [Totem](https://usetotem.xyz) alongside whatever long-form tool you pick. They don't conflict — they cover different surface area.
 
@@ -164,3 +173,6 @@ Mozilla said the way people save content has evolved. If your saving has shifted
 [^wallabag]: [wallabag.org](https://wallabag.org) and [wallabag.it](https://wallabag.it/en/).
 [^obsidian]: [obsidian.md/clipper](https://obsidian.md/clipper).
 [^graveyard]: ["Your X (Twitter) Bookmarks Are a Graveyard"](https://medium.com/@kombib/notebooklm-twitter-bookmarks-signal-mining-04a97f1d474c), Medium.
+[^heise]: heise online, ["Later-reading app Omnivore closes down"](https://www.heise.de/en/news/Later-reading-app-Omnivore-closes-down-9998733.html): Omnivore's hosted service went offline on November 15, 2024 after roughly a two-week export window, with user data deleted and no recovery; the AGPL-3.0 code remains on GitHub as self-host-only. Accessed June 19, 2026.
+[^reeed]: Hacker News, ["Show HN: Reeed – a read-it-later app for iOS, built after Pocket shut down"](https://news.ycombinator.com/item?id=48449568), June 8, 2026. Accessed June 19, 2026.
+[^pkms-twitter]: Reddit, r/PKMS, ["How can I effectively manage my Twitter (X) bookmarks without paying?"](https://www.reddit.com/r/PKMS/comments/1u58bom/how_can_i_effectively_manage_my_twitter_x/), accessed June 19, 2026. Paraphrased; thread content not independently re-verified.
