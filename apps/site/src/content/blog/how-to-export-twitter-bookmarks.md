@@ -43,6 +43,8 @@ So "export all bookmarks" usually means:
 
 For a normal account, that may be enough. For a large old archive, it may not be. The honest fix is not a better button. It is continuous local capture before you need the export.
 
+This is also the line tools fight over. `sytelus/xarchive`, an MIT extension created in April 2026, sells itself by naming the exact ceiling: "the API v2 caps at 800," so it reads X's internal GraphQL API instead "to export your complete bookmark collection -- every bookmark, every folder, unlimited."[^xarchive] That is the workaround in one sentence: the documented 800-post route has a cap; what your browser actually loads does not. It is the same distinction this section draws, restated by someone shipping against it.
+
 If you want that capture and export path to live locally, [install Totem for Chrome](https://chromewebstore.google.com/detail/acpkgdfhoaalmnhjifhneghcgfnjkglo?utm_source=blog&utm_medium=inline_cta&utm_campaign=how-to-export-twitter-bookmarks) before the next time you need a backup under pressure.
 
 ## Method 1: a userscript, if you want raw data
@@ -50,6 +52,8 @@ If you want that capture and export path to live locally, [install Totem for Chr
 Use this if you are comfortable with Tampermonkey and want a local, technical export.
 
 The strongest free option is `prinsss/twitter-web-exporter`.[^prinsss] It runs in your browser, watches the GraphQL responses X already sends while you scroll, and exports data formats like JSON, CSV, and HTML. It does not need an X API key. It does not need your password. It is also not a polished consumer app.
+
+One reason to prefer it: it is still alive. As of this writing it carries 2,552 GitHub stars and was last pushed in May 2026.[^prinsss] That matters more than it sounds. An export tool is only as good as whether it still runs against today's X. Compare `nornagon/twitter-bookmark-archiver`, an older API-route archiver with 141 stars that has not been touched since November 2022.[^nornagon] When a tool depends on a specific X endpoint and the endpoint changes, the tool quietly stops working — so check the last commit date before you trust one with a backup. If your destination is specifically Obsidian, that survival question is the whole game: see [Twitter bookmarks to Obsidian, and what actually works in 2026](/blog/twitter-bookmarks-to-obsidian).
 
 The flow is roughly:
 
@@ -88,6 +92,8 @@ If the CSV only has URLs and text snippets, that may be fine. Just do not confus
 Use this if "export" is really a proxy for "I want to find, organize, tag, or revisit things."
 
 Tools like Dewey, Tweetsmash, Circleboom, Twillot, XBookmark, and newer one-off exporters show up because they wrap export inside another workflow: search, tagging, digests, Notion sync, folders, or a dashboard.[^dewey-export]
+
+Twillot describes itself this way: "Effortlessly search, organize, and export your X/Twitter bookmarks with AI-powered categorization - no Premium account required," with export to CSV and JSON.[^twillot] Notice the export is the last verb in the sentence, after search and organize — the file is a side effect of the workflow, not the product. One caveat that proves the freshness point above: Twillot's public changelog stops at late 2024, so verify it still works before relying on it.[^twillot]
 
 That can be worth paying for if the ongoing workflow is the point.
 
@@ -173,3 +179,6 @@ Exporting is not the end of the job. It is the moment you find out whether the t
 [^serp-export]: DataForSEO SERP pull, US/en, May 28, 2026: `tmp/dataforseo/serp-export-launch-export-twitter-bookmarks-2026-05-28.json`.
 [^dewey-export]: Dewey, ["How To Export Twitter Bookmarks"](https://getdewey.co/how-to-use/export-bookmarks/), one example of the bookmark-manager route.
 [^totem-format]: Totem, [Export Format v1](/export-format/v1), documents the ZIP layout, JSONL stores, CSV columns, Markdown files, and import contract.
+[^xarchive]: [sytelus/xarchive](https://github.com/sytelus/xarchive), MIT-licensed Chrome extension (created April 2026) that reads X's internal GraphQL API to export bookmarks past the public API's 800-post cap; quote from its README, accessed June 19, 2026.
+[^nornagon]: [nornagon/twitter-bookmark-archiver](https://github.com/nornagon/twitter-bookmark-archiver), an older bookmark-archiver tool, 141 stars, last pushed November 2022, accessed June 19, 2026.
+[^twillot]: [twillot-app/twillot](https://github.com/twillot-app/twillot), 133 stars; description and CSV/JSON export from its README, accessed June 19, 2026.

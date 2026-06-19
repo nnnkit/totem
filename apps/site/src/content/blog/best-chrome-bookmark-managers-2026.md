@@ -27,6 +27,8 @@ Networkworld's 2016 listicle still ranks #2 for "best bookmark manager chrome." 
 
 Chrome's own Reading List backs this up indirectly. It is built into Chrome, but the current path is still a menu and side-panel path: `Bookmarks and lists` -> `Reading list` -> `Show reading list`. There is a 1,000/mo search cluster around `reading list chrome` whose cached SERP includes "Reading list tab disappeared." People search for the feature they already have. I wrote the fuller version here: [Chrome Reading List: where it is, how it works, and why nobody uses it](/blog/chrome-reading-list-why-nobody-uses-it).
 
+There's a sharper reason to be wary of a tool as your permanent home for saves. The read-it-later category itself collapsed over the last 18 months. Pocket — the default answer for a decade — [shut down July 8, 2025](https://support.mozilla.org/en-US/kb/future-of-pocket), with all user data queued for permanent deletion by November 12, 2025. Omnivore, the open-source favorite, [went offline in November 2024](https://alternativeto.net/news/2024/10/elevenlabs-acquires-omnivore-to-boost-elevenreader-app-for-enhanced-reading-experience) after ElevenLabs acquihired its founders. So "where does my saved pile even live now" is part of the problem, not just whether you re-open it.
+
 So before picking a tool: **the manager that helps is the one that puts what you saved in front of you.** Filing tools (Raindrop, Bookmanize) help if you're someone who actually re-opens your bookmarks to look something up. Surfacing tools (Toby's session restore, our own thing further down) help if you're not.
 
 The new-tab version of that choice is here: [what to put on your Chrome new tab page](/blog/what-to-put-on-your-chrome-new-tab-page). Blank, launcher, dashboard, and reading queue are different answers.
@@ -67,7 +69,7 @@ Now the picks, in detail.
 - The visual UI starts to feel heavy past ~5,000 bookmarks
 - Doesn't do anything special with X/Twitter bookmarks — it stores the URL but the tweet content isn't captured
 
-**Pricing**: Free forever for the basics. Pro is $28/year (one of the cheapest paid tiers in the category).
+**Pricing**: Free forever for the basics — unlimited bookmarks, collections, and devices, no time limit. Pro is [$28/year billed annually](https://help.raindrop.io/premium-features) (some resellers list ~$38), one of the cheapest paid tiers in the category, and it's what unlocks permanent copies, full-text search of page content, and AI-suggested tags.
 
 **When this is the right pick**: You save a mixed pile — some articles, some Stack Overflow links, some YouTube videos, the odd image. You want it on your phone too. You'll come back and look stuff up later, occasionally. Raindrop is the default answer here and has been for five years.
 
@@ -145,11 +147,11 @@ Open `chrome://bookmarks`. That's it. No extension. The folder tree, drag-and-dr
 
 ![Totem — read your X bookmarks, not the feed](/blog/best-chrome-bookmark-managers/totem.png)
 
-[Totem](https://usetotem.xyz) is a Chrome extension that does one thing: it puts your X (Twitter) bookmarks on your new tab page. The native X bookmark tab is buried four navigation steps deep on web and mobile, which is the entire reason 85% of saved tweets are never re-read. We move that surface to the page you open ~50 times a day.
+[Totem](https://usetotem.xyz) is a Chrome extension that does one thing: it puts your X (Twitter) bookmarks on your new tab page. X publishes no bookmark cap in its help center, and it stores bookmarks as [a single, unsorted, reverse-chronological list with no search](https://saverything.com/en/blog/twitter-bookmarks-limit/) — so the pile grows unbounded and the structure guarantees you never revisit it. We move that surface to the page you open ~50 times a day.
 
 **What it does well**
 - X bookmarks live on the new tab — you see them every time you open Chrome
-- No account, no signup, no server — bookmarks live locally in the browser
+- No account, no signup, no server — bookmarks live locally in the browser, which, after two cloud read-later services deleted user data on shutdown, is the difference between a save you keep and one that disappears with someone else's roadmap
 - Captures the full tweet content (text + images), not just the URL — so even if a tweet gets deleted, your saved copy stays
 - Free, no Pro tier
 
@@ -195,3 +197,5 @@ Pick by what you save, not by what ranks #1:
 The deeper truth, since we're being honest: most bookmark managers compete on filing — tags, folders, search, sync. The actual problem most people have is that what they save lives somewhere they never go back to. That's why the best Chrome bookmark manager for *you* depends less on which one has the best tag system, and more on whether you'll actually open the page you saved.
 
 If you've installed and abandoned three bookmark managers already, the answer probably isn't a fourth one. The answer is putting what you save somewhere you can't avoid looking at it. That's the same idea, regardless of tool.
+
+It generalizes because the failure mode is identical everywhere: a single unsorted, unsearchable list you never scroll back through. X bookmarks are one. Reddit's saved-posts tab is another. The Chrome folder tree, once it's past a few hundred items, is a third. The fix is never a fifth tool — it's surfacing one of those lists somewhere your eyes already go.

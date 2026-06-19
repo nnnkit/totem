@@ -159,7 +159,7 @@ The Chrome Web Store listing says the Twillot bookmark-search extension supports
 
 This is the right shape for someone who wants to manage Twitter data deeply, not just read saved posts.
 
-One caveat: Twillot's public GitHub repo was archived on July 31, 2025.[^twillot-github] That does not mean the Chrome extension or product site is dead, but it is a reminder to judge the current extension listing, export path, and support surface before building a long-term archive around it.
+One caveat: Twillot's public GitHub repo was archived on July 31, 2025, and its last code push was January 21, 2025 — so it sat dormant for months before going read-only.[^twillot-github] That does not mean the Chrome extension or product site is dead; the extension listing can still receive updates separately from the repo. But it is a reminder to judge the live extension listing, export path, and support surface, not the repo, before building a long-term archive around it.
 
 **Where Twillot wins**
 
@@ -296,12 +296,14 @@ For the export-only path, start with [how to export your X / Twitter bookmarks](
 
 This category is moving faster than the old SERP suggests. A few newer tools did not make the tested picks above, but they are worth watching if your priority is local export, open-source control, or fresh browser support.
 
-- [XArchive](https://chromewebstore.google.com/detail/x-bookmark-manager-export/icfbbnailmppcdkogdfbbfpnncngnnli?hl=en-US) is an active Chrome Web Store entrant updated May 28, 2026. Its listing focuses on export, tags, delete, search, local/offline storage, no sign-up, and AI tagging on paid plans.[^xarchive-cws] Its separate GitHub repo describes an open-source exporter for entire X bookmark collections, including X Premium folder assignments, using a local Chrome extension model.[^xarchive-github]
-- [sarisen/x-bookmark-manager](https://github.com/sarisen/x-bookmark-manager) is a small open-source Chrome extension that appeared in a June 2026 Show HN thread. The repo describes a local masonry view, author filtering, search, auto-load-all, remove-bookmark, and JSON export flow.[^sarisen-github][^sarisen-hn]
+- [XArchive](https://chromewebstore.google.com/detail/x-bookmark-manager-export/icfbbnailmppcdkogdfbbfpnncngnnli?hl=en-US) is an active Chrome Web Store entrant updated May 28, 2026. Its listing focuses on export, tags, delete, search, local/offline storage, no sign-up, and AI tagging on paid plans.[^xarchive-cws] The CWS listing and the open-source [sytelus/xarchive](https://github.com/sytelus/xarchive) exporter are separate artifacts; the repo's whole pitch is exporting your *entire* X bookmark collection — unlimited bookmarks, with X Premium folder assignments included, zero dependencies.[^xarchive-github] That "unlimited, with folder assignments" framing is the tell: people reaching for these tools distrust capped or partial exports.
+- [sarisen/x-bookmark-manager](https://github.com/sarisen/x-bookmark-manager) is a small open-source Chrome extension that appeared in a June 2026 Show HN thread.[^sarisen-hn] Its README describes a tool that "turns your X (Twitter) bookmarks into a modern masonry view. Search, filter by author, export to JSON, and auto-load all pages."[^sarisen-github] Worth flagging: the repo was created June 5, 2026, and is not on the Chrome Web Store yet — you install it as an unpacked extension from GitHub. Treat it as young accordingly.
 - [TweetStorm.ai's bookmark manager](https://tweetstorm.ai/products/x-bookmark-manager) is newer than the older TweetSmash/Dewey/Twillot comparison set. Its product page emphasizes nested folders, smart folders, tags, full-text search, and Chrome/Firefox extensions, while the Firefox add-on version history shows a May 14, 2026 release.[^tweetstorm-product][^tweetstorm-firefox]
 - [Keep.md](https://keep.md/docs/x) is not a normal Twitter bookmark manager. It is closer to a markdown reading system: X bookmark sync and X article following require a paid plan, and it does not promise a full historical import.[^keep-md] Watch it if your real destination is markdown-first reading, not bookmark cleanup.
 
 The pattern is useful: more new entrants are saying "local," "Markdown," "JSON," "no cloud," "AI tagging," "semantic search," or "MCP." That is the next version of this SERP. The old comparison was folders versus tags. The new comparison is ownership, recoverability, and whether saved posts can become context for reading or agents.
+
+The timing is not a coincidence. While these niche, ownership-focused X tools appear, the generic read-it-later incumbents are contracting: Mozilla shut down Pocket in 2025 — saving ended July 8, 2025, and user data was deleted later that year.[^pocket] When an 18-year-old read-later service can vanish, "can I get my saved stuff out, and where does it live?" stops being a power-user concern and becomes the whole question. The engagement on these new X tools is still small — single-digit Show HN points, a couple dozen GitHub stars each — so read this as emerging, fragmented experimentation, not a movement.
 
 ## The comparison table
 
@@ -357,3 +359,4 @@ If you want that shape, [add Totem to Chrome](https://chromewebstore.google.com/
 [^tweetstorm-product]: TweetStorm.ai, ["X Bookmark Manager - Organise Twitter Bookmarks"](https://tweetstorm.ai/products/x-bookmark-manager).
 [^tweetstorm-firefox]: Firefox Add-ons, ["X (Twitter) Bookmark Manager - TweetStorm.ai version history"](https://addons.mozilla.org/en-US/firefox/addon/tweetstorm-x-bookmark-manager/versions/).
 [^keep-md]: Keep.md, ["Save X (Twitter) bookmarks and threads"](https://keep.md/docs/x).
+[^pocket]: Mozilla Support, ["The future of Pocket"](https://support.mozilla.org/en-US/kb/future-of-pocket) — announced May 22, 2025; saving ended July 8, 2025; data deleted later in 2025. Accessed June 19, 2026.

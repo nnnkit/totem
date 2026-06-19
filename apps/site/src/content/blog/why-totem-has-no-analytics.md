@@ -50,6 +50,8 @@ They are not more important than the user's saved reading being private by defau
 
 Bookmark behavior is not neutral telemetry. It can reveal work projects, political interests, health worries, financial research, personal relationships, job searches, and half-formed thoughts. A bookmark app does not need to know that at the server level to be useful.
 
+There is a second, quieter reason: an analytics pipeline is a liability waiting to change hands. The trust people place in an extension is in the version they installed, not the one it becomes after an acquisition. One recent example — an engineer noticed the StayFocusd extension had been bought by an app-analytics company and started making "a ton more BugSnag JS calls," and uninstalled it on the spot.[^stayfocusd] A backend that phones home is exactly the thing that changes behavior after the org behind it changes.
+
 So Totem does not collect it.
 
 ## What the extension can access
@@ -87,6 +89,33 @@ That makes product work slower.
 
 But it keeps the boundary simple. If Totem does not collect the data, Totem cannot leak it, sell it, subpoena it from a backend, or accidentally join it to another identity system.
 
+That "cannot leak it" is a response to named, documented events, not paranoia. In 2019, the DataSpii disclosure showed browser extensions scraping PII, browsing history, and even tax returns and genetic profiles from up to four million users, then monetizing it.[^dataspii] In June 2026, the malext.io "SearchJack" report documented 23 deceptive Chrome extensions that silently rerouted users' searches through monetization middleware, affecting roughly 758,000 users.[^searchjack] And a 2025 Incogni study of 238 AI-powered Chrome extensions found about 41% collect personally identifiable information such as passwords, financial details, and location.[^incogni] The pattern is consistent: the data a backend holds is the data that eventually leaks, sells, or gets re-pointed.
+
+<div class="not-prose my-10">
+  <p class="text-xs uppercase tracking-widest text-neutral-500">Field notes</p>
+  <p class="mt-1 font-serif text-base leading-snug text-neutral-900">The worry about extension backends is earned, not abstract.</p>
+  <div class="mt-4 flex flex-col gap-3">
+    <figure class="rounded-xl border border-neutral-200 bg-neutral-50 p-5">
+      <figcaption class="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
+        <span class="font-semibold text-neutral-700">infosec.exchange</span>
+        <span class="text-neutral-400">·</span>
+        <span class="text-neutral-500">Royce Williams, June 2026</span>
+      </figcaption>
+      <p class="mt-2 text-sm leading-relaxed text-neutral-800">A focus extension gets acquired, starts making <span class="font-medium text-neutral-900">"a ton more BugSnag JS calls"</span> — and gets uninstalled the same day.</p>
+      <a href="https://infosec.exchange/@tychotithonus/116687260905870772" target="_blank" rel="noopener noreferrer" class="mt-3 inline-block text-xs font-medium text-neutral-500 underline underline-offset-2 transition-colors hover:text-neutral-900">Read the post →</a>
+    </figure>
+    <figure class="rounded-xl border border-neutral-200 bg-neutral-50 p-5">
+      <figcaption class="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
+        <span class="font-semibold text-neutral-700">malext.io</span>
+        <span class="text-neutral-400">·</span>
+        <span class="text-neutral-500">SearchJack report, June 2026</span>
+      </figcaption>
+      <p class="mt-2 text-sm leading-relaxed text-neutral-800">Because the operators control the traffic, the report warns, they can <span class="font-medium text-neutral-900">switch from regular results to phishing links or malicious downloads at any time.</span></p>
+      <a href="https://malext.io/reports/SearchJack/" target="_blank" rel="noopener noreferrer" class="mt-3 inline-block text-xs font-medium text-neutral-500 underline underline-offset-2 transition-colors hover:text-neutral-900">Read the report →</a>
+    </figure>
+  </div>
+</div>
+
 ## How we learn instead
 
 We still need feedback.
@@ -102,6 +131,8 @@ We use slower, more explicit channels:
 
 That is less convenient than an event stream. It is also more honest. A bookmark reader should not silently turn the act of reading into product telemetry.
 
+The cost is real, and it cuts both ways. Privacy-conscious defaults make work slower on our side, and they ask something of the user too — local-first means no cross-device sync, no "we already know what's broken" support. We accept the slower channels anyway, because the alternative is a backend that has to be trusted not to drift. Increasingly that tradeoff reads as a feature, not a limitation: "runs in the browser, nothing uploaded" and "no account needed" are now things people seek out and upvote, rather than apologize for.
+
 ## The rule
 
 Totem is allowed to use your X session to fetch your bookmarks.
@@ -113,3 +144,8 @@ Totem is allowed to export that library when you ask.
 Totem is not allowed to watch your reading habits for our convenience.
 
 That is the line.
+
+[^stayfocusd]: Royce Williams (@tychotithonus), infosec.exchange, ["TIL the StayFocusd browser extension was purchased by an app analytics company..."](https://infosec.exchange/@tychotithonus/116687260905870772), accessed June 19, 2026.
+[^dataspii]: DataSpii disclosure (Sam Jadali, July 2019), ["DataSpii: The catastrophic data leak via browser extensions"](https://dataspii.com/), accessed June 19, 2026.
+[^searchjack]: malext.io, ["SearchJack" report](https://malext.io/reports/SearchJack/), accessed June 19, 2026.
+[^incogni]: Incogni, ["Ranking AI-powered Chrome extensions by privacy risk in 2025"](https://blog.incogni.com/ranking-ai-powered-chrome-extensions-by-privacy-risk-in-2025/), accessed June 19, 2026.

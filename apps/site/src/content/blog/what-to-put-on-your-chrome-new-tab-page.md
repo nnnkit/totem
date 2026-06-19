@@ -53,6 +53,8 @@ That is where the choice starts.
 
 It also explains why people get unusually annoyed when the new tab changes. A clean new tab page feels private in a way a normal website does not. You are not visiting it. You are passing through it all day.
 
+How protective people are of this surface shows up when it breaks. In May 2026, a Chrome 148 bug forced the bookmarks bar to appear on the new tab page even for users who kept it hidden — it disappeared as soon as you opened a normal site but stuck on every fresh tab. Affected users reported it on Reddit and Google's support pages.[^chrome148] A small, forced change to a page you mostly pass through was enough to send people looking for workarounds.
+
 ## Option 1: blank
 
 A blank new tab page is underrated.
@@ -103,6 +105,8 @@ Google's own new tab cards point in the sensible direction: resume browsing, rel
 
 That is the standard for a dashboard. It should either resume work or remove uncertainty. If it mostly shows information you did not ask for, it is just a feed wearing a productivity costume.
 
+The market pulls the other way. Replacement extensions compete on widget count: one popular pack advertises 60-plus widgets — calendar, mail, weather, notes, RSS feeds, music — and pitches itself as an all-in-one dashboard.[^widgets] The implicit pitch is that more on the page is more useful. The test above is the opposite: a widget earns its place only if you would have looked it up at the moment the tab opened.
+
 ## Option 4: reading queue
 
 This is the branch most new tab advice misses.
@@ -116,6 +120,8 @@ The hard part of read-later tools is not saving. Saving is easy. The hard part i
 That is why [Chrome Reading List](/blog/chrome-reading-list-why-nobody-uses-it) feels weaker than it should. It exists, and it is useful, but it lives in a side panel you have to remember to open.
 
 Bookmarks have the same problem. A bookmark manager can be excellent and still fail if you never go back to it. That is the deeper point behind the [Chrome bookmark manager](/blog/best-chrome-bookmark-managers-2026) and [Pocket alternatives](/blog/pocket-alternatives-2026) posts: the manager matters less than the return path.
+
+The return problem is live, not hypothetical. Mozilla shut Pocket down on July 8, 2025, then closed the export window on November 12, 2025 and queued the saved data for deletion.[^pocket] The most-cited read-later app closing left a large group of people picking a new home for things they meant to read. Most will pick another manager. Few will fix the part that actually broke: getting saved things back in front of them.
 
 A reading-queue new tab works when saved things are the thing you most often fail to revisit.
 
@@ -181,3 +187,6 @@ The thing that helps the next tab do its job.
 [^chrome-override]: Chrome for Developers, ["Override Chrome pages"](https://developer.chrome.com/docs/extensions/develop/ui/override-chrome-pages).
 [^new-tab-redirect]: Chrome Web Store, ["New Tab Redirect"](https://chromewebstore.google.com/detail/new-tab-redirect/icpgjfneehieebagbmdbhnlpiopdcmna?hl=en-US).
 [^custom-new-tab]: Chrome Web Store, ["Custom New Tab"](https://chromewebstore.google.com/detail/custom-new-tab/lfjnnkckddkopjfgmbcpdiolnmfobflj?hl=en-US).
+[^chrome148]: Android Authority, ["A weird Chrome bug is preventing users from hiding the bookmarks bar"](https://www.androidauthority.com/chrome-bookmarks-bar-bug-3665492/), accessed June 19, 2026.
+[^widgets]: New Tab Widgets, ["Best New Tab Extensions"](https://newtabwidgets.com/blog/best-new-tab-extensions), accessed June 19, 2026.
+[^pocket]: Mozilla Support, ["The future of Pocket"](https://support.mozilla.org/en-US/kb/future-of-pocket), accessed June 19, 2026.

@@ -75,6 +75,8 @@ That is where hidden surfaces lose.
 
 The SERP says the same thing indirectly. A cached US search result for `reading list chrome` included Google Help, Chrome developer docs, generic how-to posts, YouTube tutorials, and a Reddit thread about the Reading List tab disappearing. The Reddit answer that matched the current UI was a menu path: `Bookmark and Lists > Reading Lists > Show Reading Lists`.[^reddit-reading-list]
 
+The mainstream how-to guides admit it too. 9to5Google's walkthrough places the list behind the Side Panel button "to the left of your profile photo," and notes that after Chrome's UI updates it "might seem hidden."[^9to5google] When the publisher explaining how to use a feature has to reassure you it still exists, the surface is the problem, not the storage.
+
 When a feature's ranking search result is "where did it go?", the feature has a return-path problem.
 
 ## Reading List is not Bookmarks
@@ -137,6 +139,8 @@ Chrome can save a URL. It cannot know that a Twitter bookmark was part of a thre
 
 That is why [Chrome bookmark managers](/blog/best-chrome-bookmark-managers-2026), [Pocket alternatives](/blog/pocket-alternatives-2026), and [Twitter bookmark managers](/blog/best-twitter-bookmark-managers-2026) are different searches. They are not all asking for the same list.
 
+The category these searches used to point at also thinned out fast. The read-later space lost its two best-known products in about a year: Omnivore shut down around November 2024 after its team was acqui-hired by ElevenLabs,[^omnivore] and Pocket was pulled from app stores on May 22, 2025, then shut down on July 8, 2025, with all user data queued for permanent deletion on November 12, 2025.[^pocket] That is part of why a built-in Chrome list is suddenly worth a second look: some of the dedicated apps people leaned on are gone.
+
 ## The better question
 
 Do not ask only:
@@ -146,6 +150,26 @@ Do not ask only:
 Ask:
 
 > Where will the saved thing show up when I am ready to read?
+
+That gap has its own vernacular. People who watch their own saving habits keep landing on the same word for the result: a graveyard. One developer, writing about read-later piles, put it as starkly as anyone — saving felt like building a knowledge base, but the list behaved like a cemetery.
+
+<div class="not-prose my-10">
+  <p class="text-xs uppercase tracking-widest text-neutral-500">Field notes</p>
+  <p class="mt-1 font-serif text-base leading-snug text-neutral-900">The save-vs-read gap has a name people keep reaching for.</p>
+  <div class="mt-4 flex flex-col gap-3">
+    <figure class="rounded-xl border border-neutral-200 bg-neutral-50 p-5">
+      <figcaption class="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
+        <span class="font-semibold text-neutral-700">dev.to</span>
+        <span class="text-neutral-400">·</span>
+        <span class="text-neutral-500">Your "Read Later" list is a graveyard</span>
+      </figcaption>
+      <p class="mt-2 text-sm leading-relaxed text-neutral-800">"I looked at my own habits recently. I wasn't building a knowledge base. <span class="font-medium text-neutral-900">I was building a digital cemetery.</span>"</p>
+      <a href="https://dev.to/the_nortern_dev/your-read-later-list-is-a-graveyard-it-is-time-to-stop-hoarding-388g" target="_blank" rel="noopener noreferrer" class="mt-3 inline-block text-xs font-medium text-neutral-500 underline underline-offset-2 transition-colors hover:text-neutral-900">Read the post →</a>
+    </figure>
+  </div>
+</div>
+
+The trap is what gets called the collector's fallacy: saving feels like progress, so the save becomes the reward and the return rarely happens. A side panel does not fix that. It just decides where the unread pile waits.
 
 If the answer is "behind a menu," you are relying on memory.
 
@@ -167,3 +191,6 @@ The tool is less important than the return path.
 [^side-panel]: Google Chrome Help, ["Manage Chrome side panel"](https://support.google.com/chrome/answer/13156494?hl=en).
 [^reading-list-api]: Chrome for Developers, [`chrome.readingList` API](https://developer.chrome.com/docs/extensions/reference/api/readingList).
 [^reddit-reading-list]: Reddit, ["Reading list tab disapeared"](https://www.reddit.com/r/chrome/comments/1c1ges3/reading_list_tab_disapeared/), surfaced in the cached DataForSEO SERP for `reading list chrome`.
+[^9to5google]: 9to5Google, ["How to use the Reading List in Google Chrome"](https://9to5google.com/2022/06/06/how-to-use-chrome-reading-list/), accessed June 19, 2026.
+[^omnivore]: TechCrunch, ["ElevenLabs has hired the team behind Omnivore, a reader app"](https://techcrunch.com/2024/10/29/elevenlabs-has-hired-the-team-behind-omnivore-a-reader-app/), accessed June 19, 2026.
+[^pocket]: Mozilla Support, ["The future of Pocket"](https://support.mozilla.org/en-US/kb/future-of-pocket), accessed June 19, 2026.

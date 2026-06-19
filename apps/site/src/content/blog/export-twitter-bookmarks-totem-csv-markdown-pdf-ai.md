@@ -9,6 +9,8 @@ canonicalKeyword: export twitter bookmarks to csv
 
 # How to Export Twitter Bookmarks from Totem to CSV, Markdown, PDF, and AI
 
+First, why this is even a guide: X has no native bookmark export. There is no download button, the official account data archive leaves bookmarks out, and the developer API returns only your [800 most recent bookmarks](https://devcommunity.x.com/t/build-with-bookmarks-on-the-twitter-api-v2/168804) — developers report pagination quietly stopping after about three pages. So every export path is a third-party one. The job is choosing the one that matches what you'll do next.
+
 There are two export surfaces in Totem.
 
 The library export is for the whole bookmark library. It downloads a ZIP with CSV, Markdown, JSONL, a `readme.md`, and a `manifest.json`.
@@ -65,6 +67,8 @@ Use `Full export` when:
 - you want more complete Markdown files
 - you are making a backup you expect to trust later
 
+Either way, the export runs locally — no server, no extra login — and covers your whole library, not just the recent slice the API would hand back. That is the same ground the open-source tools stake out: [xarchive](https://github.com/sytelus/xarchive) advertises that "everything runs locally in your browser," and [twitter-web-exporter](https://github.com/prinsss/twitter-web-exporter) sells on pulling bookmarks without the standard 800 limit. The difference here is that Totem only exports what it has actually captured for you, fetched at a conservative pace — not an unlimited server-side scrape.
+
 ## Export one saved post to PDF, Markdown, or AI text
 
 Use this when the next action is about one saved item, not the whole library.
@@ -102,6 +106,8 @@ The trap is treating "export" as one thing.
 
 CSV is for inventory. Markdown is for reading. AI copy is for one focused prompt. PDF is for one saved item you want to preserve as a document. JSONL is for restore.
 
+The format menu itself has mostly converged across tools — JSON, CSV, and Markdown, sometimes HTML. So the format list is not the differentiator; the job each format does is. Markdown in particular has stopped reading as a generic download and started reading as the notes format: newer exporters now position it explicitly for Obsidian and Notion users who turn captures into notes, not just a file you save and forget. If you export Markdown only to drop it in a vault you never reopen, you have moved the graveyard, not closed it.
+
 ## A quick check before you trust the export
 
 After downloading the ZIP:
@@ -113,5 +119,7 @@ After downloading the ZIP:
 5. Keep the original ZIP if you may want to import later.
 
 If you chose `Basic export` and some Markdown files look thin, run `Full export` later. Basic export is honest about what is already cached. Full export tries to make more of the library readable before the file leaves your browser.
+
+One last thing the export can't do for you: a clean ZIP is not the same as having read any of it. The well-worn pattern is thousands of saved posts that get exported and still never reopened, and imported notes that go quietly dead in a vault. Export protects the data; it does not solve retrieval. That part is a reading-and-search job — for X bookmarks specifically, that's what Totem's [searchable new-tab queue](https://chromewebstore.google.com/detail/acpkgdfhoaalmnhjifhneghcgfnjkglo) is for, with the ZIP as the backup underneath it. The two answer different questions: one keeps the library, the other gets you back into it.
 
 For the field-level format, the technical spec is here: [Totem Export Format v1](/export-format/v1).
