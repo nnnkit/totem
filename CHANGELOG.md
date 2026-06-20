@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.4] - 2026-06-20
+
+- feat: add premium docs
+- feat: add twitter-bookmarks-to-obsidian blog post and research report
+- feat: enrich graveyard post with cards and sources footnotes
+
 ## [1.2.3] - 2026-06-12
 
 - fix: harden extension integrity checks
