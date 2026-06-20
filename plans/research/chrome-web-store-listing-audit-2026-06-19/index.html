@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Totem Chrome Web Store Listing Audit - Competitor Research</title>
+<meta name="description" content="Competitor Chrome Web Store listing audit for Totem across bookmark managers, read-later tools, new tab tools, and X/Twitter bookmark managers.">
+<style>
+  :root {
+    --paper: #f7f4ec;
+    --sheet: #fffdf8;
+    --ink: #1f1e1b;
+    --muted: #68635a;
+    --line: #e6dfd1;
+    --blue: #1f4b6f;
+    --green: #2e6b4f;
+    --amber: #8a5b15;
+    --red: #8f3f32;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: Charter, Georgia, serif;
+    line-height: 1.55;
+  }
+  main {
+    width: min(1180px, calc(100% - 40px));
+    margin: 0 auto;
+    padding: 56px 0 88px;
+  }
+  header {
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 32px;
+  }
+  .eyebrow {
+    color: var(--blue);
+    font: 700 12px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  h1 {
+    max-width: 940px;
+    margin: 12px 0;
+    font-size: clamp(38px, 6vw, 68px);
+    line-height: 1.05;
+  }
+  h2 {
+    margin: 42px 0 14px;
+    border-top: 1px solid var(--line);
+    padding-top: 24px;
+    font-size: 28px;
+    line-height: 1.15;
+  }
+  h3 {
+    margin: 24px 0 8px;
+    font: 750 16px/1.3 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  p { margin: 10px 0 0; }
+  a { color: var(--blue); text-underline-offset: 3px; }
+  code {
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.7);
+    padding: 1px 4px;
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.9em;
+  }
+  .muted { color: var(--muted); }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+    margin-top: 22px;
+  }
+  .grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .card, .note {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--sheet);
+    padding: 16px;
+  }
+  .card strong {
+    display: block;
+    margin-bottom: 6px;
+    color: var(--blue);
+    font: 750 12px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .note {
+    border-left: 4px solid var(--blue);
+    margin-top: 18px;
+  }
+  .note.warning { border-left-color: var(--amber); }
+  .note.risk { border-left-color: var(--red); }
+  .toc {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 18px;
+    font: 700 13px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  .toc a {
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--sheet);
+    padding: 7px 10px;
+    text-decoration: none;
+  }
+  .table-wrap { margin-top: 16px; overflow-x: auto; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--sheet);
+    font: 13px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  th, td {
+    border: 1px solid var(--line);
+    padding: 10px 12px;
+    text-align: left;
+    vertical-align: top;
+  }
+  th {
+    background: #efe8d9;
+    color: #33302a;
+    font-weight: 750;
+  }
+  ul { margin: 10px 0 0 22px; padding: 0; }
+  li { margin: 6px 0; }
+  .tag {
+    display: inline-block;
+    border-radius: 999px;
+    margin: 0 4px 5px 0;
+    padding: 3px 8px;
+    background: #e8eef3;
+    color: var(--blue);
+    font: 750 12px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    white-space: nowrap;
+  }
+  .tag.green { background: #e6f1eb; color: var(--green); }
+  .tag.amber { background: #f4ead5; color: var(--amber); }
+  .tag.red { background: #f3e2df; color: var(--red); }
+  .compact td, .compact th { padding: 8px 10px; }
+  @media (max-width: 820px) {
+    main { width: min(100% - 24px, 1180px); padding-top: 32px; }
+    .grid, .grid.two { grid-template-columns: 1fr; }
+    h1 { font-size: 38px; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="eyebrow">Totem SEO Research</div>
+    <h1>Chrome Web Store listing audit</h1>
+    <p class="muted">Generated June 19, 2026. Sources accessed June 19, 2026. Scope: bookmark managers, read-later tools, new tab tools, and X/Twitter bookmark managers relevant to Totem.</p>
+    <div class="grid">
+      <div class="card">
+        <strong>Research value</strong>
+        <p>High. The Chrome Web Store has a crowded X/Twitter bookmark cluster, but almost every competitor sells search, export, tags, or AI - not the habit loop of returning to read.</p>
+      </div>
+      <div class="card">
+        <strong>Core thesis</strong>
+        <p>Totem should own "Twitter bookmarks as a read-later queue on new tab" instead of competing head-on as another archive/export dashboard.</p>
+      </div>
+      <div class="card">
+        <strong>Immediate risk</strong>
+        <p>Totem's visible privacy disclosure lists broad data categories while the copy says no server and local-first. That mismatch weakens its strongest trust claim.</p>
+      </div>
+    </div>
+    <nav class="toc" aria-label="Report sections">
+      <a href="#market-map">Market map</a>
+      <a href="#keyword-patterns">Keyword patterns</a>
+      <a href="#core-listings">Core listings</a>
+      <a href="#x-tools">X/Twitter tools</a>
+      <a href="#read-later">Read-later</a>
+      <a href="#new-tab">New tab</a>
+      <a href="#screenshots">Screenshots</a>
+      <a href="#gaps">Totem gaps</a>
+      <a href="#sources">Sources</a>
+    </nav>
+  </header>
+
+  <section id="market-map">
+    <h2>Market Map</h2>
+    <div class="note">
+      <p>Established general-purpose tools use scale and trust badges. X/Twitter-specific tools use sharper problem language, but most are young, low-rated, or low-install listings. Totem's advantage is not another export format; it is a different surface: bookmarks reappear every new tab, as a calm reading queue.</p>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Lane</th>
+            <th>What listings promise</th>
+            <th>Visible leaders</th>
+            <th>Totem implication</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>General bookmark managers</td>
+            <td>Save anything, tag, organize, full-text search, sync, integrations, privacy.</td>
+            <td>Raindrop.io: 400,000 users, 4.1 stars, 779 ratings. Bookmark Sidebar: 300,000 users, 4.5 stars, 1.7K ratings.</td>
+            <td>Do not claim "all-in-one bookmark manager." The strongest incumbents are broad and much larger.</td>
+          </tr>
+          <tr>
+            <td>Tab/session/new tab managers</td>
+            <td>Close tabs without fear, session restore, dashboard, workspace, memory savings, context switching.</td>
+            <td>OneTab: 2,000,000 users. Session Buddy: 1,000,000 users. Toby: 300,000 users.</td>
+            <td>Use "new tab" as the return surface, not as a generic productivity dashboard.</td>
+          </tr>
+          <tr>
+            <td>Read-later and Pocket replacements</td>
+            <td>Save articles, clean reader, offline, highlights, text-to-speech, import Pocket export, local-first.</td>
+            <td>Instapaper: 300,000 users. Matter: 20,000 users. New Pocket-replacement listings are smaller but explicit.</td>
+            <td>"Pocket alternative for tweets" is credible only if qualified. Totem is not a general article reader.</td>
+          </tr>
+          <tr>
+            <td>X/Twitter bookmark managers</td>
+            <td>Search, export, tags, folders, local-first, no account, Markdown/CSV/JSON, Notion/Sheets/Zotero/NotebookLM, AI tagging.</td>
+            <td>Export Twitter Bookmarks: 9,000 users. TweetsMash: 4,000 users. Twillot: 2,000 users. Most newer tools are under 600 users.</td>
+            <td>The category is noisy around "manager/exporter." Totem should front-load "read later" and "new tab" to be remembered.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="keyword-patterns">
+    <h2>Keyword Patterns</h2>
+    <div class="grid">
+      <div class="card">
+        <strong>Title formulas</strong>
+        <p><span class="tag">Brand + category</span><span class="tag">Platform + job</span><span class="tag">Job + format</span></p>
+        <p>Examples: "Raindrop.io"; "Toby: Tab Management Tool"; "Twitter Bookmarks Search by Twillot"; "X Bookmark Manager &amp; Exporter"; "ReadNook - Reader Mode, Read Later &amp; Save Articles."</p>
+      </div>
+      <div class="card">
+        <strong>High-frequency jobs</strong>
+        <p><span class="tag green">save</span><span class="tag green">search</span><span class="tag green">organize</span><span class="tag green">export</span><span class="tag green">sync</span><span class="tag green">restore</span><span class="tag green">read later</span></p>
+        <p>The X/Twitter subgroup over-indexes on search/export/tag/delete; read-later and "finish what you saved" are much rarer.</p>
+      </div>
+      <div class="card">
+        <strong>Trust language</strong>
+        <p><span class="tag amber">local-first</span><span class="tag amber">privacy-first</span><span class="tag amber">no account</span><span class="tag amber">no tracking</span><span class="tag amber">open source</span><span class="tag amber">Featured</span></p>
+        <p>Smaller X tools lean heavily on local storage and privacy because they cannot lean on user count yet.</p>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table class="compact">
+        <thead>
+          <tr>
+            <th>Cluster</th>
+            <th>Common phrases seen</th>
+            <th>Listing signal</th>
+            <th>Totem usage</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Twitter/X bookmark manager</td>
+            <td>"X/Twitter bookmarks", "bookmark manager X never built", "search, organize, export", "X doesn't let you export bookmarks."</td>
+            <td>Very crowded; several tools use nearly interchangeable problem statements.</td>
+            <td>Use once for search matching, but avoid making it the only hook.</td>
+          </tr>
+          <tr>
+            <td>Export and backup</td>
+            <td>"CSV", "JSON", "Markdown", "XLSX", "Google Sheets", "Notion", "Obsidian", "NotebookLM", "media download."</td>
+            <td>Many listings sell ownership as a file export, not as daily reading.</td>
+            <td>Keep export in title/description, but make it secondary to return-to-read.</td>
+          </tr>
+          <tr>
+            <td>Read-later</td>
+            <td>"read later", "offline", "clean reader", "Pocket alternative", "import Pocket", "distraction-free reader."</td>
+            <td>Pocket shutdown creates active replacement language, but most tools are article-first.</td>
+            <td>Phrase narrowly: "a Pocket alternative for Twitter/X bookmarks and threads."</td>
+          </tr>
+          <tr>
+            <td>New tab</td>
+            <td>"new tab page", "homepage", "start page", "calm", "focused", "productivity hub", "dashboard."</td>
+            <td>New-tab leaders win with aesthetics and widgets, not saved reading.</td>
+            <td>Own "new tab as reminder" and "saved threads without the feed."</td>
+          </tr>
+          <tr>
+            <td>AI</td>
+            <td>"AI tagging", "AI summaries", "AI chat", "semantic search", "NotebookLM", "second brain."</td>
+            <td>AI is table stakes in newer listings but often vague or future-tense.</td>
+            <td>Do not chase AI wording unless the feature is real and screenshotable.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="core-listings">
+    <h2>Core Competitor Listings</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Tool</th>
+            <th>Listing title</th>
+            <th>Short description / first promise</th>
+            <th>Visible users / rating</th>
+            <th>Proof points</th>
+            <th>Gap for Totem</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Raindrop.io</td>
+            <td>Raindrop.io</td>
+            <td>All-in-one bookmark manager; manages bookmarks, highlights, annotations and tabs.</td>
+            <td>400,000 users; 4.1 stars; 779 ratings.</td>
+            <td>Featured; recommended practices; 13 years in business; 2,600+ integrations; multi-platform apps; encryption/privacy copy.</td>
+            <td>Broad and mature, but not X-specific and not a reading-habit surface. Totem should not fight "save anything."</td>
+          </tr>
+          <tr>
+            <td>Toby</td>
+            <td>Toby: Tab Management Tool</td>
+            <td>Productivity hub to save and organize browser tabs from anywhere.</td>
+            <td>300,000 users; 4.2 stars; 3.3K ratings.</td>
+            <td>Claims use by teams at Google, Netflix, Amazon, HubSpot and IBM; 300,000+ individuals in 144 countries; Product Hunt and press proof.</td>
+            <td>Toby owns tab anxiety. Totem can own bookmark graveyard anxiety: saved posts return without reopening X.</td>
+          </tr>
+          <tr>
+            <td>Dewey</td>
+            <td>dewey.</td>
+            <td>Save all your favorite bookmarks in one place; search, sort, organize, export social bookmarks.</td>
+            <td>8,000 users; 3.5 stars; 106 ratings.</td>
+            <td>Featured; recommended practices; says 50,000+ members; folders, tags, CSV/PDF/Sheets export, AI bulk tagging, public sharing and RSS.</td>
+            <td>Strong "central hub" proof, but lower CWS rating. Totem can contrast no account/no trial and new-tab reading.</td>
+          </tr>
+          <tr>
+            <td>TweetsMash</td>
+            <td>TweetsMash</td>
+            <td>Elevate Twitter bookmarks into insights for creators and pros.</td>
+            <td>4,000 users; 4.3 stars; 6 ratings.</td>
+            <td>Featured; recommended practices; one-click import, auto sync, smart digests, AI chat, enhanced search, Notion/Sheets/Zotero export.</td>
+            <td>Owns digest/workflow language. Totem can own "read directly, calmly, on new tab" instead of email/AI workflow.</td>
+          </tr>
+          <tr>
+            <td>Bookmark Sidebar</td>
+            <td>Bookmark Sidebar</td>
+            <td>Toggleable sidebar with all bookmarks at the edge of the browser window.</td>
+            <td>300,000 users; 4.5 stars; 1.7K ratings.</td>
+            <td>Featured; recommended practices; 40 languages; no data collection disclosure; new-tab option.</td>
+            <td>Users like low-friction access surfaces. Totem's new-tab surface is more specific and can be framed as lower-friction than a dashboard.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="x-tools">
+    <h2>X/Twitter Bookmark Tools</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Tool</th>
+            <th>Listing title</th>
+            <th>Short description / first promise</th>
+            <th>Visible users / rating</th>
+            <th>Keyword and proof pattern</th>
+            <th>Gap for Totem</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Twillot</td>
+            <td>Twitter Bookmarks Search by Twillot</td>
+            <td>Search, organize and export X/Twitter bookmarks with AI categorization, no Premium required.</td>
+            <td>2,000 users; 4.3 stars; 28 ratings.</td>
+            <td>AI categorization, local sync, export threads/media/engagement metrics, folders without Premium, omnibox search.</td>
+            <td>Power-user console. Totem can be simpler: open new tab, read saved threads, export when needed.</td>
+          </tr>
+          <tr>
+            <td>Export Twitter Bookmarks</td>
+            <td>Export Twitter Bookmarks</td>
+            <td>1-click export for all Twitter bookmarks.</td>
+            <td>9,000 users; 3.9 stars; 76 ratings.</td>
+            <td>Featured; export, backup, research, share; paid upgrade warning above a limit.</td>
+            <td>Large for the niche, but narrow utility. Totem can say export is built into a real reading workflow.</td>
+          </tr>
+          <tr>
+            <td>Twitter Bookmarks Downloader</td>
+            <td>Twitter Bookmarks Downloader - Export X Bookmarks</td>
+            <td>Export X bookmarks to CSV, JSON, or XLSX with one click; backup, save offline, share.</td>
+            <td>1,000 users; 3.6 stars; 9 ratings.</td>
+            <td>Featured; multiple formats; media download; local/no servers; user personas include researchers, writers, marketers, developers, archivists.</td>
+            <td>Competes on archive completeness. Totem should avoid "download everything" as the first message.</td>
+          </tr>
+          <tr>
+            <td>xBookmarks</td>
+            <td>xBookmarks</td>
+            <td>Navigate, review, search and export Twitter/X bookmarks.</td>
+            <td>543 users; 2.3 stars; 3 ratings.</td>
+            <td>Markdown export with image folders, visual analytics, local cache, waterfall display, privacy-first.</td>
+            <td>Interesting visual-library angle but weak rating. Totem can make quality/trust more visible.</td>
+          </tr>
+          <tr>
+            <td>XBookmark</td>
+            <td>XBookmark - Twitter Bookmark Manager</td>
+            <td>Save and export X/Twitter bookmarks locally; tags, Markdown and JSON; private and open source.</td>
+            <td>242 users; no ratings.</td>
+            <td>No account, no cloud, no server, open source, Obsidian/Notion-ready Markdown with YAML frontmatter, dark dashboard.</td>
+            <td>This is close to Totem's local-first language. Totem's defensible difference is new-tab reading, not just local export.</td>
+          </tr>
+          <tr>
+            <td>XArchive</td>
+            <td>X Bookmark Manager &amp; Exporter (Twitter)</td>
+            <td>Export, tag, delete and search X bookmarks.</td>
+            <td>191 users; 4.2 stars; 4 ratings.</td>
+            <td>Free export and tagging; no sign-up viewer; local/offline/portable; cheap paid plans; AI tagging; bookmark deletion.</td>
+            <td>Very direct "manager" positioning with price hooks. Totem can keep premium/value copy away from price war.</td>
+          </tr>
+          <tr>
+            <td>XSaved</td>
+            <td>XSaved - Bookmark Manager for X (Twitter)</td>
+            <td>Organize, search, and export X bookmarks; bookmark manager X never built; free, local-first, private.</td>
+            <td>153 users; 5.0 stars; 2 ratings.</td>
+            <td>Problem-led copy: X has no search/tags/folders/export/recovery; auto-organization, notes, bulk management, tweet preservation.</td>
+            <td>Many lines overlap Totem's current "tool X never built" frame. Totem should emphasize "the reading queue X never gives you."</td>
+          </tr>
+          <tr>
+            <td>Twitter Bookmarks Search Pro</td>
+            <td>Twitter Bookmarks Search Pro</td>
+            <td>Search all Twitter/X bookmarks with ease by downloading them locally.</td>
+            <td>413 users; 4.2 stars; 5 ratings.</td>
+            <td>Simple, local full-text search; no data collection disclosure.</td>
+            <td>Search alone is a commodity. Totem should make search a supporting feature.</td>
+          </tr>
+          <tr>
+            <td>Twimark</td>
+            <td>Twimark: Twitter Bookmark to NotebookLM AI Exporter</td>
+            <td>Export X/Twitter bookmarks to an AI-ready Markdown file and launch NotebookLM.</td>
+            <td>396 users; 5.0 stars; 1 rating.</td>
+            <td>Direct-to-AI, NotebookLM, thread stitching, AI-optimized Markdown, local/privacy-first.</td>
+            <td>Shows a growing "send bookmarks to AI" lane. Totem should only enter if it can show concrete agent/AI workflows.</td>
+          </tr>
+          <tr>
+            <td>X Vault</td>
+            <td>X Vault - Smart Bookmark Manager for X</td>
+            <td>Organize X/Twitter bookmarks with categories, tags, notes, Notion sync and timeline view.</td>
+            <td>17 users; no ratings.</td>
+            <td>Categories, notes, instant search, timeline view, Notion sync, one-click save, bulk ops, local storage, Japanese support.</td>
+            <td>Feature-stuffed but low traction. Totem can be smaller and clearer.</td>
+          </tr>
+          <tr>
+            <td>PostZaper</td>
+            <td>PostZaper - Bookmark Manager for Twitter, LinkedIn &amp; Articles</td>
+            <td>Save bookmarks from Twitter/X, LinkedIn and articles; AI-powered content generation.</td>
+            <td>12 users; no ratings.</td>
+            <td>Creator/marketer positioning; full-content capture; engagement metrics; folders called clusters; $29 one-time Pro.</td>
+            <td>Broad social capture blurs the job. Totem should stay narrow and honest.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="read-later">
+    <h2>Read-Later And Pocket Alternatives</h2>
+    <div class="note warning">
+      <p>Pocket itself is no longer a Chrome Web Store competitor. Mozilla's support page says Pocket shut down July 8, 2025, the app and extensions are no longer available, the API was disabled November 12, 2025, and user data export has closed. This creates a real "Pocket alternative" opening, but most Store listings target articles, not X bookmarks.</p>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Tool</th>
+            <th>Listing title</th>
+            <th>Short description / first promise</th>
+            <th>Visible users / rating</th>
+            <th>Proof or positioning</th>
+            <th>Totem angle</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Instapaper</td>
+            <td>Instapaper</td>
+            <td>Browser extension to save links for offline reading.</td>
+            <td>300,000 users; 3.8 stars; 560 ratings.</td>
+            <td>Simple queue; iPhone, iPad, Android, computer, Kindle; saves current tab to account.</td>
+            <td>Incumbent read-later credibility. Totem should be "for saved tweets/threads," not a direct article-reader replacement.</td>
+          </tr>
+          <tr>
+            <td>Matter</td>
+            <td>Matter</td>
+            <td>Save articles to a Matter account.</td>
+            <td>20,000 users; 4.0 stars; 32 ratings.</td>
+            <td>Articles, newsletters, Twitter threads, PDFs; press quote from WSJ; Kindle, Gmail newsletters, RSS, text-to-speech, highlights export.</td>
+            <td>Matter shows "Twitter threads" can sit inside read-later copy, but its core is a cloud reading app.</td>
+          </tr>
+          <tr>
+            <td>ReadNook</td>
+            <td>ReadNook - Reader Mode, Read Later &amp; Save Articles</td>
+            <td>Clean, typography-first reader; import Pocket export; local-first, private, no account.</td>
+            <td>4 users; 5.0 stars; 2 ratings.</td>
+            <td>New listing updated June 19, 2026; whole-article offline save; Pocket import; one-time $9 Pro.</td>
+            <td>Shows emerging local-first read-later language. Totem can reuse "local-first, no account" but pair it with X-specific proof.</td>
+          </tr>
+          <tr>
+            <td>Voice Memo &amp; Read it Later</td>
+            <td>Voice Memo &amp; Read it Later</td>
+            <td>Save favorite pages to Rabrain: read-later and voice memo app.</td>
+            <td>142 users; 4.0 stars; 2 ratings.</td>
+            <td>Second-brain language, AI summaries, voice memos, semantic search, import Pocket and Omnivore.</td>
+            <td>AI/second-brain claims are crowded. Totem's writing should stay behavioral and concrete.</td>
+          </tr>
+          <tr>
+            <td>Omnivore self-hosted</td>
+            <td>Omnivore - Self Hosted</td>
+            <td>Save content to a self-hosted Omnivore library.</td>
+            <td>423 users; no ratings.</td>
+            <td>Read-it-later app for articles, labels, notes, archive/delete, paywalled extraction to self-hosted API.</td>
+            <td>Self-hosted users value ownership, but this is article infrastructure, not a Chrome-native reading habit.</td>
+          </tr>
+          <tr>
+            <td>Quick Pocket</td>
+            <td>Quick Pocket</td>
+            <td>Pocket links in a popup, inspired by the old Pocket extension.</td>
+            <td>Unknown users in extracted page; 3.0 stars; 31 ratings.</td>
+            <td>Explicitly reacts to Mozilla shutdown; promises import/exported Pocket data but says saving to Pocket is not available soon.</td>
+            <td>The shutdown story belongs in Totem copy only as a narrow bridge: "if Pocket used to be where you saved articles, Totem is for saved X posts."</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="new-tab">
+    <h2>New Tab And Session Adjacent</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Tool</th>
+            <th>Listing title</th>
+            <th>Short description / first promise</th>
+            <th>Visible users / rating</th>
+            <th>Proof points</th>
+            <th>Totem take</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Bonjourr</td>
+            <td>Bonjourr - Minimalist New Tab Page</td>
+            <td>Customizable new tab inspired by iOS for calm and focused browsing.</td>
+            <td>300,000 users; 4.9 stars; 23.1K ratings.</td>
+            <td>Featured; recommended practices; Chrome Favorites of 2023; 34 languages; open source; privacy/no account.</td>
+            <td>New-tab users reward beauty, speed, privacy and customization. Totem should make its first screenshot look calm enough to compete.</td>
+          </tr>
+          <tr>
+            <td>Session Buddy</td>
+            <td>Session Buddy - Tab &amp; Bookmark Manager</td>
+            <td>Save/restore sessions, manage tabs and bookmarks, privacy-first.</td>
+            <td>1,000,000 users; 4.7 stars; 25.1K ratings.</td>
+            <td>Featured; recommended practices; local by default; import/export 15+ formats; "solid as a rock" for thousands of tabs.</td>
+            <td>Powerful proof that local/default storage can be a trust asset if the privacy disclosure aligns.</td>
+          </tr>
+          <tr>
+            <td>OneTab</td>
+            <td>OneTab</td>
+            <td>Save up to 95% memory and reduce tab clutter.</td>
+            <td>2,000,000 users; 4.5 stars; 14.6K ratings.</td>
+            <td>Featured; recommended practices; simple measurable claim; no data collection disclosure.</td>
+            <td>A specific quantified benefit beats a generic productivity claim. Totem needs one concrete first-screen benefit.</td>
+          </tr>
+          <tr>
+            <td>Workona</td>
+            <td>Tab Manager by Workona</td>
+            <td>The world's best tab manager.</td>
+            <td>200,000 users; 4.6 stars; 3.8K ratings.</td>
+            <td>Featured; recommended practices; Chrome's Favorite Tab Manager of 2022; SOC 2 Type II; enterprise security proof.</td>
+            <td>Enterprise proof is not Totem's lane. But Totem can still show maintenance, privacy, and support as trust proof.</td>
+          </tr>
+          <tr>
+            <td>Tabme</td>
+            <td>Tabme - Tab &amp; Bookmark Manager | Save, Organize &amp; Sync Tabs</td>
+            <td>Save, organize and sync tabs; new tab bookmark dashboard.</td>
+            <td>10,000 users; 4.5 stars; 70 ratings.</td>
+            <td>Featured; recommended practices; guest mode; unlimited saved bookmarks; import/export; side panel; spaces/sync Pro.</td>
+            <td>The title is packed with keywords. Totem can keep title packed too, but the first line must be simpler.</td>
+          </tr>
+          <tr>
+            <td>Stackable</td>
+            <td>Stackable - Bookmark and Tab Manager</td>
+            <td>Home screen for browser; manage bookmarks and tabs; find content fast.</td>
+            <td>4,000 users; 3.9 stars; 39 ratings.</td>
+            <td>Featured; recommended practices; mobile-home-screen analogy; open 100 bookmarks instantly; share bookmark collections.</td>
+            <td>Strong analogy, but broader than Totem. Totem's analogy: "new tab as a return path for saved X posts."</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="screenshots">
+    <h2>Screenshot Themes</h2>
+    <p class="muted">Caveat: Chrome Web Store text extraction exposes media counts and listing copy, not every screenshot caption. Themes below combine visible media presence with the screenshots' surrounding listing promises and product UI claims.</p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Lane</th>
+            <th>Common screenshot themes</th>
+            <th>What they are trying to prove</th>
+            <th>Totem screenshot opportunity</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>General bookmark managers</td>
+            <td>Library dashboards, collection sidebars, tag/filter surfaces, browser popup save flow, web-app grid/list views.</td>
+            <td>"This is a complete system, not a small extension."</td>
+            <td>Do not lead with another dashboard. Lead with Twitter/X bookmarks already waiting on a clean new tab.</td>
+          </tr>
+          <tr>
+            <td>X/Twitter managers</td>
+            <td>Dark X-like tweet cards, export progress screens, CSV/JSON/Markdown format callouts, tag/filter panels, Notion/AI destination screens.</td>
+            <td>"X's native bookmarks are broken; this gives you control."</td>
+            <td>Show "no feed" reading mode and thread reading before export/settings. Make the emotional proof "I can finally read this."</td>
+          </tr>
+          <tr>
+            <td>Read-later tools</td>
+            <td>Clean article reader, typography controls, offline library, highlight/notes, mobile/Kindle sync, Pocket import flows.</td>
+            <td>"This is where you actually read, not just save."</td>
+            <td>Borrow the reader-quality signal: typography, saved/unread/read states, thread readability, calm empty state.</td>
+          </tr>
+          <tr>
+            <td>New tab tools</td>
+            <td>Beautiful first-screen new tab, wallpapers, widgets, quick links, notes, focus timer, weather, customization panels.</td>
+            <td>"You will enjoy seeing this every day."</td>
+            <td>Totem's first image must look like a polished new-tab replacement, not an extension settings page.</td>
+          </tr>
+          <tr>
+            <td>Session/tab managers</td>
+            <td>Large workspaces, saved sessions, restore flows, project folders, command/search surfaces, memory-saving proof.</td>
+            <td>"You can close things safely and recover your context."</td>
+            <td>Make offline/local retention concrete: saved tweets stay searchable even after you leave X.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="gaps">
+    <h2>Gaps Totem Can Exploit</h2>
+    <div class="grid two">
+      <div class="card">
+        <strong>1. Own the return path</strong>
+        <p>Competitors say "search/export/organize." Totem should say "read what you saved every new tab." This is the cleanest differentiation because it changes the habit loop.</p>
+      </div>
+      <div class="card">
+        <strong>2. Narrow the Pocket angle</strong>
+        <p>Pocket is gone, and users are looking for alternatives. Totem should use "Pocket alternative for Twitter/X bookmarks" only with that qualifier.</p>
+      </div>
+      <div class="card">
+        <strong>3. Fix trust friction</strong>
+        <p>Totem's listing says local-first/no server, but the visible privacy disclosure includes personally identifiable information, authentication information, web history, user activity and website content. If inaccurate, correct the Store declaration; if accurate, explain why clearly.</p>
+      </div>
+      <div class="card">
+        <strong>4. Make proof visual</strong>
+        <p>Use the first three screenshots for: new-tab reading queue, distraction-free thread reader, and local export/offline ownership. Move settings/privacy details later.</p>
+      </div>
+      <div class="card">
+        <strong>5. Avoid the generic X manager line</strong>
+        <p>"The bookmark manager X never built" appears in the market. Totem's version should be "the reading queue X never built" or "saved X posts without the feed."</p>
+      </div>
+      <div class="card">
+        <strong>6. Build social proof deliberately</strong>
+        <p>Established listings use badges, ratings, huge user counts and external proof. Totem has 5.0 stars but only 7 ratings and 200 users. Ask happy users for reviews after successful import/read/export moments.</p>
+      </div>
+    </div>
+
+    <h3>Suggested Listing Direction</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Element</th>
+            <th>Current signal</th>
+            <th>Recommended direction</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Title</td>
+            <td>"Twitter Saver: Bookmarks on New Tab, Search &amp; Export"</td>
+            <td>Keep the keyword density, but test a title that starts with the job: "Twitter Bookmark Manager: Read Saved X Posts on New Tab" or "Twitter Saver: Read X Bookmarks on New Tab."</td>
+          </tr>
+          <tr>
+            <td>Short description</td>
+            <td>Already strong: read, search, export, new tab, local-first, no account/server.</td>
+            <td>Make "read-later" explicit: "Turn Twitter/X bookmarks into a local read-later queue on every new tab. Search, read threads, and export Markdown/CSV without a Totem account."</td>
+          </tr>
+          <tr>
+            <td>First paragraph</td>
+            <td>Behavioral hook around saving and never returning.</td>
+            <td>Keep this. It is less generic than competitors. Consider moving "no feed, no algorithm" even earlier.</td>
+          </tr>
+          <tr>
+            <td>Feature order</td>
+            <td>New tab, reader, search, export, offline/local.</td>
+            <td>Good order. Add "read/unread state" or "finish what you saved" if the product supports it.</td>
+          </tr>
+          <tr>
+            <td>Trust proof</td>
+            <td>Local-first copy plus privacy declarations that appear broad.</td>
+            <td>Align Store disclosures, then add a short privacy proof line: "No Totem account. No server. IndexedDB storage in your browser."</td>
+          </tr>
+          <tr>
+            <td>Screenshot 1</td>
+            <td>Media visible, but not assessed visually in this pass.</td>
+            <td>First screenshot should be the polished new-tab queue with actual saved X posts and clear "Unread / Reading / Done" state if present.</td>
+          </tr>
+          <tr>
+            <td>Keyword add-ons</td>
+            <td>Twitter Saver, bookmarks, new tab, search, export, Pocket alternative appears in body.</td>
+            <td>Add exact-match variants naturally in body: "twitter bookmark manager", "x bookmark manager", "read later for tweets", "twitter bookmarks export", "Pocket alternative for tweets."</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="sources">
+    <h2>Sources</h2>
+    <p class="muted">All sources accessed June 19, 2026. Chrome Web Store ratings and user counts are visible listing values and can change daily.</p>
+    <div class="table-wrap">
+      <table class="compact">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Source</th>
+            <th>URL</th>
+            <th>Date accessed</th>
+            <th>Used for</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>1</td><td>Raindrop.io - Chrome Web Store</td><td><a href="https://chromewebstore.google.com/detail/raindropio/ldgfbffkinooeloadekpmfoklnobpien?hl=en">chromewebstore.google.com/detail/raindropio/ldgfbffkinooeloadekpmfoklnobpien</a></td><td>June 19, 2026</td><td>Core bookmark manager title, description, rating, users, proof points, update date.</td></tr>
+          <tr><td>2</td><td>Toby: Tab Management Tool - Chrome Web Store</td><td><a href="https://chromewebstore.google.com/detail/toby-tab-management-tool/hddnkoipeenegfoeaoibdmnaalmgkpip?hl=en">chromewebstore.google.com/detail/toby-tab-management-tool/hddnkoipeenegfoeaoibdmnaalmgkpip</a></td><td>June 19, 2026</td><td>Tab anxiety positioning, social proof, title, rating, users.</td></tr>
+          <tr><td>3</td><td>dewey. - Chrome Web Store</td><td><a href="https://chromewebstore.google.com/detail/dewey/occohfgiljdagdmklhpplgmcnliljmgi">chromewebstore.google.com/detail/dewey/occohfgiljdagdmklhpplgmcnliljmgi</a></td><td>June 19, 2026</td><td>Social bookmark manager positioning, export/search/AI proof, rating, users.</td></tr>
+          <tr><td>4</td><td>TweetsMash - Chrome Web Store</td><td><a href="https://chromewebstore.google.com/detail/tweetsmash/fmjgfjanmcbhpmlemahbnfehjoboopce?hl=en">chromewebstore.google.com/detail/tweetsmash/fmjgfjanmcbhpmlemahbnfehjoboopce</a></td><td>June 19, 2026</td><td>Twitter digest and AI workflow positioning, rating, users.</td></tr>
+          <tr><td>5</td><td>Twitter Bookmarks Search by Twillot - Chrome Web Store</td><td><a href="https://chromewebstore.google.com/detail/twitter-bookmarks-search/cedokfdbikcoefpkofjncipjjmffnknf">chromewebstore.google.com/detail/twitter-bookmarks-search/cedokfdbikcoefpkofjncipjjmffnknf</a></td><td>June 19, 2026</td><td>X bookmark search/export/AI categorization pattern, rating, users.</td></tr>
+          <tr><td>6</td><td>Export Twitter Bookmarks - Chrome Web Store</td><td><a href="https://chromewebstore.google.com/detail/export-twitter-bookmarks/fondehlfbfbcegdjhoefhfbkaeengcgd">chromewebstore.google.com/detail/export-twitter-bookmarks/fondehlfbfbcegdjhoefhfbkaeengcgd</a></td><td>June 19, 2026</td><td>One-click export positioning, highest visible X niche user count in scan.</td></tr>
+          <tr><td>7</td><td>xBookmarks - Chrome Web Store</td><td><a href="https://chromewebstore.google.com/detail/xbookmarks/efjimcfcnnoahhdcjipfhgpakjiaefhi">chromewebstore.google.com/detail/xbookmarks/efjimcfcnnoahhdcjipfhgpakjiaefhi</a></td><td>June 19, 2026</td><td>Markdown export, analytics, local cache, waterfall display, rating/users.</td></tr>
+          <tr><td>8</td><td>XBookmark - Twitter Bookmark Manager - Chrome Web Store</td><td><a href="https://chromewebstore.google.com/detail/xbookmark-twitter-bookmar/fmhmeljlbkjibmimlgnijjffmjgbabch">chromewebstore.google.com/detail/xbookmark-twitter-bookmar/fmhmeljlbkjibmimlgnijjffmjgbabch</a></td><td>June 19, 2026</td><td>Local-first/open-source positioning and Markdown/JSON export pattern.</td></tr>
+          <tr><td>9</td><td>Twitter Bookmarks Downloader - Export X Bookmarks - Chrome Web Store</td><td><a href="https://chromewebstore.google.com/detail/twitter-bookmarks-downloa/nfkbcnohjlfnclnhhblgjafldimikcdb">chromewebstore.google.com/detail/twitter-bookmarks-downloa/nfkbcnohjlfnclnhhblgjafldimikcdb</a></td><td>June 19, 2026</td><td>CSV/JSON/XLSX export, media download, privacy-first export copy, rating/users.</td></tr>
+          <tr><td>10</td><td>PostZaper - Bookmark Manager for Twitter, LinkedIn &amp; Articles - Chrome Web Store</td><td><a href="https://chromewebstore.google.com/detail/postzaper-bookmark-manage/ecfbdcdbijkebgkjjdolbnapnkdpfoid">chromewebstore.google.com/detail/postzaper-bookmark-manage/ecfbdcdbijkebgkjjdolbnapnkdpfoid</a></td><td>June 19, 2026</td><td>Broad social-bookmark capture and creator/marketer positioning.</td></tr>
+          <tr><td>11</td><td>X Bookmark Manager &amp; Exporter (Twitter) - Chrome Web Store</td><td><a href="https://chromewebstore.google.com/detail/x-bookmark-manager-export/icfbbnailmppcdkogdfbbfpnncngnnli">chromewebstore.google.com/detail/x-bookmark-manager-export/icfbbnailmppcdkogdfbbfpnncngnnli</a></td><td>June 19, 2026</td><td>XArchive pricing, search/tag/delete/export positioning, rating/users.</td></tr>
+          <tr><td>12</td><td>XSaved - Bookmark Manager for X (Twitter) - Chrome Web Store</td><td><a href="https://chromewebstore.google.com/detail/xsaved-%E2%80%94-bookmark-manager/nefnhjnjkpimffifpbpdogjoglpjihdn">chromewebstore.google.com/detail/xsaved-bookmark-manager/nefnhjnjkpimffifpbpdogjoglpjihdn</a></td><td>June 19, 2026</td><td>Local-first X manager copy, tweet preservation, notes, bulk management, users/rating.</td></tr>
+          <tr><td>13</td><td>Twitter Bookmarks Search Pro - Chrome Web Store</td><td><a href="https://chromewebstore.google.com/detail/twitter-bookmarks-search/dkbgchomhfloaigmpolnceedidoolmbh">chromewebstore.google.com/detail/twitter-bookmarks-search/dkbgchomhfloaigmpolnceedidoolmbh</a></td><td>June 19, 2026</td><td>Minimal local full-text search positioning.</td></tr>
+          <tr><td>14</td><td>Twimark: Twitter Bookmark to NotebookLM AI Exporter - Chrome Web Store</td><td><a href="https://chromewebstore.google.com/detail/twimark-twitter-bookmark/cnhlcmnabmfahcddbgfacjidkebamdbe">chromewebstore.google.com/detail/twimark-twitter-bookmark/cnhlcmnabmfahcddbgfacjidkebamdbe</a></td><td>June 19, 2026</td><td>NotebookLM, AI-ready Markdown and PKM keyword pattern.</td></tr>
+          <tr><td>15</td><td>X Vault - Smart Bookmark Manager for X - Chrome Web Store</td><td><a href="https://chromewebstore.google.com/detail/x-vault-smart-bookmark-ma/dpdilcdbgiebdlabiepglffeachlghoj">chromewebstore.google.com/detail/x-vault-smart-bookmark-ma/dpdilcdbgiebdlabiepglffeachlghoj</a></td><td>June 19, 2026</td><td>Categories, notes, Notion sync, timeline view, free/pro positioning.</td></tr>
+          <tr><td>16</td><td>Instapaper - Chrome Web Store</td><td><a href="https://chromewebstore.google.com/detail/instapaper/ldjkgaaoikpmhmkelcgkgacicjfbofhh">chromewebstore.google.com/detail/instapaper/ldjkgaaoikpmhmkelcgkgacicjfbofhh</a></td><td>June 19, 2026</td><td>Read-later incumbent title, user count, rating, offline reading promise.</td></tr>
+          <tr><td>17</td><td>Matter - Chrome Web Store</td><td><a href="https://chromewebstore.google.com/detail/matter/knjbgabkeojmfdhindppcmhhfiembkeb">chromewebstore.google.com/detail/matter/knjbgabkeojmfdhindppcmhhfiembkeb</a></td><td>June 19, 2026</td><td>Read-later app positioning across articles, newsletters, Twitter threads and PDFs.</td></tr>
+          <tr><td>18</td><td>ReadNook - Reader Mode, Read Later &amp; Save Articles - Chrome Web Store</td><td><a href="https://chromewebstore.google.com/detail/readnook-reader-mode-read/nbdppaibjlhlghililclkcaoepodhdae">chromewebstore.google.com/detail/readnook-reader-mode-read/nbdppaibjlhlghililclkcaoepodhdae</a></td><td>June 19, 2026</td><td>Local-first Pocket replacement, offline article save, one-time Pro, users/rating.</td></tr>
+          <tr><td>19</td><td>Voice Memo &amp; Read it Later - Chrome Web Store</td><td><a href="https://chromewebstore.google.com/detail/voice-memo-read-it-later/eggggllbaekiicgfiognccfkmimefkhj">chromewebstore.google.com/detail/voice-memo-read-it-later/eggggllbaekiicgfiognccfkmimefkhj</a></td><td>June 19, 2026</td><td>AI summaries, semantic search, Pocket/Omnivore alternative language.</td></tr>
+          <tr><td>20</td><td>Omnivore - Self Hosted - Chrome Web Store</td><td><a href="https://chromewebstore.google.com/detail/omnivore-self-hosted/lbikobacedbbjfoglgnildlciiiddcnl">chromewebstore.google.com/detail/omnivore-self-hosted/lbikobacedbbjfoglgnildlciiiddcnl</a></td><td>June 19, 2026</td><td>Self-hosted read-later positioning and user count.</td></tr>
+          <tr><td>21</td><td>Quick Pocket - Chrome Web Store</td><td><a href="https://chromewebstore.google.com/detail/quick-pocket/gccdebcpenpmmnaedfmkdhpbnihcdedh?hl=en">chromewebstore.google.com/detail/quick-pocket/gccdebcpenpmmnaedfmkdhpbnihcdedh</a></td><td>June 19, 2026</td><td>Pocket shutdown reaction and successor-copy pattern.</td></tr>
+          <tr><td>22</td><td>Pocket has shut down - Mozilla Support</td><td><a href="https://support.mozilla.org/en-US/kb/future-of-pocket">support.mozilla.org/en-US/kb/future-of-pocket</a></td><td>June 19, 2026</td><td>Pocket shutdown dates, app/extension availability, API/export closure.</td></tr>
+          <tr><td>23</td><td>Bookmark Sidebar - Chrome Web Store</td><td><a href="https://chromewebstore.google.com/detail/bookmark-sidebar/jdbnofccmhefkmjbkkdkfiicjkgofkdh">chromewebstore.google.com/detail/bookmark-sidebar/jdbnofccmhefkmjbkkdkfiicjkgofkdh</a></td><td>June 19, 2026</td><td>Sidebar access-surface pattern, user count, rating, privacy disclosure.</td></tr>
+          <tr><td>24</td><td>Bonjourr - Minimalist New Tab Page - Chrome Web Store</td><td><a href="https://chromewebstore.google.com/detail/bonjourr-%C2%B7-minimalist-new/dlnejlppicbjfcfcedcflplfjajinajd">chromewebstore.google.com/detail/bonjourr-minimalist-new/dlnejlppicbjfcfcedcflplfjajinajd</a></td><td>June 19, 2026</td><td>New tab design proof, user count, rating, privacy/open-source positioning.</td></tr>
+          <tr><td>25</td><td>Stackable - Bookmark and Tab Manager - Chrome Web Store</td><td><a href="https://chromewebstore.google.com/detail/stackable-bookmark-and-ta/coonllecklpiahhjkmnjidiaccefopli">chromewebstore.google.com/detail/stackable-bookmark-and-ta/coonllecklpiahhjkmnjidiaccefopli</a></td><td>June 19, 2026</td><td>Browser home-screen analogy, bookmarks/tabs/new-tab positioning.</td></tr>
+          <tr><td>26</td><td>Tabme - Tab &amp; Bookmark Manager - Chrome Web Store</td><td><a href="https://chromewebstore.google.com/detail/tabme-%E2%80%94-tab-bookmark-mana/jnhiookaaldadiimlgncedhkpmhlmmip">chromewebstore.google.com/detail/tabme-tab-bookmark-mana/jnhiookaaldadiimlgncedhkpmhlmmip</a></td><td>June 19, 2026</td><td>New-tab bookmark dashboard, tags, import/export, side panel, rating/users.</td></tr>
+          <tr><td>27</td><td>Tab Manager by Workona - Chrome Web Store</td><td><a href="https://chromewebstore.google.com/detail/tab-manager-by-workona/ailcmbgekjpnablpdkmaaccecekgdhlh">chromewebstore.google.com/detail/tab-manager-by-workona/ailcmbgekjpnablpdkmaaccecekgdhlh</a></td><td>June 19, 2026</td><td>Enterprise/session manager proof points and security language.</td></tr>
+          <tr><td>28</td><td>Session Buddy - Tab &amp; Bookmark Manager - Chrome Web Store</td><td><a href="https://chromewebstore.google.com/detail/session-buddy-tab-bookmar/edacconmaakjimmfgnblocblbcdcpbko">chromewebstore.google.com/detail/session-buddy-tab-bookmar/edacconmaakjimmfgnblocblbcdcpbko</a></td><td>June 19, 2026</td><td>Large local-first session manager, import/export formats, rating/users.</td></tr>
+          <tr><td>29</td><td>OneTab - Chrome Web Store</td><td><a href="https://chromewebstore.google.com/detail/onetab/chphlpgkkbolifaimnlloiipkdnihall">chromewebstore.google.com/detail/onetab/chphlpgkkbolifaimnlloiipkdnihall</a></td><td>June 19, 2026</td><td>Specific benefit claim, user count, rating, privacy disclosure.</td></tr>
+          <tr><td>30</td><td>Twitter Saver: Bookmarks on New Tab, Search &amp; Export - Chrome Web Store</td><td><a href="https://chromewebstore.google.com/detail/twitter-saver-bookmarks-o/acpkgdfhoaalmnhjifhneghcgfnjkglo">chromewebstore.google.com/detail/twitter-saver-bookmarks-o/acpkgdfhoaalmnhjifhneghcgfnjkglo</a></td><td>June 19, 2026</td><td>Totem current listing baseline for title, description, users, rating, privacy disclosure.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</main>
+</body>
+</html>

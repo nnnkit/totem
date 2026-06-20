@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Paywall UX — Moments, Copy, Anti-Patterns · Totem Premium</title>
+<meta name="generator" content="Kami">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="topbar">
+  <a class="wordmark" href="index.html">Totem <span>Premium Conversion</span></a>
+  <div class="topbar-meta">Research &amp; execution plan · v1.0 · 2026.06</div>
+</header>
+<div class="layout">
+<nav class="sidebar" aria-label="Sections">
+<a class="side-brand" href="index.html">Totem <span>Premium</span></a>
+<div class="side-group"><div class="side-group-label">Overview</div>
+<a class="side-link" href="index.html">Home</a>
+</div>
+<div class="side-group"><div class="side-group-label">The Plan</div>
+<a class="side-link" href="02-the-model.html">The Model</a>
+<a class="side-link" href="03-features.html">Features &amp; Limits</a>
+<a class="side-link" href="04-tech-stack.html">Tech Stack</a>
+<a class="side-link" href="05-payments.html">Payment Gateway</a>
+<a class="side-link" href="06-license.html">License Architecture</a>
+<a class="side-link" href="07-system-changes.html">System Changes</a>
+<a class="side-link" href="08-compliance.html">CWS Compliance</a>
+<a class="side-link" href="09-paywall-ux.html" aria-current="page">Paywall UX</a>
+<a class="side-link" href="10-rollout.html">Rollout &amp; Decisions</a>
+</div>
+<div class="side-group"><div class="side-group-label">Review</div>
+<a class="side-link" href="11-adversarial-review.html">Adversarial Review</a>
+</div>
+<div class="side-group"><div class="side-group-label">Appendices</div>
+<a class="side-link" href="appendix-a-data-sync.html">A · Data &amp; Sync</a>
+<a class="side-link" href="appendix-b-features-export.html">B · Features &amp; Export</a>
+<a class="side-link" href="appendix-c-build-release.html">C · Build &amp; Release</a>
+<a class="side-link" href="appendix-d-site-distribution.html">D · Site &amp; Dist.</a>
+<a class="side-link" href="appendix-e-ui-state-upsell.html">E · UI &amp; Upsell</a>
+<a class="side-link" href="appendix-f-payments-compared.html">F · Gateways</a>
+<a class="side-link" href="appendix-g-license-arch.html">G · License &amp; DRM</a>
+<a class="side-link" href="appendix-h-market-discourse.html">H · Market Discourse</a>
+<a class="side-link" href="appendix-i-cws-policy-ux.html">I · CWS Policy</a>
+</div>
+<div class="side-group"><div class="side-group-label">Reference</div>
+<a class="side-link" href="appendix-j-references.html">J · References</a>
+</div>
+</nav>
+<main class="content">
+<div class="chapter-eyebrow">09 · UX</div><h1 class="page-title">Paywall UX — Moments, Copy, Anti-Patterns</h1><p class="lead">The paywall is the conversion surface, but for this audience it is also a trust surface. Frame Pro as <span class="hl">funding the work, not ransoming a feature</span> — and every moment, every line of copy, and every thing you refuse to do follows from that frame.</p>
+
+<h2 id="the-reference-model-obsidian-catalyst">The reference model — Obsidian Catalyst</h2>
+
+<p>The model to copy is <strong>Obsidian Catalyst</strong>: "your data stays local, the app is free, Pro is a one-time unlock that funds the work." Pro is framed partly as <em>support</em>, not feature ransom. For the subscription-fatigued, anti-DRM, pro-ownership audience (r/nosurf, r/selfhosted, HN, PKM), the absence of coercion is itself the sell.</p>
+
+<div class="callout">Frame Pro partly as support, not feature ransom. The pitch is "fund the export, search, and deleted-tweet preservation work" — not "pay to unlock what we are holding hostage."</div>
+
+<h2 id="upgrade-moments-ranked-by-intent">Upgrade moments — ranked by intent</h2>
+
+<p>Each moment fires <strong>once</strong>, <strong>contextually</strong>, is <strong>dismissible</strong>, and only after the user has felt the value. Ordered from highest to lowest intent:</p>
+
+<ol>
+<li><strong>At export, after a free preview</strong> (primary). Let free users export or preview the first ~25 of <em>their own</em> bookmarks, then: <em>"Export all 3,412 &rarr; Unlock Pro ($14 founders / $19)."</em> Highest intent.</li>
+<li><strong>When a deleted tweet is opened</strong> (secondary, emotional): <em>"This tweet was deleted on X. Totem kept your copy. Pro preserves every deleted bookmark automatically."</em></li>
+<li><strong>On a bulk op</strong> — they have already invested effort selecting.</li>
+<li><strong>On advanced filter use</strong> — show filters lock-badged.</li>
+<li><strong>On first note / annotation.</strong></li>
+</ol>
+
+<p>Plus one quiet, persistent <strong>"Upgrade / Support Totem"</strong> entry in Settings. <span class="hl">Never auto-popup on new-tab load; never re-prompt a dismissed context.</span></p>
+
+<h2 id="copy-that-converts-here">Copy that converts here</h2>
+
+<ul>
+<li><strong>Headline the model, not the price:</strong> <em>"Totem Pro — one-time unlock. No subscription. Ever."</em></li>
+<li><strong>Pre-empt "no server, why pay?":</strong> <em>"You're paying for the work, not infrastructure. Totem stays free and open source; Pro funds development. Your data never leaves your machine."</em></li>
+<li><strong>Reassure on the check:</strong> <em>"Verified by a one-time online license check (email + key only). Your bookmarks never leave your device."</em></li>
+<li><strong>Ownership:</strong> <em>"Buy once, use on up to 5 of your browsers."</em> (or "all your browsers" if you ship an unlimited device limit).</li>
+</ul>
+
+<h2 id="anti-patterns-that-nuke-goodwill">Anti-patterns that nuke goodwill</h2>
+
+<p>These are the <span class="tag">DON'T</span> list — each one specifically corrodes trust with this audience:</p>
+
+<ul>
+<li>Nagging after dismissal.</li>
+<li>Clawing back currently-free features (&rarr; grandfather instead).</li>
+<li>Card-required "free trials."</li>
+<li>Fake scarcity / countdown.</li>
+<li>Surprise paywall with no prior disclosure.</li>
+<li>Any telemetry creep.</li>
+</ul>
+
+<div class="takeaway"><div class="takeaway-label">DATA</div> Upgrade-prompt copy that lists the value proposition converts <strong>~4x</strong> a bare alert — 2% &rarr; 8% in real first-party data.</div>
+<nav class="pager"><a class="pager-link prev" href="08-compliance.html"><span class="pager-eyebrow">Previous</span><span class="pager-title">Chrome Web Store Compliance</span></a><a class="pager-link next" href="10-rollout.html"><span class="pager-eyebrow">Next</span><span class="pager-title">Phased Rollout &amp; Open Decisions</span></a></nav>
+<footer class="page-foot">Totem · premium-monetization research · compiled with kami</footer>
+</main>
+<aside class="toc"><div class="toc-label">On this page</div><a href="#the-reference-model-obsidian-catalyst">The reference model — Obsidian Catalyst</a>
+<a href="#upgrade-moments-ranked-by-intent">Upgrade moments — ranked by intent</a>
+<a href="#copy-that-converts-here">Copy that converts here</a>
+<a href="#anti-patterns-that-nuke-goodwill">Anti-patterns that nuke goodwill</a></aside>
+</div>
+</body>
+</html>

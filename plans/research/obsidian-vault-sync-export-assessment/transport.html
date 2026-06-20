@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="generator" content="Kami">
+  <meta name="description" content="Totem cannot detect which sync engine watches a vault folder. The safe-write rules that keep iCloud, Dropbox, Git, and Obsidian Sync from corrupting or duplicating notes.">
+  <title>Sync-transport safety · Totem × Obsidian Vault Sync</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="topbar-brand" href="index.html"><span class="tick"></span> Totem × Obsidian Sync</a>
+    <span class="topbar-meta">Research v2 · Jun 2026</span>
+  </header>
+
+  <div class="shell">
+    <aside class="sidebar" aria-label="Section navigation">
+      <div class="nav-group">
+        <p class="nav-group-title">Overview</p>
+        <a class="nav-link" href="index.html">Overview &amp; recommendation</a>
+      </div>
+      <div class="nav-group">
+        <p class="nav-group-title">Findings</p>
+        <a class="nav-link" href="landscape.html">The landscape</a>
+        <a class="nav-link" href="mechanisms.html">Mechanism scorecard</a>
+        <a class="nav-link" href="precedent.html">What the best tools do</a>
+        <a class="nav-link" href="transport.html" aria-current="page">Sync-transport safety</a>
+      </div>
+      <div class="nav-group">
+        <p class="nav-group-title">Build it</p>
+        <a class="nav-link" href="design.html">Vault-sync design</a>
+        <a class="nav-link" href="changes.html">Concrete changes</a>
+      </div>
+      <div class="nav-group">
+        <p class="nav-group-title">Reference</p>
+        <a class="nav-link" href="sources.html">Evidence &amp; sources</a>
+      </div>
+    </aside>
+
+    <main class="content">
+      <article class="prose">
+        <p class="eyebrow">Findings · 04</p>
+        <h1>Sync transport: assume the worst, write safe</h1>
+        <p class="lede">Totem cannot detect whether iCloud, Dropbox, Git, Syncthing, or Obsidian Sync is watching the folder it writes to. So it must write in a way that survives all of them — the safe-write rules below are not optional polish, they are the contract.</p>
+        <div class="page-meta">
+          <span>Findings</span>
+          <span>Risk &amp; mitigation</span>
+        </div>
+
+        <nav class="toc" aria-label="On this page">
+          <p class="toc-title">On this page</p>
+          <ul>
+            <li><a href="#transports">The transports Totem can't see</a></li>
+            <li><a href="#rules">The safe-write rules</a></li>
+          </ul>
+        </nav>
+
+        <section>
+          <h2 id="transports">The transports Totem can't see</h2>
+          <p>Each sync engine a user might run behind their vault has a different failure mode. Totem writes blind to all of them, so the design must assume the harshest combination.</p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Transport</th><th>Behavior to survive</th><th>Risk if naive</th></tr>
+              </thead>
+              <tbody>
+                <tr><td><strong>iCloud Drive</strong></td><td>May evict files to the cloud and download on access; renames can lag.</td><td>A partial read of an evicted file looks like an empty note.</td></tr>
+                <tr><td><strong>Dropbox</strong></td><td>Watches the folder live; uploads on every byte change.</td><td>Mid-write reads ship a half-written file to every device.</td></tr>
+                <tr><td><strong>Obsidian Sync</strong></td><td>Indexes and syncs on file-change events.</td><td>Rapid rewrites churn the sync log and can trigger conflict copies.</td></tr>
+                <tr><td><strong>Git (Obsidian Git)</strong></td><td>Commits on a schedule; diffs every line.</td><td>Reordered YAML keys or timestamp churn create noisy, useless diffs.</td></tr>
+                <tr><td><strong>Syncthing</strong></td><td>Bidirectional; resolves conflicts by creating <code>.sync-conflict</code> copies.</td><td>Two devices writing the same path spawn duplicate conflict files.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section>
+          <h2 id="rules">The safe-write rules</h2>
+          <p>Six rules make a write survive any of the transports above. They are cheap to implement and they are the difference between a sync that users trust and one that quietly corrupts notes.</p>
+          <ol>
+            <li><strong>Write atomically.</strong> Write to a temp file in the same directory, then rename into place. A watcher never sees a half-written note — it sees the old file, then the new one.</li>
+            <li><strong>Make writes deterministic.</strong> Stable YAML key order, stable formatting, no volatile timestamps in the body. Re-rendering an unchanged item must produce byte-identical output so Git and Sync see no change.</li>
+            <li><strong>Skip no-op writes.</strong> Compare a content hash before writing; if nothing changed, don't touch the file. This is what keeps Dropbox and Obsidian Sync quiet.</li>
+            <li><strong>Own a subfolder, never the vault root.</strong> Write only inside a Totem-owned folder so a conflict copy or a stray file can never collide with the user's own notes.</li>
+            <li><strong>Never delete.</strong> Removing a bookmark in Totem must not delete the vault note. Orphans are the user's to clean up; silent deletion is unforgivable.</li>
+            <li><strong>Keep the manifest canonical in IndexedDB, not the vault.</strong> The source of truth for what Totem has written lives in the extension, so a sync conflict on a note never corrupts the index of what exists.</li>
+          </ol>
+        </section>
+
+        <nav class="pager" aria-label="Page navigation">
+          <a class="pager-prev" href="precedent.html">
+            <span class="dir">Previous</span>
+            <span class="ttl">What the best tools do</span>
+          </a>
+          <a class="pager-next" href="design.html">
+            <span class="dir">Next</span>
+            <span class="ttl">Vault-sync design</span>
+          </a>
+        </nav>
+
+        <p class="colophon">Totem × Obsidian vault-sync assessment · v2 · designed with the kami system.</p>
+      </article>
+    </main>
+  </div>
+</body>
+</html>
