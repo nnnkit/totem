@@ -48,39 +48,41 @@
 </div>
 </nav>
 <main class="content">
-<div class="chapter-eyebrow">06 · License</div><h1 class="page-title">License &amp; Entitlement Architecture</h1><p class="lead">A paid unlock has to survive resets, account switches, and offline launches while never violating the MV3 ban on remote code. The architecture leans on seams that already exist: a service-worker trust boundary, a reactive snapshot channel, and pure local crypto.</p>
+<div class="chapter-eyebrow">06 · License</div><h1 class="page-title">License &amp; Entitlement Architecture</h1><p class="lead">A paid unlock has to survive resets, account switches, and offline launches while never violating the MV3 ban on remote code. The architecture leans on seams that already exist: a service-worker trust boundary, a reactive snapshot channel, and a cached online-validate result.</p>
 
 <h2 id="5-1-end-to-end-flow">5.1 End-to-end flow</h2>
 
-<p>From the buyer's click to the gated feature flipping on, seven stages carry a signed key through purchase, verification, persistence, and propagation.</p>
+<p>From the buyer's click to the gated feature flipping on, seven stages carry the license key through purchase, validation, caching, and propagation.</p>
 
 <pre><code>1. PURCHASE   Buyer clicks "Upgrade — $19 lifetime" in the extension
               → opens usetotem.xyz/pricing → MoR hosted checkout
               (Lemon Squeezy / Polar = merchant of record; card + VAT handled)
                     │
-2. ISSUE      On paid order, Keyforge / serverless signer produces an
-              Ed25519-signed key:  base64(payload).base64(sig)
-              payload = { v, email, plan:"pro-lifetime", order, exp:null, feat:[...] }
-              Emailed to buyer + shown on usetotem.xyz/upgrade/success
+2. ISSUE      On paid order, the MoR mints a license key and emails it
+              to the buyer + shows it on usetotem.xyz/upgrade/success.
+              (No separate signer; the provider owns issuance.)
                     │
 3. ACTIVATE   Buyer returns to extension. Three layered paths:
               (a) one-click: success page → externally_connectable → onMessageExternal
               (b) deep link: chrome-extension://&lt;id&gt;/newtab.html?license=&lt;key&gt;
               (c) paste-a-key fallback in Settings (always shipped)
                     │
-4. VERIFY     Service worker: ed.verify(sig, payload, EMBEDDED_PUBKEY) + exp check.
-              Pure local crypto. Zero network. MV3-safe (no remote code).
+4. VALIDATE   Service worker calls the provider's validate/activate endpoint
+              ONCE with { key, instanceId }. Receives JSON { valid, plan, ... }.
+              Counts toward the device limit. MV3-safe (remote DATA, not code).
                     │
 5. PERSIST    SW writes CS_ENTITLEMENT to chrome.storage.local
-              { isPro, plan, email, order, feat, verifiedAt } + raw key.
+              { isPro, plan, email, order, instanceId, validatedAt } + raw key.
               Stamped into RuntimeSnapshot.
                     │
 6. PROPAGATE  CS_RUNTIME_STATE_V2 change → chrome.storage.onChanged →
               applyRuntimeSnapshot → Zustand → useIsPro() → every open
               tab/reader flips to Pro on the same event-loop tick.
                     │
-7. GATES      Export / preservation / bulk / filters / annotations read isPro.
-              Re-verified from the stored key on each launch (offline, cheap).</code></pre>
+7. GATES      Export / preservation / bulk / filters / annotations read isPro
+              FROM THE CACHE on each launch (no network). A quiet background
+              re-validate (~weekly) catches refunds; it FAILS OPEN — a failed
+              re-check never revokes Pro, so an outage can't lock out a buyer.</code></pre>
 
 <h2 id="5-2-where-the-entitlement-lives-resolving-the-storage-tension">5.2 Where the entitlement lives — resolving the storage tension</h2>
 
@@ -88,7 +90,7 @@
 
 <h3>Authoritative — SW-owned write</h3>
 
-<p>The SW writes <span class="hl"><code>CS_ENTITLEMENT</code></span> (<code>"totem_entitlement"</code>) to <code>chrome.storage.local</code>, declared in <code>src/service-worker/storage-keys-sw.ts</code> → the existing <code>storage-invariants.test.ts</code> makes the SW the <em>only</em> writer for free. The SW is the right owner because it's the trust boundary and the thing that verifies the signature.</p>
+<p>The SW writes <span class="hl"><code>CS_ENTITLEMENT</code></span> (<code>"totem_entitlement"</code>) to <code>chrome.storage.local</code>, declared in <code>src/service-worker/storage-keys-sw.ts</code> → the existing <code>storage-invariants.test.ts</code> makes the SW the <em>only</em> writer for free. The SW is the right owner because it's the trust boundary and the thing that runs the validate call and caches its result.</p>
 
 <h3>Reset-surviving</h3>
 
@@ -117,11 +119,11 @@
 
 <h2 id="5-3-mv3-compliance-the-load-bearing-constraint">5.3 MV3 compliance — the load-bearing constraint</h2>
 
-<p>MV3 bans <strong>remotely-hosted code</strong>, not remote <strong>data</strong>. Both options here are valid.</p>
+<p>MV3 bans <strong>remotely-hosted code</strong>, not remote <strong>data</strong> — and license validation is squarely the allowed kind.</p>
 
 <ul>
-<li><span class="tag">VERIFIED</span> <strong>Pure local crypto</strong> (verify a pasted signed key) → no network at all → trivially compliant.</li>
-<li><span class="tag">VERIFIED</span> <strong>Data fetch</strong> (call an MoR validate endpoint → receive JSON) → fetching <em>data</em>, explicitly allowed.</li>
+<li><span class="tag">VERIFIED</span> <strong>Data fetch</strong> (call the provider's validate endpoint → receive JSON <code>{ valid, plan, ... }</code>) → fetching <em>data</em>, explicitly allowed. This is the path we ship.</li>
+<li><span class="tag">VERIFIED</span> The validate result only <strong>toggles a local flag</strong>; it never returns code to run.</li>
 </ul>
 
 <p>What you must <strong>never</strong> do: fetch a JS "validator" or a script that <em>implements</em> a Pro feature and <code>eval</code>/import it. All Pro feature logic ships in the package and is merely <em>toggled</em> by <code>isPro</code>.</p>

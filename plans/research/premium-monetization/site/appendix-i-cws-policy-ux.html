@@ -152,7 +152,7 @@
 <li>Checkout happens off-extension (web page / processor-hosted), not inside an extension UI flow that pretends to be a native purchase.</li>
 <li>License validation returns <strong>JSON / data only</strong> (signed token preferred). No fetched JS/WASM, no <code>eval</code>, no server-command interpreter.</li>
 <li>All Pro feature <em>logic</em> ships inside the extension package; the license result only flips local feature flags.</li>
-<li>Prefer an offline-verifiable signed license (Ed25519 / JWT) cached in <code>chrome.storage.local</code> so Pro keeps working offline.</li>
+<li>Validate the key online once, then <strong>cache the result</strong> in <code>chrome.storage.local</code> and read it locally — with a fail-open background re-check — so Pro keeps working without a per-launch network call.</li>
 </ul>
 
 <h3>Single purpose / permissions</h3>
@@ -199,7 +199,7 @@
 <li><strong>Forced action / fake "free trial" that demands a card up front.</strong> This crowd reads a card-required trial as a trap. If you trial Pro, make it <strong>no-card</strong> or just use a generous free tier instead.</li>
 <li><strong>Dark-pattern checkout</strong> (hidden recurring charge, pre-checked add-ons, confusing "cancel"). For a one-time purchase this is mostly avoided — but make crystal clear it is one-time, not a sub.</li>
 <li><strong>Surprise paywall at the moment of need with no prior disclosure</strong> (also a CWS deceptive-tactics risk).</li>
-<li><strong>Telemetry / "phone home" creep.</strong> Any new network call is scrutinized. Be loud that the license check sends only email + key, never bookmarks; ideally make it offline-verifiable.</li>
+<li><strong>Telemetry / "phone home" creep.</strong> Any new network call is scrutinized. Be loud that the license check sends only email + key (+ a device id), never bookmarks, and runs only at activation plus an occasional background re-check — not on every launch.</li>
 <li><strong>Manipulative urgency / scarcity</strong> ("only 3 left!") — reads as scammy to a technical audience. The founders price is fine <em>if framed honestly</em> ("$14 founders price, going to $19" — a real, time-boxed thing, not a fake countdown).</li>
 </ul>
 

@@ -65,19 +65,24 @@
 <td>MoR remits global VAT/GST, so the solo dev never registers for tax anywhere. No Totem billing server.</td>
 </tr>
 <tr>
-<td>License issuance</td>
-<td><strong>Keyforge</strong> (turnkey, signs Ed25519/JWT, plugs into LS/Polar) <strong>or</strong> a tiny serverless Ed25519 signer fired by the MoR webhook</td>
-<td>Produces an <strong>offline-verifiable signed key</strong>; the private key never touches the extension.</td>
+<td>License keys</td>
+<td><strong>Provider-issued license keys</strong> (Lemon Squeezy / Polar)</td>
+<td>The MoR mints and emails the key on a paid order — <strong>no separate signer, no key-management vendor, no private signing key to host.</strong></td>
 </tr>
 <tr>
 <td>License verification</td>
-<td><strong><code>@noble/ed25519</code></strong> in the service worker, public key embedded at build time</td>
-<td>Pure local crypto. ~5KB, audited, pairs with the <code>@noble/hashes 2.2.0</code> already present. <strong>No network, no new host permission.</strong></td>
+<td><strong>Online validate</strong> via the provider's license API — once at activation + a quiet periodic background re-check</td>
+<td>Validating <em>data</em> (JSON) is MV3-legal. Result is <strong>cached in <code>CS_ENTITLEMENT</code></strong> and read locally thereafter; <strong>fail-open</strong> on network errors. Only key + email leave the device.</td>
+</tr>
+<tr>
+<td>Device management</td>
+<td>Provider <strong>activation limit (~5)</strong> + self-serve <strong>deactivate</strong> page (its customer portal)</td>
+<td>Resolves multi-browser activation: a real person's few devices are fine; mass key-sharing is capped. Counting requires the online check.</td>
 </tr>
 <tr>
 <td>Entitlement storage</td>
 <td>New SW-owned <code>chrome.storage.local</code> key <code>CS_ENTITLEMENT</code></td>
-<td>Single-writer, reset-surviving, rides the existing reactive snapshot channel.</td>
+<td>Single-writer, reset-surviving, rides the existing reactive snapshot channel. Holds the cached validate result.</td>
 </tr>
 <tr>
 <td>Pricing/license pages</td>
@@ -87,13 +92,13 @@
 </tbody>
 </table>
 
-<h2 id="no-new-runtime-dependency-on-a-third-party-server">No new runtime dependency on a third-party server</h2>
+<h2 id="no-totem-server">No Totem server</h2>
 
-<p>The MoR/signer is touched <strong>only by the buyer's browser at checkout</strong> — never by the extension. That is the whole point: it preserves the <span class="hl">"no server" claim verbatim</span>.</p>
+<p>Checkout, tax, key issuance, and device counting all live with the merchant-of-record. The extension talks to the <strong>provider's</strong> API (one host permission), never to a Totem-run backend. The MoR's <em>secret</em> API key stays server-side and never enters <code>dist/</code> — the validate call a public client makes needs no secret.</p>
 
 <div class="takeaway">
 <div class="takeaway-label">NET EFFECT</div>
-The extension makes zero license network calls once activated. Every new moving part lives at issuance/checkout time, in the buyer's browser — not in <code>dist/</code>, not in the runtime trust chain.
+The only network the extension does for licensing is a small <strong>validate</strong> call at activation and an occasional background re-check — never a per-launch phone-home, and never anything touching bookmark data. Verify online, but read from cache and fail open, so an outage can't lock out a buyer.
 </div>
 <nav class="pager"><a class="pager-link prev" href="03-features.html"><span class="pager-eyebrow">Previous</span><span class="pager-title">Free vs Pro — Features &amp; Limits</span></a><a class="pager-link next" href="05-payments.html"><span class="pager-eyebrow">Next</span><span class="pager-title">Payment Gateway — The Decision</span></a></nav>
 <footer class="page-foot">Totem · premium-monetization research · compiled with kami</footer>

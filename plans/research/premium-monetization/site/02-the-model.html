@@ -55,11 +55,11 @@
 <ol>
 <li><strong>Model: Freemium, one build, runtime-gated.</strong> The free tier stays fully functional forever; Pro is a one-time lifetime unlock. This is the only model the pipeline (single artifact, single CWS listing) and the audience (subscription-averse, anti-DRM) actually support.</li>
 <li><strong>The work is packaging, not building.</strong> <strong>5 of the 6</strong> proposed Pro features already exist and ship for free today — export, deleted-tweet preservation (the hydration engine), advanced search filters, annotations, thread-aware capture. Only <strong>bulk ops</strong> is net-new. The real engineering is a <em>single clean entitlement boundary</em>, not new features.</li>
-<li><strong>Payments: a merchant-of-record</strong> (Lemon Squeezy or Polar) for checkout, so global VAT/tax is handled and there's no Totem billing server. Verify with <strong>offline Ed25519-signed license keys</strong> (<code>@noble/ed25519</code>, which pairs with the <code>@noble/hashes</code> already in the repo) so the extension makes <strong>zero license network calls</strong> — "no server, works offline, nothing can shut down" stays literally true <em>once activated</em> (checkout itself still needs the MoR online).</li>
+<li><strong>Payments: a merchant-of-record</strong> (Lemon Squeezy or Polar) for checkout, so global VAT/tax is handled and there's no Totem billing server. Verify with the <strong>provider's license API</strong>: validate the key <strong>online once at activation</strong>, cache the result locally, and read from that cache thereafter — re-checking quietly in the background and <strong>failing open</strong> so a network blip never locks out a paying user. Only the key + email leave the device; bookmark content never does. The provider also counts devices, so multi-browser activation is capped at a generous limit (~5) with self-serve deactivation.</li>
 <li><strong>The #1 risk is the retroactive paywall.</strong> Totem is already free; bolting a paywall onto existing users generates 1-star reviews. <strong>Grandfather every existing install</strong> (full features, free, forever) and only ever gate <em>new</em> installs. This single move neutralizes the biggest execution risk.</li>
 </ol>
 
-<div class="takeaway"><div class="takeaway-label">CORE BET</div> One artifact, gated at runtime; one-time lifetime price; offline-verifiable keys; never claw back from existing users.</div>
+<div class="takeaway"><div class="takeaway-label">CORE BET</div> One artifact, gated at runtime; one-time lifetime price; verify online once and cache (fail-open); never claw back from existing users.</div>
 
 <h2 id="the-premium-model-and-why-this-one">The premium model (and why this one)</h2>
 
@@ -70,7 +70,7 @@
 <tbody>
 <tr><td>Pipeline is single-artifact (one <code>dist/</code>, one zip, one CWS item, version-pinned)</td><td><strong>One build, entitlement-gated at runtime.</strong> Not separate Free/Pro builds.</td></tr>
 <tr><td>Audience = r/nosurf, r/selfhosted, HN, PKM (subscription-fatigued, anti-DRM, pro-ownership)</td><td><strong>One-time "lifetime" unlock</strong>, Obsidian-Catalyst-style "fund the work," not a subscription.</td></tr>
-<tr><td>Local-first, no server, no telemetry is the <em>entire</em> pitch</td><td>Verification must be <strong>local/offline</strong>; no per-launch phone-home.</td></tr>
+<tr><td>Local-first, no Totem server, no telemetry is the pitch</td><td>Verification is a <strong>quick online check at activation</strong>, then <strong>cached and read locally</strong> — no per-launch phone-home; fail-open on outages; bookmarks never leave the device.</td></tr>
 <tr><td>Open-source (code is public on GitHub)</td><td>The check is <strong>patchable by design</strong> — accept it, out-serve the cracker, don't build DRM.</td></tr>
 </tbody>
 </table>

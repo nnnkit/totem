@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="generator" content="Kami">
+  <meta name="description" content="The pattern every durable read-it-later tool uses to write into Obsidian — idempotent, ID-keyed, never-delete — and the Omnivore cautionary tale.">
+  <title>What the best tools do · Totem × Obsidian Vault Sync</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="topbar-brand" href="index.html"><span class="tick"></span> Totem × Obsidian Sync</a>
+    <span class="topbar-meta">Research v2 · Jun 2026</span>
+  </header>
+
+  <div class="shell">
+    <aside class="sidebar" aria-label="Section navigation">
+      <div class="nav-group">
+        <p class="nav-group-title">Overview</p>
+        <a class="nav-link" href="index.html">Overview &amp; recommendation</a>
+      </div>
+      <div class="nav-group">
+        <p class="nav-group-title">Findings</p>
+        <a class="nav-link" href="landscape.html">The landscape</a>
+        <a class="nav-link" href="mechanisms.html">Mechanism scorecard</a>
+        <a class="nav-link" href="precedent.html" aria-current="page">What the best tools do</a>
+        <a class="nav-link" href="transport.html">Sync-transport safety</a>
+      </div>
+      <div class="nav-group">
+        <p class="nav-group-title">Build it</p>
+        <a class="nav-link" href="design.html">Vault-sync design</a>
+        <a class="nav-link" href="changes.html">Concrete changes</a>
+      </div>
+      <div class="nav-group">
+        <p class="nav-group-title">Reference</p>
+        <a class="nav-link" href="sources.html">Evidence &amp; sources</a>
+      </div>
+    </aside>
+
+    <main class="content">
+      <article class="prose">
+        <p class="eyebrow">Findings · 03</p>
+        <h1>What the best read-it-later tools actually do</h1>
+        <p class="lede">Readwise, Matter, and Raindrop converge on one shape: an idempotent, ID-keyed write loop that owns its own subfolder and never deletes what it didn't create. Omnivore shows the failure mode Totem must avoid.</p>
+        <div class="page-meta">
+          <span>Findings</span>
+          <span>Prior art</span>
+        </div>
+
+        <nav class="toc" aria-label="On this page">
+          <p class="toc-title">On this page</p>
+          <ul>
+            <li><a href="#pattern">The pattern to copy</a></li>
+            <li><a href="#advantage">Totem's structural advantage</a></li>
+            <li><a href="#omnivore">The Omnivore cautionary tale</a></li>
+          </ul>
+        </nav>
+
+        <section>
+          <h2 id="pattern">The pattern to copy</h2>
+          <p>Across the durable tools, the write loop is the same. Totem should adopt it wholesale.</p>
+          <div class="grid cols-2">
+            <div class="callout">
+              <strong>The idempotent loop</strong>
+              <ul>
+                <li>Each item maps to a <strong>stable file path keyed by a durable ID</strong> — the same bookmark always lands on the same note.</li>
+                <li>Re-syncing <strong>updates in place</strong> instead of duplicating; the ID, not the title, is the key.</li>
+                <li>The tool writes into <strong>its own subfolder</strong> and treats everything outside it as off-limits.</li>
+                <li>It <strong>never deletes</strong> user files — unsynced items are left alone, not pruned.</li>
+              </ul>
+            </div>
+            <div class="callout">
+              <strong>What rides in the note</strong>
+              <ul>
+                <li>YAML front matter with typed metadata that <strong>Obsidian Properties and Dataview</strong> can query.</li>
+                <li>Highlights and notes rendered into the body, often as <strong>Obsidian callouts</strong>.</li>
+                <li>A clear marker that the file is <strong>tool-managed</strong>, so manual edits and regeneration don't collide.</li>
+                <li>Self-contained, atomic files — <strong>one note per item</strong>, no shared mutable index that races.</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <h2 id="advantage">Totem's structural advantage</h2>
+          <p>Most of these tools must run a cloud backend because their source data lives on their servers. Totem's data is already local in IndexedDB, so it can skip the backend entirely and write straight to the vault from the browser. That is a genuine edge: fewer moving parts, no server uptime to maintain, and nothing between the user's bookmarks and their vault.</p>
+          <div class="note">The niche is narrow but real: people who keep X bookmarks <em>and</em> live in Obsidian. For them, a local-first, no-account, idempotent writer is strictly better than any cloud round-trip — it keeps working even if Totem's servers never exist.</div>
+        </section>
+
+        <section>
+          <h2 id="omnivore">The Omnivore cautionary tale</h2>
+          <p>Omnivore's Obsidian plugin pulled from the Omnivore cloud API. When the company wound down and the API went offline, the plugin stopped working and users' sync broke — the notes they had were fine, but no new ones could arrive and the integration was dead. The lesson is direct: <strong>do not put Totem's servers on the critical path between a user's bookmarks and their vault.</strong> A local-file writer has no such dependency; it works as long as the browser and the folder exist.</p>
+        </section>
+
+        <nav class="pager" aria-label="Page navigation">
+          <a class="pager-prev" href="mechanisms.html">
+            <span class="dir">Previous</span>
+            <span class="ttl">Mechanism scorecard</span>
+          </a>
+          <a class="pager-next" href="transport.html">
+            <span class="dir">Next</span>
+            <span class="ttl">Sync-transport safety</span>
+          </a>
+        </nav>
+
+        <p class="colophon">Totem × Obsidian vault-sync assessment · v2 · designed with the kami system.</p>
+      </article>
+    </main>
+  </div>
+</body>
+</html>

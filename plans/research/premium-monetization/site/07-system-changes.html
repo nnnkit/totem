@@ -61,12 +61,12 @@
 <tbody>
 <tr>
 <td><code>src/service-worker/entitlement.ts</code></td>
-<td>SW handlers: <code>ACTIVATE_LICENSE</code>, <code>VERIFY_LICENSE</code>, <code>GET_ENTITLEMENT</code>. Verifies Ed25519 sig, writes <code>CS_ENTITLEMENT</code>, re-persists snapshot.</td>
+<td>SW handlers: <code>ACTIVATE_LICENSE</code>, <code>VALIDATE_LICENSE</code>, <code>GET_ENTITLEMENT</code>. Calls the provider validate/activate API, caches the result to <code>CS_ENTITLEMENT</code>, re-persists snapshot; runs the background re-check with fail-open.</td>
 <td>sibling of <code>auth.ts</code>/<code>sync.ts</code> handler maps</td>
 </tr>
 <tr>
-<td><code>src/lib/license/verify.ts</code></td>
-<td>Pure <code>verifyLicense(key)</code> &rarr; entitlement | null using <code>@noble/ed25519</code> + embedded pubkey. Unit-testable, no chrome APIs.</td>
+<td><code>src/lib/license/validate.ts</code></td>
+<td>Thin <code>validateLicense(key, instanceId)</code> &rarr; entitlement | null by <code>fetch</code>-ing the provider's validate/activate endpoint and normalizing the JSON. Pure data, no embedded secret. Unit-testable (mock fetch).</td>
 <td>&mdash;</td>
 </tr>
 <tr>
@@ -107,7 +107,7 @@
 </tr>
 <tr>
 <td><code>src/types/messages.ts</code></td>
-<td>Add <code>isPro</code>/<code>entitlement</code> to <code>RuntimeSnapshotData</code>; add <code>ACTIVATE_LICENSE</code>/<code>VERIFY_LICENSE</code>/<code>GET_ENTITLEMENT</code> to the <code>MessageRequest</code> union.</td>
+<td>Add <code>isPro</code>/<code>entitlement</code> to <code>RuntimeSnapshotData</code>; add <code>ACTIVATE_LICENSE</code>/<code>VALIDATE_LICENSE</code>/<code>GET_ENTITLEMENT</code> to the <code>MessageRequest</code> union.</td>
 </tr>
 <tr>
 <td><code>src/service-worker/auth.ts</code></td>
@@ -190,16 +190,16 @@
 <h3><code>public/manifest.json</code></h3>
 
 <ul>
-<li><strong>Offline-signed-key path (recommended):</strong> <em>no new host permission needed</em> &mdash; verification is pure local crypto. For one-click site&rarr;extension activation add <code>externally_connectable: { "matches": ["https://usetotem.xyz/*"] }</code> + an <code>onMessageExternal</code> handler &mdash; <strong>both are greenfield</strong> (neither exists in the codebase today). Note this path still puts the site in the <em>activation</em> trust chain (it hands over the key); pair it with the on-device signature verify so entitlement is never granted on the site's say-so alone. The paste-a-key fallback is the only truly zero-trust-chain path &mdash; always ship it.</li>
-<li><strong>Online-validate fallback path:</strong> add the MoR API origin to <strong><code>optional_host_permissions</code></strong> (request at upgrade time via <code>chrome.permissions.request</code>, so free users never grant it) and, if you tighten CSP, an explicit <code>connect-src 'self' https://x.com &lt;mor-api&gt;</code>.</li>
-<li><strong>Reword <code>description</code>:</strong> the readiness script pins the description string <strong>exactly</strong>, including the literal "no server" phrasing. The offline-key path keeps it true. The online-validate path forces a coordinated change in <strong>three places at once</strong> &mdash; the manifest, <code>expected.description</code> in <code>verify-cws-featured-readiness.mjs</code>, and the dashboard listing/privacy packet &mdash; so "launch on fallback, migrate later" is not free; budget for it. Keep <code>script-src 'self'</code> untouched (never add a payment SDK <code>&lt;script&gt;</code>).</li>
+<li><strong>Add the provider API origin as a host permission.</strong> Prefer <strong><code>optional_host_permissions</code></strong> (request at upgrade time via <code>chrome.permissions.request</code>, so free users never grant it); fall back to <code>host_permissions</code> if the activation flow needs it unconditionally. If you tighten CSP, add an explicit <code>connect-src 'self' https://x.com &lt;provider-api&gt;</code>. Keep <code>script-src 'self'</code> untouched (never add a payment SDK <code>&lt;script&gt;</code>).</li>
+<li><strong>One-click activation (optional):</strong> for site&rarr;extension hand-off add <code>externally_connectable: { "matches": ["https://usetotem.xyz/*"] }</code> + an <code>onMessageExternal</code> handler &mdash; <strong>both are greenfield</strong> (neither exists today). The site only <em>hands over the key</em>; the SW still <strong>validates it with the provider</strong> before granting Pro, so entitlement is never granted on the site's say-so alone. The paste-a-key fallback is always shipped.</li>
+<li><strong>Reword <code>description</code> (required):</strong> the readiness script pins the description string <strong>exactly</strong>, including the literal "no server" phrasing. Validating online makes a network call, so reword to something true under this design &mdash; e.g. "no Totem account; your bookmarks stay on your device" &mdash; and change it in <strong>three places at once</strong>: the manifest, <code>expected.description</code> in <code>verify-cws-featured-readiness.mjs</code>, and the dashboard listing/privacy packet. Budget for this; it is not optional under online validation.</li>
 </ul>
 
 <h3>Build (<code>vite.config.ts</code>, <code>src/vite-env.d.ts</code>)</h3>
 
-<p>Inject the <strong>public</strong> verification key via the existing <code>define</code> mechanism (same pattern as <code>__TOTEM_APP_VERSION__</code>) &mdash; or just commit it as a constant (it's public). <strong>No secret ever enters <code>dist/</code>.</strong> Add <code>@noble/ed25519</code> to dependencies.</p>
+<p>The provider's <strong>validate endpoint URL</strong> (and any publishable product/store id) can be injected via the existing <code>define</code> mechanism (same pattern as <code>__TOTEM_APP_VERSION__</code>) or committed as a constant &mdash; these are public, <strong>no secret ever enters <code>dist/</code></strong> (the MoR's secret API key stays server-side and is never needed for a public validate call).</p>
 
-<div class="callout"><span class="tag">VERIFIED</span> <strong>Build trap:</strong> <code>@noble/ed25519</code> needs SHA-512 wired in manually, and the standard snippet's <code>import { sha512 } from '@noble/hashes/sha512'</code> <strong>does not resolve against <code>@noble/hashes</code> 2.x</strong> (neither <code>/sha512</code> nor <code>/sha2</code> is an exported subpath). Use <span class="hl"><code>import { sha512 } from '@noble/hashes/sha2.js'</code></span> (the <code>.js</code> suffix is required) and register <code>ed.etc.sha512Sync = (...m) =&gt; sha512(ed.etc.concatBytes(...m))</code> <strong>before any <code>verify</code> call</strong> (sync verification needs the sync hook set at SW startup).</div>
+<div class="callout"><span class="tag">NO NEW CRYPTO DEP</span> Because there is no on-device signature verification, <code>@noble/ed25519</code> is <strong>not</strong> added &mdash; and the <code>@noble/hashes</code> 2.x SHA-512 wiring trap that the earlier offline design hit simply does not apply.</div>
 
 <h3>Release pipeline</h3>
 

@@ -428,7 +428,7 @@
 <ol>
   <li><strong>Model — freemium, one build, runtime-gated.</strong> The free tier stays fully functional forever; Pro is a one-time lifetime unlock. It is the only model the single-artifact pipeline and the subscription-averse, anti-DRM audience actually support.</li>
   <li><strong>The work is packaging, not building.</strong> Five of the six proposed Pro features already exist and ship for free today — export, deleted-tweet preservation (the hydration engine), advanced search, annotations, thread-aware capture. Only <span class="tag">NET-NEW</span> bulk operations must be built. The real engineering is one clean entitlement boundary.</li>
-  <li><strong>Payments — merchant-of-record for checkout, offline signed keys for verification.</strong> Lemon Squeezy or Polar handles global VAT so there is no Totem billing server; <code>@noble/ed25519</code> verifies an Ed25519-signed license on-device, so the extension makes zero license network calls and "works offline, nothing can shut down" stays literally true once activated.</li>
+  <li><strong>Payments — merchant-of-record for checkout, online license validation for verification.</strong> Lemon Squeezy or Polar handles global VAT so there is no Totem billing server, and the extension validates the key against the provider's license API <em>once at activation</em>, caches the result locally, and reads it from cache thereafter — re-checking quietly in the background and failing open so an outage never locks out a paying user. Only the key and email leave the device; bookmarks never do. The provider also counts devices, so multi-browser activation is capped at a generous limit (~5) with self-serve deactivation.</li>
   <li><strong>The #1 risk is the retroactive paywall.</strong> Totem is already free; bolting a paywall onto existing users earns 1-star reviews. Grandfather every existing install — full features, free, forever — and gate only new installs.</li>
 </ol>
 
@@ -437,7 +437,7 @@
   <li>Realistic conversion to model against: <span class="hl">1–3% of active users</span> (not installs), ~60–70% checkout completion — the one-time-tool bucket where lifetime pricing beats subscriptions.</li>
   <li>The cleanest authoritative entitlement is a service-worker-owned <code>CS_ENTITLEMENT</code> key in <code>chrome.storage.local</code>, kept off the reset lists and stamped into the existing reactive snapshot so every open tab flips to Pro on the same event-loop tick.</li>
   <li>One hard repo blocker exists: <code>scripts/verify-cws-featured-readiness.mjs</code> hard-pins the manifest permissions, hosts, description string, and screenshot set — it must be loosened for any new host or copy change.</li>
-  <li>An adversarial review pass corrected three load-bearing claims before this document shipped (see Chapter 11): export is not single-gated, the <code>@noble/hashes</code> 2.x SHA-512 import path breaks the standard wiring, and grandfathering by install-reason alone misfires on reinstall.</li>
+  <li>An adversarial review pass corrected the load-bearing claims before this document shipped (see Chapter 11): export is not single-gated, the original "fully offline, nothing can shut down" framing was an overclaim — the design now validates online once and caches with fail-open — and grandfathering by install-reason alone misfires on reinstall.</li>
 </ul>
 
 <div class="takeaway">
@@ -456,11 +456,11 @@
 <ol>
 <li><strong>Model: Freemium, one build, runtime-gated.</strong> The free tier stays fully functional forever; Pro is a one-time lifetime unlock. This is the only model the pipeline (single artifact, single CWS listing) and the audience (subscription-averse, anti-DRM) actually support.</li>
 <li><strong>The work is packaging, not building.</strong> <strong>5 of the 6</strong> proposed Pro features already exist and ship for free today — export, deleted-tweet preservation (the hydration engine), advanced search filters, annotations, thread-aware capture. Only <strong>bulk ops</strong> is net-new. The real engineering is a <em>single clean entitlement boundary</em>, not new features.</li>
-<li><strong>Payments: a merchant-of-record</strong> (Lemon Squeezy or Polar) for checkout, so global VAT/tax is handled and there's no Totem billing server. Verify with <strong>offline Ed25519-signed license keys</strong> (<code>@noble/ed25519</code>, which pairs with the <code>@noble/hashes</code> already in the repo) so the extension makes <strong>zero license network calls</strong> — "no server, works offline, nothing can shut down" stays literally true <em>once activated</em> (checkout itself still needs the MoR online).</li>
+<li><strong>Payments: a merchant-of-record</strong> (Lemon Squeezy or Polar) for checkout, so global VAT/tax is handled and there's no Totem billing server. Verify with the <strong>provider's license API</strong>: validate the key <strong>online once at activation</strong>, cache the result locally, and read from that cache thereafter — re-checking quietly in the background and <strong>failing open</strong> so a network blip never locks out a paying user. Only the key + email leave the device; bookmark content never does. The provider also counts devices, so multi-browser activation is capped at a generous limit (~5) with self-serve deactivation.</li>
 <li><strong>The #1 risk is the retroactive paywall.</strong> Totem is already free; bolting a paywall onto existing users generates 1-star reviews. <strong>Grandfather every existing install</strong> (full features, free, forever) and only ever gate <em>new</em> installs. This single move neutralizes the biggest execution risk.</li>
 </ol>
 
-<div class="takeaway"><div class="takeaway-label">CORE BET</div> One artifact, gated at runtime; one-time lifetime price; offline-verifiable keys; never claw back from existing users.</div>
+<div class="takeaway"><div class="takeaway-label">CORE BET</div> One artifact, gated at runtime; one-time lifetime price; verify online once and cache (fail-open); never claw back from existing users.</div>
 
 <h2>The premium model (and why this one)</h2>
 
@@ -471,7 +471,7 @@
 <tbody>
 <tr><td>Pipeline is single-artifact (one <code>dist/</code>, one zip, one CWS item, version-pinned)</td><td><strong>One build, entitlement-gated at runtime.</strong> Not separate Free/Pro builds.</td></tr>
 <tr><td>Audience = r/nosurf, r/selfhosted, HN, PKM (subscription-fatigued, anti-DRM, pro-ownership)</td><td><strong>One-time "lifetime" unlock</strong>, Obsidian-Catalyst-style "fund the work," not a subscription.</td></tr>
-<tr><td>Local-first, no server, no telemetry is the <em>entire</em> pitch</td><td>Verification must be <strong>local/offline</strong>; no per-launch phone-home.</td></tr>
+<tr><td>Local-first, no Totem server, no telemetry is the pitch</td><td>Verification is a <strong>quick online check at activation</strong>, then <strong>cached and read locally</strong> — no per-launch phone-home; fail-open on outages; bookmarks never leave the device.</td></tr>
 <tr><td>Open-source (code is public on GitHub)</td><td>The check is <strong>patchable by design</strong> — accept it, out-serve the cracker, don't build DRM.</td></tr>
 </tbody>
 </table>
@@ -650,19 +650,24 @@
 <td>MoR remits global VAT/GST, so the solo dev never registers for tax anywhere. No Totem billing server.</td>
 </tr>
 <tr>
-<td>License issuance</td>
-<td><strong>Keyforge</strong> (turnkey, signs Ed25519/JWT, plugs into LS/Polar) <strong>or</strong> a tiny serverless Ed25519 signer fired by the MoR webhook</td>
-<td>Produces an <strong>offline-verifiable signed key</strong>; the private key never touches the extension.</td>
+<td>License keys</td>
+<td><strong>Provider-issued license keys</strong> (Lemon Squeezy / Polar)</td>
+<td>The MoR mints and emails the key on a paid order — <strong>no separate signer, no key-management vendor, no private signing key to host.</strong></td>
 </tr>
 <tr>
 <td>License verification</td>
-<td><strong><code>@noble/ed25519</code></strong> in the service worker, public key embedded at build time</td>
-<td>Pure local crypto. ~5KB, audited, pairs with the <code>@noble/hashes 2.2.0</code> already present. <strong>No network, no new host permission.</strong></td>
+<td><strong>Online validate</strong> via the provider's license API — once at activation + a quiet periodic background re-check</td>
+<td>Validating <em>data</em> (JSON) is MV3-legal. Result is <strong>cached in <code>CS_ENTITLEMENT</code></strong> and read locally thereafter; <strong>fail-open</strong> on network errors. Only key + email leave the device.</td>
+</tr>
+<tr>
+<td>Device management</td>
+<td>Provider <strong>activation limit (~5)</strong> + self-serve <strong>deactivate</strong> page (its customer portal)</td>
+<td>Resolves multi-browser activation: a real person's few devices are fine; mass key-sharing is capped. Counting requires the online check.</td>
 </tr>
 <tr>
 <td>Entitlement storage</td>
 <td>New SW-owned <code>chrome.storage.local</code> key <code>CS_ENTITLEMENT</code></td>
-<td>Single-writer, reset-surviving, rides the existing reactive snapshot channel.</td>
+<td>Single-writer, reset-surviving, rides the existing reactive snapshot channel. Holds the cached validate result.</td>
 </tr>
 <tr>
 <td>Pricing/license pages</td>
@@ -672,20 +677,20 @@
 </tbody>
 </table>
 
-<h2>No new runtime dependency on a third-party server</h2>
+<h2>No Totem server</h2>
 
-<p>The MoR/signer is touched <strong>only by the buyer's browser at checkout</strong> — never by the extension. That is the whole point: it preserves the <span class="hl">"no server" claim verbatim</span>.</p>
+<p>Checkout, tax, key issuance, and device counting all live with the merchant-of-record. The extension talks to the <strong>provider's</strong> API (one host permission), never to a Totem-run backend. The MoR's <em>secret</em> API key stays server-side and never enters <code>dist/</code> — the validate call a public client makes needs no secret.</p>
 
 <div class="takeaway">
 <div class="takeaway-label">NET EFFECT</div>
-The extension makes zero license network calls once activated. Every new moving part lives at issuance/checkout time, in the buyer's browser — not in <code>dist/</code>, not in the runtime trust chain.
+The only network the extension does for licensing is a small <strong>validate</strong> call at activation and an occasional background re-check — never a per-launch phone-home, and never anything touching bookmark data. Verify online, but read from cache and fail open, so an outage can't lock out a buyer.
 </div>
 </section>
 
 <section class="chapter">
   <div class="chapter-num">05 · Payments</div>
   <h1>Payment Gateway — The Decision</h1>
-<p class="lead">Native Chrome Web Store payments died <strong>Feb 1, 2021</strong>, so an external processor is mandatory. The choice is not just "who takes the smallest cut" — it is which option preserves Totem's <span class="hl">no-server, works-offline, nothing-can-shut-down</span> promise.</p>
+<p class="lead">Native Chrome Web Store payments died <strong>Feb 1, 2021</strong>, so an external processor is mandatory. The choice is not just "who takes the smallest cut" — it is which option keeps Totem <span class="hl">server-free, privacy-safe, and resilient to provider outages</span>.</p>
 
 <h2>The contenders (2026 facts)</h2>
 
@@ -704,25 +709,25 @@ The extension makes zero license network calls once activated. Every new moving 
 
 <h2>Recommendation</h2>
 
-<div class="callout"><strong>Lemon Squeezy as merchant-of-record (primary), Polar as the cost-optimized alternative</strong> &mdash; and issue offline-verifiable Ed25519 signed keys on top (via Keyforge or a tiny serverless signer).</div>
+<div class="callout"><strong>Lemon Squeezy as merchant-of-record (primary), Polar as the cost-optimized alternative</strong> &mdash; and use the provider's license-key API for verification: validate the key online once at activation, cache the result locally, fail open, with a generous device limit.</div>
 
 <h3>Why MoR, not ExtPay</h3>
 
-<p>ExtPay is the <em>fastest</em> to wire and the most extension-native, but it (a) is <strong>not</strong> a merchant of record, so you still owe VAT in every country, and (b) makes every paid check a live call to <code>extensionpay.com</code> &mdash; a third-party server in the trust chain of a product whose entire pitch is "no server." Both are brand-violating. The <span class="hl">MoR removes the tax burden; the signed-key approach removes the runtime dependency</span>.</p>
+<p>ExtPay is the <em>fastest</em> to wire and the most extension-native, but it (a) is <strong>not</strong> a merchant of record, so you still owe VAT in every country, and (b) makes <strong>every</strong> paid check a live <code>getUser()</code> call to <code>extensionpay.com</code> with <strong>no documented offline cache</strong> &mdash; so a network failure can throw on a routine launch. The MoR's license API is better on both axes: it removes the tax burden, and you call <strong>validate</strong> <em>once at activation</em>, then run from a local cache and only re-check occasionally in the background. <span class="hl">You verify online, but you don't depend on the network being up on every launch.</span></p>
 
-<h3>Why offline signed keys, not the MoR's online validate endpoint</h3>
+<h3>Why online validate (not a fully-offline signed key)</h3>
 
-<p>Polar/LS both <em>can</em> validate a key with no embedded secret (great for OSS), but that's an <strong>online</strong> check &mdash; every validation is a network event to a third party. For Totem specifically, the offline signed-key path is strictly more on-brand: the extension verifies a pasted key with an embedded <strong>public</strong> key and <strong>never makes a license network call at all</strong>. The marketing claim "no Totem account, no server, works offline" survives literally. The cost is one extra moving part at <em>issuance</em> time (Keyforge, or ~40 lines of serverless signing), which the buyer's browser hits during checkout &mdash; not the extension.</p>
+<p>We deliberately accept one online check. It is the simplest path, it is what makes <strong>device management</strong> possible (something has to count activations), and it lets the provider revoke a refunded or charged-back key. MV3 allows it cleanly: validating a key returns <strong>JSON data</strong>, not remote code. The cost &mdash; a host permission and a reworded store description &mdash; is small. We do <strong>not</strong> ship an on-device signature verifier, a license-signing vendor, or a private signing key; the provider issues and validates the key.</p>
 
-<h3>Lower-effort fallback</h3>
+<h3>The rule that keeps it resilient &mdash; cache + fail-open</h3>
 
-<p>If you don't want to run/relay a signer for v1: use the MoR's <strong>own license key + its validate endpoint</strong>, called <strong>once at activation</strong>, then cache <code>isPro</code> in <code>chrome.storage.local</code> and run offline with an optional weekly fail-open re-check. This needs one host permission (the MoR API) and dents the "zero network" claim slightly, but ships faster.</p>
+<p>Validate online at activation &rarr; write <code>isPro</code> to <code>CS_ENTITLEMENT</code> &rarr; read from that cache on every launch. Re-validate quietly in the background (e.g. weekly) to catch refunds. If a re-check can't reach the network, <strong>keep Pro on</strong> (fail-open, with a grace window) &mdash; never revoke a paying user because their Wi-Fi blipped or the provider had a hiccup. "Online verification" means <em>check when we can, trust the saved answer otherwise</em> &mdash; not <em>gate every launch on a live call</em>.</p>
 
-<div class="takeaway"><div class="takeaway-label">MIGRATION-SAFE</div> You can launch on the fallback and migrate to signed keys later without changing the buyer's experience.</div>
+<h3>Multi-device activation</h3>
 
-<h3>Honest scope of the "nothing can shut down" claim</h3>
+<p>A purely offline key can't be counted (nothing knows how many browsers hold it). Because verification is <strong>online</strong>, the provider <em>is</em> that shared counter: set a generous <strong>activation limit (~5)</strong>, expose <strong>activate / deactivate</strong> so a user can free a slot from the customer portal (the fix for the reinstall-burns-a-slot complaint), and send a device id on activate. An <strong>unlimited</strong> limit ("use on all your browsers") is a defensible zero-friction alternative for a $19 honest-audience tool &mdash; you just accept that a key <em>could</em> be shared, the same way the open-source build can already be patched.</p>
 
-<p>The offline-signed-key design means an <em>already-activated</em> user works forever with no network and no dependency on any vendor staying alive. It does <strong>not</strong> mean a <em>new buyer</em> is immune to outages &mdash; checkout needs the MoR online and issuance needs the signer online at purchase time. So phrase the brand promise precisely (<span class="hl">"once activated, Totem Pro works forever, fully offline, even if we disappear"</span>), not as an absolute. This matters given the Lemon-Squeezy&rarr;Stripe transition watch-item: the signed keys already sold keep working regardless of what happens to the MoR.</p>
+<div class="takeaway"><div class="takeaway-label">BRAND PROMISE, PRECISELY</div> Not "works offline, nothing can shut down," but the truthful version: <span class="hl">no Totem server to run &mdash; the provider handles checkout, tax, and licensing; your bookmarks never leave your device; Pro is verified by a quick online check, then cached and read locally.</span> Cached entitlements ride out a short provider outage &mdash; relevant given the Lemon-Squeezy&rarr;Stripe transition watch-item.</div>
 
 <h2>The honest stance (publish it &mdash; it converts for this audience)</h2>
 
@@ -736,39 +741,41 @@ The extension makes zero license network calls once activated. Every new moving 
 <section class="chapter">
   <div class="chapter-num">06 · License</div>
   <h1>License &amp; Entitlement Architecture</h1>
-<p class="lead">A paid unlock has to survive resets, account switches, and offline launches while never violating the MV3 ban on remote code. The architecture leans on seams that already exist: a service-worker trust boundary, a reactive snapshot channel, and pure local crypto.</p>
+<p class="lead">A paid unlock has to survive resets, account switches, and offline launches while never violating the MV3 ban on remote code. The architecture leans on seams that already exist: a service-worker trust boundary, a reactive snapshot channel, and a cached online-validate result.</p>
 
 <h2>5.1 End-to-end flow</h2>
 
-<p>From the buyer's click to the gated feature flipping on, seven stages carry a signed key through purchase, verification, persistence, and propagation.</p>
+<p>From the buyer's click to the gated feature flipping on, seven stages carry the license key through purchase, validation, caching, and propagation.</p>
 
 <pre><code>1. PURCHASE   Buyer clicks "Upgrade — $19 lifetime" in the extension
               → opens usetotem.xyz/pricing → MoR hosted checkout
               (Lemon Squeezy / Polar = merchant of record; card + VAT handled)
                     │
-2. ISSUE      On paid order, Keyforge / serverless signer produces an
-              Ed25519-signed key:  base64(payload).base64(sig)
-              payload = { v, email, plan:"pro-lifetime", order, exp:null, feat:[...] }
-              Emailed to buyer + shown on usetotem.xyz/upgrade/success
+2. ISSUE      On paid order, the MoR mints a license key and emails it
+              to the buyer + shows it on usetotem.xyz/upgrade/success.
+              (No separate signer; the provider owns issuance.)
                     │
 3. ACTIVATE   Buyer returns to extension. Three layered paths:
               (a) one-click: success page → externally_connectable → onMessageExternal
               (b) deep link: chrome-extension://&lt;id&gt;/newtab.html?license=&lt;key&gt;
               (c) paste-a-key fallback in Settings (always shipped)
                     │
-4. VERIFY     Service worker: ed.verify(sig, payload, EMBEDDED_PUBKEY) + exp check.
-              Pure local crypto. Zero network. MV3-safe (no remote code).
+4. VALIDATE   Service worker calls the provider's validate/activate endpoint
+              ONCE with { key, instanceId }. Receives JSON { valid, plan, ... }.
+              Counts toward the device limit. MV3-safe (remote DATA, not code).
                     │
 5. PERSIST    SW writes CS_ENTITLEMENT to chrome.storage.local
-              { isPro, plan, email, order, feat, verifiedAt } + raw key.
+              { isPro, plan, email, order, instanceId, validatedAt } + raw key.
               Stamped into RuntimeSnapshot.
                     │
 6. PROPAGATE  CS_RUNTIME_STATE_V2 change → chrome.storage.onChanged →
               applyRuntimeSnapshot → Zustand → useIsPro() → every open
               tab/reader flips to Pro on the same event-loop tick.
                     │
-7. GATES      Export / preservation / bulk / filters / annotations read isPro.
-              Re-verified from the stored key on each launch (offline, cheap).</code></pre>
+7. GATES      Export / preservation / bulk / filters / annotations read isPro
+              FROM THE CACHE on each launch (no network). A quiet background
+              re-validate (~weekly) catches refunds; it FAILS OPEN — a failed
+              re-check never revokes Pro, so an outage can't lock out a buyer.</code></pre>
 
 <h2>5.2 Where the entitlement lives — resolving the storage tension</h2>
 
@@ -776,7 +783,7 @@ The extension makes zero license network calls once activated. Every new moving 
 
 <h3>Authoritative — SW-owned write</h3>
 
-<p>The SW writes <span class="hl"><code>CS_ENTITLEMENT</code></span> (<code>"totem_entitlement"</code>) to <code>chrome.storage.local</code>, declared in <code>src/service-worker/storage-keys-sw.ts</code> → the existing <code>storage-invariants.test.ts</code> makes the SW the <em>only</em> writer for free. The SW is the right owner because it's the trust boundary and the thing that verifies the signature.</p>
+<p>The SW writes <span class="hl"><code>CS_ENTITLEMENT</code></span> (<code>"totem_entitlement"</code>) to <code>chrome.storage.local</code>, declared in <code>src/service-worker/storage-keys-sw.ts</code> → the existing <code>storage-invariants.test.ts</code> makes the SW the <em>only</em> writer for free. The SW is the right owner because it's the trust boundary and the thing that runs the validate call and caches its result.</p>
 
 <h3>Reset-surviving</h3>
 
@@ -805,11 +812,11 @@ The extension makes zero license network calls once activated. Every new moving 
 
 <h2>5.3 MV3 compliance — the load-bearing constraint</h2>
 
-<p>MV3 bans <strong>remotely-hosted code</strong>, not remote <strong>data</strong>. Both options here are valid.</p>
+<p>MV3 bans <strong>remotely-hosted code</strong>, not remote <strong>data</strong> — and license validation is squarely the allowed kind.</p>
 
 <ul>
-<li><span class="tag">VERIFIED</span> <strong>Pure local crypto</strong> (verify a pasted signed key) → no network at all → trivially compliant.</li>
-<li><span class="tag">VERIFIED</span> <strong>Data fetch</strong> (call an MoR validate endpoint → receive JSON) → fetching <em>data</em>, explicitly allowed.</li>
+<li><span class="tag">VERIFIED</span> <strong>Data fetch</strong> (call the provider's validate endpoint → receive JSON <code>{ valid, plan, ... }</code>) → fetching <em>data</em>, explicitly allowed. This is the path we ship.</li>
+<li><span class="tag">VERIFIED</span> The validate result only <strong>toggles a local flag</strong>; it never returns code to run.</li>
 </ul>
 
 <p>What you must <strong>never</strong> do: fetch a JS "validator" or a script that <em>implements</em> a Pro feature and <code>eval</code>/import it. All Pro feature logic ships in the package and is merely <em>toggled</em> by <code>isPro</code>.</p>
@@ -833,12 +840,12 @@ The extension makes zero license network calls once activated. Every new moving 
 <tbody>
 <tr>
 <td><code>src/service-worker/entitlement.ts</code></td>
-<td>SW handlers: <code>ACTIVATE_LICENSE</code>, <code>VERIFY_LICENSE</code>, <code>GET_ENTITLEMENT</code>. Verifies Ed25519 sig, writes <code>CS_ENTITLEMENT</code>, re-persists snapshot.</td>
+<td>SW handlers: <code>ACTIVATE_LICENSE</code>, <code>VALIDATE_LICENSE</code>, <code>GET_ENTITLEMENT</code>. Calls the provider validate/activate API, caches the result to <code>CS_ENTITLEMENT</code>, re-persists snapshot; runs the background re-check with fail-open.</td>
 <td>sibling of <code>auth.ts</code>/<code>sync.ts</code> handler maps</td>
 </tr>
 <tr>
-<td><code>src/lib/license/verify.ts</code></td>
-<td>Pure <code>verifyLicense(key)</code> &rarr; entitlement | null using <code>@noble/ed25519</code> + embedded pubkey. Unit-testable, no chrome APIs.</td>
+<td><code>src/lib/license/validate.ts</code></td>
+<td>Thin <code>validateLicense(key, instanceId)</code> &rarr; entitlement | null by <code>fetch</code>-ing the provider's validate/activate endpoint and normalizing the JSON. Pure data, no embedded secret. Unit-testable (mock fetch).</td>
 <td>&mdash;</td>
 </tr>
 <tr>
@@ -879,7 +886,7 @@ The extension makes zero license network calls once activated. Every new moving 
 </tr>
 <tr>
 <td><code>src/types/messages.ts</code></td>
-<td>Add <code>isPro</code>/<code>entitlement</code> to <code>RuntimeSnapshotData</code>; add <code>ACTIVATE_LICENSE</code>/<code>VERIFY_LICENSE</code>/<code>GET_ENTITLEMENT</code> to the <code>MessageRequest</code> union.</td>
+<td>Add <code>isPro</code>/<code>entitlement</code> to <code>RuntimeSnapshotData</code>; add <code>ACTIVATE_LICENSE</code>/<code>VALIDATE_LICENSE</code>/<code>GET_ENTITLEMENT</code> to the <code>MessageRequest</code> union.</td>
 </tr>
 <tr>
 <td><code>src/service-worker/auth.ts</code></td>
@@ -962,16 +969,16 @@ The extension makes zero license network calls once activated. Every new moving 
 <h3><code>public/manifest.json</code></h3>
 
 <ul>
-<li><strong>Offline-signed-key path (recommended):</strong> <em>no new host permission needed</em> &mdash; verification is pure local crypto. For one-click site&rarr;extension activation add <code>externally_connectable: { "matches": ["https://usetotem.xyz/*"] }</code> + an <code>onMessageExternal</code> handler &mdash; <strong>both are greenfield</strong> (neither exists in the codebase today). Note this path still puts the site in the <em>activation</em> trust chain (it hands over the key); pair it with the on-device signature verify so entitlement is never granted on the site's say-so alone. The paste-a-key fallback is the only truly zero-trust-chain path &mdash; always ship it.</li>
-<li><strong>Online-validate fallback path:</strong> add the MoR API origin to <strong><code>optional_host_permissions</code></strong> (request at upgrade time via <code>chrome.permissions.request</code>, so free users never grant it) and, if you tighten CSP, an explicit <code>connect-src 'self' https://x.com &lt;mor-api&gt;</code>.</li>
-<li><strong>Reword <code>description</code>:</strong> the readiness script pins the description string <strong>exactly</strong>, including the literal "no server" phrasing. The offline-key path keeps it true. The online-validate path forces a coordinated change in <strong>three places at once</strong> &mdash; the manifest, <code>expected.description</code> in <code>verify-cws-featured-readiness.mjs</code>, and the dashboard listing/privacy packet &mdash; so "launch on fallback, migrate later" is not free; budget for it. Keep <code>script-src 'self'</code> untouched (never add a payment SDK <code>&lt;script&gt;</code>).</li>
+<li><strong>Add the provider API origin as a host permission.</strong> Prefer <strong><code>optional_host_permissions</code></strong> (request at upgrade time via <code>chrome.permissions.request</code>, so free users never grant it); fall back to <code>host_permissions</code> if the activation flow needs it unconditionally. If you tighten CSP, add an explicit <code>connect-src 'self' https://x.com &lt;provider-api&gt;</code>. Keep <code>script-src 'self'</code> untouched (never add a payment SDK <code>&lt;script&gt;</code>).</li>
+<li><strong>One-click activation (optional):</strong> for site&rarr;extension hand-off add <code>externally_connectable: { "matches": ["https://usetotem.xyz/*"] }</code> + an <code>onMessageExternal</code> handler &mdash; <strong>both are greenfield</strong> (neither exists today). The site only <em>hands over the key</em>; the SW still <strong>validates it with the provider</strong> before granting Pro, so entitlement is never granted on the site's say-so alone. The paste-a-key fallback is always shipped.</li>
+<li><strong>Reword <code>description</code> (required):</strong> the readiness script pins the description string <strong>exactly</strong>, including the literal "no server" phrasing. Validating online makes a network call, so reword to something true under this design &mdash; e.g. "no Totem account; your bookmarks stay on your device" &mdash; and change it in <strong>three places at once</strong>: the manifest, <code>expected.description</code> in <code>verify-cws-featured-readiness.mjs</code>, and the dashboard listing/privacy packet. Budget for this; it is not optional under online validation.</li>
 </ul>
 
 <h3>Build (<code>vite.config.ts</code>, <code>src/vite-env.d.ts</code>)</h3>
 
-<p>Inject the <strong>public</strong> verification key via the existing <code>define</code> mechanism (same pattern as <code>__TOTEM_APP_VERSION__</code>) &mdash; or just commit it as a constant (it's public). <strong>No secret ever enters <code>dist/</code>.</strong> Add <code>@noble/ed25519</code> to dependencies.</p>
+<p>The provider's <strong>validate endpoint URL</strong> (and any publishable product/store id) can be injected via the existing <code>define</code> mechanism (same pattern as <code>__TOTEM_APP_VERSION__</code>) or committed as a constant &mdash; these are public, <strong>no secret ever enters <code>dist/</code></strong> (the MoR's secret API key stays server-side and is never needed for a public validate call).</p>
 
-<div class="callout"><span class="tag">VERIFIED</span> <strong>Build trap:</strong> <code>@noble/ed25519</code> needs SHA-512 wired in manually, and the standard snippet's <code>import { sha512 } from '@noble/hashes/sha512'</code> <strong>does not resolve against <code>@noble/hashes</code> 2.x</strong> (neither <code>/sha512</code> nor <code>/sha2</code> is an exported subpath). Use <span class="hl"><code>import { sha512 } from '@noble/hashes/sha2.js'</code></span> (the <code>.js</code> suffix is required) and register <code>ed.etc.sha512Sync = (...m) =&gt; sha512(ed.etc.concatBytes(...m))</code> <strong>before any <code>verify</code> call</strong> (sync verification needs the sync hook set at SW startup).</div>
+<div class="callout"><span class="tag">NO NEW CRYPTO DEP</span> Because there is no on-device signature verification, <code>@noble/ed25519</code> is <strong>not</strong> added &mdash; and the <code>@noble/hashes</code> 2.x SHA-512 wiring trap that the earlier offline design hit simply does not apply.</div>
 
 <h3>Release pipeline</h3>
 
@@ -1027,10 +1034,10 @@ The extension makes zero license network calls once activated. Every new moving 
 <li>All Pro feature <em>logic</em> ships in the package; the license result only flips local flags ("full functionality discernible from submitted code").</li>
 <li>Pro features stay within the <strong>single purpose</strong> (read/search/export your X bookmarks). Don't add an unrelated second product.</li>
 <li><strong>Privacy practices tab:</strong> update data-collected to include <strong>PII (email) + auth info (license key)</strong>; per-permission justifications; the 3 Limited-Use certifications.</li>
-<li><strong>Privacy policy</strong> on <code>usetotem.xyz</code> discloses: license/email sent to <code>&lt;MoR&gt;</code> for validation, not sold, not used for ads; <strong>bookmark content never transmitted</strong>. (With offline keys, even the email/key may never leave the device — keep the policy honest to whichever path ships.)</li>
+<li><strong>Privacy policy</strong> on <code>usetotem.xyz</code> discloses: the <strong>license key + email + a device id</strong> are sent to <code>&lt;MoR&gt;</code> for validation at activation and on an occasional background re-check; not sold, not used for ads; <strong>bookmark content never transmitted</strong>. Keep the "no analytics/telemetry, no third-party tracking" claims true alongside this one scoped license call.</li>
 <li>Store listing states <strong>free core + optional one-time Pro unlock</strong> and lists Pro features (Deceptive-Installation-Tactics rule: don't advertise a headline feature then reveal at point-of-use that it's paid without prior disclosure).</li>
 <li><span class="tag">ADVERSARIAL-REVIEW FLAG</span> <strong>Featured screenshots disclose Pro.</strong> The readiness script pins the screenshot set, and <code>04-export-twitter-bookmarks-markdown-csv-notion.png</code> literally advertises export — gating export while a featured screenshot sells it is the exact "advertise-then-paywall" pattern §266 prohibits. Mitigation: the <strong>free export allowance</strong> (export your first ~25) keeps the screenshot <em>truthful</em> (export genuinely works free), and the listing copy must label unlimited export / preservation / bulk as Pro. Re-shoot or annotate the screenshot if it implies unlimited export is free.</li>
-<li>When activation arrives via <code>onMessageExternal</code> from the site, the SW still <strong>verifies the signature on-device</strong> before granting Pro — never grant entitlement on the page's message alone (a reviewer reading site&rarr;extension entitlement-granting as remote control is a rejection vector).</li>
+<li>When activation arrives via <code>onMessageExternal</code> from the site, the SW still <strong>validates the key with the provider</strong> before granting Pro — never grant entitlement on the page's message alone (a reviewer reading site&rarr;extension entitlement-granting as remote control is a rejection vector).</li>
 <li>New host permission (if any) scoped narrowly (never <code>&lt;all_urls&gt;</code>), justified in the dashboard, ideally <code>optional_host_permissions</code>.</li>
 </ul>
 
@@ -1067,8 +1074,8 @@ The extension makes zero license network calls once activated. Every new moving 
 <ul>
 <li><strong>Headline the model, not the price:</strong> <em>"Totem Pro — one-time unlock. No subscription. Ever."</em></li>
 <li><strong>Pre-empt "no server, why pay?":</strong> <em>"You're paying for the work, not infrastructure. Totem stays free and open source; Pro funds development. Your data never leaves your machine."</em></li>
-<li><strong>Reassure on the check:</strong> <em>"Verified by a one-time license check (email + key only). Your bookmarks never leave your device."</em> (or, offline path: <em>"…verified entirely on your device."</em>)</li>
-<li><strong>Ownership:</strong> <em>"Buy once, use on all your browsers."</em></li>
+<li><strong>Reassure on the check:</strong> <em>"Verified by a one-time online license check (email + key only). Your bookmarks never leave your device."</em></li>
+<li><strong>Ownership:</strong> <em>"Buy once, use on up to 5 of your browsers."</em> (or "all your browsers" if you ship an unlimited device limit).</li>
 </ul>
 
 <h2>Anti-patterns that nuke goodwill</h2>
@@ -1095,10 +1102,10 @@ The extension makes zero license network calls once activated. Every new moving 
 <h2>Phased rollout — do these in order</h2>
 
 <h3>Phase 0 — Decisions &amp; accounts (no code)</h3>
-<p>Pick the merchant-of-record (Lemon Squeezy vs Polar) and the issuance mechanism (Keyforge vs serverless signer). Create the $19 product plus the $14 founders coupon. Generate the Ed25519 keypair — the private key goes to the signer only, the public key goes into the extension. Write the privacy-policy update and the "honest stance" copy.</p>
+<p>Pick the merchant-of-record (Lemon Squeezy vs Polar). Create the $19 product plus the $14 founders coupon, <strong>enable license keys</strong>, and set the <strong>activation/device limit</strong> (~5). Note the provider's validate endpoint URL. Write the privacy-policy update and the "honest stance" copy.</p>
 
 <h3>Phase 1 — The entitlement spine (ship dark)</h3>
-<p><code>CS_ENTITLEMENT</code> + <code>entitlement.ts</code> + <code>verifyLicense</code> + the snapshot field + <code>useIsPro()</code> + the grandfather stamp on <code>onInstalled</code>. No gates yet, no UI. Test that <code>isPro</code> propagates reactively and survives reset/account-switch. This is the <span class="hl">load-bearing, low-visibility work</span>.</p>
+<p><code>CS_ENTITLEMENT</code> + <code>entitlement.ts</code> + <code>validateLicense</code> + the snapshot field + <code>useIsPro()</code> + the grandfather stamp on <code>onInstalled</code>. No gates yet, no UI. Test that <code>isPro</code> propagates reactively and survives reset/account-switch. This is the <span class="hl">load-bearing, low-visibility work</span>.</p>
 
 <h3>Phase 2 — The gate + the one feature</h3>
 <p><code>&lt;ProGate&gt;</code> / <code>requirePro</code> / <code>UpgradeModal</code> / <code>usePro</code>. Gate <strong>export</strong> only — the cleanest, highest-intent surface — with the free-allowance and grandfathering in place. Paste-a-key activation in Settings. Ship the site <code>pricing</code> / <code>success</code> / <code>manage-license</code> pages plus the MoR checkout.</p>
@@ -1111,15 +1118,14 @@ The extension makes zero license network calls once activated. Every new moving 
 <p>Build <strong>bulk operations</strong> — the only net-new feature — a clearly-new Pro capability nobody can claim was taken away. Then the <code>ProNudge</code>, the time-boxed founders-price banner, and analytics on the success page.</p>
 
 <h3>Phase 5 — Optional hardening</h3>
-<p>If you launched on the online-validate fallback, migrate to offline signed keys (removes the host permission, restores the literal "no server" claim). Add the fail-open revocation list only if refund abuse ever shows up.</p>
+<p>Tune the device limit and the background re-check cadence; add a "deactivate this device" affordance inside the extension (mirrors the provider portal) for the reinstall case; surface refund/chargeback revocation gracefully — the provider already revokes, so keep the re-check fail-open so a <em>network</em> failure never looks like a revocation.</p>
 
 <h2>Open decisions for you</h2>
 <p>These are genuine forks where your preference matters — everything else above is a recommendation I'd ship as-is.</p>
 
 <ol>
 <li><strong>MoR:</strong> Lemon Squeezy (most mature license API, Stripe-transition watch) vs Polar (cheaper, OSS-positioned, younger). Both are fine; pick on whether maturity or cost/ethos weighs more.</li>
-<li><strong>Issuance:</strong> Keyforge (turnkey, one more vendor) vs a tiny serverless signer you own (no vendor lock-in, ~40 lines + a webhook). The signer is more on-brand; Keyforge is faster.</li>
-<li><strong>Launch verification path:</strong> ship straight to offline signed keys (purest, slightly more setup) vs launch on MoR online-validate and migrate later (faster, one temporary host permission).</li>
+<li><strong>Device limit:</strong> the exact activation cap — <strong>~5 with self-serve deactivate</strong> (recommended: kills mass key-sharing, never bites a real user) vs <strong>unlimited</strong> ("buy once, use on all your browsers," zero friction, accepts key-sharing). And whether to expose deactivate inside the extension or only via the provider's portal.</li>
 <li><strong>Free export allowance:</strong> the exact N (25 is the research default) and whether per-article <em>Copy-to-clipboard</em> stays free as a teaser (recommended yes).</li>
 <li><strong>Annotations / advanced-search free vs Pro:</strong> the GTM doc gates them; the retroactive-paywall risk argues for keeping the <em>currently-shipping</em> versions free for everyone and gating only <em>export of</em> annotations + <em>new</em> filter operators. Worth a deliberate call.</li>
 </ol>
@@ -1146,8 +1152,8 @@ The extension makes zero license network calls once activated. Every new moving 
 <h3>1 · Export is not a single gate</h3>
 <p>The bulk-ZIP path concentrates at <code>ExportModal.tsx:64</code>, but <code>src/components/BookmarkReader.tsx:313-352</code> has four independent per-article egress handlers (copy-Markdown, copy-for-agent, download <code>.md</code>, print/PDF) that bypass <code>ExportModal</code> entirely. The "copy stays free as a teaser" idea is therefore a slow full-library leak — a knowing trade-off, not an oversight. All four handlers must be gated; the file is <code>BookmarkReader.tsx</code>, not <code>TweetContent.tsx</code>.</p>
 
-<h3>2 · The Ed25519 / @noble SHA-512 build trap</h3>
-<p>The standard ed25519 wiring snippet imports <code>{ sha512 } from '@noble/hashes/sha512'</code>, which <span class="hl">does not resolve against <code>@noble/hashes</code> 2.x</span> (neither <code>/sha512</code> nor <code>/sha2</code> is an exported subpath). The repo pins 2.2.0. Use <code>import { sha512 } from '@noble/hashes/sha2.js'</code> (the <code>.js</code> suffix is required) and register <code>ed.etc.sha512Sync</code> at service-worker startup before any <code>verify</code> call.</p>
+<h3>2 · "Fully offline, nothing can shut down" was an overclaim</h3>
+<p>The original plan leaned on <strong>offline Ed25519-signed keys</strong> so the extension would make zero license network calls. The review flagged two problems: the brand line "nothing can shut down" only ever held <em>post-activation</em> (checkout and issuance still need the provider online), and — more decisively — a fully-offline key <span class="hl">cannot be counted</span>, so there is no way to manage multi-device activation. The design was therefore changed to <strong>online-validate-then-cache</strong>: validate once at activation, cache the result, read locally, and re-check quietly in the background with <strong>fail-open</strong>. This is simpler (no signer, no key-management vendor, no <code>@noble/ed25519</code> dependency and its SHA-512 wiring trap), it enables the device limit, and it lets the provider revoke a refunded key — at the cost of one host permission and a reworded store description.</p>
 
 <h3>3 · Grandfathering by install-reason misfires</h3>
 <p><code>chrome.runtime.onInstalled</code> with <code>reason === "install"</code> fires for uninstall→reinstall and new-machine cases, so reason alone strips grandfathered status from exactly the engaged users it is meant to protect. Add a secondary heuristic that also runs on install: treat a non-empty bookmarks IndexedDB store (or a pre-Pro settings key) as proof of an existing user.</p>
@@ -1156,8 +1162,8 @@ The extension makes zero license network calls once activated. Every new moving 
 <table class="compact">
   <thead><tr><th>Risk</th><th>Mitigation in the plan</th></tr></thead>
   <tbody>
-    <tr><td>"Nothing can shut down" overclaim</td><td>Scoped to <em>post-activation</em>; checkout still needs the MoR online (Ch. 5).</td></tr>
-    <tr><td>One-click activation puts the site in the trust chain</td><td><code>onMessageExternal</code> must still verify the signature on-device; paste-a-key is the zero-trust-chain fallback (Ch. 7–8).</td></tr>
+    <tr><td>"Nothing can shut down" / fully-offline overclaim</td><td>Design changed to online-validate-then-cache with fail-open; brand promise reworded to "no Totem server; bookmarks stay on-device; verified by a quick online check, then cached" (Ch. 4–5).</td></tr>
+    <tr><td>One-click activation puts the site in the trust chain</td><td><code>onMessageExternal</code> must still validate the key with the provider; paste-a-key is the zero-trust-chain fallback (Ch. 7–8).</td></tr>
     <tr><td>Gating currently-free search/annotations</td><td>Flagged as an open decision; lean toward keeping today's versions free and gating only new operators + annotation export (Ch. 10).</td></tr>
     <tr><td>Featured export screenshot vs paywall</td><td>The free export allowance keeps the pinned screenshot truthful; listing copy must label unlimited export as Pro (Ch. 8).</td></tr>
   </tbody>
@@ -1697,7 +1703,7 @@ Today's <code>fetch</code> to <code>x.com</code> works because <code>https://x.c
 <h3>What a license check needs at build time, and where it lives</h3>
 <p>Critical distinction for a one-time-license model:</p>
 <ul>
-<li>A <strong>license-verification public key</strong> (Ed25519/RSA public key used to verify a signed license token offline) is <strong>public by design</strong> — safe to commit and safe to inline. This is the recommended secret-free approach: the extension ships the public key, the server signs license tokens with the private key, the extension verifies signatures locally (it already depends on <code>@noble/hashes</code> 2.2.0, and <code>@noble/ed25519</code> would pair with it for offline verification). No runtime server round-trip needed after first redemption.</li>
+<li>The <strong>provider validate endpoint URL</strong> (and any publishable product/store id) is <strong>non-secret by design</strong> — safe to commit and safe to inline. The shipped design needs no client-side secret at all: the provider's license <strong>validate</strong> endpoint is documented as safe to call from a public client, so the extension sends only the key (the provider's <em>secret</em> API key stays server-side). <em>(An earlier exploration embedded an Ed25519 public key for offline signature verification — see Appendix G's decision note for why that was set aside.)</em></li>
 <li>A <strong>provider publishable key</strong> (e.g. a Stripe/Lemon Squeezy <em>publishable</em> key) is also non-secret and can be inlined, but is only relevant if checkout happens in-extension — which §2.1 recommends against.</li>
 <li>A <strong>provider secret key / signing private key</strong> must <strong>NEVER</strong> be in the extension build. The extension ships to users' machines; anything in <code>dist/</code> is fully readable. The private signing key lives only on the server / in CI secrets for the server, never in this repo's build.</li>
 </ul>
@@ -1734,23 +1740,23 @@ Today's <code>fetch</code> to <code>x.com</code> works because <code>https://x.c
 <li><strong>The pipeline is architecturally single-artifact.</strong> Versioning (<code>check-version-sync</code>, <code>prepare-release</code>), packaging (<code>package-extension.mjs</code> reads one <code>dist/manifest.json</code>, produces one <code>totem-v&lt;version&gt;.zip</code>), the release workflow (uploads <code>release/*.zip</code>, validates one tag&harr;manifest version), and the featured-readiness verifier (pins one manifest) all assume exactly one artifact. A second "Pro" build would mean forking version sync, doubling the zip step, duplicating the manifest pin, and managing two CWS listings — a large pipeline rewrite for no user benefit.</li>
 <li><strong>CWS distributes one item.</strong> A free-on-store extension that unlocks Pro is the standard, frictionless model: one listing, one review, one ID (<code>acpkgdfhoaalmnhjifhneghcgfnjkglo</code>, pinned in the verifier). Separate builds imply either two store items (more review surface, confusing) or sideloaded Pro builds (kills the "install from the Web Store" UX and breaks auto-update).</li>
 <li><strong>The gating surface already exists locally.</strong> State lives in Zustand + <code>chrome.storage.local</code> and IndexedDB. An entitlement flag (<code>isPro</code>) fits naturally as another stored value, checked at the boundaries of the Pro features. The Pro-gated capabilities are already discrete modules — export lives entirely in <code>src/lib/export/*</code> (e.g. <code>quick-export.ts</code>, <code>tweet-export.ts</code>, <code>stream-zip.ts</code>, <code>article-to-markdown.ts</code>), so gating is a small set of guard checks, not a build-time code split. There is no per-build code difference to justify two artifacts.</li>
-<li><strong>No secret needs to differ per build.</strong> Because license verification uses a <strong>public</strong> key (offline signature verification), both free and pro users run identical code; the only difference is whether a valid signed license is present in storage. Code is identical, entitlement is data.</li>
+<li><strong>No secret needs to differ per build.</strong> The license check is an <strong>online validate</strong> call that needs no client-side secret (the provider's secret key stays server-side), so both free and pro users run identical code; the only difference is whether a valid, validated license is cached in storage. Code is identical, entitlement is data.</li>
 <li><strong>Optional-permission hygiene reinforces one build.</strong> With <code>optional_host_permissions</code> for the verify origin, the default install is byte-identical in footprint to today's free experience; the payment host is only requested when a user upgrades. One manifest, one build, graceful free path.</li>
 </ol>
-<div class="callout"><strong>Net:</strong> ship one zip; add an <code>isPro</code> entitlement resolved from a locally-verified signed license; gate <code>src/lib/export/*</code> (and the other Pro modules) behind it; do not fork the build/release pipeline.</div>
+<div class="callout"><strong>Net:</strong> ship one zip; add an <code>isPro</code> entitlement resolved from a cached online-validate result; gate <code>src/lib/export/*</code> (and the other Pro modules) behind it; do not fork the build/release pipeline.</div>
 
 <h2>Concrete change checklist (if/when implemented)</h2>
 <table>
 <thead><tr><th>File / target</th><th>Change</th></tr></thead>
 <tbody>
-<tr><td><code>vite.config.ts</code></td><td>Add <code>__TOTEM_LICENSE_PUBLIC_KEY__</code> to <code>define</code> (or just commit a constant — key is public).</td></tr>
+<tr><td><code>vite.config.ts</code></td><td>Add <code>__TOTEM_LICENSE_VALIDATE_URL__</code> (+ publishable product/store id) to <code>define</code> (or just commit a constant — these are public; no secret).</td></tr>
 <tr><td><code>src/vite-env.d.ts</code></td><td>Declare the new global.</td></tr>
 <tr><td><code>public/manifest.json</code></td><td>Add verify origin to <code>optional_host_permissions</code> (preferred) or <code>host_permissions</code>; add explicit <code>connect-src 'self' https://x.com https://api.usetotem.xyz</code> to the CSP; reword <code>description</code> away from "no server".</td></tr>
 <tr><td><code>scripts/verify-cws-featured-readiness.mjs</code></td><td>Loosen the manifest pins to permit the new host/permission and the new description string.</td></tr>
 <tr><td><code>PUBLISH.md</code> + <code>plans/chrome-web-store-dashboard-update-packet.md</code></td><td>Add permission justification + privacy disclosure for license validation.</td></tr>
 <tr><td><code>usetotem.xyz/privacy/</code></td><td>Document the license-key data flow.</td></tr>
 <tr><td><code>scripts/package-extension.mjs</code></td><td>(optional) Add a guard grepping <code>dist/</code> for private-key patterns before zipping.</td></tr>
-<tr><td>Dependency</td><td>Add <code>@noble/ed25519</code> (pairs with existing <code>@noble/hashes</code>) for offline license-signature verification — no runtime server dependency after redemption.</td></tr>
+<tr><td>Dependency</td><td><strong>None.</strong> Online validate is a plain <code>fetch</code> — no on-device crypto, so <code>@noble/ed25519</code> is not added.</td></tr>
 </tbody>
 </table>
 </section>
@@ -1851,7 +1857,7 @@ Today's <code>fetch</code> to <code>x.com</code> works because <code>https://x.c
 <li><strong>(b) Deep-link button</strong> <code>chrome-extension://&lt;id&gt;/newtab.html?license=&lt;key&gt;</code> (or a custom action) that the success page renders; the new-tab boot reads <code>?license=</code> and stores/validates it. Works without <code>externally_connectable</code> but exposes the key in a URL.</li>
 <li><strong>(c) Paste-a-key fallback (always ship this):</strong> a field in extension Settings + the <code>/manage-license</code> page where the user pastes the key manually. The robust, no-coupling path, mirroring the existing <code>uninstall-feedback.astro</code> "static page + client script, no backend" pattern.</li>
 </ul></li>
-<li><strong>Verification (extension):</strong> The extension validates the key either offline (verify an Ed25519/HMAC signature against a public key bundled in the extension — keeps "no Totem server" intact) or by calling the MoR's license-verify API directly from the service worker. Store the unlocked state in <code>chrome.storage.local</code> alongside existing runtime/auth keys. No Totem backend in the loop.</li>
+<li><strong>Verification (extension):</strong> The service worker calls the MoR's license <strong>validate</strong> API directly (a public, no-secret data call) once at activation, then stores the unlocked state in <code>chrome.storage.local</code> alongside existing runtime/auth keys and reads it locally thereafter, re-checking in the background with fail-open. No Totem backend in the loop — the MoR is the only server, and only the key + email + a device id are sent.</li>
 </ol>
 
 <div class="takeaway"><div class="takeaway-label">MANIFEST NOTE</div> Whichever of (a)/(b) is chosen, the work is on the <strong>extension side</strong> (manifest <code>externally_connectable</code> and/or an <code>onMessageExternal</code>/URL-param handler). The site side stays static — the success/manage pages are ordinary Astro static pages with client <code>&lt;script&gt;</code> glue.</div>
@@ -2340,6 +2346,8 @@ async function validateProKey(licenseKey) {
 <section class="chapter">
   <div class="chapter-num">Appendix · Market Research</div>
   <h1>Appendix G · License Architecture &amp; DRM Stance</h1>
+<div class="callout"><span class="tag">DECISION UPDATE</span> This appendix is the <strong>raw research</strong> that explored <em>offline</em> Ed25519-signed keys. The project ultimately <strong>did not adopt</strong> that approach: verification is <strong>online-validate-then-cache</strong> via the provider's license API (validate once at activation, cache locally, read offline from cache, re-check in the background with fail-open) — chosen because it is simpler and because it enables multi-device management, which a fully-offline key cannot. See Chapters 4–5 for the shipped design; read the crypto exploration below as the option that was considered and set aside. The "crackable is fine" / anti-DRM stance below still holds.</div>
+
 <p class="lead">How to gate a paid "Pro" tier when the source is public on GitHub, there is no Totem server, and Chrome's MV3 policy forbids remotely-hosted code. The honest answer: the crypto is sound, the gate is patchable, and that is the correct strategy rather than a failure.</p>
 
 <h2>The constraint, stated honestly up front</h2>
@@ -2489,9 +2497,9 @@ Inputs accept <code>Uint8Array</code> or hex; verify supports detached signature
 
 <h3>Recommendation on the online/offline axis</h3>
 
-<div class="takeaway"><div class="takeaway-label">DECISION</div> Offline-verified signed keys, with the payment vendor only touched at purchase time.</div>
+<div class="takeaway"><div class="takeaway-label">DECISION (superseded)</div> The research leaned toward offline-verified signed keys. The <strong>shipped decision is online-validate-then-cache</strong> (validate once, cache, read offline from cache, re-check with fail-open) — it gives the same "don't phone home on every launch" resilience while adding device management and provider-side revocation. See Ch. 4–5.</div>
 
-<p>Totem should <em>not</em> phone home on every launch — that contradicts the local-first, no-telemetry promise and adds a runtime dependency. The buyer activates once (paste key → verify signature locally), and Totem never needs the network again. Revocation is a near-non-issue for a <strong>one-time lifetime</strong> product (there's no subscription to cancel; the only revocation case is a refunded/charged-back order, which is rare and low-stakes — handle it with an optional, <strong>best-effort</strong> online revocation-list check that <em>fails open</em>, never blocking offline users).</p>
+<p>Either way, Totem should <em>not</em> phone home on <em>every</em> launch — that contradicts the local-first, no-telemetry promise. The buyer activates once; thereafter Pro is read from the local cache and only re-checked occasionally in the background, failing open so an outage never revokes access. The online check (vs a fully-offline signed key) is what lets the provider count devices and revoke a refunded/charged-back order — both impossible to do offline.</p>
 
 <h2>The MV3 constraint: data fetch ✅, remote code ❌</h2>
 
@@ -2512,7 +2520,7 @@ Inputs accept <code>Uint8Array</code> or hex; verify supports detached signature
 
 <h3>Summary</h3>
 
-<p><span class="hl">Offline-first, Ed25519-signed license keys, verified with an embedded public key</span>, with a hosted merchant-of-record only at purchase time. No Totem server. No per-launch phone-home. Honest, published "this is crackable and that's okay" stance.</p>
+<p><span class="hl">Shipped design: provider-issued license keys, validated online once at activation and cached locally</span> (read offline from cache, re-checked in the background with fail-open), with a hosted merchant-of-record handling checkout, tax, issuance, and device counting. No Totem server. No per-launch phone-home. Honest, published "this is crackable and that's okay" stance. <em>(The offline-signed-key exploration that follows was considered and set aside — see the decision banner above.)</em></p>
 
 <h3>Where the key comes from</h3>
 
@@ -2550,8 +2558,8 @@ async function verifyLicense(key) {
 <h3>Online vs offline decision</h3>
 
 <ul>
-<li><strong>Default: fully offline.</strong> Verify locally; never required to hit the network again after entry. Preserves local-first, zero-telemetry, "nothing can shut down" promises.</li>
-<li><strong>Optional best-effort online revocation:</strong> at most once per app launch (or weekly), Totem <em>may</em> fetch a small static <strong>revocation-list JSON</strong> (refunded/charged-back order ids) — a <strong>data fetch</strong>, MV3-legal. It <strong>fails open</strong>: no network → stay Pro. This is the only "online" touch and it's non-blocking.</li>
+<li><strong>Shipped: online-validate-then-cache.</strong> Validate the key with the provider once at activation (counts the device), then read <code>isPro</code> from the local cache on every launch — no per-launch network. Preserves the local-first, zero-telemetry feel while enabling device management.</li>
+<li><strong>Background re-check, fail-open:</strong> at most weekly, Totem re-validates (or fetches a small revocation-list JSON) to catch refunds/charge-backs — a <strong>data fetch</strong>, MV3-legal. No network → <strong>stay Pro</strong>. The re-check is non-blocking and never the gate for a normal launch.</li>
 </ul>
 
 <h3>What's stored where</h3>
@@ -2590,7 +2598,7 @@ async function verifyLicense(key) {
 
 <h2>Concrete recommendation</h2>
 
-<p>Ship <strong>offline-verified Ed25519 signed license keys</strong>: issue them at checkout through a merchant-of-record (Lemon Squeezy or Polar for tax handling; optionally Keyforge/Keygen or a tiny serverless signer for the actual signing), embed only the <strong>public key</strong> in the extension, and verify pasted keys <strong>entirely locally</strong> with <code>@noble/ed25519</code> (pairs with the <code>@noble/hashes</code> already in <code>package.json</code>). Persist the verified entitlement in <code>chrome.storage.local</code> + Zustand, re-verify from the stored key on each launch, and add only an <strong>optional fail-open revocation-list data fetch</strong> (MV3-legal, never blocking). Use <strong>lifetime keys</strong> (<code>exp: null</code>) so there is no per-launch phone-home and nothing to shut down — and publish the honest, on-brand stance that <span class="hl">the check is patchable by design</span>, because for a $19 one-time tool the cracker's experience is worse than just paying, and Totem's privacy-first audience will trust the absence of DRM more than they'd respect its presence.</p>
+<p><em>(Final decision — this supersedes the offline-key recommendation explored above.)</em> Ship <strong>provider-issued license keys validated online and cached</strong>: sell through a merchant-of-record (Lemon Squeezy or Polar) that handles checkout, tax, key issuance, and device counting; on activation the service worker calls the provider's <strong>validate/activate</strong> endpoint once (a public, no-secret <strong>data</strong> fetch — MV3-legal), then persists the result to <code>chrome.storage.local</code> + Zustand and <strong>reads from that cache on every launch</strong> (no per-launch network). Re-validate weekly in the background, <strong>failing open</strong> so an outage never revokes a paying user, which also catches refunds/charge-backs. Set a generous <strong>device limit (~5)</strong> with self-serve deactivation. Use <strong>lifetime keys</strong> so there is no subscription to manage — and publish the honest, on-brand stance that <span class="hl">the check is patchable by design</span>, because for a $19 one-time tool the cracker's experience is worse than just paying, and Totem's privacy-first audience will trust the absence of DRM more than they'd respect its presence.</p>
 </section>
 
 <section class="chapter">
@@ -2798,7 +2806,7 @@ async function verifyLicense(key) {
 <li>Checkout happens off-extension (web page / processor-hosted), not inside an extension UI flow that pretends to be a native purchase.</li>
 <li>License validation returns <strong>JSON / data only</strong> (signed token preferred). No fetched JS/WASM, no <code>eval</code>, no server-command interpreter.</li>
 <li>All Pro feature <em>logic</em> ships inside the extension package; the license result only flips local feature flags.</li>
-<li>Prefer an offline-verifiable signed license (Ed25519 / JWT) cached in <code>chrome.storage.local</code> so Pro keeps working offline.</li>
+<li>Validate the key online once, then <strong>cache the result</strong> in <code>chrome.storage.local</code> and read it locally — with a fail-open background re-check — so Pro keeps working without a per-launch network call.</li>
 </ul>
 
 <h3>Single purpose / permissions</h3>
@@ -2845,7 +2853,7 @@ async function verifyLicense(key) {
 <li><strong>Forced action / fake "free trial" that demands a card up front.</strong> This crowd reads a card-required trial as a trap. If you trial Pro, make it <strong>no-card</strong> or just use a generous free tier instead.</li>
 <li><strong>Dark-pattern checkout</strong> (hidden recurring charge, pre-checked add-ons, confusing "cancel"). For a one-time purchase this is mostly avoided — but make crystal clear it is one-time, not a sub.</li>
 <li><strong>Surprise paywall at the moment of need with no prior disclosure</strong> (also a CWS deceptive-tactics risk).</li>
-<li><strong>Telemetry / "phone home" creep.</strong> Any new network call is scrutinized. Be loud that the license check sends only email + key, never bookmarks; ideally make it offline-verifiable.</li>
+<li><strong>Telemetry / "phone home" creep.</strong> Any new network call is scrutinized. Be loud that the license check sends only email + key (+ a device id), never bookmarks, and runs only at activation plus an occasional background re-check — not on every launch.</li>
 <li><strong>Manipulative urgency / scarcity</strong> ("only 3 left!") — reads as scammy to a technical audience. The founders price is fine <em>if framed honestly</em> ("$14 founders price, going to $19" — a real, time-boxed thing, not a fake countdown).</li>
 </ul>
 
@@ -2909,7 +2917,7 @@ async function verifyLicense(key) {
     <tr><td><code>cb-site-distribution.md</code></td><td>Astro static site + checkout pages</td><td>D</td></tr>
     <tr><td><code>cb-ui-state-upsell.md</code></td><td>usePro / ProGate / upsell mounts</td><td>E</td></tr>
     <tr><td><code>rs-payments.md</code></td><td>Gateway comparison</td><td>F</td></tr>
-    <tr><td><code>rs-license-arch.md</code></td><td>Ed25519 offline keys + DRM stance</td><td>G</td></tr>
+    <tr><td><code>rs-license-arch.md</code></td><td>License-key architecture + DRM stance (explored offline keys; plan chose online-validate-then-cache)</td><td>G</td></tr>
     <tr><td><code>rs-recent-discourse.md</code></td><td>2026 builder evidence, lifetime vs subscription</td><td>H</td></tr>
     <tr><td><code>rs-cws-policy-ux.md</code></td><td>CWS compliance + paywall UX</td><td>I</td></tr>
   </tbody>
@@ -2918,9 +2926,11 @@ async function verifyLicense(key) {
 
 <h2>B. Glossary</h2>
 <p><strong>MoR (Merchant of Record)</strong> — a payment provider that becomes the legal seller and remits global VAT/GST on your behalf (Lemon Squeezy, Polar, Gumroad). Removes the tax-registration burden from a solo developer.</p>
-<p><strong>MV3</strong> — Chrome Manifest V3. Bans remotely-hosted <em>code</em> but allows fetching remote <em>data</em>; pure local crypto verification is trivially compliant.</p>
+<p><strong>MV3</strong> — Chrome Manifest V3. Bans remotely-hosted <em>code</em> but allows fetching remote <em>data</em>; an online license <strong>validate</strong> call returns JSON data (not code), so it is compliant.</p>
 <p><strong>Entitlement</strong> — the device-global fact "this install is Pro." Stored authoritatively in <code>CS_ENTITLEMENT</code> (service-worker-owned <code>chrome.storage.local</code>), independent of account or reset.</p>
-<p><strong>Ed25519 signed key</strong> — a license token signed with a private key the buyer never sees and verified on-device with an embedded public key via <code>@noble/ed25519</code>. Enables offline, no-phone-home verification.</p>
+<p><strong>License key</strong> — a key the merchant-of-record mints on a paid order. The extension <strong>validates</strong> it against the provider's license API once at activation (a no-secret, public data call), caches the result in <code>CS_ENTITLEMENT</code>, and reads it locally thereafter — re-checking in the background with fail-open.</p>
+<p><strong>Cache + fail-open</strong> — the resilience rule for online verification: validate once, store the result, read from the store on every launch, and if a background re-check can't reach the network, keep Pro on (never lock out a paying user over an outage).</p>
+<p><strong>Activation / device limit</strong> — the provider caps how many devices a key can activate (recommend ~5) and exposes activate/deactivate so a user can free a slot themselves. This is how multi-browser activation is managed, and it requires the online check.</p>
 <p><strong>Grandfathering</strong> — granting existing users full features free, forever, so the paywall only ever applies to new installs. The primary backlash mitigation.</p>
 <p><strong>Hydration</strong> — Totem's existing engine that fetches and caches tweet detail, already classifying deleted/protected tweets — the basis of the "deleted-tweet preservation" Pro feature.</p>
 <p><strong>CWS</strong> — Chrome Web Store. Native in-extension payments were removed Feb 1, 2021; an external processor is mandatory.</p>

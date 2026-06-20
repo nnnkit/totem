@@ -48,7 +48,9 @@
 </div>
 </nav>
 <main class="content">
-<div class="chapter-eyebrow">Appendix G</div><h1 class="page-title">License Architecture &amp; DRM Stance</h1><p class="lead">How to gate a paid "Pro" tier when the source is public on GitHub, there is no Totem server, and Chrome's MV3 policy forbids remotely-hosted code. The honest answer: the crypto is sound, the gate is patchable, and that is the correct strategy rather than a failure.</p>
+<div class="chapter-eyebrow">Appendix G</div><h1 class="page-title">License Architecture &amp; DRM Stance</h1><div class="callout"><span class="tag">DECISION UPDATE</span> This appendix is the <strong>raw research</strong> that explored <em>offline</em> Ed25519-signed keys. The project ultimately <strong>did not adopt</strong> that approach: verification is <strong>online-validate-then-cache</strong> via the provider's license API (validate once at activation, cache locally, read offline from cache, re-check in the background with fail-open) — chosen because it is simpler and because it enables multi-device management, which a fully-offline key cannot. See Chapters 4–5 for the shipped design; read the crypto exploration below as the option that was considered and set aside. The "crackable is fine" / anti-DRM stance below still holds.</div>
+
+<p class="lead">How to gate a paid "Pro" tier when the source is public on GitHub, there is no Totem server, and Chrome's MV3 policy forbids remotely-hosted code. The honest answer: the crypto is sound, the gate is patchable, and that is the correct strategy rather than a failure.</p>
 
 <h2 id="the-constraint-stated-honestly-up-front">The constraint, stated honestly up front</h2>
 
@@ -197,9 +199,9 @@ Inputs accept <code>Uint8Array</code> or hex; verify supports detached signature
 
 <h3>Recommendation on the online/offline axis</h3>
 
-<div class="takeaway"><div class="takeaway-label">DECISION</div> Offline-verified signed keys, with the payment vendor only touched at purchase time.</div>
+<div class="takeaway"><div class="takeaway-label">DECISION (superseded)</div> The research leaned toward offline-verified signed keys. The <strong>shipped decision is online-validate-then-cache</strong> (validate once, cache, read offline from cache, re-check with fail-open) — it gives the same "don't phone home on every launch" resilience while adding device management and provider-side revocation. See Ch. 4–5.</div>
 
-<p>Totem should <em>not</em> phone home on every launch — that contradicts the local-first, no-telemetry promise and adds a runtime dependency. The buyer activates once (paste key → verify signature locally), and Totem never needs the network again. Revocation is a near-non-issue for a <strong>one-time lifetime</strong> product (there's no subscription to cancel; the only revocation case is a refunded/charged-back order, which is rare and low-stakes — handle it with an optional, <strong>best-effort</strong> online revocation-list check that <em>fails open</em>, never blocking offline users).</p>
+<p>Either way, Totem should <em>not</em> phone home on <em>every</em> launch — that contradicts the local-first, no-telemetry promise. The buyer activates once; thereafter Pro is read from the local cache and only re-checked occasionally in the background, failing open so an outage never revokes access. The online check (vs a fully-offline signed key) is what lets the provider count devices and revoke a refunded/charged-back order — both impossible to do offline.</p>
 
 <h2 id="the-mv3-constraint-data-fetch-remote-code">The MV3 constraint: data fetch ✅, remote code ❌</h2>
 
@@ -220,7 +222,7 @@ Inputs accept <code>Uint8Array</code> or hex; verify supports detached signature
 
 <h3>Summary</h3>
 
-<p><span class="hl">Offline-first, Ed25519-signed license keys, verified with an embedded public key</span>, with a hosted merchant-of-record only at purchase time. No Totem server. No per-launch phone-home. Honest, published "this is crackable and that's okay" stance.</p>
+<p><span class="hl">Shipped design: provider-issued license keys, validated online once at activation and cached locally</span> (read offline from cache, re-checked in the background with fail-open), with a hosted merchant-of-record handling checkout, tax, issuance, and device counting. No Totem server. No per-launch phone-home. Honest, published "this is crackable and that's okay" stance. <em>(The offline-signed-key exploration that follows was considered and set aside — see the decision banner above.)</em></p>
 
 <h3>Where the key comes from</h3>
 
@@ -258,8 +260,8 @@ async function verifyLicense(key) {
 <h3>Online vs offline decision</h3>
 
 <ul>
-<li><strong>Default: fully offline.</strong> Verify locally; never required to hit the network again after entry. Preserves local-first, zero-telemetry, "nothing can shut down" promises.</li>
-<li><strong>Optional best-effort online revocation:</strong> at most once per app launch (or weekly), Totem <em>may</em> fetch a small static <strong>revocation-list JSON</strong> (refunded/charged-back order ids) — a <strong>data fetch</strong>, MV3-legal. It <strong>fails open</strong>: no network → stay Pro. This is the only "online" touch and it's non-blocking.</li>
+<li><strong>Shipped: online-validate-then-cache.</strong> Validate the key with the provider once at activation (counts the device), then read <code>isPro</code> from the local cache on every launch — no per-launch network. Preserves the local-first, zero-telemetry feel while enabling device management.</li>
+<li><strong>Background re-check, fail-open:</strong> at most weekly, Totem re-validates (or fetches a small revocation-list JSON) to catch refunds/charge-backs — a <strong>data fetch</strong>, MV3-legal. No network → <strong>stay Pro</strong>. The re-check is non-blocking and never the gate for a normal launch.</li>
 </ul>
 
 <h3>What's stored where</h3>
@@ -298,7 +300,7 @@ async function verifyLicense(key) {
 
 <h2 id="concrete-recommendation">Concrete recommendation</h2>
 
-<p>Ship <strong>offline-verified Ed25519 signed license keys</strong>: issue them at checkout through a merchant-of-record (Lemon Squeezy or Polar for tax handling; optionally Keyforge/Keygen or a tiny serverless signer for the actual signing), embed only the <strong>public key</strong> in the extension, and verify pasted keys <strong>entirely locally</strong> with <code>@noble/ed25519</code> (pairs with the <code>@noble/hashes</code> already in <code>package.json</code>). Persist the verified entitlement in <code>chrome.storage.local</code> + Zustand, re-verify from the stored key on each launch, and add only an <strong>optional fail-open revocation-list data fetch</strong> (MV3-legal, never blocking). Use <strong>lifetime keys</strong> (<code>exp: null</code>) so there is no per-launch phone-home and nothing to shut down — and publish the honest, on-brand stance that <span class="hl">the check is patchable by design</span>, because for a $19 one-time tool the cracker's experience is worse than just paying, and Totem's privacy-first audience will trust the absence of DRM more than they'd respect its presence.</p>
+<p><em>(Final decision — this supersedes the offline-key recommendation explored above.)</em> Ship <strong>provider-issued license keys validated online and cached</strong>: sell through a merchant-of-record (Lemon Squeezy or Polar) that handles checkout, tax, key issuance, and device counting; on activation the service worker calls the provider's <strong>validate/activate</strong> endpoint once (a public, no-secret <strong>data</strong> fetch — MV3-legal), then persists the result to <code>chrome.storage.local</code> + Zustand and <strong>reads from that cache on every launch</strong> (no per-launch network). Re-validate weekly in the background, <strong>failing open</strong> so an outage never revokes a paying user, which also catches refunds/charge-backs. Set a generous <strong>device limit (~5)</strong> with self-serve deactivation. Use <strong>lifetime keys</strong> so there is no subscription to manage — and publish the honest, on-brand stance that <span class="hl">the check is patchable by design</span>, because for a $19 one-time tool the cracker's experience is worse than just paying, and Totem's privacy-first audience will trust the absence of DRM more than they'd respect its presence.</p>
 <nav class="pager"><a class="pager-link prev" href="appendix-f-payments-compared.html"><span class="pager-eyebrow">Previous</span><span class="pager-title">Payment Gateways Compared</span></a><a class="pager-link next" href="appendix-h-market-discourse.html"><span class="pager-eyebrow">Next</span><span class="pager-title">2026 Market Discourse</span></a></nav>
 <footer class="page-foot">Totem · premium-monetization research · compiled with kami</footer>
 </main>

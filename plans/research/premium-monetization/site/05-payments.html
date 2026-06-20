@@ -48,7 +48,7 @@
 </div>
 </nav>
 <main class="content">
-<div class="chapter-eyebrow">05 · Payments</div><h1 class="page-title">Payment Gateway — The Decision</h1><p class="lead">Native Chrome Web Store payments died <strong>Feb 1, 2021</strong>, so an external processor is mandatory. The choice is not just "who takes the smallest cut" — it is which option preserves Totem's <span class="hl">no-server, works-offline, nothing-can-shut-down</span> promise.</p>
+<div class="chapter-eyebrow">05 · Payments</div><h1 class="page-title">Payment Gateway — The Decision</h1><p class="lead">Native Chrome Web Store payments died <strong>Feb 1, 2021</strong>, so an external processor is mandatory. The choice is not just "who takes the smallest cut" — it is which option keeps Totem <span class="hl">server-free, privacy-safe, and resilient to provider outages</span>.</p>
 
 <h2 id="the-contenders-2026-facts">The contenders (2026 facts)</h2>
 
@@ -67,25 +67,25 @@
 
 <h2 id="recommendation">Recommendation</h2>
 
-<div class="callout"><strong>Lemon Squeezy as merchant-of-record (primary), Polar as the cost-optimized alternative</strong> &mdash; and issue offline-verifiable Ed25519 signed keys on top (via Keyforge or a tiny serverless signer).</div>
+<div class="callout"><strong>Lemon Squeezy as merchant-of-record (primary), Polar as the cost-optimized alternative</strong> &mdash; and use the provider's license-key API for verification: validate the key online once at activation, cache the result locally, fail open, with a generous device limit.</div>
 
 <h3>Why MoR, not ExtPay</h3>
 
-<p>ExtPay is the <em>fastest</em> to wire and the most extension-native, but it (a) is <strong>not</strong> a merchant of record, so you still owe VAT in every country, and (b) makes every paid check a live call to <code>extensionpay.com</code> &mdash; a third-party server in the trust chain of a product whose entire pitch is "no server." Both are brand-violating. The <span class="hl">MoR removes the tax burden; the signed-key approach removes the runtime dependency</span>.</p>
+<p>ExtPay is the <em>fastest</em> to wire and the most extension-native, but it (a) is <strong>not</strong> a merchant of record, so you still owe VAT in every country, and (b) makes <strong>every</strong> paid check a live <code>getUser()</code> call to <code>extensionpay.com</code> with <strong>no documented offline cache</strong> &mdash; so a network failure can throw on a routine launch. The MoR's license API is better on both axes: it removes the tax burden, and you call <strong>validate</strong> <em>once at activation</em>, then run from a local cache and only re-check occasionally in the background. <span class="hl">You verify online, but you don't depend on the network being up on every launch.</span></p>
 
-<h3>Why offline signed keys, not the MoR's online validate endpoint</h3>
+<h3>Why online validate (not a fully-offline signed key)</h3>
 
-<p>Polar/LS both <em>can</em> validate a key with no embedded secret (great for OSS), but that's an <strong>online</strong> check &mdash; every validation is a network event to a third party. For Totem specifically, the offline signed-key path is strictly more on-brand: the extension verifies a pasted key with an embedded <strong>public</strong> key and <strong>never makes a license network call at all</strong>. The marketing claim "no Totem account, no server, works offline" survives literally. The cost is one extra moving part at <em>issuance</em> time (Keyforge, or ~40 lines of serverless signing), which the buyer's browser hits during checkout &mdash; not the extension.</p>
+<p>We deliberately accept one online check. It is the simplest path, it is what makes <strong>device management</strong> possible (something has to count activations), and it lets the provider revoke a refunded or charged-back key. MV3 allows it cleanly: validating a key returns <strong>JSON data</strong>, not remote code. The cost &mdash; a host permission and a reworded store description &mdash; is small. We do <strong>not</strong> ship an on-device signature verifier, a license-signing vendor, or a private signing key; the provider issues and validates the key.</p>
 
-<h3>Lower-effort fallback</h3>
+<h3>The rule that keeps it resilient &mdash; cache + fail-open</h3>
 
-<p>If you don't want to run/relay a signer for v1: use the MoR's <strong>own license key + its validate endpoint</strong>, called <strong>once at activation</strong>, then cache <code>isPro</code> in <code>chrome.storage.local</code> and run offline with an optional weekly fail-open re-check. This needs one host permission (the MoR API) and dents the "zero network" claim slightly, but ships faster.</p>
+<p>Validate online at activation &rarr; write <code>isPro</code> to <code>CS_ENTITLEMENT</code> &rarr; read from that cache on every launch. Re-validate quietly in the background (e.g. weekly) to catch refunds. If a re-check can't reach the network, <strong>keep Pro on</strong> (fail-open, with a grace window) &mdash; never revoke a paying user because their Wi-Fi blipped or the provider had a hiccup. "Online verification" means <em>check when we can, trust the saved answer otherwise</em> &mdash; not <em>gate every launch on a live call</em>.</p>
 
-<div class="takeaway"><div class="takeaway-label">MIGRATION-SAFE</div> You can launch on the fallback and migrate to signed keys later without changing the buyer's experience.</div>
+<h3>Multi-device activation</h3>
 
-<h3>Honest scope of the "nothing can shut down" claim</h3>
+<p>A purely offline key can't be counted (nothing knows how many browsers hold it). Because verification is <strong>online</strong>, the provider <em>is</em> that shared counter: set a generous <strong>activation limit (~5)</strong>, expose <strong>activate / deactivate</strong> so a user can free a slot from the customer portal (the fix for the reinstall-burns-a-slot complaint), and send a device id on activate. An <strong>unlimited</strong> limit ("use on all your browsers") is a defensible zero-friction alternative for a $19 honest-audience tool &mdash; you just accept that a key <em>could</em> be shared, the same way the open-source build can already be patched.</p>
 
-<p>The offline-signed-key design means an <em>already-activated</em> user works forever with no network and no dependency on any vendor staying alive. It does <strong>not</strong> mean a <em>new buyer</em> is immune to outages &mdash; checkout needs the MoR online and issuance needs the signer online at purchase time. So phrase the brand promise precisely (<span class="hl">"once activated, Totem Pro works forever, fully offline, even if we disappear"</span>), not as an absolute. This matters given the Lemon-Squeezy&rarr;Stripe transition watch-item: the signed keys already sold keep working regardless of what happens to the MoR.</p>
+<div class="takeaway"><div class="takeaway-label">BRAND PROMISE, PRECISELY</div> Not "works offline, nothing can shut down," but the truthful version: <span class="hl">no Totem server to run &mdash; the provider handles checkout, tax, and licensing; your bookmarks never leave your device; Pro is verified by a quick online check, then cached and read locally.</span> Cached entitlements ride out a short provider outage &mdash; relevant given the Lemon-Squeezy&rarr;Stripe transition watch-item.</div>
 
 <h2 id="the-honest-stance-publish-it-it-converts-for-this-audience">The honest stance (publish it &mdash; it converts for this audience)</h2>
 

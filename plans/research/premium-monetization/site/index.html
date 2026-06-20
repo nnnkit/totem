@@ -56,7 +56,7 @@
 <ol>
   <li><strong>Model — freemium, one build, runtime-gated.</strong> The free tier stays fully functional forever; Pro is a one-time lifetime unlock. It is the only model the single-artifact pipeline and the subscription-averse, anti-DRM audience actually support.</li>
   <li><strong>The work is packaging, not building.</strong> Five of the six proposed Pro features already exist and ship for free today — export, deleted-tweet preservation (the hydration engine), advanced search, annotations, thread-aware capture. Only <span class="tag">NET-NEW</span> bulk operations must be built. The real engineering is one clean entitlement boundary.</li>
-  <li><strong>Payments — merchant-of-record for checkout, offline signed keys for verification.</strong> Lemon Squeezy or Polar handles global VAT so there is no Totem billing server; <code>@noble/ed25519</code> verifies an Ed25519-signed license on-device, so the extension makes zero license network calls and "works offline, nothing can shut down" stays literally true once activated.</li>
+  <li><strong>Payments — merchant-of-record for checkout, online license validation for verification.</strong> Lemon Squeezy or Polar handles global VAT so there is no Totem billing server, and the extension validates the key against the provider's license API <em>once at activation</em>, caches the result locally, and reads it from cache thereafter — re-checking quietly in the background and failing open so an outage never locks out a paying user. Only the key and email leave the device; bookmarks never do. The provider also counts devices, so multi-browser activation is capped at a generous limit (~5) with self-serve deactivation.</li>
   <li><strong>The #1 risk is the retroactive paywall.</strong> Totem is already free; bolting a paywall onto existing users earns 1-star reviews. Grandfather every existing install — full features, free, forever — and gate only new installs.</li>
 </ol>
 
@@ -65,7 +65,7 @@
   <li>Realistic conversion to model against: <span class="hl">1–3% of active users</span> (not installs), ~60–70% checkout completion — the one-time-tool bucket where lifetime pricing beats subscriptions.</li>
   <li>The cleanest authoritative entitlement is a service-worker-owned <code>CS_ENTITLEMENT</code> key in <code>chrome.storage.local</code>, kept off the reset lists and stamped into the existing reactive snapshot so every open tab flips to Pro on the same event-loop tick.</li>
   <li>One hard repo blocker exists: <code>scripts/verify-cws-featured-readiness.mjs</code> hard-pins the manifest permissions, hosts, description string, and screenshot set — it must be loosened for any new host or copy change.</li>
-  <li>An adversarial review pass corrected three load-bearing claims before this document shipped (see Chapter 11): export is not single-gated, the <code>@noble/hashes</code> 2.x SHA-512 import path breaks the standard wiring, and grandfathering by install-reason alone misfires on reinstall.</li>
+  <li>An adversarial review pass corrected the load-bearing claims before this document shipped (see Chapter 11): export is not single-gated, the original "fully offline, nothing can shut down" framing was an overclaim — the design now validates online once and caches with fail-open — and grandfathering by install-reason alone misfires on reinstall.</li>
 </ul>
 
 <div class="takeaway">

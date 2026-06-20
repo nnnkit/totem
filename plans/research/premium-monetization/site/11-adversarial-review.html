@@ -66,8 +66,8 @@
 <h3>1 · Export is not a single gate</h3>
 <p>The bulk-ZIP path concentrates at <code>ExportModal.tsx:64</code>, but <code>src/components/BookmarkReader.tsx:313-352</code> has four independent per-article egress handlers (copy-Markdown, copy-for-agent, download <code>.md</code>, print/PDF) that bypass <code>ExportModal</code> entirely. The "copy stays free as a teaser" idea is therefore a slow full-library leak — a knowing trade-off, not an oversight. All four handlers must be gated; the file is <code>BookmarkReader.tsx</code>, not <code>TweetContent.tsx</code>.</p>
 
-<h3>2 · The Ed25519 / @noble SHA-512 build trap</h3>
-<p>The standard ed25519 wiring snippet imports <code>{ sha512 } from '@noble/hashes/sha512'</code>, which <span class="hl">does not resolve against <code>@noble/hashes</code> 2.x</span> (neither <code>/sha512</code> nor <code>/sha2</code> is an exported subpath). The repo pins 2.2.0. Use <code>import { sha512 } from '@noble/hashes/sha2.js'</code> (the <code>.js</code> suffix is required) and register <code>ed.etc.sha512Sync</code> at service-worker startup before any <code>verify</code> call.</p>
+<h3>2 · "Fully offline, nothing can shut down" was an overclaim</h3>
+<p>The original plan leaned on <strong>offline Ed25519-signed keys</strong> so the extension would make zero license network calls. The review flagged two problems: the brand line "nothing can shut down" only ever held <em>post-activation</em> (checkout and issuance still need the provider online), and — more decisively — a fully-offline key <span class="hl">cannot be counted</span>, so there is no way to manage multi-device activation. The design was therefore changed to <strong>online-validate-then-cache</strong>: validate once at activation, cache the result, read locally, and re-check quietly in the background with <strong>fail-open</strong>. This is simpler (no signer, no key-management vendor, no <code>@noble/ed25519</code> dependency and its SHA-512 wiring trap), it enables the device limit, and it lets the provider revoke a refunded key — at the cost of one host permission and a reworded store description.</p>
 
 <h3>3 · Grandfathering by install-reason misfires</h3>
 <p><code>chrome.runtime.onInstalled</code> with <code>reason === "install"</code> fires for uninstall→reinstall and new-machine cases, so reason alone strips grandfathered status from exactly the engaged users it is meant to protect. Add a secondary heuristic that also runs on install: treat a non-empty bookmarks IndexedDB store (or a pre-Pro settings key) as proof of an existing user.</p>
@@ -76,8 +76,8 @@
 <table class="compact">
   <thead><tr><th>Risk</th><th>Mitigation in the plan</th></tr></thead>
   <tbody>
-    <tr><td>"Nothing can shut down" overclaim</td><td>Scoped to <em>post-activation</em>; checkout still needs the MoR online (Ch. 5).</td></tr>
-    <tr><td>One-click activation puts the site in the trust chain</td><td><code>onMessageExternal</code> must still verify the signature on-device; paste-a-key is the zero-trust-chain fallback (Ch. 7–8).</td></tr>
+    <tr><td>"Nothing can shut down" / fully-offline overclaim</td><td>Design changed to online-validate-then-cache with fail-open; brand promise reworded to "no Totem server; bookmarks stay on-device; verified by a quick online check, then cached" (Ch. 4–5).</td></tr>
+    <tr><td>One-click activation puts the site in the trust chain</td><td><code>onMessageExternal</code> must still validate the key with the provider; paste-a-key is the zero-trust-chain fallback (Ch. 7–8).</td></tr>
     <tr><td>Gating currently-free search/annotations</td><td>Flagged as an open decision; lean toward keeping today's versions free and gating only new operators + annotation export (Ch. 10).</td></tr>
     <tr><td>Featured export screenshot vs paywall</td><td>The free export allowance keeps the pinned screenshot truthful; listing copy must label unlimited export as Pro (Ch. 8).</td></tr>
   </tbody>

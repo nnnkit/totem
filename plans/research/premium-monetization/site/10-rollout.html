@@ -53,10 +53,10 @@
 <h2 id="phased-rollout-do-these-in-order">Phased rollout — do these in order</h2>
 
 <h3>Phase 0 — Decisions &amp; accounts (no code)</h3>
-<p>Pick the merchant-of-record (Lemon Squeezy vs Polar) and the issuance mechanism (Keyforge vs serverless signer). Create the $19 product plus the $14 founders coupon. Generate the Ed25519 keypair — the private key goes to the signer only, the public key goes into the extension. Write the privacy-policy update and the "honest stance" copy.</p>
+<p>Pick the merchant-of-record (Lemon Squeezy vs Polar). Create the $19 product plus the $14 founders coupon, <strong>enable license keys</strong>, and set the <strong>activation/device limit</strong> (~5). Note the provider's validate endpoint URL. Write the privacy-policy update and the "honest stance" copy.</p>
 
 <h3>Phase 1 — The entitlement spine (ship dark)</h3>
-<p><code>CS_ENTITLEMENT</code> + <code>entitlement.ts</code> + <code>verifyLicense</code> + the snapshot field + <code>useIsPro()</code> + the grandfather stamp on <code>onInstalled</code>. No gates yet, no UI. Test that <code>isPro</code> propagates reactively and survives reset/account-switch. This is the <span class="hl">load-bearing, low-visibility work</span>.</p>
+<p><code>CS_ENTITLEMENT</code> + <code>entitlement.ts</code> + <code>validateLicense</code> + the snapshot field + <code>useIsPro()</code> + the grandfather stamp on <code>onInstalled</code>. No gates yet, no UI. Test that <code>isPro</code> propagates reactively and survives reset/account-switch. This is the <span class="hl">load-bearing, low-visibility work</span>.</p>
 
 <h3>Phase 2 — The gate + the one feature</h3>
 <p><code>&lt;ProGate&gt;</code> / <code>requirePro</code> / <code>UpgradeModal</code> / <code>usePro</code>. Gate <strong>export</strong> only — the cleanest, highest-intent surface — with the free-allowance and grandfathering in place. Paste-a-key activation in Settings. Ship the site <code>pricing</code> / <code>success</code> / <code>manage-license</code> pages plus the MoR checkout.</p>
@@ -69,15 +69,14 @@
 <p>Build <strong>bulk operations</strong> — the only net-new feature — a clearly-new Pro capability nobody can claim was taken away. Then the <code>ProNudge</code>, the time-boxed founders-price banner, and analytics on the success page.</p>
 
 <h3>Phase 5 — Optional hardening</h3>
-<p>If you launched on the online-validate fallback, migrate to offline signed keys (removes the host permission, restores the literal "no server" claim). Add the fail-open revocation list only if refund abuse ever shows up.</p>
+<p>Tune the device limit and the background re-check cadence; add a "deactivate this device" affordance inside the extension (mirrors the provider portal) for the reinstall case; surface refund/chargeback revocation gracefully — the provider already revokes, so keep the re-check fail-open so a <em>network</em> failure never looks like a revocation.</p>
 
 <h2 id="open-decisions-for-you">Open decisions for you</h2>
 <p>These are genuine forks where your preference matters — everything else above is a recommendation I'd ship as-is.</p>
 
 <ol>
 <li><strong>MoR:</strong> Lemon Squeezy (most mature license API, Stripe-transition watch) vs Polar (cheaper, OSS-positioned, younger). Both are fine; pick on whether maturity or cost/ethos weighs more.</li>
-<li><strong>Issuance:</strong> Keyforge (turnkey, one more vendor) vs a tiny serverless signer you own (no vendor lock-in, ~40 lines + a webhook). The signer is more on-brand; Keyforge is faster.</li>
-<li><strong>Launch verification path:</strong> ship straight to offline signed keys (purest, slightly more setup) vs launch on MoR online-validate and migrate later (faster, one temporary host permission).</li>
+<li><strong>Device limit:</strong> the exact activation cap — <strong>~5 with self-serve deactivate</strong> (recommended: kills mass key-sharing, never bites a real user) vs <strong>unlimited</strong> ("buy once, use on all your browsers," zero friction, accepts key-sharing). And whether to expose deactivate inside the extension or only via the provider's portal.</li>
 <li><strong>Free export allowance:</strong> the exact N (25 is the research default) and whether per-article <em>Copy-to-clipboard</em> stays free as a teaser (recommended yes).</li>
 <li><strong>Annotations / advanced-search free vs Pro:</strong> the GTM doc gates them; the retroactive-paywall risk argues for keeping the <em>currently-shipping</em> versions free for everyone and gating only <em>export of</em> annotations + <em>new</em> filter operators. Worth a deliberate call.</li>
 </ol>

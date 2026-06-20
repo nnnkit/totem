@@ -65,7 +65,7 @@
     <tr><td><code>cb-site-distribution.md</code></td><td>Astro static site + checkout pages</td><td>D</td></tr>
     <tr><td><code>cb-ui-state-upsell.md</code></td><td>usePro / ProGate / upsell mounts</td><td>E</td></tr>
     <tr><td><code>rs-payments.md</code></td><td>Gateway comparison</td><td>F</td></tr>
-    <tr><td><code>rs-license-arch.md</code></td><td>Ed25519 offline keys + DRM stance</td><td>G</td></tr>
+    <tr><td><code>rs-license-arch.md</code></td><td>License-key architecture + DRM stance (explored offline keys; plan chose online-validate-then-cache)</td><td>G</td></tr>
     <tr><td><code>rs-recent-discourse.md</code></td><td>2026 builder evidence, lifetime vs subscription</td><td>H</td></tr>
     <tr><td><code>rs-cws-policy-ux.md</code></td><td>CWS compliance + paywall UX</td><td>I</td></tr>
   </tbody>
@@ -74,9 +74,11 @@
 
 <h2 id="b-glossary">B. Glossary</h2>
 <p><strong>MoR (Merchant of Record)</strong> — a payment provider that becomes the legal seller and remits global VAT/GST on your behalf (Lemon Squeezy, Polar, Gumroad). Removes the tax-registration burden from a solo developer.</p>
-<p><strong>MV3</strong> — Chrome Manifest V3. Bans remotely-hosted <em>code</em> but allows fetching remote <em>data</em>; pure local crypto verification is trivially compliant.</p>
+<p><strong>MV3</strong> — Chrome Manifest V3. Bans remotely-hosted <em>code</em> but allows fetching remote <em>data</em>; an online license <strong>validate</strong> call returns JSON data (not code), so it is compliant.</p>
 <p><strong>Entitlement</strong> — the device-global fact "this install is Pro." Stored authoritatively in <code>CS_ENTITLEMENT</code> (service-worker-owned <code>chrome.storage.local</code>), independent of account or reset.</p>
-<p><strong>Ed25519 signed key</strong> — a license token signed with a private key the buyer never sees and verified on-device with an embedded public key via <code>@noble/ed25519</code>. Enables offline, no-phone-home verification.</p>
+<p><strong>License key</strong> — a key the merchant-of-record mints on a paid order. The extension <strong>validates</strong> it against the provider's license API once at activation (a no-secret, public data call), caches the result in <code>CS_ENTITLEMENT</code>, and reads it locally thereafter — re-checking in the background with fail-open.</p>
+<p><strong>Cache + fail-open</strong> — the resilience rule for online verification: validate once, store the result, read from the store on every launch, and if a background re-check can't reach the network, keep Pro on (never lock out a paying user over an outage).</p>
+<p><strong>Activation / device limit</strong> — the provider caps how many devices a key can activate (recommend ~5) and exposes activate/deactivate so a user can free a slot themselves. This is how multi-browser activation is managed, and it requires the online check.</p>
 <p><strong>Grandfathering</strong> — granting existing users full features free, forever, so the paywall only ever applies to new installs. The primary backlash mitigation.</p>
 <p><strong>Hydration</strong> — Totem's existing engine that fetches and caches tweet detail, already classifying deleted/protected tweets — the basis of the "deleted-tweet preservation" Pro feature.</p>
 <p><strong>CWS</strong> — Chrome Web Store. Native in-extension payments were removed Feb 1, 2021; an external processor is mandatory.</p>
