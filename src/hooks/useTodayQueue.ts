@@ -5,6 +5,7 @@ import type {
   BookmarkQueueMetadata,
   ReadingProgress,
   TodayQueueBudgetMinutes,
+  TodayQueueExposure,
   TodayQueueExposureAction,
   TodayQueueSnapshot,
 } from "../types";
@@ -26,9 +27,11 @@ import {
   deriveActiveTodayQueueItems,
   deriveHandledTodayQueueItems,
   formatLocalDate,
+  getAdditionalTodayReadPool,
   isTodayQueueSnapshotDone,
   makeQueueExposure,
   makeTodayQueueKey,
+  pickAdditionalTodayReadItems,
   shouldPersistTodayQueueSnapshot,
   toTodayQueueSnapshot,
   type TodayQueueHandledItem,
@@ -56,6 +59,9 @@ interface TodayQueueState {
   localDate: string;
   snapshot: TodayQueueSnapshot | null;
   metadata: BookmarkQueueMetadata[];
+  // Kept in state so the done-state can reactively offer "Two more" (the safe
+  // pool needs the same exposure window the daily build uses for suppression).
+  exposures: TodayQueueExposure[];
 }
 
 export interface UseTodayQueueResult {
@@ -70,8 +76,12 @@ export interface UseTodayQueueResult {
   totalCount: number;
   completedCount: number;
   isDone: boolean;
+  // True only in the done-state: at least one eligible saved post remains for a
+  // calm "Two more". When false in the done-state the archive is exhausted today.
+  canAddMore: boolean;
   refresh: () => void;
   addToTodayQueue: (tweetId: string) => Promise<void>;
+  addTwoMore: () => Promise<void>;
   recordOpen: (tweetId: string) => Promise<void>;
   recordRead: (tweetId: string) => Promise<void>;
   recordPinned: (tweetId: string) => Promise<void>;
@@ -89,6 +99,7 @@ const EMPTY_STATE: TodayQueueState = {
   localDate: "",
   snapshot: null,
   metadata: [],
+  exposures: [],
 };
 
 export interface TodayQueueStats {
@@ -175,6 +186,7 @@ export function useTodayQueue({
             localDate,
             snapshot: null,
             metadata,
+            exposures,
           });
         }
         return;
@@ -221,6 +233,7 @@ export function useTodayQueue({
           localDate,
           snapshot,
           metadata,
+          exposures,
         });
       }
     };
@@ -351,6 +364,48 @@ export function useTodayQueue({
     existingTweetIds,
   });
 
+  const isDone =
+    state.status === "ready" &&
+    isTodayQueueSnapshotDone({
+      snapshot: state.snapshot,
+      handledItems: completionHandledItems,
+      existingTweetIds,
+    });
+
+  // Only meaningful in the done-state; gated on isDone so the full library isn't
+  // re-scored on every render while the active list is in play.
+  const canAddMore = useMemo(() => {
+    if (!isDone || !state.snapshot) return false;
+    return (
+      getAdditionalTodayReadPool({
+        accountId,
+        localDate: state.localDate || formatLocalDate(),
+        budgetMinutes,
+        now: Date.now(),
+        bookmarks,
+        readingProgress,
+        metadata: state.metadata,
+        exposures: state.exposures,
+        pinnedTweetIds: getPinnedTweetIdsOrdered(),
+        detailedTweetIds,
+        restrictToCachedDetails,
+        excludeTweetIds: new Set(state.snapshot.tweetIds),
+      }).length > 0
+    );
+  }, [
+    accountId,
+    bookmarks,
+    budgetMinutes,
+    detailedTweetIds,
+    isDone,
+    readingProgress,
+    restrictToCachedDetails,
+    state.exposures,
+    state.localDate,
+    state.metadata,
+    state.snapshot,
+  ]);
+
   const recordAction = useCallback(
     async (tweetId: string, action: TodayQueueExposureAction) => {
       await recordTodayQueueExposures([
@@ -457,6 +512,44 @@ export function useTodayQueue({
     [budgetMinutes, refresh, state.localDate, state.snapshot],
   );
 
+  // "Two more": pick once from the safe pool (random in production) and persist
+  // via the same add-to-Today's-Read path, so the extras survive reload and are
+  // recorded as exposures. The picks are made up front, so reads of the growing
+  // snapshot between appends never reshuffle them.
+  const addTwoMore = useCallback(async () => {
+    if (!state.snapshot) return;
+    const localDate = state.localDate || formatLocalDate();
+    const ids = pickAdditionalTodayReadItems({
+      accountId,
+      localDate,
+      budgetMinutes,
+      now: Date.now(),
+      bookmarks,
+      readingProgress,
+      metadata: state.metadata,
+      exposures: state.exposures,
+      pinnedTweetIds: getPinnedTweetIdsOrdered(),
+      detailedTweetIds,
+      restrictToCachedDetails,
+      excludeTweetIds: new Set(state.snapshot.tweetIds),
+    });
+    for (const tweetId of ids) {
+      await addToTodayQueue(tweetId);
+    }
+  }, [
+    accountId,
+    addToTodayQueue,
+    bookmarks,
+    budgetMinutes,
+    detailedTweetIds,
+    readingProgress,
+    restrictToCachedDetails,
+    state.exposures,
+    state.localDate,
+    state.metadata,
+    state.snapshot,
+  ]);
+
   return {
     status: state.status,
     localDate: state.localDate,
@@ -468,14 +561,11 @@ export function useTodayQueue({
     handledCount,
     totalCount,
     completedCount,
-    isDone: state.status === "ready" &&
-      isTodayQueueSnapshotDone({
-        snapshot: state.snapshot,
-        handledItems: completionHandledItems,
-        existingTweetIds,
-      }),
+    isDone,
+    canAddMore,
     refresh,
     addToTodayQueue,
+    addTwoMore,
     recordOpen: (tweetId) => recordAction(tweetId, "opened"),
     recordRead: (tweetId) => recordAction(tweetId, "read"),
     recordPinned: (tweetId) => recordAction(tweetId, "pinned"),

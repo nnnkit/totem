@@ -38,6 +38,8 @@ import {
   NEW_BADGE_CUTOFF_MS,
   TODAY_QUEUE_DONE_MESSAGE,
   TODAY_QUEUE_DONE_TITLE,
+  TODAY_QUEUE_TWO_MORE_EXHAUSTED,
+  TODAY_QUEUE_TWO_MORE_LABEL,
 } from "../lib/constants/ui";
 import {
   getPinnedTweetIds,
@@ -879,6 +881,10 @@ function useBookmarksListModel({
     void actions.startLogin();
   }, [actions, onLogin]);
 
+  const handleAddTwoMore = useCallback(() => {
+    void todayQueue?.addTwoMore().catch(() => {});
+  }, [todayQueue]);
+
   const hasItems = visibleBookmarks.length > 0;
 
   const renderEmptyState = () => {
@@ -910,10 +916,23 @@ function useBookmarksListModel({
                 ))}
               </div>
             )}
+            {todayQueue?.canAddMore ? (
+              <Button
+                variant="ghost"
+                onClick={handleAddTwoMore}
+                className="mt-5"
+              >
+                {TODAY_QUEUE_TWO_MORE_LABEL}
+              </Button>
+            ) : (
+              <p className="mt-5 text-sm text-subtle/80">
+                {TODAY_QUEUE_TWO_MORE_EXHAUSTED}
+              </p>
+            )}
             <Button
               variant="ghost"
               onClick={() => onTabChange("unread")}
-              className="mt-5"
+              className="mt-3 text-subtle"
             >
               Browse unread
             </Button>

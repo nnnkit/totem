@@ -14,3 +14,9 @@ export const MIN_READING_MINUTES = 2;
 export const TODAY_QUEUE_DONE_TITLE = "Nice. Today's Read is clear.";
 export const TODAY_QUEUE_DONE_MESSAGE =
   "You handled everything for today. We'll line up a fresh read tomorrow.";
+
+// "Two more" — the calm, optional post-completion extension. Understated and
+// repeatable; no streak, counter, or momentum language (done is always the
+// headline). When the safe pool is empty the control retires for the day.
+export const TODAY_QUEUE_TWO_MORE_LABEL = "Two more";
+export const TODAY_QUEUE_TWO_MORE_EXHAUSTED = "Nothing else to add today.";

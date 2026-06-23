@@ -12,9 +12,11 @@ import {
   deriveActiveTodayQueueItems,
   deriveHandledTodayQueueItems,
   formatLocalDate,
+  getAdditionalTodayReadPool,
   isTodayQueueSnapshotDone,
   makeQueueExposure,
   makeTodayQueueKey,
+  pickAdditionalTodayReadItems,
   selectStaleTodayQueueSnapshotKeys,
   shouldPersistTodayQueueSnapshot,
   toTodayQueueSnapshot,
@@ -659,5 +661,171 @@ describe("selectStaleTodayQueueSnapshotKeys", () => {
 
   it("returns no keys for empty input", () => {
     expect(selectStaleTodayQueueSnapshotKeys([], 2)).toEqual([]);
+  });
+});
+
+describe("pickAdditionalTodayReadItems", () => {
+  function authored(
+    tweetId: string,
+    savedAt: number,
+    screenName: string,
+    overrides: Partial<Bookmark> = {},
+  ): Bookmark {
+    return bookmark(tweetId, savedAt, {
+      author: {
+        name: screenName,
+        screenName,
+        profileImageUrl: "https://example.com/avatar.png",
+        verified: false,
+      },
+      ...overrides,
+    });
+  }
+
+  function rngFrom(values: number[]): () => number {
+    let index = 0;
+    return () => values[Math.min(index++, values.length - 1)];
+  }
+
+  const SHOWN = new Set(["shown_a", "shown_b"]);
+
+  function corpus(): Bookmark[] {
+    return [
+      authored("shown_a", daysAgo(2), "shown_author_a"),
+      authored("shown_b", daysAgo(3), "shown_author_b"),
+      authored("eligible_1", daysAgo(4), "author_one"),
+      authored("eligible_2", daysAgo(6), "author_two"),
+      authored("eligible_3", daysAgo(8), "author_three"),
+      authored("completed", daysAgo(5), "author_done"),
+      authored("snoozed", daysAgo(5), "author_snooze"),
+      authored("reference", daysAgo(5), "author_ref"),
+      authored("act", daysAgo(5), "author_act"),
+      authored("overexposed", daysAgo(5), "author_over"),
+      authored("too_long", daysAgo(5), "author_long", {
+        article: { title: "Long", plainText: words(4000) },
+        tweetKind: "article",
+      }),
+    ];
+  }
+
+  function corpusInput(overrides = {}) {
+    return {
+      ...baseInput({
+        bookmarks: corpus(),
+        readingProgress: [progress("completed", true)],
+        metadata: [
+          metadata("snoozed", { snoozedUntil: "2026-06-09" }),
+          metadata("reference", { intent: "reference" }),
+          metadata("act", { intent: "act" }),
+        ],
+        exposures: [
+          queuedExposure("overexposed", 1),
+          queuedExposure("overexposed", 2),
+          queuedExposure("overexposed", 3),
+        ],
+      }),
+      excludeTweetIds: SHOWN,
+      ...overrides,
+    };
+  }
+
+  const ELIGIBLE = ["eligible_1", "eligible_2", "eligible_3"];
+
+  it("returns up to two eligible, budget-fitting ids and excludes suppressed / already-shown", () => {
+    const picks = pickAdditionalTodayReadItems({
+      ...corpusInput(),
+      random: () => 0,
+    });
+
+    expect(picks).toHaveLength(2);
+    expect(new Set(picks).size).toBe(2);
+    for (const id of picks) {
+      expect(ELIGIBLE).toContain(id);
+    }
+  });
+
+  it("exposes the same eligible pool without consuming randomness", () => {
+    expect(new Set(getAdditionalTodayReadPool(corpusInput()))).toEqual(
+      new Set(ELIGIBLE),
+    );
+  });
+
+  it("returns the single remaining id when only one is eligible", () => {
+    const picks = pickAdditionalTodayReadItems({
+      ...corpusInput({
+        excludeTweetIds: new Set([
+          "shown_a",
+          "shown_b",
+          "eligible_2",
+          "eligible_3",
+        ]),
+      }),
+      random: () => 0.99,
+    });
+
+    expect(picks).toEqual(["eligible_1"]);
+  });
+
+  it("returns empty when nothing eligible remains", () => {
+    const picks = pickAdditionalTodayReadItems({
+      ...corpusInput({
+        excludeTweetIds: new Set([
+          "shown_a",
+          "shown_b",
+          "eligible_1",
+          "eligible_2",
+          "eligible_3",
+        ]),
+      }),
+      random: () => 0,
+    });
+
+    expect(picks).toEqual([]);
+    expect(
+      getAdditionalTodayReadPool(
+        corpusInput({
+          excludeTweetIds: new Set([
+            "shown_a",
+            "shown_b",
+            "eligible_1",
+            "eligible_2",
+            "eligible_3",
+          ]),
+        }),
+      ),
+    ).toEqual([]);
+  });
+
+  it("is deterministic under a seeded random source", () => {
+    const seed = [0.42, 0.13, 0.87];
+    const first = pickAdditionalTodayReadItems({
+      ...corpusInput(),
+      random: rngFrom(seed),
+    });
+    const second = pickAdditionalTodayReadItems({
+      ...corpusInput(),
+      random: rngFrom(seed),
+    });
+
+    expect(first).toEqual(second);
+  });
+
+  it("avoids an author already over-represented in today's set where the pool allows", () => {
+    const picks = pickAdditionalTodayReadItems({
+      ...baseInput({
+        bookmarks: [
+          authored("dom_1", daysAgo(2), "dom"),
+          authored("dom_2", daysAgo(3), "dom"),
+          authored("dom_extra", daysAgo(4), "dom"),
+          authored("fresh_voice", daysAgo(5), "solo"),
+        ],
+      }),
+      excludeTweetIds: new Set(["dom_1", "dom_2"]),
+      count: 1,
+      // Would index the "dom" candidate first if it were allowed.
+      random: () => 0,
+    });
+
+    expect(picks).toEqual(["fresh_voice"]);
   });
 });

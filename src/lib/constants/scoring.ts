@@ -63,6 +63,7 @@ export const TODAY_QUEUE = {
   // logic instead of waiting for the local date to roll over.
   version: 2,
   size: 5,
+  additionalReadCount: 2,
   freshWindowMs: 72 * 60 * 60 * 1000,
   neglectedAfterMs: 14 * 24 * 60 * 60 * 1000,
   exposureWindowMs: 7 * 24 * 60 * 60 * 1000,
