@@ -58,7 +58,10 @@ export const RELATED_WEIGHTS = {
 } as const;
 
 export const TODAY_QUEUE = {
-  version: 1,
+  // v2: continuous freshness curve (fades to 0 at neglectedAfter) + variety
+  // self-heal. The bump re-derives today's already-frozen sets under the new
+  // logic instead of waiting for the local date to roll over.
+  version: 2,
   size: 5,
   freshWindowMs: 72 * 60 * 60 * 1000,
   neglectedAfterMs: 14 * 24 * 60 * 60 * 1000,

@@ -245,6 +245,160 @@ describe("today queue generation", () => {
   });
 });
 
+describe("balanced daily mix (v2)", () => {
+  function article(tweetId: string, savedAt: number): Bookmark {
+    return bookmark(tweetId, savedAt, {
+      tweetKind: "article",
+      article: { title: `Article ${tweetId}`, plainText: words(50) },
+    });
+  }
+
+  it("orders mid-age (3–14d) saves by age rather than tie-break noise", () => {
+    // Before v2 every save older than the ~3d fresh window got zero recency
+    // score, so 4–13d posts were ordered purely by tie-break hash. The
+    // continuous curve now ranks them strictly by age.
+    const result = buildTodayQueue(
+      baseInput({
+        bookmarks: [
+          bookmark("mid_13", daysAgo(13)),
+          bookmark("mid_7", daysAgo(7)),
+          bookmark("mid_4", daysAgo(4)),
+          bookmark("mid_10", daysAgo(10)),
+        ],
+      }),
+    );
+
+    expect(result.tweetIds).toEqual(["mid_4", "mid_7", "mid_10", "mid_13"]);
+  });
+
+  it("surfaces a spread across fresh / mid-age / older bands when size permits", () => {
+    const result = buildTodayQueue(
+      baseInput({
+        bookmarks: [
+          bookmark("mid_b", daysAgo(8)),
+          bookmark("fresh", daysAgo(1)),
+          bookmark("older", daysAgo(30)),
+          bookmark("mid_c", daysAgo(11)),
+          bookmark("mid_a", daysAgo(5)),
+        ],
+      }),
+    );
+
+    // Fresh slot first, older slot second (structurally guaranteed), then the
+    // mid-age fill ordered by age — one pick from each band.
+    expect(result.tweetIds).toEqual([
+      "fresh",
+      "older",
+      "mid_a",
+      "mid_b",
+      "mid_c",
+    ]);
+  });
+
+  it("keeps the older-item (2–8 week) boost increasing with age", () => {
+    const result = buildTodayQueue(
+      baseInput({
+        bookmarks: [
+          bookmark("older_21", daysAgo(21)),
+          bookmark("older_49", daysAgo(49)),
+        ],
+      }),
+    );
+
+    // The neglected branch is unchanged: revival weight climbs with age toward
+    // the 8-week mark, so the 49d save outranks the 21d save.
+    expect(result.tweetIds).toEqual(["older_49", "older_21"]);
+  });
+
+  it("self-heals a repeated author in the fill tail without touching priority slots or deliberate reads", () => {
+    // Author "dup" appears twice: once as the in-progress pick (a deliberate
+    // read in a priority slot) and once seated by the fill loop, which tolerates
+    // the pair. Kinds are varied so no kind repeat confounds the author repair.
+    const result = buildTodayQueue(
+      baseInput({
+        bookmarks: [
+          bookmark("dup_inprogress", daysAgo(8), {
+            author: {
+              name: "Dup",
+              screenName: "dup",
+              profileImageUrl: "https://example.com/avatar.png",
+              verified: false,
+            },
+          }),
+          bookmark("dup_fill", daysAgo(4), {
+            author: {
+              name: "Dup",
+              screenName: "dup",
+              profileImageUrl: "https://example.com/avatar.png",
+              verified: false,
+            },
+          }),
+          article("article_b", daysAgo(5)),
+          article("article_c", daysAgo(6)),
+          bookmark("thread_d", daysAgo(7), { isThread: true }),
+          bookmark("link_alt", daysAgo(9), { hasLink: true }),
+        ],
+        readingProgress: [progress("dup_inprogress")],
+      }),
+    );
+
+    // The fill-tail "dup_fill" is swapped for the clean unpicked "link_alt"; the
+    // in-progress "dup_inprogress" (same author) survives untouched at the front.
+    expect(result.tweetIds).toEqual([
+      "dup_inprogress",
+      "link_alt",
+      "article_b",
+      "article_c",
+      "thread_d",
+    ]);
+    expect(result.tweetIds).not.toContain("dup_fill");
+  });
+
+  it("leaves the set as-is when variety cannot be improved", () => {
+    // Every candidate is the same kind, so evicting a fill-tail repeat finds no
+    // non-repeating replacement — variety the library can't supply is not faked.
+    const result = buildTodayQueue(
+      baseInput({
+        bookmarks: [
+          bookmark("a", daysAgo(4)),
+          bookmark("b", daysAgo(5)),
+          bookmark("c", daysAgo(6)),
+          bookmark("d", daysAgo(7)),
+        ],
+      }),
+    );
+
+    expect(result.tweetIds).toEqual(["a", "b", "c", "d"]);
+  });
+
+  it("fills to size on an all-fresh corpus", () => {
+    const result = buildTodayQueue(
+      baseInput({
+        bookmarks: [
+          bookmark("f1", NOW - 1 * 60 * 60 * 1000),
+          bookmark("f2", NOW - 2 * 60 * 60 * 1000),
+          bookmark("f3", NOW - 3 * 60 * 60 * 1000),
+          bookmark("f4", NOW - 4 * 60 * 60 * 1000),
+          bookmark("f5", NOW - 5 * 60 * 60 * 1000),
+          bookmark("f6", NOW - 6 * 60 * 60 * 1000),
+        ],
+      }),
+    );
+
+    expect(result.tweetIds).toHaveLength(5);
+  });
+
+  it("degrades gracefully on a thin corpus", () => {
+    const result = buildTodayQueue(
+      baseInput({
+        bookmarks: [bookmark("only_a", daysAgo(2)), bookmark("only_b", daysAgo(6))],
+      }),
+    );
+
+    expect(result.tweetIds).toHaveLength(2);
+  });
+});
+
 describe("today queue snapshots", () => {
   it("does not persist empty generated snapshots", () => {
     const result = buildTodayQueue(
@@ -266,10 +420,10 @@ describe("today queue snapshots", () => {
     );
 
     expect(toTodayQueueSnapshot(result)).toEqual<TodayQueueSnapshot>({
-      key: "2026-06-08:15:v1",
+      key: "2026-06-08:15:v2",
       localDate: LOCAL_DATE,
       budgetMinutes: 15,
-      version: 1,
+      version: 2,
       tweetIds: ["1"],
       generatedAt: NOW,
     });
@@ -305,16 +459,16 @@ describe("today queue snapshots", () => {
       addTweetIdToTodayQueueSnapshot({
         snapshot: null,
         tweetId: "manual",
-        key: "2026-06-08:15:v1",
+        key: "2026-06-08:15:v2",
         localDate: LOCAL_DATE,
         budgetMinutes: 15,
         generatedAt: NOW,
       }),
     ).toEqual<TodayQueueSnapshot>({
-      key: "2026-06-08:15:v1",
+      key: "2026-06-08:15:v2",
       localDate: LOCAL_DATE,
       budgetMinutes: 15,
-      version: 1,
+      version: 2,
       tweetIds: ["manual"],
       generatedAt: NOW,
     });

@@ -339,8 +339,13 @@ function createCandidate({
   if (pinned) {
     score += Math.max(1, TODAY_QUEUE_WEIGHTS.pinned - (pinnedIndex ?? 0));
   }
-  if (recent) {
-    const freshnessRatio = 1 - age / TODAY_QUEUE.freshWindowMs;
+  // Continuous freshness curve: full weight at "just saved", fading linearly to
+  // zero at the two-week (neglectedAfter) mark, where the older-item boost takes
+  // over. Widening the denominator from freshWindow to neglectedAfter closes the
+  // dead 3–14d zone where mid-age saves used to get no recency score at all. The
+  // fresh-slot predicate (recent) is unchanged; only the score gating widens.
+  if (age < TODAY_QUEUE.neglectedAfterMs) {
+    const freshnessRatio = 1 - age / TODAY_QUEUE.neglectedAfterMs;
     score += Math.max(0, freshnessRatio * TODAY_QUEUE_WEIGHTS.freshness);
   }
   if (neglected) {
@@ -407,6 +412,60 @@ function pickBest(
   );
   if (pool.length === 0) return null;
   return pool.find((candidate) => !violatesDiversity(candidate, picked)) ?? pool[0];
+}
+
+// A candidate repeats a set when the set — counting the candidate itself — holds
+// ≥2 of its author or ≥3 of its kind. This inclusive count is intentionally
+// stricter than the fill loop (which tolerates a same-author pair while placing
+// the slots), so the self-heal can improve a pair the fill loop deliberately
+// allowed, and a swapped-in replacement never recreates a repeat.
+function repeatsWithin(
+  candidate: ScoredCandidate,
+  set: ScoredCandidate[],
+): boolean {
+  return violatesDiversity(
+    candidate,
+    set.includes(candidate) ? set : [...set, candidate],
+  );
+}
+
+// One bounded, deterministic repair pass after the slots + fill loop: swap the
+// weakest fill-tail violator for the strongest non-violating unpicked candidate.
+// Never touches the four priority slots or a deliberate (in-progress / read-soon
+// / pinned) pick, and never manufactures variety the library can't supply.
+function repairDiversity(
+  candidates: ScoredCandidate[],
+  picked: ScoredCandidate[],
+  pickedIds: Set<string>,
+  prioritySlotCount: number,
+): void {
+  const evictable = picked
+    .map((candidate, index) => ({ candidate, index }))
+    .filter(
+      ({ candidate, index }) =>
+        index >= prioritySlotCount &&
+        !candidate.inProgress &&
+        !candidate.readSoon &&
+        !candidate.pinned &&
+        repeatsWithin(candidate, picked),
+    );
+  if (evictable.length === 0) return;
+
+  // compareCandidates sorts best-first, so the last entry is the lowest-scoring.
+  evictable.sort((a, b) => compareCandidates(a.candidate, b.candidate));
+  const target = evictable[evictable.length - 1];
+
+  const remaining = picked.filter((_, index) => index !== target.index);
+  const replacement = candidates.find(
+    (candidate) =>
+      !pickedIds.has(candidate.bookmark.tweetId) &&
+      !repeatsWithin(candidate, remaining),
+  );
+  if (!replacement) return;
+
+  pickedIds.delete(target.candidate.bookmark.tweetId);
+  pickedIds.add(replacement.bookmark.tweetId);
+  picked[target.index] = replacement;
 }
 
 export function buildTodayQueue({
@@ -491,11 +550,15 @@ export function buildTodayQueue({
   );
   add(pickBest(candidates, pickedIds, picked, (candidate) => candidate.neglected));
 
+  const prioritySlotCount = picked.length;
+
   while (picked.length < size) {
     const next = pickBest(candidates, pickedIds, picked, () => true);
     if (!next) break;
     add(next);
   }
+
+  repairDiversity(candidates, picked, pickedIds, prioritySlotCount);
 
   return {
     key,
