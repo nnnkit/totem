@@ -3,7 +3,7 @@ import { searchBookmarksDetailed } from "../lib/search";
 import type { Bookmark } from "../types";
 import type { BookmarkSignals } from "../lib/search";
 import { SEARCH_DEBOUNCE_MS } from "../lib/constants/timing";
-import { getBookmarkSignals } from "../db";
+import { useAccountDb } from "../stores/selectors";
 import { subscribeToReaderActivity } from "../lib/reader-activity";
 
 export interface UseBookmarkSearchResult {
@@ -22,6 +22,7 @@ const EMPTY_SIGNALS: ReadonlyMap<string, BookmarkSignals> = new Map();
 export function useBookmarkSearch(
   bookmarks: Bookmark[],
 ): UseBookmarkSearchResult {
+  const db = useAccountDb();
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [signals, setSignals] =
@@ -37,7 +38,7 @@ export function useBookmarkSearch(
   useEffect(() => {
     let cancelled = false;
     const load = () => {
-      void getBookmarkSignals().then((next) => {
+      void db.getBookmarkSignals().then((next) => {
         if (!cancelled) setSignals(next);
       });
     };
@@ -47,7 +48,7 @@ export function useBookmarkSearch(
       cancelled = true;
       unsub();
     };
-  }, []);
+  }, [db]);
 
   const outcome = useMemo(
     () => searchBookmarksDetailed(bookmarks, debouncedQuery, signals),

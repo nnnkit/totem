@@ -1,11 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Highlight } from "../types";
 import type { SelectionRange } from "../types";
-import {
-  upsertHighlight,
-  deleteHighlight as dbDeleteHighlight,
-  getHighlightsByTweetId,
-} from "../db";
+import { useAccountDb } from "../stores/selectors";
 import { resolveHighlightColor } from "../lib/highlight-colors";
 import type { HighlightColor } from "../lib/highlight-colors";
 
@@ -136,6 +132,7 @@ function findMatchingSection(container: Element, highlight: Highlight): Element 
 }
 
 export function useHighlights({ tweetId, contentReady, containerRef }: Props) {
+  const db = useAccountDb();
   const highlightsRef = useRef<Map<string, Highlight>>(new Map());
   const [revision, setRevision] = useState(0);
   const flashIdsRef = useRef<Set<string>>(new Set());
@@ -252,7 +249,7 @@ export function useHighlights({ tweetId, contentReady, containerRef }: Props) {
     let retryTimer = 0;
     flashIdsRef.current.clear();
 
-    getHighlightsByTweetId(tweetId).then((stored) => {
+    db.getHighlightsByTweetId(tweetId).then((stored) => {
       if (cancelled) return;
       highlightsRef.current.clear();
       for (const h of stored) {
@@ -288,7 +285,7 @@ export function useHighlights({ tweetId, contentReady, containerRef }: Props) {
         applyFrameRef.current = 0;
       }
     };
-  }, [tweetId, contentReady, runApplyNow, containerRef]);
+  }, [tweetId, contentReady, runApplyNow, containerRef, db]);
 
   useEffect(() => {
     scheduleApply();
@@ -327,7 +324,7 @@ export function useHighlights({ tweetId, contentReady, containerRef }: Props) {
         type,
       }));
 
-      await Promise.all(created.map((highlight) => upsertHighlight(highlight)));
+      await Promise.all(created.map((highlight) => db.upsertHighlight(highlight)));
 
       for (const highlight of created) {
         highlightsRef.current.set(highlight.id, highlight);
@@ -338,14 +335,14 @@ export function useHighlights({ tweetId, contentReady, containerRef }: Props) {
       setRevision((r) => r + 1);
       return created;
     },
-    [tweetId],
+    [tweetId, db],
   );
 
   const removeHighlight = useCallback(async (id: string) => {
-    await dbDeleteHighlight(id);
+    await db.deleteHighlight(id);
     highlightsRef.current.delete(id);
     setRevision((r) => r + 1);
-  }, []);
+  }, [db]);
 
   const updateHighlightNote = useCallback(
     async (id: string, note: string | null) => {
@@ -354,10 +351,10 @@ export function useHighlights({ tweetId, contentReady, containerRef }: Props) {
 
       const updated = { ...existing, note };
       highlightsRef.current.set(id, updated);
-      await upsertHighlight(updated);
+      await db.upsertHighlight(updated);
       setRevision((r) => r + 1);
     },
-    [],
+    [db],
   );
 
   const updateHighlightColor = useCallback(
@@ -370,10 +367,10 @@ export function useHighlights({ tweetId, contentReady, containerRef }: Props) {
 
       const updated = { ...existing, color: resolved };
       highlightsRef.current.set(id, updated);
-      await upsertHighlight(updated);
+      await db.upsertHighlight(updated);
       setRevision((r) => r + 1);
     },
-    [],
+    [db],
   );
 
   const getHighlight = useCallback((id: string) => {
