@@ -15,6 +15,7 @@ import {
   isTodayQueueSnapshotDone,
   makeQueueExposure,
   makeTodayQueueKey,
+  selectStaleTodayQueueSnapshotKeys,
   shouldPersistTodayQueueSnapshot,
   toTodayQueueSnapshot,
 } from "../today-queue";
@@ -467,5 +468,42 @@ describe("today queue snapshots", () => {
     expect(
       isTodayQueueSnapshotDone({ snapshot, handledItems, existingTweetIds }),
     ).toBe(true);
+  });
+});
+
+describe("selectStaleTodayQueueSnapshotKeys", () => {
+  function record(key: string, version: number): TodayQueueSnapshot {
+    return {
+      key,
+      localDate: LOCAL_DATE,
+      budgetMinutes: 15,
+      version,
+      tweetIds: ["a"],
+      generatedAt: NOW,
+    };
+  }
+
+  it("returns only the keys whose version differs from the current version", () => {
+    const records = [
+      record("2026-06-08:15:v1", 1),
+      record("2026-06-07:15:v2", 2),
+      record("2026-06-08:30:v1", 1),
+      record("2026-06-08:15:v2", 2),
+    ];
+
+    expect(selectStaleTodayQueueSnapshotKeys(records, 2)).toEqual([
+      "2026-06-08:15:v1",
+      "2026-06-08:30:v1",
+    ]);
+  });
+
+  it("returns no keys when every record is the current version", () => {
+    const records = [record("2026-06-08:15:v2", 2), record("2026-06-07:15:v2", 2)];
+
+    expect(selectStaleTodayQueueSnapshotKeys(records, 2)).toEqual([]);
+  });
+
+  it("returns no keys for empty input", () => {
+    expect(selectStaleTodayQueueSnapshotKeys([], 2)).toEqual([]);
   });
 });

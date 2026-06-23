@@ -11,6 +11,7 @@ import type {
 } from "../types";
 import { sanitizeBookmark } from "../lib/sanitize";
 import { emitReaderActivity } from "../lib/reader-activity";
+import { selectStaleTodayQueueSnapshotKeys } from "../lib/today-queue";
 import {
   DB_ACCOUNT_PREFIX,
   DB_NAME,
@@ -979,6 +980,17 @@ export async function getAllTodayQueueSnapshots(): Promise<
 > {
   const db = await getDb();
   return db.getAll(TODAY_QUEUE_SNAPSHOTS_STORE_NAME);
+}
+
+// Thin shell around the pure stale-key decision: drop any daily-set record left
+// behind by an earlier scoring version (including imported older-version
+// records). Safe to call with no records — it simply deletes nothing.
+export async function sweepStaleTodayQueueSnapshots(): Promise<void> {
+  const records = await getAllTodayQueueSnapshots();
+  const staleKeys = selectStaleTodayQueueSnapshotKeys(records);
+  for (const key of staleKeys) {
+    await deleteTodayQueueSnapshot(key);
+  }
 }
 
 export async function getAllTodayQueueExposures(): Promise<

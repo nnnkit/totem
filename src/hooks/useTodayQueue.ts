@@ -16,6 +16,7 @@ import {
   getTodayQueueSnapshot,
   markReadingProgressUncompleted,
   recordTodayQueueExposures,
+  sweepStaleTodayQueueSnapshots,
   upsertQueueBookmarkMetadata,
   upsertTodayQueueSnapshot,
 } from "../db";
@@ -119,6 +120,11 @@ export function computeTodayQueueStats({
 function nextLocalDate(): string {
   return formatLocalDate(new Date(Date.now() + 24 * 60 * 60 * 1000));
 }
+
+// Module-scoped so the orphaned-record sweep runs at most once per page load
+// rather than once per hook mount; a bumped scoring version would otherwise
+// leave prior-version daily-set records lingering in local storage.
+let staleSnapshotSweepStarted = false;
 
 function isNeutralMetadata(row: BookmarkQueueMetadata): boolean {
   return row.intent === "unset" && !row.snoozedUntil;
@@ -235,6 +241,12 @@ export function useTodayQueue({
   useEffect(() => {
     refresh();
   }, [refresh]);
+
+  useEffect(() => {
+    if (!enabled || staleSnapshotSweepStarted) return;
+    staleSnapshotSweepStarted = true;
+    void sweepStaleTodayQueueSnapshots().catch(() => {});
+  }, [enabled]);
 
   useEffect(() => {
     if (!enabled) return;

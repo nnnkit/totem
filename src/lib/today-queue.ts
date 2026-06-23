@@ -96,6 +96,19 @@ export function makeTodayQueueKey({
   return `${localDate}:${budgetMinutes}:v${version}`;
 }
 
+// A daily-set record is keyed by (date, budget, version). When the scoring
+// version is bumped, prior-version records are orphaned: nothing reads them and
+// the reader regenerates a fresh set under the current version. This pure
+// decision returns those orphaned keys so a load-time sweep can drop them.
+export function selectStaleTodayQueueSnapshotKeys(
+  records: readonly Pick<TodayQueueSnapshot, "key" | "version">[],
+  currentVersion: number = TODAY_QUEUE.version,
+): string[] {
+  return records
+    .filter((record) => record.version !== currentVersion)
+    .map((record) => record.key);
+}
+
 export function toTodayQueueSnapshot(
   result: TodayQueueBuildResult,
 ): TodayQueueSnapshot {
