@@ -17,13 +17,10 @@ import {
   type SyncMode,
 } from "../api/core/sync";
 import {
-  cleanupOldTweetDetails,
-  deleteBookmarksByTweetIds,
-  getAllBookmarks,
-  getDetailedTweetIds,
+  openAccountDb,
   setActiveAccountId,
   subscribeTweetDetailCache,
-  upsertBookmarks,
+  type AccountDb,
 } from "../db";
 import { FetchQueue } from "../lib/fetch-queue";
 import { resolveBookmarkEventPlan } from "../lib/bookmark-event-plan";
@@ -382,6 +379,9 @@ function createInitialState(actions: RuntimeActions): RuntimeState {
 export function createRuntimeStore() {
   let activeSyncController: ActiveSyncController | null = null;
   let activeLease: ActiveSyncLease | null = null;
+  // Account-bound DB handle; swapped in lockstep with setActiveAccountId
+  // (which stays until every db consumer is migrated to a handle).
+  let accountDb: AccountDb = openAccountDb(null);
   let processingBookmarkEvents = false;
   let authRequestId = 0;
   let cleanupStarted = false;
@@ -481,7 +481,7 @@ export function createRuntimeStore() {
           if (Date.now() - lastCleanup < WEEK_MS) return;
 
           await Promise.all([
-            cleanupOldTweetDetails(DETAIL_CACHE_RETENTION_MS),
+            accountDb.cleanupOldTweetDetails(DETAIL_CACHE_RETENTION_MS),
             chrome.storage.local.set({ [CS_DB_CLEANUP_AT]: Date.now() }),
           ]);
         } catch {}
@@ -552,16 +552,17 @@ export function createRuntimeStore() {
     ): Promise<void> => {
       const accountId = get().activeAccountId;
       setActiveAccountId(accountId);
+      accountDb = openAccountDb(accountId);
       if (get().bootGeneration !== bootGeneration) return Promise.resolve();
 
       return Promise.allSettled([
         withTimeout(
-          getAllBookmarks(),
+          accountDb.getAllBookmarks(),
           DB_INIT_TIMEOUT_MS,
           new Error("DB_INIT_TIMEOUT"),
         ),
         withTimeout(
-          getDetailedTweetIds(),
+          accountDb.getDetailedTweetIds(),
           DB_INIT_TIMEOUT_MS,
           new Error("DETAIL_DB_INIT_TIMEOUT"),
         ),
@@ -897,7 +898,7 @@ export function createRuntimeStore() {
         // Persist before the in-memory update so a failed IndexedDB write
         // propagates and the sync reports failure, instead of leaving the store
         // ahead of the DB (a false-success split-brain).
-        await upsertBookmarks(deduped);
+        await accountDb.upsertBookmarks(deduped);
 
         setRuntimeState({
           bookmarks: updated,
@@ -977,7 +978,7 @@ export function createRuntimeStore() {
             });
           } else {
             if (mode === "full" && reconcileResult.staleIds.length > 0) {
-              await deleteBookmarksByTweetIds(reconcileResult.staleIds, {
+              await accountDb.deleteBookmarksByTweetIds(reconcileResult.staleIds, {
                 purgeHighlights: false,
               });
               const staleIds = new Set(reconcileResult.staleIds);
@@ -1145,14 +1146,15 @@ export function createRuntimeStore() {
 
         const accountId = get().activeAccountId;
         setActiveAccountId(accountId);
+        accountDb = openAccountDb(accountId);
         const [bookmarksResult, detailedIdsResult] = await Promise.allSettled([
           withTimeout(
-            getAllBookmarks(),
+            accountDb.getAllBookmarks(),
             DB_INIT_TIMEOUT_MS,
             new Error("DB_INIT_TIMEOUT"),
           ),
           withTimeout(
-            getDetailedTweetIds(),
+            accountDb.getDetailedTweetIds(),
             DB_INIT_TIMEOUT_MS,
             new Error("DETAIL_DB_INIT_TIMEOUT"),
           ),
@@ -1215,7 +1217,7 @@ export function createRuntimeStore() {
               bookmarks: state.bookmarks.filter((bookmark) => !toDelete.has(bookmark.tweetId)),
             }));
 
-            await deleteBookmarksByTweetIds(plan.idsToDelete, {
+            await accountDb.deleteBookmarksByTweetIds(plan.idsToDelete, {
               purgeHighlights: false,
             });
           }
@@ -1235,7 +1237,7 @@ export function createRuntimeStore() {
                 // Persist before the in-memory update; on failure the catch below
                 // marks the fetch failed so the create events stay un-acked for
                 // retry and the store is not left ahead of the DB.
-                await upsertBookmarks(deduped);
+                await accountDb.upsertBookmarks(deduped);
                 const updated = [...get().bookmarks, ...deduped].toSorted(compareSortIndexDesc);
                 setRuntimeState({ bookmarks: updated });
                 prefetchController.reconcile();
@@ -1282,7 +1284,7 @@ export function createRuntimeStore() {
           bookmarks: state.bookmarks.filter((bookmark) => bookmark.tweetId !== tweetId),
         }));
 
-        await deleteBookmarksByTweetIds([tweetId], {
+        await accountDb.deleteBookmarksByTweetIds([tweetId], {
           purgeHighlights: false,
         });
 

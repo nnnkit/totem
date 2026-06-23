@@ -95,6 +95,15 @@ vi.mock("../../db", () => ({
   setActiveAccountId: mocks.setActiveAccountId,
   subscribeTweetDetailCache: mocks.subscribeTweetDetailCache,
   upsertBookmarks: mocks.upsertBookmarks,
+  // The store now reads/writes through an account-bound handle; the mock
+  // handle delegates to the same fns so existing call assertions still hold.
+  openAccountDb: vi.fn(() => ({
+    getAllBookmarks: mocks.getAllBookmarks,
+    getDetailedTweetIds: mocks.getDetailedTweetIds,
+    deleteBookmarksByTweetIds: mocks.deleteBookmarksByTweetIds,
+    upsertBookmarks: mocks.upsertBookmarks,
+    cleanupOldTweetDetails: mocks.cleanupOldTweetDetails,
+  })),
 }));
 
 function createBookmark(tweetId: string): Bookmark {
