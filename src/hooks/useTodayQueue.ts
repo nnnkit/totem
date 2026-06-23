@@ -132,10 +132,12 @@ function nextLocalDate(): string {
   return formatLocalDate(new Date(Date.now() + 24 * 60 * 60 * 1000));
 }
 
-// Module-scoped so the orphaned-record sweep runs at most once per page load
-// rather than once per hook mount; a bumped scoring version would otherwise
-// leave prior-version daily-set records lingering in local storage.
-let staleSnapshotSweepStarted = false;
+// Module-scoped so the orphaned-record sweep runs at most once per account per
+// page load (not once per hook mount). Keyed by account because daily-set
+// records live in a per-account IndexedDB: an in-session account switch repoints
+// the active DB without remounting, so each account must be swept when it first
+// becomes active — a single page-load flag would only ever clean the first one.
+const sweptAccountIds = new Set<string>();
 
 function isNeutralMetadata(row: BookmarkQueueMetadata): boolean {
   return row.intent === "unset" && !row.snoozedUntil;
@@ -155,6 +157,11 @@ export function useTodayQueue({
   // sequence lets a newer run supersede an older in-flight one so the slower
   // response can't clobber state with stale data.
   const refreshSeqRef = useRef(0);
+  // Guards "Two more" against a rapid double-press: without it, two clicks fire
+  // before refresh() updates the snapshot, both read the same pre-append state,
+  // and each rolls the RNG independently — appending up to four items instead of
+  // two and rolling randomness twice.
+  const addingMoreRef = useRef(false);
 
   const refresh = useCallback(() => {
     const requestId = ++refreshSeqRef.current;
@@ -256,10 +263,14 @@ export function useTodayQueue({
   }, [refresh]);
 
   useEffect(() => {
-    if (!enabled || staleSnapshotSweepStarted) return;
-    staleSnapshotSweepStarted = true;
+    if (!enabled) return;
+    // accountId drives which per-account IndexedDB is active; sweep each one the
+    // first time it becomes active this page load.
+    const sweepKey = accountId ?? "local";
+    if (sweptAccountIds.has(sweepKey)) return;
+    sweptAccountIds.add(sweepKey);
     void sweepStaleTodayQueueSnapshots().catch(() => {});
-  }, [enabled]);
+  }, [enabled, accountId]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -517,24 +528,29 @@ export function useTodayQueue({
   // recorded as exposures. The picks are made up front, so reads of the growing
   // snapshot between appends never reshuffle them.
   const addTwoMore = useCallback(async () => {
-    if (!state.snapshot) return;
-    const localDate = state.localDate || formatLocalDate();
-    const ids = pickAdditionalTodayReadItems({
-      accountId,
-      localDate,
-      budgetMinutes,
-      now: Date.now(),
-      bookmarks,
-      readingProgress,
-      metadata: state.metadata,
-      exposures: state.exposures,
-      pinnedTweetIds: getPinnedTweetIdsOrdered(),
-      detailedTweetIds,
-      restrictToCachedDetails,
-      excludeTweetIds: new Set(state.snapshot.tweetIds),
-    });
-    for (const tweetId of ids) {
-      await addToTodayQueue(tweetId);
+    if (!state.snapshot || addingMoreRef.current) return;
+    addingMoreRef.current = true;
+    try {
+      const localDate = state.localDate || formatLocalDate();
+      const ids = pickAdditionalTodayReadItems({
+        accountId,
+        localDate,
+        budgetMinutes,
+        now: Date.now(),
+        bookmarks,
+        readingProgress,
+        metadata: state.metadata,
+        exposures: state.exposures,
+        pinnedTweetIds: getPinnedTweetIdsOrdered(),
+        detailedTweetIds,
+        restrictToCachedDetails,
+        excludeTweetIds: new Set(state.snapshot.tweetIds),
+      });
+      for (const tweetId of ids) {
+        await addToTodayQueue(tweetId);
+      }
+    } finally {
+      addingMoreRef.current = false;
     }
   }, [
     accountId,
