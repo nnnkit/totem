@@ -894,14 +894,15 @@ export function createRuntimeStore() {
 
         const updated = [...currentBookmarks, ...deduped].toSorted(compareSortIndexDesc);
 
+        // Persist before the in-memory update so a failed IndexedDB write
+        // propagates and the sync reports failure, instead of leaving the store
+        // ahead of the DB (a false-success split-brain).
+        await upsertBookmarks(deduped);
+
         setRuntimeState({
           bookmarks: updated,
           syncJobKind: updated.length > 0 ? "backfill" : get().syncJobKind,
         });
-
-        try {
-          await upsertBookmarks(deduped);
-        } catch {}
 
         prefetchController.reconcile();
       };
@@ -1231,9 +1232,12 @@ export function createRuntimeStore() {
               const currentIds = new Set(get().bookmarks.map((bookmark) => bookmark.tweetId));
               const deduped = page.bookmarks.filter((bookmark) => !currentIds.has(bookmark.tweetId));
               if (deduped.length > 0) {
+                // Persist before the in-memory update; on failure the catch below
+                // marks the fetch failed so the create events stay un-acked for
+                // retry and the store is not left ahead of the DB.
+                await upsertBookmarks(deduped);
                 const updated = [...get().bookmarks, ...deduped].toSorted(compareSortIndexDesc);
                 setRuntimeState({ bookmarks: updated });
-                await upsertBookmarks(deduped);
                 prefetchController.reconcile();
               }
               // CS_LAST_SOFT_SYNC is the SW's record of a completed sync run
