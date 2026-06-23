@@ -1,9 +1,12 @@
 import type { ArticleContent, ArticleContentBlock } from "../../types";
 import {
   detectArticleHeadings,
-  groupBlocks,
   headingBlockMatchesArticleTitle,
 } from "../../components/reader/utils";
+import {
+  type ArticleBlockEmit,
+  walkArticleBlocks,
+} from "./article-block-walk";
 import { resolveArticleCoverImageUrl } from "./article-cover";
 import { renderBlockInlineMarkdown } from "./block-inline-markdown";
 import { richTextArticleMarkdown } from "./article-plain-markdown";
@@ -66,12 +69,6 @@ function fenceCodeBlock(code: string): string {
   return `${fence}\n${code}\n${fence}`;
 }
 
-function stripMarkdownEntityCode(markdown: string): string {
-  return markdown
-    .replace(/^```\w*\n?/, "")
-    .replace(/\n?```$/, "");
-}
-
 function markdownImageAlt(value: string): string {
   return value
     .replace(/[\r\n]+/g, " ")
@@ -89,126 +86,74 @@ function formatBlockquoteMarkdown(content: string): string {
   return lines.map((line) => `> ${line}`).join("\n");
 }
 
+const HEADING_PREFIX: Record<1 | 2 | 3, string> = {
+  1: "##",
+  2: "###",
+  3: "####",
+};
+
+const markdownEmit: ArticleBlockEmit<string> = {
+  unorderedList(items, entityMap) {
+    return items
+      .map((item) => `- ${renderBlockInlineMarkdown(item, entityMap)}`)
+      .join("\n");
+  },
+  orderedList(items, entityMap) {
+    return items
+      .map((item, i) => `${i + 1}. ${renderBlockInlineMarkdown(item, entityMap)}`)
+      .join("\n");
+  },
+  mediaImage(url, alt) {
+    return markdownImage(url, alt);
+  },
+  mediaVideo(imageUrl, postUrl) {
+    const parts: string[] = [];
+    if (imageUrl) {
+      parts.push(markdownImage(imageUrl, "Video preview"));
+    }
+    if (postUrl) {
+      parts.push(`[Watch on X](${postUrl})`);
+    } else {
+      parts.push("*Video — open the source URL in the front matter on X.*");
+    }
+    return parts.join("\n\n");
+  },
+  markdownEntity(code) {
+    return fenceCodeBlock(code);
+  },
+  divider() {
+    return "---";
+  },
+  empty() {
+    return "";
+  },
+  heading(level, block, entityMap) {
+    return `${HEADING_PREFIX[level]} ${renderBlockInlineMarkdown(block, entityMap)}`;
+  },
+  blockquote(block, entityMap) {
+    return formatBlockquoteMarkdown(renderBlockInlineMarkdown(block, entityMap));
+  },
+  codeBlock(block) {
+    return fenceCodeBlock(block.text);
+  },
+  paragraph(block, entityMap) {
+    return renderBlockInlineMarkdown(block, entityMap);
+  },
+};
+
 function blocksToMarkdown(
   blocks: ArticleContentBlock[],
   entityMap: Record<string, import("../../types").ArticleContentEntity>,
   articleTitle: string | undefined,
   watchOnXUrl: string | undefined,
 ): string {
-  const groups = groupBlocks(blocks);
-  const out: string[] = [];
-
-  for (let groupIdx = 0; groupIdx < groups.length; groupIdx++) {
-    const group = groups[groupIdx];
-
-    if (group.type === "unordered-list") {
-      const items = group.items.map((item) => {
-        const line = renderBlockInlineMarkdown(item, entityMap);
-        return `- ${line}`;
-      });
-      out.push(items.join("\n"));
-      continue;
-    }
-
-    if (group.type === "ordered-list") {
-      const items = group.items.map((item, i) => {
-        const line = renderBlockInlineMarkdown(item, entityMap);
-        return `${i + 1}. ${line}`;
-      });
-      out.push(items.join("\n"));
-      continue;
-    }
-
-    const { block } = group;
-
-    if (block.type === "atomic") {
-      for (const range of block.entityRanges) {
-        const entity = entityMap[String(range.key)];
-        if (entity?.type === "MEDIA") {
-          const imageUrl = entity.data?.imageUrl;
-          const videoUrl = entity.data?.videoUrl;
-          if (typeof videoUrl === "string" && videoUrl) {
-            const parts: string[] = [];
-            if (typeof imageUrl === "string" && imageUrl) {
-              parts.push(markdownImage(imageUrl, "Video preview"));
-            }
-            if (watchOnXUrl) {
-              parts.push(`[Watch on X](${watchOnXUrl})`);
-            } else {
-              parts.push("*Video — open the source URL in the front matter on X.*");
-            }
-            out.push(parts.join("\n\n"));
-            break;
-          }
-          if (typeof imageUrl === "string" && imageUrl) {
-            const alt =
-              String(
-                entity.data?.altText ||
-                  entity.data?.imageAlt ||
-                  entity.data?.alt ||
-                  "",
-              ).trim() || "Media attachment";
-            out.push(markdownImage(imageUrl, alt));
-            break;
-          }
-        }
-        if (entity?.type === "MARKDOWN") {
-          const markdown = String(entity.data?.markdown || "");
-          if (markdown) {
-            const code = stripMarkdownEntityCode(markdown);
-            out.push(fenceCodeBlock(code));
-            break;
-          }
-        }
-        if (entity?.type === "DIVIDER") {
-          out.push("---");
-          break;
-        }
-      }
-      continue;
-    }
-
-    if (!block.text.trim()) {
-      out.push("");
-      continue;
-    }
-
-    const inline = renderBlockInlineMarkdown(block, entityMap);
-
-    if (
-      (block.type === "header-one" ||
-        block.type === "header-two" ||
-        block.type === "header-three") &&
-      headingBlockMatchesArticleTitle(block.text, articleTitle)
-    ) {
-      continue;
-    }
-
-    if (block.type === "header-one") {
-      out.push(`## ${inline}`);
-      continue;
-    }
-    if (block.type === "header-two") {
-      out.push(`### ${inline}`);
-      continue;
-    }
-    if (block.type === "header-three") {
-      out.push(`#### ${inline}`);
-      continue;
-    }
-    if (block.type === "blockquote") {
-      out.push(formatBlockquoteMarkdown(inline));
-      continue;
-    }
-    if (block.type === "code-block") {
-      out.push(fenceCodeBlock(block.text));
-      continue;
-    }
-
-    out.push(inline);
-  }
-
-  return out.join("\n\n");
+  return walkArticleBlocks(
+    blocks,
+    entityMap,
+    articleTitle,
+    watchOnXUrl,
+    markdownEmit,
+  ).join("\n\n");
 }
 
 function buildHeadingChunksMarkdown(

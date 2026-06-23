@@ -2,13 +2,16 @@ import type { ArticleContent, ArticleContentBlock } from "../../types";
 import {
   detectArticleHeadings,
   escapeHtml,
-  groupBlocks,
   headingBlockMatchesArticleTitle,
   paragraphHtml,
   paragraphizeText,
   renderBlockInlineContent,
   sanitizeUrl,
 } from "../../components/reader/utils";
+import {
+  type ArticleBlockEmit,
+  walkArticleBlocks,
+} from "./article-block-walk";
 import { resolveArticleCoverImageUrl } from "./article-cover";
 import { slugifyArticleBasename } from "./article-filename";
 import { splitPlainTextByHeadings } from "./article-heading-chunks";
@@ -25,11 +28,61 @@ function safeImgSrc(url: string | undefined): string {
   return clean ? escapeHtml(clean) : "";
 }
 
-function stripMarkdownEntityCode(markdown: string): string {
-  return markdown
-    .replace(/^```\w*\n?/, "")
-    .replace(/\n?```$/, "");
-}
+const HTML_HEADING_TAG: Record<1 | 2 | 3, string> = {
+  1: "h2",
+  2: "h3",
+  3: "h4",
+};
+
+const htmlEmit: ArticleBlockEmit<string> = {
+  unorderedList(items, entityMap) {
+    const li = items
+      .map((item) => `<li>${renderBlockInlineContent(item, entityMap)}</li>`)
+      .join("");
+    return `<ul>${li}</ul>`;
+  },
+  orderedList(items, entityMap) {
+    const li = items
+      .map((item) => `<li>${renderBlockInlineContent(item, entityMap)}</li>`)
+      .join("");
+    return `<ol>${li}</ol>`;
+  },
+  mediaImage(url) {
+    const safeImg = safeImgSrc(url);
+    return safeImg ? `<figure><img src="${safeImg}" alt="" /></figure>` : null;
+  },
+  mediaVideo(imageUrl, postUrl) {
+    const safeImg = safeImgSrc(imageUrl);
+    const imgPart = safeImg ? `<img src="${safeImg}" alt="" />` : "";
+    const safePostHref = safeHref(postUrl);
+    const linkPart = safePostHref
+      ? `<p class="print-video-link"><a href="${safePostHref}">Watch on X</a></p>`
+      : `<p class="print-video-link"><em>Video</em> — use the source link above.</p>`;
+    return `<figure class="print-video">${imgPart}${linkPart}</figure>`;
+  },
+  markdownEntity(code) {
+    return `<pre><code>${escapeHtml(code)}</code></pre>`;
+  },
+  divider() {
+    return "<hr />";
+  },
+  empty() {
+    return '<div class="spacer"></div>';
+  },
+  heading(level, block, entityMap) {
+    const tag = HTML_HEADING_TAG[level];
+    return `<${tag}>${renderBlockInlineContent(block, entityMap)}</${tag}>`;
+  },
+  blockquote(block, entityMap) {
+    return `<blockquote>${renderBlockInlineContent(block, entityMap)}</blockquote>`;
+  },
+  codeBlock(block) {
+    return `<pre><code>${escapeHtml(block.text)}</code></pre>`;
+  },
+  paragraph(block, entityMap) {
+    return `<p>${renderBlockInlineContent(block, entityMap)}</p>`;
+  },
+};
 
 function blocksToArticleHtml(
   blocks: ArticleContentBlock[],
@@ -37,123 +90,13 @@ function blocksToArticleHtml(
   articleTitle: string | undefined,
   postUrl: string | undefined,
 ): string {
-  const groups = groupBlocks(blocks);
-  const out: string[] = [];
-
-  for (let groupIdx = 0; groupIdx < groups.length; groupIdx++) {
-    const group = groups[groupIdx];
-
-    if (group.type === "unordered-list") {
-      const items = group.items
-        .map(
-          (item) =>
-            `<li>${renderBlockInlineContent(item, entityMap)}</li>`,
-        )
-        .join("");
-      out.push(`<ul>${items}</ul>`);
-      continue;
-    }
-
-    if (group.type === "ordered-list") {
-      const items = group.items
-        .map(
-          (item) =>
-            `<li>${renderBlockInlineContent(item, entityMap)}</li>`,
-        )
-        .join("");
-      out.push(`<ol>${items}</ol>`);
-      continue;
-    }
-
-    const { block } = group;
-
-    if (block.type === "atomic") {
-      for (const range of block.entityRanges) {
-        const entity = entityMap[String(range.key)];
-        if (entity?.type === "MEDIA") {
-          const imageUrl = entity.data?.imageUrl;
-          const videoUrl = entity.data?.videoUrl;
-          if (typeof videoUrl === "string" && videoUrl) {
-            const safeImg = safeImgSrc(
-              typeof imageUrl === "string" ? imageUrl : undefined,
-            );
-            const imgPart = safeImg ? `<img src="${safeImg}" alt="" />` : "";
-            const safePostHref = safeHref(postUrl);
-            const linkPart = safePostHref
-              ? `<p class="print-video-link"><a href="${safePostHref}">Watch on X</a></p>`
-              : `<p class="print-video-link"><em>Video</em> — use the source link above.</p>`;
-            out.push(
-              `<figure class="print-video">${imgPart}${linkPart}</figure>`,
-            );
-            break;
-          }
-          const safeImg = safeImgSrc(
-            typeof imageUrl === "string" ? imageUrl : undefined,
-          );
-          if (safeImg) {
-            out.push(`<figure><img src="${safeImg}" alt="" /></figure>`);
-            break;
-          }
-        }
-        if (entity?.type === "MARKDOWN") {
-          const markdown = String(entity.data?.markdown || "");
-          if (markdown) {
-            const code = stripMarkdownEntityCode(markdown);
-            out.push(
-              `<pre><code>${escapeHtml(code)}</code></pre>`,
-            );
-            break;
-          }
-        }
-        if (entity?.type === "DIVIDER") {
-          out.push("<hr />");
-          break;
-        }
-      }
-      continue;
-    }
-
-    if (!block.text.trim()) {
-      out.push('<div class="spacer"></div>');
-      continue;
-    }
-
-    const html = renderBlockInlineContent(block, entityMap);
-
-    if (
-      (block.type === "header-one" ||
-        block.type === "header-two" ||
-        block.type === "header-three") &&
-      headingBlockMatchesArticleTitle(block.text, articleTitle)
-    ) {
-      continue;
-    }
-
-    if (block.type === "header-one") {
-      out.push(`<h2>${html}</h2>`);
-      continue;
-    }
-    if (block.type === "header-two") {
-      out.push(`<h3>${html}</h3>`);
-      continue;
-    }
-    if (block.type === "header-three") {
-      out.push(`<h4>${html}</h4>`);
-      continue;
-    }
-    if (block.type === "blockquote") {
-      out.push(`<blockquote>${html}</blockquote>`);
-      continue;
-    }
-    if (block.type === "code-block") {
-      out.push(`<pre><code>${escapeHtml(block.text)}</code></pre>`);
-      continue;
-    }
-
-    out.push(`<p>${html}</p>`);
-  }
-
-  return out.join("\n");
+  return walkArticleBlocks(
+    blocks,
+    entityMap,
+    articleTitle,
+    postUrl,
+    htmlEmit,
+  ).join("\n");
 }
 
 function richTextArticleHtml(plainText: string): string {
