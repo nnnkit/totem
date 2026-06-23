@@ -1,0 +1,420 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Today's Read — the redesigned card</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --font-sans:"SF Pro Display",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --font-serif:"Spectral",Charter,"Iowan Old Style",Georgia,serif;
+    --coral:#e28067;
+    --page-bg:#0e0e10;--page-fg:#e9e6e1;--page-muted:#9b968d;--page-line:rgba(255,255,255,.10);
+    --ease-entrance:cubic-bezier(.23,1,.32,1);
+    --ease-overlay-in:cubic-bezier(.215,.61,.355,1);
+    --ease-hover:ease;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{font-family:var(--font-sans);background:var(--page-bg);color:var(--page-fg);-webkit-font-smoothing:antialiased;line-height:1.5}
+  .wrap{max-width:1080px;margin:0 auto;padding:40px 24px 120px}
+  .eyebrow-k{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--coral);font-weight:600}
+  h1{font-family:var(--font-serif);font-weight:500;font-size:32px;line-height:1.15;margin:.35em 0 .35em;letter-spacing:-.01em}
+  h2{font-family:var(--font-serif);font-weight:500;font-size:23px;line-height:1.2;margin:48px 0 6px;letter-spacing:-.01em}
+  .lede{color:var(--page-muted);max-width:760px;font-size:15px}
+  .lede b{color:var(--page-fg);font-weight:600}
+  .sub{color:var(--page-muted);max-width:780px;font-size:13.5px;margin:0 0 8px}
+
+  /* controls */
+  .controls{position:sticky;top:0;z-index:50;display:flex;gap:16px;align-items:center;flex-wrap:wrap;
+    padding:14px 0;margin:18px 0 18px;background:linear-gradient(to bottom,var(--page-bg) 74%,transparent)}
+  .grp{display:flex;gap:7px;align-items:center}
+  .grp .label{font-size:11.5px;color:var(--page-muted);text-transform:uppercase;letter-spacing:.08em}
+  .seg{display:inline-flex;border:1px solid var(--page-line);border-radius:999px;overflow:hidden}
+  .seg button{border:0;background:transparent;color:var(--page-muted);font:inherit;font-size:13px;padding:7px 13px;cursor:pointer;transition:all .15s ease}
+  .seg button[aria-pressed="true"]{background:rgba(255,255,255,.10);color:var(--page-fg)}
+  .switch{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--page-muted);cursor:pointer}
+  .switch input{appearance:none;width:32px;height:19px;border-radius:999px;background:rgba(255,255,255,.14);position:relative;cursor:pointer;transition:background .2s ease;flex:none}
+  .switch input:checked{background:var(--coral)}
+  .switch input::after{content:"";position:absolute;top:2px;left:2px;width:15px;height:15px;border-radius:999px;background:#fff;transition:transform .2s var(--ease-overlay-in)}
+  .switch input:checked::after{transform:translateX(13px)}
+  .layer-toggles{display:none;gap:14px;align-items:center;padding:8px 0 0;flex-wrap:wrap}
+  .layer-toggles.show{display:flex}
+  .layer-toggles .lk{font-size:11.5px;color:var(--page-muted);text-transform:uppercase;letter-spacing:.08em}
+
+  /* the mock new-tab stage */
+  .stage{position:relative;border-radius:16px;overflow:hidden;height:600px;border:1px solid rgba(255,255,255,.07);
+    box-shadow:0 24px 60px rgba(0,0,0,.45);isolation:isolate;
+    background:radial-gradient(120% 95% at 50% 4%,#2a2740 0%,#181725 44%,#0d0d14 84%);
+    transition:background 1.2s var(--ease-overlay-in)}
+  .ambient{position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(ellipse 80% 70% at 50% 42%,transparent 30%,rgba(0,0,0,.42) 100%),
+      linear-gradient(to top,rgba(0,0,0,.5) 0%,rgba(0,0,0,.12) 40%,transparent 70%)}
+  /* siblings — the rest of the new tab. NOT blurred by Focus Mode (the card recedes, not the surroundings). */
+  .sib{transition:filter .3s var(--ease-overlay-in),opacity .3s var(--ease-overlay-in)}
+  .topbar{position:absolute;top:0;left:0;right:0;padding:34px 0 0;text-align:center}
+  .clock{font-family:var(--font-serif);font-size:46px;font-weight:400;color:rgba(255,255,255,.93)}
+  .date{font-size:12.5px;color:rgba(255,255,255,.5);margin-top:2px}
+  .search{position:absolute;top:150px;left:50%;transform:translateX(-50%);width:min(440px,calc(100% - 64px));
+    height:42px;border-radius:999px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.10);
+    display:flex;align-items:center;padding:0 16px;font-size:13px;color:rgba(255,255,255,.4);backdrop-filter:blur(6px)}
+  .tiles{position:absolute;top:212px;left:50%;transform:translateX(-50%);display:flex;gap:10px}
+  .tile{width:54px;height:54px;border-radius:14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);
+    display:flex;align-items:center;justify-content:center;font-size:18px;color:rgba(255,255,255,.5)}
+
+  /* the card — real tokens */
+  .cardwrap{position:absolute;left:0;right:0;bottom:30px;display:flex;justify-content:center}
+  .card{
+    --bg:rgba(255,252,247,.97);--bg-hover:#fffaf2;
+    --fg-sec:rgba(23,21,18,.84);--desc:rgba(23,21,18,.85);--muted:rgba(23,21,18,.64);--empty:rgba(23,21,18,.56);
+    --step-cur:rgba(10,10,12,.45);--step-up:rgba(10,10,12,.20);
+    --sec-bg:rgba(255,252,247,.95);--sec-bd:rgba(23,21,18,.18);--sec-tx:rgba(23,21,18,.76);
+    --accent:#c25a41;--home-accent:#e28067;--accent-tint:rgba(226,128,103,.08);
+    --shadow:0 1px 3px rgba(0,0,0,.06),0 6px 24px rgba(0,0,0,.10);--read-fg:#18100d;
+    width:540px;max-width:calc(100% - 48px);background:var(--bg);border-radius:14px;position:relative;overflow:hidden;
+    box-shadow:var(--shadow),0 18px 50px rgba(0,0,0,.32);
+    transition:filter .3s var(--ease-overlay-in),opacity .3s var(--ease-overlay-in),background .6s ease}
+  .stage[data-theme="dark"] .card{
+    --bg:rgb(17,17,19);--bg-hover:rgba(19,19,21,.92);
+    --fg-sec:rgba(255,255,255,.86);--desc:rgba(255,255,255,.74);--muted:rgba(255,255,255,.72);--empty:rgba(255,255,255,.5);
+    --step-cur:rgba(255,255,255,.40);--step-up:rgba(255,255,255,.15);
+    --sec-bg:rgb(26,26,29);--sec-bd:rgba(255,255,255,.14);--sec-tx:rgba(255,255,255,.8);
+    --accent:#e28067;--home-accent:#e28067;--accent-tint:rgba(226,128,103,.18);
+    --shadow:none}
+  /* Focus Mode = the CARD recedes (blur 8-12px + opacity .55-.7), present-as-shape, surroundings stay crisp. */
+  .stage.recede .card{filter:blur(10px);opacity:.6;cursor:pointer;transition:filter .3s var(--ease-overlay-in),opacity .3s var(--ease-overlay-in)}
+  .stage.recede.restoring .card{transition:filter .2s ease,opacity .2s ease}
+  .recede-hint{position:absolute;left:0;right:0;bottom:8px;text-align:center;opacity:0;pointer-events:none;transition:opacity .3s ease;z-index:6}
+  .stage.recede .recede-hint{opacity:1}
+  .recede-hint span{font-size:11.5px;color:rgba(255,255,255,.55);background:rgba(0,0,0,.32);border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:5px 12px;backdrop-filter:blur(6px)}
+
+  /* dusk warming on the card (wind-down, A/B, OFF by default) */
+  .stage.dusk .card{--bg:#f7ece2;--bg-hover:#f9efe6}
+  .stage.dusk[data-theme="dark"] .card{--bg:rgb(22,18,17);--bg-hover:rgb(24,20,18)}
+
+  .cardbody{display:flex;flex-direction:column;min-height:112px;padding:16px 18px 12px}
+  /* eyebrow row: label, gauge hairline, count — the quietest things on the card */
+  .ebrow{display:flex;align-items:center;gap:10px}
+  .ebrow .k{flex:none;font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+  .gauge{flex:none;width:44px;height:2px;border-radius:999px;background:var(--step-up);overflow:hidden}
+  .gauge i{display:block;height:100%;border-radius:999px;background:var(--step-cur);width:0%;transition:width .3s ease,background .6s ease}
+  .stage.tint .card .gauge{background:var(--accent-tint)}
+  .ebrow .count{margin-left:auto;flex:none;font-size:11.5px;font-variant-numeric:tabular-nums;color:var(--muted)}
+  .stage.breathe .card .ebrow .k,.stage.breathe .card .count{animation:breathe 5s cubic-bezier(.37,0,.63,1) infinite}
+  @keyframes breathe{0%,100%{opacity:.9}50%{opacity:1}}
+
+  .title{font-family:var(--font-serif);font-size:21px;line-height:1.25;font-weight:500;color:var(--fg-sec);margin:14px 0 0;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;text-wrap:balance}
+  .excerpt{font-size:12.5px;color:var(--desc);opacity:.8;line-height:1.5;margin:5px 0 0;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .resume{font-size:12px;color:var(--muted);margin:9px 0 0}
+
+  /* footer toolbar */
+  .foot{display:flex;align-items:center;justify-content:space-between;gap:8px;
+    border-top:1px solid var(--sec-bd);background:rgba(0,0,0,.02);padding:9px 14px}
+  .stage[data-theme="dark"] .foot{background:rgba(0,0,0,.07)}
+  .byline{display:flex;align-items:center;gap:8px;min-width:0}
+  .av{width:24px;height:24px;border-radius:999px;flex:none;background:linear-gradient(135deg,#caa,#a78)}
+  .byline .nm{font-size:11.5px;font-weight:500;color:var(--fg-sec);line-height:1.25}
+  .byline .mn{font-size:11.5px;color:var(--muted);line-height:1.25}
+  .undo{font-size:11.5px;color:var(--muted)}
+  .undo b{color:var(--fg-sec);font-weight:500}
+  .undo button{background:transparent;border:0;color:var(--accent);font:inherit;font-size:11.5px;cursor:pointer;padding:0 0 0 6px;text-decoration:underline;text-underline-offset:2px}
+  .tools{display:flex;align-items:center;gap:6px;flex:none}
+  .btn{height:30px;border-radius:8px;font:inherit;font-size:12px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;padding:0 11px;transition:background .15s var(--ease-hover),opacity .15s ease,transform .08s ease}
+  .btn:active{transform:scale(.97)}
+  .btn .kbd{font-size:9.5px;font-weight:600;padding:1px 4px;border-radius:4px;border:1px solid currentColor;opacity:.5}
+  .btn.ghost{background:transparent;color:var(--muted);padding:0 8px}
+  .btn.ghost:hover{color:var(--fg-sec)}
+  .btn.sec{background:var(--sec-bg);border:1px solid var(--sec-bd);color:var(--sec-tx)}
+  .btn.sec:hover{background:var(--bg-hover)}
+  .btn.read{background:var(--home-accent);border:0;color:var(--read-fg)}
+  .btn.read:hover{opacity:.9}
+
+  /* done surface */
+  .done{display:none;flex-direction:column;align-items:center;text-align:center;padding:34px 22px 30px}
+  .stage.is-done .cardbody,.stage.is-done .foot{display:none}
+  .stage.is-done .done{display:flex;animation:exhale .7s var(--ease-entrance)}
+  @keyframes exhale{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+  .done .check{width:30px;height:30px;border-radius:999px;border:1.5px solid var(--home-accent);display:flex;align-items:center;justify-content:center;color:var(--home-accent);margin-bottom:13px}
+  .done .dt{font-family:var(--font-serif);font-size:20px;font-weight:500;color:var(--fg-sec)}
+  .done .dm{font-size:13px;color:var(--empty);margin-top:5px}
+  .done .rhythm{display:none;font-size:11.5px;color:var(--empty);margin-top:11px}
+  .stage.show-rhythm .done .rhythm{display:block}
+  .done .browse{margin-top:16px;background:transparent;border:0;color:var(--muted);font:inherit;font-size:12px;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+
+  .caption{margin-top:15px;font-size:12.5px;color:var(--page-muted);line-height:1.6;max-width:820px}
+  .caption b{color:var(--page-fg)}.caption .g{color:#8fcfb0}
+
+  /* writeup */
+  .badge{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:2px 7px;border-radius:999px;white-space:nowrap;vertical-align:middle}
+  .s-none{background:rgba(226,90,75,.16);color:#f0917f;border:1px solid rgba(226,90,75,.35)}
+  .s-weak{background:rgba(214,160,90,.14);color:#e0ad6b;border:1px solid rgba(214,160,90,.30)}
+  .s-mod{background:rgba(120,190,150,.14);color:#8fcfb0;border:1px solid rgba(120,190,150,.30)}
+  .s-strong{background:rgba(120,170,220,.14);color:#8fb6dc;border:1px solid rgba(120,170,220,.30)}
+  .callout{border:1px solid rgba(226,128,103,.30);background:rgba(226,128,103,.06);border-radius:12px;padding:15px 17px;margin:16px 0;font-size:13.5px;color:var(--page-fg);line-height:1.6}
+  .callout b{color:var(--coral)}
+  table.t{width:100%;border-collapse:collapse;margin-top:12px;font-size:12.5px}
+  table.t th{text-align:left;font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--page-muted);font-weight:600;padding:0 10px 8px;border-bottom:1px solid var(--page-line)}
+  table.t td{border-top:1px solid var(--page-line);padding:9px 10px;vertical-align:top;color:var(--page-muted)}
+  table.t td:first-child{color:var(--page-fg);font-weight:600;white-space:nowrap}
+  table.t code{font-family:ui-monospace,monospace;color:#eaa088;font-size:11px}
+  ol.fixes,ol.q{margin:8px 0 0;padding-left:20px;font-size:13px;color:var(--page-muted);line-height:1.6}
+  ol.fixes li,ol.q li{margin-bottom:9px}
+  ol.fixes b,ol.q b{color:var(--page-fg)}
+  ol.fixes .old{color:#c98;text-decoration:line-through;text-decoration-color:rgba(226,90,75,.5)}
+  ol.fixes .new{color:#8fcfb0}
+  .drops{columns:2;column-gap:26px;font-size:12.5px;color:var(--page-muted);line-height:1.55;margin-top:10px}
+  .drops div{break-inside:avoid;margin-bottom:8px;padding-left:14px;position:relative}
+  .drops div::before{content:"–";position:absolute;left:0;color:#c98}
+  @media(max-width:720px){.drops{columns:1}}
+  .footer{margin-top:46px;padding-top:22px;border-top:1px solid var(--page-line);font-size:12.5px;color:var(--page-muted);line-height:1.6}
+  a{color:var(--coral)}
+
+  @media (prefers-reduced-motion: reduce){*{animation:none !important;transition-duration:.01ms !important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow-k">Totem · Today's Read · the redesigned card</div>
+  <h1>One quiet reading line the day gently dims around</h1>
+  <p class="lede">The research didn't just add features — it changed the brief. The best-powered evidence is <b>deflationary</b> (nudges ≈ 0 after bias correction), so the redesign leads with the <b>calm default being the whole product</b>, not a fallback. The card you see ~40×/day is identical at hour 1 and hour 11, carries <b>exactly one saturated mark</b>, and can be finished two honest ways — <b>read it, or let it go</b> — both advancing the same progress. Everything else (wind-down warming, the gauge's direction, the rhythm) is a faint, separately-vetoable layer, never a competing control.</p>
+
+  <div class="controls">
+    <div class="grp"><span class="label">State</span>
+      <div class="seg" id="stateseg" role="group" aria-label="Card state">
+        <button data-state="calm" aria-pressed="true">Calm</button>
+        <button data-state="winddown" aria-pressed="false">Wind-down</button>
+        <button data-state="partial" aria-pressed="false">Partial</button>
+        <button data-state="done" aria-pressed="false">Done</button>
+      </div>
+    </div>
+    <div class="grp"><span class="label">Theme</span>
+      <div class="seg" id="themeseg" role="group" aria-label="Theme">
+        <button data-theme="light" aria-pressed="true">Light</button>
+        <button data-theme="dark" aria-pressed="false">Dark</button>
+      </div>
+    </div>
+    <button class="btn sec" id="focusbtn" style="height:32px">Focus Mode (F)</button>
+    <label class="switch"><input type="checkbox" id="rhythmtoggle"> Reading rhythm</label>
+  </div>
+  <div class="layer-toggles" id="layers">
+    <span class="lk">Wind-down layers — each independent, all OFF by default:</span>
+    <label class="switch"><input type="checkbox" id="t-tint"> accent-tint <span class="badge s-weak">weak</span></label>
+    <label class="switch"><input type="checkbox" id="t-dusk"> dusk warmth <span class="badge s-weak">weakest</span></label>
+    <label class="switch"><input type="checkbox" id="t-breathe"> breathing <span class="badge s-none">cuttable</span></label>
+  </div>
+
+  <div class="stage" id="stage" data-theme="light">
+    <div class="ambient sib"></div>
+    <div class="topbar sib">
+      <div class="clock" id="clock">2:10</div>
+      <div class="date">Tuesday, June 23</div>
+    </div>
+    <div class="search sib">Search the web</div>
+    <div class="tiles sib"><div class="tile">◷</div><div class="tile">✉</div><div class="tile">▤</div><div class="tile">★</div></div>
+
+    <div class="recede-hint"><span>Focus Mode — the card recedes so the tab gets out of your way. Tap it, or press F, to bring it back.</span></div>
+
+    <div class="cardwrap">
+      <div class="card" id="card">
+        <div class="cardbody">
+          <div class="ebrow">
+            <span class="k" id="ebrow-k">today's read</span>
+            <span class="gauge"><i id="gauge-fill"></i></span>
+            <span class="count" id="count">0 of 5</span>
+          </div>
+          <div class="title" id="title">The quiet case for reading less, but finishing it</div>
+          <div class="excerpt" id="excerpt">A short argument that a small, finished set beats an endless saved pile — and what that means for how you triage what you keep.</div>
+          <div class="resume" id="resume" style="display:none">Where you left off — 3 to go.</div>
+        </div>
+        <div class="foot">
+          <div class="byline" id="byline"><span class="av"></span><div><div class="nm" id="nm">Maya Cordova</div><div class="mn" id="mn">2 min</div></div></div>
+          <div class="undo" id="undo" style="display:none"><b>Set aside.</b><button id="undobtn">Undo</button></div>
+          <div class="tools">
+            <button class="btn ghost" id="listbtn" title="Open reading list">List <span class="kbd">L</span></button>
+            <button class="btn sec" id="releasebtn">Not for me <span class="kbd">X</span></button>
+            <button class="btn read" id="readbtn">Read <span class="kbd">Space</span></button>
+          </div>
+        </div>
+        <div class="done">
+          <div class="check"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg></div>
+          <div class="dt">That's today's read, done.</div>
+          <div class="dm">Nothing waiting.</div>
+          <div class="rhythm">You've read on 12 days this month.</div>
+          <button class="browse" id="restart">↻ replay</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p class="caption"><b>What you're looking at:</b> the real card on a mocked new tab, real <code>src/index.css</code> tokens. <b>Read</b> or <b>Not for me</b> both advance the gauge — <span class="g">releasing is finishing</span>. <b>Focus Mode</b> recedes the <i>card</i> (not the surroundings) so the tab gets out of your way; the blurred shape stays as a self-reminder. <b>Wind-down</b> makes only the minimum honest change by default (eyebrow → "winding down", count → "3 to finish"); the three warming layers above are each OFF until you opt in. <b>Done</b> is a quiet one-shot exhale — no confetti, no "tomorrow" promise.</p>
+
+  <!-- ===== THE RETHINK ===== -->
+  <h2>What changed in the thinking</h2>
+  <div class="callout">
+    The redesign is a synthesis of six independent card concepts, adversarially judged, then red-teamed for voice/honesty and feasibility/accessibility. The spine is the top-scored <b>Calm-Hero</b> (the resting card must be effortless and identical all day), grafted with <b>Recede &amp; Return</b> (Focus is a first-class verb) and <b>Done-is-Enough</b> (read and release are two doors to the same progress, encoded in the layout, not the copy). Three corrections were made over the raw synthesis: release routes through the <b>real</b> <code>setIntent('reference')</code> / <code>snooze()</code> calls (no fabricated reason that doesn't exist in code); Focus Mode blurs <b>the card</b>, not the surroundings (matching <code>CONCEPTS.md</code>, your instruction, and the focus-lens evidence — the synthesis had inverted it); and <code>List</code> + nav stay focusable for keyboard/AT discoverability.
+  </div>
+
+  <h2>The card, state by state</h2>
+  <table class="t">
+    <thead><tr><th style="width:20%">State</th><th>What it is</th></tr></thead>
+    <tbody>
+    <tr><td>Calm default <span class="badge s-mod">the hero</span></td><td>Seen ~40×/day. One warm card, no border/glow/pulse/live-count. <b>Exactly one saturated mark</b> (the "today's read" eyebrow); the Spectral serif title carries everything. Gauge is a neutral 2px hairline that <b>fills by item</b> — never accent, never a meter to empty — with "2 of 5" carrying the literal meaning. Read + Not for me present from first paint.</td></tr>
+    <tr><td>Wind-down <span class="badge s-mod">moderate</span></td><td>Appears <b>only if you set a wind-down time</b>, fires when the real 30s clock crosses it. Default change is minimal &amp; honest: eyebrow → "winding down", count → "3 to finish". The accent-tint, dusk, and breathing layers are <b>independent and off by default</b> — the evidence (weak + weakest) doesn't support stacking them on.</td></tr>
+    <tr><td>Focus-receded <span class="badge s-mod">moderate</span></td><td>User-invoked only (F / affordance). The <b>card</b> blurs (10px) + drops to 0.6 opacity — present as shape, unreadable as text, so it recedes without disappearing. DOM/aria intact; restores instantly on tap, F, Escape, or focus-enter.</td></tr>
+    <tr><td>Done <span class="badge s-weak">weak</span></td><td>A quiet one-shot exhale (~700ms), serif "That's today's read, done." + "Nothing waiting." No confetti/sound, no forward-promise. Gauge settles to full in its neutral color.</td></tr>
+    <tr><td>Partial-resume <span class="badge s-weak">weak</span></td><td>Most days end partial, and that's fine. One forward line ("Where you left off — 3 to go.") shows <b>only on first session open</b>, never on every routine tab. No red, no "incomplete", no Zeigarnik nag.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>The two load-bearing decisions (designed as questions, not beliefs)</h2>
+  <table class="t">
+    <tbody>
+    <tr><td>Gauge direction <span class="badge s-weak">weak</span></td><td><b>Ships:</b> fill-by-item, neutral color, "2 of 5" — the framing that <i>cannot</i> read as a countdown. <b>Why not drain:</b> "minutes remaining draining to empty" rests on one un-replicated lab study (Koo &amp; Fishbach 2012) whose sign can flip — it motivates finishers but pressures the ambivalent majority who dominate a 40× glance. <b>A/B plan:</b> remaining-focus is tested only <i>inside the wind-down window</i>, measured on % handled with real-read share as a hard cannibalization guard, guardrails holding veto.</td></tr>
+    <tr><td>"Not for me" release <span class="badge s-none">no direct evidence</span></td><td>The mechanic the whole metric leans on, and the least grounded. Built for dignity + testability: same-size secondary button left of Read, undo (<b>"Set aside. Undo"</b> — matching the real <code>'reference'</code> fate, not a dishonest "Released"), wired to <code>setIntent('reference')</code>. <b>#1 A/B</b> — present vs absent, watching % handled <i>up</i> without real-read share <i>down</i>, the guard live at launch.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Red-team fixes folded in</h2>
+  <p class="sub">The voice/honesty critic flagged seven places the draft drifted into hype, false promises, or claims the pixels didn't deliver. All applied:</p>
+  <ol class="fixes">
+    <li><b>Partial resume:</b> <span class="old">"Pick up where you left off — 3 to go."</span> → <span class="new">"Where you left off — 3 to go."</span> (cut the productivity-app pep preamble; state the fact).</li>
+    <li><b>Done subline:</b> <span class="old">"Nothing waiting. A fresh set tomorrow."</span> → <span class="new">"Nothing waiting."</span> (drop a forward-promise the product can't guarantee on a no-bookmarks day).</li>
+    <li><b>Wind-down:</b> stop stacking four warming layers as a bundle → default to the <span class="new">minimum honest change</span>; accent-tint / dusk / breathing each ship <span class="new">off by default</span> behind separate flags.</li>
+    <li><b>Undo verb:</b> <span class="old">"Released. Undo"</span> → <span class="new">"Set aside. Undo"</span> (the post is <i>filed for reference</i>, not discarded — the word must match the real data fate).</li>
+    <li><b>Wind-down setup:</b> <span class="old">"…I'll finish today's read."</span> → <span class="new">"…I'll sit with today's read."</span> (frame the if-then around the act, not a completion the UI then scores you against).</li>
+    <li><b>Equal-weight honesty:</b> stop calling Read/Not-for-me "equal weight." Named honestly: <span class="new">Read is the visual primary; Not for me is a real, same-size secondary</span> — and filled-Read-vs-equal-doors becomes an explicit release-A/B arm.</li>
+    <li><b>Rhythm:</b> <span class="old">"You read on 12 of the last 30 days."</span> → <span class="new">"You've read on 12 days this month."</span> (drop the denominator so there's no 12/30 ratio to fail against).</li>
+  </ol>
+
+  <h2>Feasibility &amp; accessibility — verified against the real tokens</h2>
+  <table class="t">
+    <tbody>
+    <tr><td>Permissions</td><td>Every mechanic is pure client-side render/state. <b>Zero new Chrome permissions.</b> Wind-down is just a comparison against the already-running 30s <code>now</code> tick — no idle/alarms.</td></tr>
+    <tr><td>Real wiring</td><td>Gauge = CSS width on the existing meter slot. Release = <code>setIntent('reference')</code>/<code>snooze()</code> + <code>undoHandled</code> (all exist in <code>useTodayQueue</code>). Focus = a boolean + CSS filter. All map to <code>NewTabHome.tsx:404–475</code>.</td></tr>
+    <tr><td>Reduced-motion</td><td>Needs a <b>new card-scoped rule</b> (the existing exception only covers <code>.totem-popover</code>): done exhale → instant crossfade, breathing → off, dusk → static tint, focus blur → instant. Tap feedback stays &lt;100ms.</td></tr>
+    <tr><td>No color-only signal</td><td>Count "2 of 5" always accompanies the gauge; both actions carry text labels (WCAG 1.4.1). ✓</td></tr>
+    <tr><td>Keyboard / AT</td><td>List + Prev/Next stay <b>focusable toolbar buttons</b> (visually recessive, not removed) so discoverability survives. Focus Mode restores on focus-enter so nobody operates a blurred control.</td></tr>
+    <tr><td>Open risk</td><td><b>Dusk-palette contrast is a promise, not yet proven</b> — dimming lightness + warming hue could push body text under 4.5:1, especially dark mode. Must be measured before that layer ships.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>What the redesign removes</h2>
+  <div class="drops">
+    <div>The two competing meters (segmented step bar + continuous progress bar) collapse into one neutral hairline.</div>
+    <div>Accent color leaves the gauge by day — it now appears in exactly one resting place.</div>
+    <div>"Read" stops being the only positive action — "Not for me" joins it, advancing the same count.</div>
+    <div>Any standalone minutes gauge — minutes stay a per-post fact in the byline.</div>
+    <div>Any session/browser-time countdown — impossible without permissions and dishonest.</div>
+    <div>The instant done-swap → one quiet ~700ms exhale; no celebration beyond it, ever.</div>
+    <div>Any "you didn't finish" nag from a partial set.</div>
+    <div>The live "N reading now" co-presence chip — tested and declined (no privacy-safe count; the pressure citation was refuted).</div>
+  </div>
+
+  <h2>Open decisions — these are yours</h2>
+  <ol class="q">
+    <li><b>Release semantics:</b> should "Not for me" map to <code>setIntent('reference')</code> (set aside, keep for future lookup) or <code>snooze()</code> (defer to tomorrow)? I lean <i>reference</i> — it's truer to "not for me today" and matches the "Set aside" copy — but the long-term fate of the post is your call.</li>
+    <li><b>Read button:</b> keep Read filled-coral as the control (and test demoting it as an arm), or demote it to a quiet sibling from day one? I kept it filled to avoid stacking two unproven bets in the control.</li>
+    <li><b>Scope &amp; sequence:</b> ship the <b>calm default card + release + Focus</b> first (it works fully with no wind-down), and add the net-new wind-down subsystem as a fast-follow? Or build activation now?</li>
+    <li><b>Lowest-value layers:</b> Reading Rhythm, dusk, and breathing are the most skippable. In the initial build at all, or deferred until the core card + release + Focus are validated?</li>
+  </ol>
+
+  <div class="footer">
+    Redesigned card · Totem · 2026-06-23 · real <code>src/index.css</code> tokens · synthesis of 6 judged concepts + voice/honesty &amp; feasibility/a11y red-team, grounded in the completed 19-agent engagement research. Companions: <a href="activation-model-demo.html">activation model</a> · <a href="voice-spectrum-demo.html">calm↔bold spectrum</a>.
+  </div>
+</div>
+
+<script>
+(function(){
+  var stage=document.getElementById('stage');
+  var ITEMS=[
+    {t:"The quiet case for reading less, but finishing it",x:"A short argument that a small, finished set beats an endless saved pile — and what that means for how you triage what you keep.",a:"Maya Cordova",m:"2 min"},
+    {t:"Notes on attention at the end of a long day",x:"Why the last hour is the hardest to read in, and the small set that's still worth finishing before you put it down.",a:"Devin Asaba",m:"3 min"},
+    {t:"A field guide to actually closing the tab",x:"Tiny commitments beat big intentions. Two minutes on why the next small thing is the one that gets done.",a:"Priya Anand",m:"2 min"},
+    {t:"On keeping a smaller, kinder reading list",x:"What changes when the list has an end — a practical take on saving less and returning to more.",a:"Lena Ortiz",m:"4 min"},
+    {t:"Why a daily habit beats a daily streak",x:"Nothing to keep, nothing to break — just the reading. A short note on rhythms over chains.",a:"Sam Iverson",m:"4 min"}
+  ];
+  var N=ITEMS.length, handled=0, idx=0, mode='calm', undoTimer=null;
+
+  function $(id){return document.getElementById(id)}
+  function render(){
+    var it=ITEMS[Math.min(idx,N-1)];
+    $('title').textContent=it.t; $('excerpt').textContent=it.x; $('nm').textContent=it.a; $('mn').textContent=it.m;
+    $('gauge-fill').style.width=(handled/N*100)+'%';
+    var left=N-handled;
+    if(mode==='winddown'){ $('ebrow-k').textContent='winding down'; $('count').textContent=left+' to finish'; }
+    else { $('ebrow-k').textContent="today's read"; $('count').textContent=handled+' of '+N; }
+    $('resume').style.display = (mode==='partial' && handled>0 && handled<N) ? 'block' : 'none';
+    if(mode==='partial') $('resume').textContent='Where you left off — '+left+' to go.';
+    stage.classList.toggle('is-done', mode!=='done' ? handled>=N : true);
+  }
+  function setMode(m){
+    mode=m;
+    if(m==='partial'){ handled=2; idx=2; }
+    else if(m==='done'){ handled=N; idx=N-1; }
+    else if(m==='calm'){ handled=0; idx=0; }
+    else if(m==='winddown'){ if(handled>=N){handled=2;idx=2;} }
+    $('layers').classList.toggle('show', m==='winddown');
+    if(m!=='winddown'){ stage.classList.remove('tint','dusk','breathe'); ['t-tint','t-dusk','t-breathe'].forEach(function(id){$(id).checked=false}); }
+    stage.classList.toggle('is-done', m==='done');
+    render();
+  }
+  function advance(release){
+    if(handled>=N) return;
+    handled++; idx=Math.min(idx+1,N-1);
+    if(release){
+      clearTimeout(undoTimer);
+      $('byline').style.display='none'; $('undo').style.display='block';
+      undoTimer=setTimeout(function(){ $('undo').style.display='none'; $('byline').style.display='flex'; },6000);
+    }
+    if(handled>=N) setTimeout(function(){ stage.classList.add('is-done'); },220);
+    render();
+  }
+  function undo(){
+    clearTimeout(undoTimer);
+    handled=Math.max(0,handled-1); idx=Math.max(0,idx-1);
+    $('undo').style.display='none'; $('byline').style.display='flex';
+    stage.classList.remove('is-done'); render();
+  }
+  function toggleFocus(){
+    if(stage.classList.contains('recede')){ stage.classList.add('restoring'); stage.classList.remove('recede'); setTimeout(function(){stage.classList.remove('restoring')},220); $('focusbtn').textContent='Focus Mode (F)'; }
+    else { stage.classList.add('recede'); $('focusbtn').textContent='Return (F)'; }
+  }
+
+  // state seg
+  var ss=document.getElementById('stateseg');
+  ss.addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;[].forEach.call(ss.children,function(x){x.setAttribute('aria-pressed',x===b)});setMode(b.dataset.state)});
+  // theme seg
+  var ts=document.getElementById('themeseg');
+  ts.addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;[].forEach.call(ts.children,function(x){x.setAttribute('aria-pressed',x===b)});stage.dataset.theme=b.dataset.theme});
+
+  $('readbtn').addEventListener('click',function(){advance(false)});
+  $('releasebtn').addEventListener('click',function(){advance(true)});
+  $('undobtn').addEventListener('click',undo);
+  $('restart').addEventListener('click',function(){setMode('calm');[].forEach.call(ss.children,function(x){x.setAttribute('aria-pressed',x.dataset.state==='calm')})});
+  $('focusbtn').addEventListener('click',toggleFocus);
+  // tap a receded card to restore
+  $('card').addEventListener('click',function(){ if(stage.classList.contains('recede')) toggleFocus(); });
+  document.getElementById('rhythmtoggle').addEventListener('change',function(e){stage.classList.toggle('show-rhythm',e.target.checked)});
+  $('t-tint').addEventListener('change',function(e){stage.classList.toggle('tint',e.target.checked)});
+  $('t-dusk').addEventListener('change',function(e){stage.classList.toggle('dusk',e.target.checked)});
+  $('t-breathe').addEventListener('change',function(e){stage.classList.toggle('breathe',e.target.checked)});
+
+  document.addEventListener('keydown',function(e){
+    if(e.target.tagName==='INPUT') return;
+    var k=e.key.toLowerCase();
+    if(k===' '||e.code==='Space'){e.preventDefault();advance(false)}
+    else if(k==='x'){advance(true)}
+    else if(k==='f'){toggleFocus()}
+    else if(e.key==='Escape'&&stage.classList.contains('recede')){toggleFocus()}
+  });
+
+  setMode('calm');
+})();
+</script>
+</body>
+</html>
