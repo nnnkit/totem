@@ -12,7 +12,7 @@ Use this doc whenever the task mentions:
 - new-tab, reader, search, export, or privacy screenshots
 - screenshot text or screenshot ordering
 
-For website route screenshots, use the route-specific plan if one exists, such as `plans/astro-migration.md`. For extension/product screenshots, use this doc.
+For website route screenshots, follow the route-specific plan if one exists. For extension/product screenshots, use this doc.
 
 ## Source Of Truth
 

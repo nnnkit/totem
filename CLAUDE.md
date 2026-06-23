@@ -1,3 +1,9 @@
+## Repository Rules
+
+- Do not add unnecessary comments.
+- Keep comments only when they explain non-obvious constraints, cross-file coupling, browser quirks, side effects, or business rules.
+- Remove decorative section headers and comments that only restate the code.
+
 ## UI Components
 
 This project uses `@base-ui/react` (v1.2.0) for base UI primitives. Always prefer Base UI components over raw HTML elements when a corresponding component is available. Check `node_modules/@base-ui/react/` for the full list of available components.
@@ -14,9 +20,9 @@ Before capturing, regenerating, editing, or reviewing extension screenshots, rea
 
 ## Blog pipeline
 
-All blog work is managed in [`plans/blog-pipeline.md`](plans/blog-pipeline.md). It is the single source of truth for ideas, in-progress drafts, and published posts. Before doing any blog-related work — pitching topics, researching keywords, drafting, publishing — read it.
+All blog work is managed in [`docs/blog-pipeline.md`](docs/blog-pipeline.md). It is the single source of truth for ideas, in-progress drafts, and published posts. Before doing any blog-related work — pitching topics, researching keywords, drafting, publishing — read it.
 
-For end-to-end SEO execution, also read [`plans/seo-agent-goal.md`](plans/seo-agent-goal.md). It is the reusable goal/checklist and long-running loop for choosing SEO opportunities, validating SERPs, adding non-commodity evidence, publishing pages, internal-linking them, building the site, updating tracking, writing readable HTML research/status reports under `plans/research/`, writing distribution plans, and looping back until the backlog is done or blocked.
+For end-to-end SEO execution, also read [`docs/seo-agent-goal.md`](docs/seo-agent-goal.md). It is the reusable goal/checklist and long-running loop for choosing SEO opportunities, validating SERPs, adding non-commodity evidence, publishing pages, internal-linking them, building the site, updating tracking, writing readable HTML research/status reports under `plans/research/`, writing distribution plans, and looping back until the backlog is done or blocked.
 
 It contains:
 - **Voice** — the editorial personality every post must match ("Notes on bookmarks, reading, and the things you save"). Behavioral, honest about scope, specific, terse. No generic listicles without a thesis.
@@ -25,6 +31,6 @@ It contains:
 - **Frontmatter template** for new posts.
 - **Ideas / In progress / Published / Killed** sections.
 
-When the user asks to "add a blog idea," "draft a post," or anything blog-adjacent: update `plans/blog-pipeline.md` first, then do the work. Never write a post that hasn't passed the topic filter.
+When the user asks to "add a blog idea," "draft a post," or anything blog-adjacent: update `docs/blog-pipeline.md` first, then do the work. Never write a post that hasn't passed the topic filter.
 
-Original keyword research lives in [`plans/seo-blog-research.md`](plans/seo-blog-research.md) — historical context for the first three published posts.
+Original keyword research lives in [`docs/seo-blog-research.md`](docs/seo-blog-research.md) — historical context for the first three published posts.
