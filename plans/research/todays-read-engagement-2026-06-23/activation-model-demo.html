@@ -1,0 +1,435 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Today's Read — the settled model (calm → end-of-day activation)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --font-sans:"SF Pro Display",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --font-serif:"Spectral",Charter,"Iowan Old Style",Georgia,serif;
+    --coral:#e28067;
+    --page-bg:#0e0e10;--page-fg:#e9e6e1;--page-muted:#9b968d;--page-line:rgba(255,255,255,.10);
+    /* Emil easing blueprint */
+    --ease-out-quint:cubic-bezier(.23,1,.32,1);
+    --ease-out-cubic:cubic-bezier(.215,.61,.355,1);
+    --ease-in-out-quart:cubic-bezier(.77,0,.175,1);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{font-family:var(--font-sans);background:var(--page-bg);color:var(--page-fg);-webkit-font-smoothing:antialiased;line-height:1.5}
+  .wrap{max-width:1080px;margin:0 auto;padding:40px 24px 120px}
+  .eyebrow{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--coral);font-weight:600}
+  h1{font-family:var(--font-serif);font-weight:500;font-size:32px;line-height:1.15;margin:.35em 0 .35em;letter-spacing:-.01em}
+  h2{font-family:var(--font-serif);font-weight:500;font-size:23px;line-height:1.2;margin:48px 0 6px;letter-spacing:-.01em}
+  .lede{color:var(--page-muted);max-width:740px;font-size:15px}
+  .lede b{color:var(--page-fg);font-weight:600}
+  .sub{color:var(--page-muted);max-width:760px;font-size:13.5px;margin:0 0 8px}
+  .asks{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin:22px 0 26px}
+  .ask{border:1px solid var(--page-line);border-radius:12px;padding:13px 15px;background:rgba(255,255,255,.02)}
+  .ask h3{margin:0 0 4px;font-size:13px;color:var(--coral);font-weight:600;letter-spacing:.01em}
+  .ask p{margin:0;font-size:12.5px;color:var(--page-muted);line-height:1.5}
+  @media(max-width:740px){.asks{grid-template-columns:1fr}}
+
+  .controls{position:sticky;top:0;z-index:50;display:flex;gap:14px;align-items:center;flex-wrap:wrap;
+    padding:14px 0;margin-bottom:24px;background:linear-gradient(to bottom,var(--page-bg) 72%,transparent)}
+  .grp{display:flex;gap:7px;align-items:center}
+  .grp .label{font-size:12px;color:var(--page-muted)}
+  .seg{display:inline-flex;border:1px solid var(--page-line);border-radius:999px;overflow:hidden}
+  .seg button{border:0;background:transparent;color:var(--page-muted);font:inherit;font-size:13px;padding:7px 13px;cursor:pointer;transition:all .15s ease}
+  .seg button[aria-pressed="true"]{background:rgba(255,255,255,.10);color:var(--page-fg)}
+  .switch{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--page-muted);cursor:pointer}
+  .switch input{appearance:none;width:34px;height:20px;border-radius:999px;background:rgba(255,255,255,.14);position:relative;cursor:pointer;transition:background .2s ease}
+  .switch input:checked{background:var(--coral)}
+  .switch input::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:999px;background:#fff;transition:transform .2s var(--ease-out-cubic)}
+  .switch input:checked::after{transform:translateX(14px)}
+
+  /* the new-tab stage */
+  .stage{position:relative;border-radius:16px;overflow:hidden;height:600px;border:1px solid rgba(255,255,255,.07);
+    box-shadow:0 24px 60px rgba(0,0,0,.45);
+    background:radial-gradient(120% 95% at 50% 6%, var(--sky-top) 0%, var(--sky-mid) 42%, var(--sky-bot) 82%);
+    --sky-top:#2a2740;--sky-mid:#181725;--sky-bot:#0d0d14;
+    transition:background 1.2s var(--ease-in-out-quart);isolation:isolate}
+  .ambient{position:absolute;inset:0;pointer-events:none;transition:opacity .9s ease;
+    background:radial-gradient(ellipse 80% 70% at 50% 45%,transparent 30%,rgba(0,0,0,.45) 100%),
+      linear-gradient(to top,rgba(0,0,0,.5) 0%,rgba(0,0,0,.15) 40%,transparent 70%)}
+  .duskglow{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity 1.4s var(--ease-in-out-quart);
+    background:radial-gradient(95% 62% at 50% 100%,rgba(226,128,103,.26),transparent 72%)}
+  .grain{position:absolute;inset:0;pointer-events:none;opacity:.15;mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+
+  .top{position:absolute;top:0;left:0;right:0;padding:38px 0 0;text-align:center;transition:opacity .5s ease}
+  .clock{font-family:var(--font-serif);font-size:50px;font-weight:400;color:rgba(255,255,255,.93)}
+  .date{font-size:13px;color:rgba(255,255,255,.55);margin-top:2px}
+  .date .wind{color:var(--coral);opacity:0;transition:opacity .8s ease}
+  .stage[data-phase="window"] .date .wind,.stage[data-phase="past"] .date .wind{opacity:.85}
+
+  /* time scrubber */
+  .scrub{position:absolute;left:50%;transform:translateX(-50%);bottom:18px;width:min(560px,calc(100% - 48px));z-index:8;
+    background:rgba(0,0,0,.34);border:1px solid rgba(255,255,255,.10);border-radius:12px;padding:10px 14px;backdrop-filter:blur(8px)}
+  .scrub-row{display:flex;align-items:center;gap:12px}
+  .scrub label{font-size:11.5px;color:rgba(255,255,255,.6);white-space:nowrap}
+  .scrub input[type=range]{flex:1;appearance:none;height:4px;border-radius:999px;background:rgba(255,255,255,.18);outline:none}
+  .scrub input[type=range]::-webkit-slider-thumb{appearance:none;width:16px;height:16px;border-radius:999px;background:var(--coral);cursor:pointer;box-shadow:0 0 0 4px rgba(226,128,103,.25)}
+  .scrub-note{font-size:11px;color:rgba(255,255,255,.5);margin-top:6px;text-align:center}
+  .scrub-note b{color:var(--coral)}
+
+  /* the card */
+  .cardwrap{position:absolute;left:0;right:0;bottom:84px;display:flex;justify-content:center}
+  .card{
+    --card-bg:rgba(255,252,247,.97);--fg:rgba(23,21,18,.94);--fg2:rgba(23,21,18,.82);--fg3:rgba(23,21,18,.60);
+    --line:rgba(23,21,18,.10);--c:#c25a41;--step-up:rgba(10,10,12,.18);
+    width:540px;max-width:calc(100% - 48px);background:var(--card-bg);color:var(--fg);border-radius:16px;padding:20px 22px 18px;position:relative;
+    box-shadow:0 1px 3px rgba(0,0,0,.10),0 18px 50px rgba(0,0,0,.35);
+    /* Focus Mode restore (fast, ~200ms). Blur-in is overridden slower on .recede below. */
+    transition:filter .2s var(--ease-out-cubic),transform .2s var(--ease-out-cubic),opacity .2s var(--ease-out-cubic),background .6s ease,box-shadow .4s ease}
+  .stage[data-cardtheme="dark"] .card{--card-bg:rgb(20,20,22);--fg:rgba(255,255,255,.92);--fg2:rgba(255,255,255,.82);--fg3:rgba(255,255,255,.60);--line:rgba(255,255,255,.10);--c:#e28067;--step-up:rgba(255,255,255,.16);box-shadow:0 1px 3px rgba(0,0,0,.4),0 18px 50px rgba(0,0,0,.5)}
+  /* Focus Mode recede: blur 8-12px + opacity 0.55-0.7 (research: present, not gone). Blur-in slower (~320ms) than restore. */
+  .stage.recede .card{filter:blur(9px);transform:scale(.985);opacity:.6;cursor:pointer;
+    transition:filter .32s var(--ease-out-cubic),transform .32s var(--ease-out-cubic),opacity .32s var(--ease-out-cubic),background .6s ease,box-shadow .4s ease}
+  .recede-hint{position:absolute;left:0;right:0;bottom:118px;text-align:center;opacity:0;pointer-events:none;transition:opacity .4s ease;z-index:7}
+  .stage.recede .recede-hint{opacity:1}
+  .recede-hint span{font-size:12px;color:rgba(255,255,255,.6);background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:6px 14px;backdrop-filter:blur(6px)}
+
+  .eb{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .eb-l{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--fg3);font-weight:600}
+  .eb-r{font-size:12px;color:var(--fg3);transition:color .5s ease}
+  .focusbtn{width:28px;height:28px;border-radius:8px;border:1px solid var(--line);background:transparent;color:var(--fg3);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s ease;font-size:14px}
+  .focusbtn:hover{color:var(--fg);background:rgba(0,0,0,.04)}
+
+  .gauge{margin-top:14px}
+  .gauge-row{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:7px}
+  .gauge-label{font-size:12.5px;color:var(--fg3)}
+  .gauge-label b{color:var(--fg);font-weight:600;font-variant-numeric:tabular-nums}
+  .gauge-track{height:5px;border-radius:999px;background:var(--step-up);overflow:hidden}
+  .gauge-fill{height:100%;border-radius:999px;background:var(--c);width:100%;transition:width .5s var(--ease-out-quint)}
+  /* end-of-day "breathing" — window-only. Research: opacity ~.92->1, period 4-6s, sinusoidal ease-in-out, no flicker. */
+  .stage[data-phase="window"] .gauge-label,.stage[data-phase="past"] .gauge-label{color:var(--c)}
+  .stage[data-phase="window"] .breathe{animation:breathe 5s cubic-bezier(.37,0,.63,1) infinite}
+  @keyframes breathe{0%,100%{opacity:.9}50%{opacity:1}}
+
+  .windline{font-size:13px;color:var(--c);line-height:1.45;margin:13px 0 -2px;max-height:0;opacity:0;overflow:hidden;
+    transition:max-height .5s var(--ease-out-cubic),opacity .5s ease,margin .5s ease}
+  .stage[data-phase="window"] .windline,.stage[data-phase="past"] .windline{max-height:48px;opacity:1;margin-top:14px}
+
+  .title{font-family:var(--font-serif);font-size:21px;font-weight:500;line-height:1.25;margin:14px 0 6px;color:var(--fg)}
+  .desc{font-size:13.5px;color:var(--fg3);line-height:1.5;margin-bottom:13px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+
+  /* forgiving rhythm — opt-in, no chain, no loss */
+  .rhythm{display:none;align-items:center;gap:9px;font-size:12.5px;color:var(--fg3);margin:-2px 0 12px}
+  .stage.show-rhythm .rhythm{display:flex}
+  .rhythm .week{display:flex;gap:4px}
+  .rhythm .d{width:9px;height:9px;border-radius:3px;background:var(--step-up)}
+  .rhythm .d.on{background:var(--c);opacity:.85}
+
+  .foot{display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .byline{font-size:13px;color:var(--fg2)}
+  .byline .sep{opacity:.5;margin:0 6px}
+  .actions{display:flex;align-items:center;gap:9px}
+  .letgo{font-size:12.5px;color:var(--fg3);background:transparent;border:0;font-family:inherit;cursor:pointer;padding:6px 8px}
+  .letgo:hover{color:var(--fg2)}
+  .read{font-family:inherit;font-size:13.5px;font-weight:600;border:0;cursor:pointer;color:#fff;background:var(--c);padding:9px 18px;border-radius:9px;transition:transform .12s ease,filter .15s ease}
+  .read:hover{filter:brightness(1.05)}
+  .read:active{transform:scale(.96)}
+
+  .done{display:none}
+  .stage.is-done .live{display:none}.stage.is-done .done{display:block}
+  .done .check{width:30px;height:30px;border-radius:999px;border:1.5px solid var(--c);display:flex;align-items:center;justify-content:center;color:var(--c);margin-bottom:12px}
+  .done-title{font-family:var(--font-serif);font-size:20px;font-weight:500;color:var(--fg);margin-bottom:6px}
+  .done-msg{font-size:13.5px;color:var(--fg3);line-height:1.55}
+  .done .restart{margin-top:14px;font-size:12.5px;color:var(--fg3);background:transparent;border:0;cursor:pointer;font-family:inherit}
+  .done .restart:hover{color:var(--fg)}
+
+  .caption{margin-top:16px;font-size:13px;color:var(--page-muted);line-height:1.6}
+  .caption b{color:var(--page-fg)}.caption .good{color:#8fcfb0}
+
+  /* evidence badges + tables */
+  .badge{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
+    padding:2px 7px;border-radius:999px;white-space:nowrap;vertical-align:middle}
+  .s-none{background:rgba(226,90,75,.16);color:#f0917f;border:1px solid rgba(226,90,75,.35)}
+  .s-weak{background:rgba(214,160,90,.14);color:#e0ad6b;border:1px solid rgba(214,160,90,.30)}
+  .s-mod{background:rgba(120,190,150,.14);color:#8fcfb0;border:1px solid rgba(120,190,150,.30)}
+  .s-strong{background:rgba(120,170,220,.14);color:#8fb6dc;border:1px solid rgba(120,170,220,.30)}
+  .legend{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0 0;font-size:12px;color:var(--page-muted)}
+
+  .callout{border:1px solid rgba(226,128,103,.30);background:rgba(226,128,103,.06);border-radius:12px;padding:16px 18px;margin:18px 0;font-size:13.5px;color:var(--page-fg);line-height:1.6}
+  .callout b{color:var(--coral)}
+  .callout .big{font-family:var(--font-serif);font-size:17px;color:var(--page-fg);display:block;margin-bottom:6px}
+
+  table.spec{width:100%;border-collapse:collapse;margin-top:14px;font-size:12.5px}
+  table.spec th{text-align:left;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--page-muted);font-weight:600;padding:0 10px 8px;border-bottom:1px solid var(--page-line)}
+  table.spec td{border-top:1px solid var(--page-line);padding:10px 10px;vertical-align:top;color:var(--page-muted)}
+  table.spec td:first-child{color:var(--page-fg);font-weight:600}
+  table.spec code{font-family:ui-monospace,monospace;color:#eaa088;font-size:11.5px}
+  table.spec .cite{display:block;margin-top:4px;font-size:11px;color:#7d7870}
+
+  ol.cav{margin:8px 0 0;padding-left:20px;font-size:13.5px;color:var(--page-muted);line-height:1.62}
+  ol.cav li{margin-bottom:11px}
+  ol.cav b{color:var(--page-fg)}
+  ol.cav .tag{color:#f0917f;font-weight:700}
+
+  .seq{display:grid;gap:10px;margin-top:14px}
+  .seqrow{display:grid;grid-template-columns:54px 1fr;gap:14px;align-items:start;border:1px solid var(--page-line);border-radius:10px;padding:12px 14px;background:rgba(255,255,255,.02)}
+  .pchip{font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--page-fg);background:rgba(255,255,255,.07);border-radius:7px;padding:5px 0;text-align:center}
+  .seqrow.p0 .pchip{background:rgba(120,190,150,.16);color:#8fcfb0}
+  .seqrow.p1 .pchip{background:rgba(214,160,90,.14);color:#e0ad6b}
+  .seqrow.p2 .pchip{background:rgba(255,255,255,.06);color:var(--page-muted)}
+  .seqrow h4{margin:0 0 3px;font-size:13.5px;color:var(--page-fg);font-weight:600}
+  .seqrow p{margin:0;font-size:12.5px;color:var(--page-muted);line-height:1.55}
+  .seqrow .where{display:block;margin-top:4px;font-size:11px;color:#7d7870;font-family:ui-monospace,monospace}
+
+  .footer{margin-top:48px;padding-top:22px;border-top:1px solid var(--page-line);font-size:12.5px;color:var(--page-muted);line-height:1.6}
+  a{color:var(--coral)}
+
+  @media (prefers-reduced-motion: reduce){*{animation:none !important;transition-duration:.01ms !important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">Totem · Today's Read · the settled model</div>
+  <h1>Calm all day — then it quietly helps you finish at dusk</h1>
+  <p class="lede">Your two fixes, built — and now <b>tuned to a finished 19-agent science review</b> with adversarial fact-checking. <b>Drag the clock</b> at the bottom of the frame from afternoon to night and watch the card go from fully calm to gently <b>activated</b> only in the last ~2 hours before your wind-down. Click the <b>⊘</b> on the card for the <b>blur-don't-hide</b> Focus Mode. Every number below now carries an honest evidence strength — and the most useful part is what the science says <b>won't</b> reliably work.</p>
+
+  <div class="asks">
+    <div class="ask"><h3>“only when the day's about to end”</h3><p>Calm until ~2h before <i>your</i> wind-down time, then a soft dusk-warm + a gentle line. Honest — counts down only to a time you set, never a fabricated browser clock.</p></div>
+    <div class="ask"><h3>“the pulse was too fast”</h3><p>No blink. A slow <b>~5s breath</b> (opacity .9→1) on the minutes label, only inside the window. The skill's rule: a 40×/day surface gets almost no motion.</p></div>
+    <div class="ask"><h3>“blur it, don't hide it”</h3><p>⊘ recedes the card — <code>blur 9px + opacity .6</code>, ~320ms in / ~200ms back. It stays present and readable-as-shape; tap to bring it crisply back.</p></div>
+  </div>
+
+  <div class="controls">
+    <div class="grp"><span class="label">Card</span>
+      <div class="seg" id="themeseg" role="group" aria-label="Theme">
+        <button data-theme="light" aria-pressed="true">Light</button>
+        <button data-theme="dark" aria-pressed="false">Dark</button>
+      </div>
+    </div>
+    <label class="switch"><input type="checkbox" id="rhythmtoggle"> Reading rhythm (opt-in)</label>
+    <span class="label" style="margin-left:auto">↓ drag the clock in the frame</span>
+  </div>
+
+  <div class="stage" data-cardtheme="light" data-phase="day" data-minutes="12" data-mins-per="3">
+    <div class="ambient"></div><div class="duskglow"></div><div class="grain"></div>
+    <div class="top">
+      <div class="clock">2:10</div>
+      <div class="date">Tuesday, June 23 <span class="wind">· near your wind-down</span></div>
+    </div>
+
+    <div class="recede-hint"><span>Focus Mode — tap the card to bring it back</span></div>
+
+    <div class="cardwrap">
+      <div class="card">
+        <div class="live">
+          <div class="eb">
+            <span class="eb-l">today's read</span>
+            <span style="display:flex;align-items:center;gap:10px">
+              <span class="eb-r">your 15 min, 5 reads</span>
+              <button class="focusbtn" title="Focus Mode — blur it away">⊘</button>
+            </span>
+          </div>
+          <div class="gauge">
+            <div class="gauge-row"><span class="gauge-label breathe">about <b class="g-min">12</b> min left</span><span class="gauge-label g-count">5 left</span></div>
+            <div class="gauge-track"><div class="gauge-fill"></div></div>
+          </div>
+          <div class="windline">Near your 9 PM wind-down — about <b class="g-min2">12</b> minutes of reading left, if you want them. Tomorrow's fine too.</div>
+          <div class="title">The quiet case for reading less, but finishing it</div>
+          <div class="desc">A short argument that a small, finished set beats an endless saved pile — and what that means for how you triage what you keep.</div>
+          <div class="rhythm"><span class="week"><i class="d on"></i><i class="d on"></i><i class="d"></i><i class="d on"></i><i class="d on"></i><i class="d"></i><i class="d on"></i></span> You've read on 5 of the last 7 days — no streak to keep, just a rhythm.</div>
+          <div class="foot">
+            <span class="byline">Maya Cordova<span class="sep">·</span><span class="cur-min">2 min</span></span>
+            <div class="actions"><button class="letgo">Not for me</button><button class="read">Read</button></div>
+          </div>
+        </div>
+        <div class="done">
+          <div class="check"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg></div>
+          <div class="done-title done-t">Today's set, finished.</div>
+          <div class="done-msg done-m">All five, handled — about 12 minutes with them. Nothing else is waiting; we'll set out a fresh five tomorrow.</div>
+          <button class="restart">↻ replay</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="scrub">
+      <div class="scrub-row">
+        <label>1 PM</label>
+        <input type="range" id="time" min="780" max="1320" value="850" step="5">
+        <label>10 PM</label>
+      </div>
+      <div class="scrub-note">phase: <b class="phase-name">calm (daytime)</b> · activation begins ~2h before your 9 PM wind-down <i>(a soft prior — chronotype varies, so it's user-editable)</i></div>
+    </div>
+  </div>
+
+  <p class="caption"><b>What you're watching:</b> one card, three honest phases driven by the real clock. <span class="good">Calm</span> all afternoon. In the last ~2h a <span class="good">dusk warmth</span> rises, a wind-down line offers (never demands) a read, and the minutes label takes a slow breath. Past 9 PM it <span class="good">releases</span> — "leave the rest for tomorrow." No streak, no red, no countdown. The release valve ("Not for me") drains the gauge exactly like a read, because <b>handled = read OR consciously released.</b></p>
+
+  <!-- ============ THE HONEST PART ============ -->
+  <h2>What the science actually says</h2>
+  <p class="sub">19 agents across 8 evidence lenses, then a feasibility pass and an adversarial audit that fact-checked the research against its own citations. The audit's job was to catch over-claiming — and it did. Here is the unvarnished read.</p>
+
+  <div class="callout">
+    <span class="big">The single best-powered study in this whole brief is a deflationary one.</span>
+    Maier et al. (2022, <i>PNAS</i>) re-analysed the nudge literature for publication bias and found the average effect collapses from d≈0.43 to <b>d≈0.04–0.11</b> — and pure-information nudges to roughly <b>zero</b>. So the honest planning assumption is that <b>every</b> activation tactic here is worth <b>at most +2 to +5 percentage points</b> on handled-rate, and might be worth nothing. That changes the strategy: ship <b>calm-by-default as the product truth</b> (not as a promised conversion machine), and gate every warming/breathing/gauge tactic behind a pre-registered A/B that the retention guardrails are allowed to kill.
+  </div>
+
+  <div class="legend">
+    <span><span class="badge s-strong">strong</span> field study / robust replication</span>
+    <span><span class="badge s-mod">moderate</span> real but modest, some bias risk</span>
+    <span><span class="badge s-weak">weak</span> one study / contested / extrapolated</span>
+    <span><span class="badge s-none">no direct evidence</span> design hypothesis only</span>
+  </div>
+
+  <table class="spec">
+    <thead><tr><th style="width:34%">Mechanic</th><th style="width:24%">Evidence</th><th>The honest caveat</th></tr></thead>
+    <tbody>
+    <tr>
+      <td>Minutes-drain gauge <span class="badge s-weak">weak</span><br><span style="font-weight:400;color:var(--page-muted)">remaining minutes, not item dots</span></td>
+      <td>Goal-gradient / small-area focus on what's left.<span class="cite">Koo &amp; Fishbach (2012), <i>J. Consumer Research</i> 39(3):493–509</span></td>
+      <td>Rests on <b>one lab study</b>, no field replication, no published effect size — and a hidden premise that the user <i>wants</i> to finish. For an ambivalent reader a "draining" bar can read as pressure and <b>flip the sign</b>. Direction (drain vs fill) is an A/B, not a given.</td>
+    </tr>
+    <tr>
+      <td>"Not for me" release <span class="badge s-none">no direct evidence</span><br><span style="font-weight:400;color:var(--page-muted)">drains the gauge like a read</span></td>
+      <td>Autonomy / real-exit defuses reactance &amp; sunk-cost guilt.<span class="cite">Patall, Cooper &amp; Robinson (2008), <i>Psych. Bulletin</i> 134(2):270–300</span></td>
+      <td><b>The load-bearing success-metric mechanic AND the least grounded.</b> Zero direct evidence a blessed quit raises completion; cannibalising real reads is equally plausible. Frictionless one-tap can be reflex-mashed to game "handled." <b>#1 A/B unknown</b> — ship with a real-read cannibalisation guard.</td>
+    </tr>
+    <tr>
+      <td>End-of-day activation <span class="badge s-mod">moderate</span><br><span style="font-weight:400;color:var(--page-muted)">user-set wind-down time</span></td>
+      <td>A user-authored time is a built-in if-then implementation intention + a self-set deadline.<span class="cite">Gollwitzer &amp; Sheeran (2006); bias-corrected ~0.15 (Sheeran et al. 2024); Ariely &amp; Wertenbroch (2002)</span></td>
+      <td>The <b>best-supported lever here — and still small.</b> The famous d≈0.65 is the lab-heavy figure; the real-world, bias-corrected estimate is <b>~0.15</b>, and a single dismissible inline cue sits at the weak end. Do not sell it as "high-confidence."</td>
+    </tr>
+    <tr>
+      <td>Dusk color shift <span class="badge s-weak">weak</span><br><span style="font-weight:400;color:var(--page-muted)">slow warm amber, low sat, dimming</span></td>
+      <td>Learned "lamplight at dusk" peripheral cue.<span class="cite">Weijs, Jonauskaite et al. (2023), <i>R. Soc. Open Sci.</i> 10(10):230432</span></td>
+      <td><b>The weakest behavioral lever.</b> No source measures "warm tint → more sets finished," and warm hues actually map to <i>positive-but-HIGH</i> arousal (only blue is low-arousal). Justify it as "fits the calm paradigm, won't hurt" — and watch the arousal-side guardrails. Must be a redundant layer, never the signal.</td>
+    </tr>
+    <tr>
+      <td>Focus-mode blur <span class="badge s-mod">moderate</span><br><span style="font-weight:400;color:var(--page-muted)">recede, don't hide</span></td>
+      <td>Blur strips the high spatial frequencies needed to <i>read</i> while keeping shape/presence; interruption-cost is real.<span class="cite">Iqbal &amp; Horvitz (2007), <i>CHI</i> — field study (9m33s diversion)</span></td>
+      <td>Calm/accessibility grounding is <b>strong</b>; its specific contribution to <i>% handled</i> has <b>no direct evidence</b>. Keep DOM/aria intact (visual blur only), restore keyboard-reachable. Validate against new-tab-decline + time-on-newtab.</td>
+    </tr>
+    <tr>
+      <td>Forgiving reading rhythm <span class="badge s-weak">weak</span><br><span style="font-weight:400;color:var(--page-muted)">opt-in, no chain, grace days</span></td>
+      <td>Missing one day doesn't impair a habit (the new tab is the real cue); loss-framed streaks corrupt motivation.<span class="cite">Lally et al. (2010), <i>Eur. J. Soc. Psych.</i> 40(6):998–1009; Gal &amp; Rucker (2018)</span></td>
+      <td>Benefit of a <i>non-punitive</i> rhythm is thin/contested — most habit-app data measured <b>loss-framed</b> streaks. The no-loss design survives because <b>avoiding loss mechanics is asymmetric and near-free</b>, not because a rhythm is proven to lift reading. Ship off by default.</td>
+    </tr>
+    <tr>
+      <td>Completion finish <span class="badge s-weak">weak</span><br><span style="font-weight:400;color:var(--page-muted)">quiet done-state</span></td>
+      <td>Acknowledging progress is the strongest driver of positive "inner work life."<span class="cite">Amabile &amp; Kramer (2011), <i>The Progress Principle</i> (correlational diary)</span></td>
+      <td>The leap from "progress feels good" to "a warm fade increases set-completion" is <b>untested</b>; over-celebrating risks the time-on-newtab veto and incentivises mashing "Not for me" to reach the reward. Keep it a quiet exhale — no confetti, no sound.</td>
+    </tr>
+    <tr>
+      <td>No-fabrication / honest-time-only <span class="badge s-strong">strong</span><br><span style="font-weight:400;color:var(--page-muted)">the design commitment</span></td>
+      <td>Baseless countdowns &amp; false scarcity are named deceptive practices; the asymmetric downside (uninstall, trust loss) makes a conservative rule rational regardless of effect size.<span class="cite">FTC (2022), "Bringing Dark Patterns to Light," Section 5</span></td>
+      <td><b>The single most defensible decision in the brief.</b> Only ever count down to a fact the user authored. No <code>chrome.idle</code>/<code>tabs</code> permission exists to know real session time anyway — so a "browser time left" countdown would be both dishonest and impossible.</td>
+    </tr>
+    </tbody>
+  </table>
+
+  <!-- ============ THE FIVE UNKNOWNS ============ -->
+  <h2>The five things we don't actually know</h2>
+  <p class="sub">If we ship all of this and measure honestly, these are the bets most likely to be wrong. Naming them is the point — it's what keeps "science fact" from quietly becoming "science vibes."</p>
+  <ol class="cav">
+    <li><span class="tag">①</span> <b>The "Not for me" release might lower real reading, not raise completion.</b> It's the mechanic the whole success metric leans on, and it has zero direct evidence. A one-tap exit could just become a faster way to clear the card without reading. <b>This is the highest-priority experiment.</b></li>
+    <li><span class="tag">②</span> <b>The draining gauge could read as pressure.</b> "Minutes left" shrinking toward zero motivates people who want to finish — and, per the same source, <i>slows</i> people who'd rather prolong. We don't know which Totem users are. Drain-vs-fill-vs-dots is a real test, not a chosen answer.</li>
+    <li><span class="tag">③</span> <b>The wind-down cue is real but small (~0.15, not 0.65).</b> Implementation intentions are the best-replicated tool in self-regulation, but the headline number is lab-inflated, and our version is a single dismissible note rather than a rehearsed plan. Plan for modest.</li>
+    <li><span class="tag">④</span> <b>The dusk color does the least.</b> No study links warm tint to finishing a reading set, and warm hue trends toward <i>arousal</i>, not calm. It earns its place only as a wordless, redundant reinforcement of the gauge — and only if the arousal guardrails stay green.</li>
+    <li><span class="tag">⑤</span> <b>A forgiving rhythm may not lift reading at all.</b> The evidence is almost entirely about loss-framed streaks (which we're deliberately not building). We keep it because avoiding the harm is free, not because the gentle version is proven to help.</li>
+  </ol>
+
+  <!-- ============ MEASUREMENT ============ -->
+  <h2>How we'll know it worked (and pre-commit to it)</h2>
+  <p class="sub">Because every lever is individually weak, the measurement design is the actual product. Pre-register each metric's "good direction" <i>before</i> the test, so a tempting read-rate bump can't retroactively redefine success.</p>
+  <table class="spec">
+    <tbody>
+    <tr><td>Primary</td><td colspan="2"><b>% of today's set HANDLED</b> = (read OR consciously released) ÷ set size, per user per day.</td></tr>
+    <tr><td>Secondary &amp; guard</td><td colspan="2"><b>Share actually read</b> (scroll-depth / dwell). Kept <i>separate</i> from the primary as a cannibalisation guard — if the release valve or the gauge lifts "handled" but this drops materially, the win is vetoed.</td></tr>
+    <tr><td>Retention vetoes</td><td colspan="2">Uninstall rate (hard veto) · activation snooze/dismiss rate · new-tab-open frequency decline over 7 days · time-on-newtab with a <b>pre-registered direction</b> (for a finish-and-leave product, <i>lower</i> is often the healthy signal — a rise can mean the card is pulling people off their real work).</td></tr>
+    <tr><td>Non-negotiable</td><td colspan="2">Reduced-motion users get a static warm tint / instant fallback. Not an A/B — an accessibility floor.</td></tr>
+    <tr><td>Experiments</td><td colspan="2"><b>A1</b> gauge direction (drain vs fill vs dots) · <b>A2</b> release-valve cannibalisation (present vs absent, co-primary with share-read) · <b>A3</b> activation (calm vs warm-tint vs warm+breathing) · <b>A4</b> wind-down framing (if-then vs neutral label) · <b>A5</b> forgiving rhythm (opt-in cohort vs none). All on a <b>4-week window</b> to catch slow-burn trust cost.</td></tr>
+    </tbody>
+  </table>
+
+  <!-- ============ BUILD ORDER ============ -->
+  <h2>Build order</h2>
+  <p class="sub">All eight mechanics are buildable today with <b>zero new Chrome permissions</b> — pure client-side render/state in the new-tab React app. The data layer for most already exists. Sequenced so the calm default and the measurement gates land before anything that could feel like pressure.</p>
+  <div class="seq">
+    <div class="seqrow p0"><div class="pchip">P0</div><div><h4>1 · Minutes-drain gauge</h4><p>Extend <code>getTodayQueueProgress()</code> to sum reading-minutes of active vs handled items; swap the item-dot row for the existing 1px width bar. The foundation everything else escalates. Pure CSS.<span class="where">new-tab-home-progress.tsx · NewTabHome.tsx:301</span></p></div></div>
+    <div class="seqrow p0"><div class="pchip">P0</div><div><h4>2 · "Not for me" release UI</h4><p>The data layer already advances handled identically (<code>setIntent 'reference'</code>); add the one-tap footer button + undo toast. Ship behind the A2 cannibalisation-guarded flag.<span class="where">NewTabHome.tsx:423 · undoHandled exists</span></p></div></div>
+    <div class="seqrow p0"><div class="pchip">P0</div><div><h4>3 · Measurement &amp; guardrails — first-class</h4><p>Wire handled-rate, share-actually-read, uninstall, snooze/dismiss, new-tab frequency, time-on-newtab with pre-registered directions. <b>No activation A/B ships until the veto gates exist.</b></p></div></div>
+    <div class="seqrow p1"><div class="pchip">P1</div><div><h4>4 · Focus-mode blur</h4><p>Lowest-risk, highest calm-default value — ship early to protect the non-intrusive default. <code>focusBlur</code> state + CSS filter blur on the card, restore on tap/focus, hotkey.<span class="where">NewTabHome.tsx:128 / :285 transition list</span></p></div></div>
+    <div class="seqrow p1"><div class="pchip">P1</div><div><h4>5 · End-of-day activation plumbing</h4><p><code>windDownHour</code> setting + Select; derive <code>isWindDown</code> from the existing 30s tick; thread the flag to the card; wire the ~5s breathing. Behind A3.<span class="where">NewTabHome.tsx:826 tick · SettingsModal</span></p></div></div>
+    <div class="seqrow p1"><div class="pchip">P1</div><div><h4>6 · Completion finish</h4><p>Elevate the existing <code>isDone</code> empty-state into a quiet one-shot settle; add resumption framing on partial sets ("pick up where you left off — 2 to go"). Logic is done.<span class="where">useTodayQueue.ts:459 · NewTabHome.tsx:522</span></p></div></div>
+    <div class="seqrow p2"><div class="pchip">P2</div><div><h4>7 · Dusk color shift</h4><p>Secondary layer on the gauge. <code>data-winddown</code> token override (warm amber, low sat, slightly dimmer), 60–120s cross-fade, contrast re-verify, all-day-constant toggle. Ship after activation proves out.<span class="where">index.css .totem-home scope · NewTabHome.tsx:1044</span></p></div></div>
+    <div class="seqrow p2"><div class="pchip">P2</div><div><h4>8 · Opt-in forgiving rhythm</h4><p>Largest new-build surface, off by default. Derive "days you read" from existing exposure rows, ambient dots strip, opt-in Switch, auto-soften if dismiss rises. Ship last, behind A5.<span class="where">TodayQueueExposure localDates · SettingsModal Switch</span></p></div></div>
+  </div>
+
+  <div class="footer">
+    Demo · Totem · 2026-06-23 · real <code>src/index.css</code> tokens · easings from the web-animation-design skill (Emil Kowalski). Numbers tuned to the completed 19-agent science review (8 lenses, 76 fact-checked claims, feasibility + adversarial audit). Full citations &amp; per-claim verdicts: <a href="science-report.html">the science report →</a> · Companion: <a href="voice-spectrum-demo.html">calm↔bold spectrum demo</a>.
+  </div>
+</div>
+
+<script>
+(function(){
+  const stage=document.querySelector('.stage');
+  const seg=document.getElementById('themeseg');
+  seg.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;[...seg.children].forEach(x=>x.setAttribute('aria-pressed',x===b));stage.dataset.cardtheme=b.dataset.theme});
+  document.getElementById('rhythmtoggle').addEventListener('change',e=>stage.classList.toggle('show-rhythm',e.target.checked));
+
+  // ---- clock / activation ----
+  const clock=stage.querySelector('.clock');
+  const phaseName=stage.querySelector('.phase-name');
+  const wind=stage.querySelector('.windline');
+  const duskglow=stage.querySelector('.duskglow');
+  const DAY_END=1260, WIN_START=1140; // 9:00pm wind-down, ~2h window opens 7:00pm
+  function fmt(m){let h=Math.floor(m/60),mm=m%60;const ap=h>=12?'PM':'AM';let hh=h%12;if(hh===0)hh=12;return hh+':'+String(mm).padStart(2,'0')+' '+ap}
+  function setTime(m){
+    clock.textContent=fmt(m).replace(' PM','').replace(' AM','');
+    let phase='day',act=0;
+    if(m>DAY_END){phase='past';act=1;}
+    else if(m>WIN_START){phase='window';act=(m-WIN_START)/(DAY_END-WIN_START);}
+    stage.dataset.phase=phase;
+    // dusk sky + glow (warm, low-saturation, slightly dimmer toward dusk — never brighter, never red)
+    const k=phase==='past'?1:act;
+    stage.style.setProperty('--sky-top', mix('#2a2740','#3c2b33',k));
+    stage.style.setProperty('--sky-mid', mix('#181725','#241a23',k));
+    stage.style.setProperty('--sky-bot', mix('#0d0d14','#120c12',k));
+    duskglow.style.opacity = phase==='day'?0:(phase==='past'?0.82:(0.18+act*0.6));
+    phaseName.textContent = phase==='day'?'calm (daytime)':phase==='window'?'activating · dusk ('+Math.round(act*100)+'%)':'past wind-down · released';
+    // copy — references the user's own wind-down time, never a fabricated countdown
+    if(phase==='past'){
+      wind.innerHTML="Winding down — leave the rest for tomorrow. Nothing's overdue.";
+    } else {
+      wind.innerHTML='Near your 9 PM wind-down — about <b class="g-min2">'+curMin()+'</b> minutes of reading left, if you want them. Tomorrow\'s fine too.';
+    }
+  }
+  function mix(a,b,t){const pa=hx(a),pb=hx(b);return '#'+[0,1,2].map(i=>Math.round(pa[i]+(pb[i]-pa[i])*t).toString(16).padStart(2,'0')).join('')}
+  function hx(c){return [parseInt(c.slice(1,3),16),parseInt(c.slice(3,5),16),parseInt(c.slice(5,7),16)]}
+  document.getElementById('time').addEventListener('input',e=>setTime(+e.target.value));
+
+  // ---- progress / focus ----
+  const total=+stage.dataset.minutes, per=+stage.dataset.minsPer, N=5;
+  let read=0,left=total;
+  const gFill=stage.querySelector('.gauge-fill');
+  function curMin(){return Math.max(0,Math.round(left))}
+  function render(){
+    stage.querySelectorAll('.g-min').forEach(el=>el.textContent=curMin());
+    const g2=stage.querySelector('.g-min2'); if(g2)g2.textContent=curMin();
+    gFill.style.width=(Math.max(0,left)/total*100)+'%';
+    stage.querySelector('.g-count').textContent=Math.max(0,N-read)+' left';
+  }
+  function advance(){if(read>=N)return;read++;left=Math.max(0,total-read*per);render();
+    if(read>=N)setTimeout(()=>stage.classList.add('is-done'),260)}
+  function reset(){read=0;left=total;stage.classList.remove('is-done');render()}
+
+  stage.addEventListener('click',e=>{
+    if(e.target.closest('.focusbtn')){stage.classList.add('recede');return}
+    if(stage.classList.contains('recede')){stage.classList.remove('recede');return}
+    if(e.target.closest('.read')||e.target.closest('.letgo')){advance();return}
+    if(e.target.closest('.restart')){reset();return}
+  });
+
+  setTime(850); render();
+})();
+</script>
+</body>
+</html>

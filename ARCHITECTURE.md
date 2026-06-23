@@ -305,7 +305,7 @@ stateDiagram-v2
 - termination reason
 - recovery hint when X returns one full page (100) with no cursor
 
-The runtime store merges each page into state immediately, then persists it to IndexedDB.
+The runtime store persists each page to IndexedDB first, then merges it into state. A failed IndexedDB write therefore propagates and the sync reports failure, instead of leaving the store ahead of the durable DB (a false-success split-brain).
 
 ## 7. Incomplete Initial Seed Handling
 

@@ -1,0 +1,493 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Today's Read — calm ↔ bold demo (Totem)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet" />
+<style>
+  /* ============================================================
+     Real Totem tokens (from src/index.css). Scoped to .stage so
+     each frame's light/dark is independent of the page chrome.
+     ============================================================ */
+  :root{
+    --font-sans:"SF Pro Display",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --font-serif:"Spectral",Charter,"Iowan Old Style",Georgia,serif;
+    --accent-coral:#e28067;
+    --page-bg:#0e0e10;
+    --page-fg:#e9e6e1;
+    --page-muted:#9b968d;
+    --page-line:rgba(255,255,255,.10);
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:var(--font-sans);
+    background:var(--page-bg);
+    color:var(--page-fg);
+    -webkit-font-smoothing:antialiased;
+    line-height:1.5;
+  }
+
+  /* ---------- page chrome ---------- */
+  .wrap{max-width:1180px;margin:0 auto;padding:40px 24px 120px}
+  header.intro{margin-bottom:8px}
+  .eyebrow{
+    font-size:12px;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--accent-coral);font-weight:600;
+  }
+  h1{
+    font-family:var(--font-serif);font-weight:500;
+    font-size:34px;line-height:1.15;margin:.35em 0 .3em;letter-spacing:-.01em;
+  }
+  .lede{color:var(--page-muted);max-width:760px;font-size:15.5px}
+  .lede b{color:var(--page-fg);font-weight:600}
+
+  .controls{
+    position:sticky;top:0;z-index:50;
+    display:flex;gap:10px;align-items:center;flex-wrap:wrap;
+    padding:14px 0;margin:18px 0 28px;
+    background:linear-gradient(to bottom,var(--page-bg) 70%,transparent);
+    backdrop-filter:blur(2px);
+  }
+  .controls .grp{display:flex;gap:6px;align-items:center}
+  .controls .label{font-size:12px;color:var(--page-muted);margin-right:2px}
+  .seg{display:inline-flex;border:1px solid var(--page-line);border-radius:999px;overflow:hidden}
+  .seg button{
+    appearance:none;border:0;background:transparent;color:var(--page-muted);
+    font:inherit;font-size:13px;padding:7px 14px;cursor:pointer;transition:all .15s ease;
+  }
+  .seg button[aria-pressed="true"]{background:rgba(255,255,255,.10);color:var(--page-fg)}
+  .seg button:not([aria-pressed="true"]):hover{color:var(--page-fg)}
+  .hint{font-size:12.5px;color:var(--page-muted)}
+  .hint kbd{font-family:var(--font-sans);border:1px solid var(--page-line);border-radius:5px;padding:1px 6px;font-size:11px}
+
+  /* ---------- a frame = one mocked new-tab ---------- */
+  .frame{margin:0 0 46px}
+  .frame-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+  .frame-tag{
+    font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+    padding:4px 9px;border-radius:999px;
+  }
+  .tag-calm{background:rgba(120,170,150,.16);color:#8fcfb0}
+  .tag-warm{background:rgba(226,128,103,.18);color:#eaa088}
+  .tag-bold{background:rgba(225,90,70,.20);color:#ff8d7a}
+  .frame-title{font-family:var(--font-serif);font-size:20px;font-weight:500}
+  .frame-sub{color:var(--page-muted);font-size:13.5px}
+
+  /* the new-tab "screen" — wallpaper is ALWAYS dark (real behavior);
+     the card flips light/dark with the per-frame theme */
+  .stage{
+    position:relative;border-radius:16px;overflow:hidden;
+    height:560px;border:1px solid rgba(255,255,255,.07);
+    box-shadow:0 24px 60px rgba(0,0,0,.45);
+    background:
+      radial-gradient(120% 90% at 50% 8%, #2a2740 0%, #181725 38%, #0d0d14 78%);
+    isolation:isolate;
+  }
+  /* warm/dusk wallpaper variant */
+  .stage[data-mood="dusk"]{
+    background:
+      radial-gradient(130% 100% at 50% 0%, #3a2b34 0%, #241a25 40%, #100c14 80%);
+  }
+  /* totem-ambient overlay (real) */
+  .ambient{
+    position:absolute;inset:0;pointer-events:none;transition:opacity .9s ease;
+    background:
+      radial-gradient(ellipse 80% 70% at 50% 45%, transparent 30%, rgba(0,0,0,.45) 100%),
+      linear-gradient(to top, rgba(0,0,0,.5) 0%, rgba(0,0,0,.15) 40%, transparent 70%),
+      linear-gradient(180deg, rgba(226,128,103,.03) 0%, rgba(226,128,103,.02) 100%);
+  }
+  /* warm dusk glow that the "warm" frame intensifies over time */
+  .duskglow{
+    position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity 1.4s ease;
+    background:radial-gradient(90% 60% at 50% 100%, rgba(226,128,103,.22), transparent 70%);
+  }
+  .grain{
+    position:absolute;inset:0;pointer-events:none;opacity:.16;mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* clock + search up top, over wallpaper */
+  .top{position:absolute;top:0;left:0;right:0;padding:40px 0 0;text-align:center;transition:opacity .6s ease}
+  .clock{font-family:var(--font-serif);font-size:52px;font-weight:400;color:rgba(255,255,255,.93);letter-spacing:.01em}
+  .date{font-size:13px;color:rgba(255,255,255,.55);margin-top:2px}
+  .search{
+    margin:26px auto 0;max-width:440px;height:46px;border-radius:12px;
+    background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.10);
+    display:flex;align-items:center;padding:0 16px;color:rgba(255,255,255,.5);font-size:14px;gap:10px;
+  }
+  .search svg{opacity:.6}
+
+  /* the Today's Read card, bottom-center */
+  .cardwrap{
+    position:absolute;left:0;right:0;bottom:30px;display:flex;justify-content:center;
+    transition:opacity .6s ease, transform .6s ease;
+  }
+  .card{
+    --card-bg:rgba(255,252,247,.97);
+    --fg:rgba(23,21,18,.94);
+    --fg2:rgba(23,21,18,.82);
+    --fg3:rgba(23,21,18,.60);
+    --line:rgba(23,21,18,.10);
+    --coral:#c25a41;
+    --coral-tint:rgba(226,128,103,.10);
+    --step-up:rgba(10,10,12,.20);
+    width:540px;max-width:calc(100% - 48px);
+    background:var(--card-bg);color:var(--fg);
+    border-radius:16px;padding:20px 22px 18px;position:relative;
+    box-shadow:0 1px 3px rgba(0,0,0,.10),0 18px 50px rgba(0,0,0,.35);
+    transition:box-shadow .4s ease, background .5s ease;
+  }
+  .stage[data-cardtheme="dark"] .card{
+    --card-bg:rgb(20,20,22);
+    --fg:rgba(255,255,255,.92);
+    --fg2:rgba(255,255,255,.82);
+    --fg3:rgba(255,255,255,.60);
+    --line:rgba(255,255,255,.10);
+    --coral:#e28067;
+    --step-up:rgba(255,255,255,.16);
+    box-shadow:0 1px 3px rgba(0,0,0,.4),0 18px 50px rgba(0,0,0,.5);
+  }
+
+  .card .eb{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .card .eb-l{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--fg3);font-weight:600}
+  .card .eb-min{font-size:12px;color:var(--fg3)}
+
+  /* progress variants */
+  .dots{display:flex;gap:5px;margin-top:12px}
+  .dot{height:4px;flex:1;border-radius:999px;background:var(--step-up);transition:background .3s ease,box-shadow .3s ease}
+  .dot.done{background:var(--coral)}
+  .dot.cur{background:var(--fg3)}
+
+  .gauge{margin-top:14px}
+  .gauge-row{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:7px}
+  .gauge-label{font-size:12.5px;color:var(--fg3)}
+  .gauge-label b{color:var(--fg);font-weight:600;font-variant-numeric:tabular-nums}
+  .gauge-track{height:5px;border-radius:999px;background:var(--step-up);overflow:hidden}
+  .gauge-fill{height:100%;border-radius:999px;background:var(--coral);width:100%;
+    transition:width .6s cubic-bezier(.23,1,.32,1)}
+
+  /* bold-only meters */
+  .bold-strip{display:flex;align-items:center;gap:14px;margin-top:12px}
+  .streak{display:flex;align-items:center;gap:5px;font-weight:700;font-size:14px;color:#e0552f}
+  .xp{flex:1}
+  .xp-track{height:8px;border-radius:999px;background:var(--step-up);overflow:hidden}
+  .xp-fill{height:100%;background:linear-gradient(90deg,#e28067,#e0552f);width:62%;transition:width .5s ease}
+  .xp-num{font-size:11px;color:var(--fg3);margin-top:3px;display:block}
+  .left-badge{font-size:11px;font-weight:800;letter-spacing:.08em;color:#fff;background:#e0552f;
+    padding:3px 8px;border-radius:6px;animation:pulseRed 1.6s ease-in-out infinite}
+  @keyframes pulseRed{0%,100%{opacity:1}50%{opacity:.55}}
+
+  .title{font-family:var(--font-serif);font-size:21px;font-weight:500;line-height:1.25;margin:14px 0 6px;color:var(--fg)}
+  .desc{font-size:13.5px;color:var(--fg3);line-height:1.5;margin-bottom:14px;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+
+  /* whisper co-presence chip (warm only) */
+  .copresence{font-size:12.5px;color:var(--fg3);margin:-4px 0 12px;display:flex;align-items:center;gap:7px}
+  .copresence .pip{width:6px;height:6px;border-radius:999px;background:#8fcfb0;box-shadow:0 0 0 0 rgba(143,207,176,.6);animation:breathe 3.2s ease-in-out infinite}
+  @keyframes breathe{0%,100%{box-shadow:0 0 0 0 rgba(143,207,176,.5)}50%{box-shadow:0 0 0 5px rgba(143,207,176,0)}}
+
+  .foot{display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .byline{font-size:13px;color:var(--fg2)}
+  .byline .sep{opacity:.5;margin:0 6px}
+  .actions{display:flex;align-items:center;gap:9px}
+  .ghost{font-size:12.5px;color:var(--fg3);background:transparent;border:0;font-family:inherit;cursor:pointer;padding:6px 6px}
+  .ghost:hover{color:var(--fg)}
+  .read{
+    font-family:inherit;font-size:13.5px;font-weight:600;border:0;cursor:pointer;
+    color:#fff;background:var(--coral);padding:9px 18px;border-radius:9px;transition:transform .12s ease,filter .15s ease;
+  }
+  .read:hover{filter:brightness(1.05)}
+  .read:active{transform:scale(.96)}
+  .letgo{font-size:12.5px;color:var(--fg3);background:transparent;border:0;font-family:inherit;cursor:pointer;padding:6px 8px}
+  .letgo:hover{color:var(--fg2)}
+
+  /* focus / distraction-free toggle */
+  .focusbtn{
+    position:absolute;top:14px;right:14px;width:30px;height:30px;border-radius:8px;
+    border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);
+    color:rgba(255,255,255,.7);display:flex;align-items:center;justify-content:center;cursor:pointer;
+    z-index:6;transition:all .15s ease;backdrop-filter:blur(4px);
+  }
+  .focusbtn:hover{background:rgba(255,255,255,.12);color:#fff}
+  /* when focused: fade card + ambient away to a clean wallpaper */
+  .stage.focused .cardwrap{opacity:0;transform:translateY(10px);pointer-events:none}
+  .stage.focused .ambient{opacity:.35}
+  .stage.focused .top{opacity:1}
+  .restore{
+    position:absolute;left:0;right:0;bottom:26px;text-align:center;opacity:0;pointer-events:none;transition:opacity .5s ease;z-index:5;
+  }
+  .stage.focused .restore{opacity:1;pointer-events:auto}
+  .restore button{font-family:inherit;font-size:12.5px;color:rgba(255,255,255,.6);background:rgba(255,255,255,.07);
+    border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:7px 16px;cursor:pointer;backdrop-filter:blur(6px)}
+  .restore button:hover{color:#fff;background:rgba(255,255,255,.12)}
+
+  /* done states */
+  .done{display:none}
+  .stage.is-done .live{display:none}
+  .stage.is-done .done{display:block}
+  .done .check{width:30px;height:30px;border-radius:999px;border:1.5px solid var(--coral);
+    display:flex;align-items:center;justify-content:center;color:var(--coral);margin-bottom:12px}
+  .done-title{font-family:var(--font-serif);font-size:20px;font-weight:500;color:var(--fg);margin-bottom:6px}
+  .done-msg{font-size:13.5px;color:var(--fg3);line-height:1.55;max-width:90%}
+  .done .restart{margin-top:14px;font-size:12.5px;color:var(--fg3);background:transparent;border:0;cursor:pointer;font-family:inherit}
+  .done .restart:hover{color:var(--fg)}
+
+  /* confetti (bold only) */
+  .confetti{position:absolute;inset:0;pointer-events:none;overflow:hidden;display:none}
+  .stage.is-done[data-frame="bold"] .confetti{display:block}
+  .confetti i{position:absolute;top:-12px;width:8px;height:12px;opacity:0;border-radius:2px;
+    animation:fall 1.2s ease-in forwards}
+  @keyframes fall{0%{opacity:1;transform:translateY(0) rotate(0)}100%{opacity:0;transform:translateY(560px) rotate(540deg)}}
+
+  .caption{margin-top:12px;font-size:13px;color:var(--page-muted);line-height:1.55}
+  .caption b{color:var(--page-fg);font-weight:600}
+  .caption .good{color:#8fcfb0}
+  .caption .bad{color:#ff8d7a}
+
+  .footer{margin-top:50px;padding-top:24px;border-top:1px solid var(--page-line);font-size:13px;color:var(--page-muted);line-height:1.6}
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation:none !important;transition-duration:.01ms !important}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="intro">
+    <div class="eyebrow">Totem · Today's Read · Voice spectrum</div>
+    <h1>Three ways the new tab could nudge you to finish your five</h1>
+    <p class="lede">Same card, same five saved posts, same 5:48&nbsp;PM "you haven't read any yet" moment — rendered at three points on the <b>calm ↔ bold</b> spectrum, in Totem's real tokens. Click <b>Read</b> to advance each to its finish. Try the <b>⊘ focus</b> button (top-right of each card) — that's the distraction-free fade you asked for. Pick the temperature you want; it sets the constraint for the deep research.</p>
+  </header>
+
+  <div class="controls">
+    <div class="grp"><span class="label">Card theme</span>
+      <div class="seg" id="themeseg" role="group" aria-label="Theme">
+        <button data-theme="light" aria-pressed="true">Light</button>
+        <button data-theme="dark" aria-pressed="false">Dark</button>
+      </div>
+    </div>
+    <span class="hint">Wallpaper stays dark in both (it always is) · the <b>card</b> flips · <kbd>Read</kbd> advances · <kbd>⊘</kbd> = distraction-free</span>
+  </div>
+
+  <!-- ============ FRAME 1 · CALM ============ -->
+  <section class="frame">
+    <div class="frame-head">
+      <span class="frame-tag tag-calm">Calm</span>
+      <span class="frame-title">The minutes quietly drain to zero</span>
+      <span class="frame-sub">— honest time gauge, no counters, no pressure</span>
+    </div>
+    <div class="stage" data-frame="calm" data-cardtheme="light" data-minutes="12" data-mins-per="3">
+      <div class="ambient"></div><div class="grain"></div>
+      <div class="top">
+        <div class="clock">5:48</div>
+        <div class="date">Tuesday, June 23</div>
+        <div class="search"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>Search the web</div>
+      </div>
+      <button class="focusbtn" title="Distraction-free — fade it away">⊘</button>
+      <div class="restore"><button>· bring back today's read ·</button></div>
+      <div class="cardwrap">
+        <div class="card">
+          <div class="live">
+            <div class="eb"><span class="eb-l">today's read</span><span class="eb-min">your 15 min, 5 reads</span></div>
+            <div class="gauge">
+              <div class="gauge-row"><span class="gauge-label">about <b class="g-min">12</b> min left</span><span class="gauge-label g-count">0 read</span></div>
+              <div class="gauge-track"><div class="gauge-fill"></div></div>
+            </div>
+            <div class="title">The quiet case for reading less, but finishing it</div>
+            <div class="desc">A short argument that a small, finished set beats an endless saved pile — and what that means for how you triage what you keep.</div>
+            <div class="foot">
+              <span class="byline">Maya Cordova<span class="sep">·</span><span class="cur-min">2 min</span></span>
+              <div class="actions"><button class="letgo">Not for me</button><button class="read">Read</button></div>
+            </div>
+          </div>
+          <div class="done">
+            <div class="check"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg></div>
+            <div class="done-title">Nice. Today's Read is clear.</div>
+            <div class="done-msg">All five, read — about 12 minutes with them. Nothing else is waiting; we'll set out a fresh five tomorrow.</div>
+            <button class="restart">↻ replay</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="caption"><b>What it does:</b> swaps the dot-counter for a single slim bar that <span class="good">only ever shrinks toward zero</span> — minutes, not items, so it can't be padded. "Not for me" advances it exactly like reading does, so the set actually reaches done. <span class="good">Calm fit 5/5 · no new permission · lowest effort.</span> The colour and motion are alive but quiet — proof that "calm" ≠ "static."</p>
+  </section>
+
+  <!-- ============ FRAME 2 · WARM ============ -->
+  <section class="frame">
+    <div class="frame-head">
+      <span class="frame-tag tag-warm">Warm</span>
+      <span class="frame-title">Calm, plus a little human warmth</span>
+      <span class="frame-sub">— a dusk glow, soft company, a gentle finish</span>
+    </div>
+    <div class="stage" data-frame="warm" data-cardtheme="light" data-minutes="12" data-mins-per="3" data-mood="dusk">
+      <div class="ambient"></div><div class="duskglow"></div><div class="grain"></div>
+      <div class="top">
+        <div class="clock">5:48</div>
+        <div class="date">Tuesday, June 23 · winding down</div>
+        <div class="search"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>Search the web</div>
+      </div>
+      <button class="focusbtn" title="Distraction-free — fade it away">⊘</button>
+      <div class="restore"><button>· bring back today's read ·</button></div>
+      <div class="cardwrap">
+        <div class="card">
+          <div class="live">
+            <div class="eb"><span class="eb-l">today's read</span><span class="eb-min">it's evening · ~6 min of light left</span></div>
+            <div class="gauge">
+              <div class="gauge-row"><span class="gauge-label">about <b class="g-min">12</b> min left in today's set</span><span class="gauge-label g-count">0 read</span></div>
+              <div class="gauge-track"><div class="gauge-fill"></div></div>
+            </div>
+            <div class="title">Notes on attention at the end of a long day</div>
+            <div class="desc">Why the last hour is the hardest to read in — and the small set that's still worth finishing before you put it down.</div>
+            <div class="copresence"><span class="pip"></span> Reading alongside ~40 others right now</div>
+            <div class="foot">
+              <span class="byline">Devin Asaba<span class="sep">·</span><span class="cur-min">3 min</span></span>
+              <div class="actions"><button class="letgo">Not for me</button><button class="read">Read</button></div>
+            </div>
+          </div>
+          <div class="done">
+            <div class="check"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg></div>
+            <div class="done-title">That's today's reading, done.</div>
+            <div class="done-msg">All five — about 12 minutes. You and ~40 others cleared theirs tonight. A fresh five tomorrow; nothing's waiting on you.</div>
+            <button class="restart">↻ replay</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="caption"><b>What it adds over Calm:</b> the wallpaper warms toward dusk as evening lands (your "change the colour" idea — but honest, tied to the real time of day, never alarm-red), a <span class="good">whisper-quiet "~40 others reading" chip</span> (company, never a scoreboard), and a slightly warmer finish. <b>Still calm</b> — but more expressive. Risk lives in the social chip if it ever implied rank or pace.</p>
+  </section>
+
+  <!-- ============ FRAME 3 · BOLD ============ -->
+  <section class="frame">
+    <div class="frame-head">
+      <span class="frame-tag tag-bold">Bold</span>
+      <span class="frame-title">Full gamification — streak, XP, urgency</span>
+      <span class="frame-sub">— shown so you can feel what to avoid</span>
+    </div>
+    <div class="stage" data-frame="bold" data-cardtheme="light" data-minutes="12" data-mins-per="3">
+      <div class="ambient"></div><div class="grain"></div>
+      <div class="confetti"></div>
+      <div class="top">
+        <div class="clock">5:48</div>
+        <div class="date">Tuesday, June 23</div>
+        <div class="search"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>Search the web</div>
+      </div>
+      <button class="focusbtn" title="Distraction-free — fade it away">⊘</button>
+      <div class="restore"><button>· bring back today's read ·</button></div>
+      <div class="cardwrap">
+        <div class="card">
+          <div class="live">
+            <div class="eb"><span class="eb-l">today's read</span><span class="left-badge">5 LEFT TODAY</span></div>
+            <div class="bold-strip">
+              <span class="streak">🔥 <span class="streak-n">4</span></span>
+              <span class="xp"><span class="xp-track"><span class="xp-fill"></span></span><span class="xp-num">120 / 200 XP · Level 3 Reader</span></span>
+            </div>
+            <div class="dots">
+              <span class="dot cur"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+            </div>
+            <div class="title">Don't lose your streak — finish today's 5!</div>
+            <div class="desc">You're 1 read away from a personal best. Keep the chain alive and earn the Weekend Warrior badge. ⚡</div>
+            <div class="foot">
+              <span class="byline">Maya Cordova<span class="sep">·</span><span class="cur-min">2 min</span> · +20 XP</span>
+              <div class="actions"><button class="read">Read &nbsp;+20 XP</button></div>
+            </div>
+          </div>
+          <div class="done">
+            <div class="done-title">🎉 5/5 — Streak extended to 5! +100 XP</div>
+            <div class="done-msg">You're on fire! Come back tomorrow or your 5-day streak resets to zero. 3 days to your next badge. 🏆</div>
+            <button class="restart">↻ replay</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="caption"><b>Why it's here:</b> this is the literal "gamify it" instinct — streaks, XP, levels, badges, a pulsing red <span class="bad">"5 LEFT"</span>, confetti, and a "come back or lose it" finish. It <i>does</i> spike same-day action — and it's the <span class="bad">#1 driver of uninstalls</span> for a calm tool. On a new tab you open 40× a day, "don't break your chain" becomes a tax on every browse. This is the wall the research will respect, not climb.</p>
+  </section>
+
+  <div class="footer">
+    Demo · Totem · Today's Read · 2026-06-23 · real tokens from <code>src/index.css</code> (coral <code>#c25a41/#e28067</code>, Spectral serif, the <code>.totem-ambient</code> overlay). Copy &amp; mechanics are illustrative, not yet wired. The distraction-free fade is mocked on all three. Pick a temperature — it becomes the Voice constraint the deep-research round is built around.
+  </div>
+</div>
+
+<script>
+(function(){
+  // ---- global card-theme toggle ----
+  const seg = document.getElementById('themeseg');
+  seg.addEventListener('click', e=>{
+    const b = e.target.closest('button'); if(!b) return;
+    [...seg.children].forEach(x=>x.setAttribute('aria-pressed', x===b));
+    document.querySelectorAll('.stage').forEach(s=>s.dataset.cardtheme = b.dataset.theme);
+  });
+
+  // ---- per-frame interactivity ----
+  document.querySelectorAll('.stage').forEach(stage=>{
+    const frame = stage.dataset.frame;
+    const total = parseFloat(stage.dataset.minutes);
+    const per   = parseFloat(stage.dataset.minsPer);
+    let left = total, read = 0;
+    const N = 5;
+
+    const gMin   = stage.querySelector('.g-min');
+    const gFill  = stage.querySelector('.gauge-fill');
+    const gCount = stage.querySelector('.g-count');
+    const dots   = stage.querySelectorAll('.dot');
+    const xpFill = stage.querySelector('.xp-fill');
+    const xpNum  = stage.querySelector('.xp-num');
+    const leftBadge = stage.querySelector('.left-badge');
+    const streakN= stage.querySelector('.streak-n');
+    const dusk   = stage.querySelector('.duskglow');
+
+    function render(){
+      if(gMin)  gMin.textContent = Math.max(0, Math.round(left));
+      if(gFill) gFill.style.width = (Math.max(0,left)/total*100)+'%';
+      if(gCount)gCount.textContent = read+' read';
+      dots.forEach((d,i)=>{ d.classList.toggle('done', i<read); d.classList.toggle('cur', i===read); });
+      if(xpFill){ xpFill.style.width = (62 + read*7.6)+'%'; }
+      if(xpNum){ xpNum.textContent = (120 + read*20)+' / 200 XP · Level 3 Reader'; }
+      if(leftBadge) leftBadge.textContent = (N-read)+' LEFT TODAY';
+      if(dusk) dusk.style.opacity = Math.min(.85, .25 + read*.16); // warm frame deepens
+    }
+
+    function advance(){
+      if(read>=N) return;
+      read++; left = Math.max(0, total - read*per);
+      render();
+      if(read>=N){
+        setTimeout(()=>{ stage.classList.add('is-done'); if(frame==='bold') burst(stage); }, 260);
+      }
+    }
+    function reset(){
+      read=0; left=total; stage.classList.remove('is-done'); render();
+    }
+
+    stage.addEventListener('click', e=>{
+      if(e.target.closest('.read'))   { advance(); return; }
+      if(e.target.closest('.letgo'))  { advance(); return; }   // "Not for me" advances like a read
+      if(e.target.closest('.restart')){ reset();   return; }
+      if(e.target.closest('.focusbtn')){ stage.classList.add('focused'); return; }
+      if(e.target.closest('.restore button')){ stage.classList.remove('focused'); return; }
+    });
+
+    render();
+  });
+
+  function burst(stage){
+    const c = stage.querySelector('.confetti'); if(!c) return;
+    c.innerHTML='';
+    const cols=['#e28067','#e0552f','#8fcfb0','#f0c674','#fff'];
+    for(let i=0;i<46;i++){
+      const p=document.createElement('i');
+      p.style.left=(Math.random()*100)+'%';
+      p.style.background=cols[i%cols.length];
+      p.style.animationDelay=(Math.random()*.3)+'s';
+      p.style.transform='rotate('+(Math.random()*360)+'deg)';
+      c.appendChild(p);
+    }
+  }
+})();
+</script>
+</body>
+</html>

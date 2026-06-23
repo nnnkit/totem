@@ -29,8 +29,7 @@
     "test": "vitest run",
     "test:reliability": "vitest run src/stores/__tests__/runtime-store.test.ts src/api/__tests__/parsers.bookmarks.test.ts src/lib/__tests__/reconcile.test.ts src/lib/__tests__/sw-pure.test.ts",
     "audit:prod": "pnpm audit --prod --audit-level high",
-    "ci:verify": "pnpm test && pnpm build && pnpm verify:workspace && pnpm audit:prod",
-    "ralph": ".ralph/run.sh"
+    "ci:verify": "pnpm test && pnpm build && pnpm verify:workspace && pnpm audit:prod"
   },
   "dependencies": {
     "@base-ui/react": "^1.2.0",

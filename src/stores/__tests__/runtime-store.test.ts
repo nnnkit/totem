@@ -573,6 +573,41 @@ describe("runtime-store sync", () => {
     });
   });
 
+  it("reports failure (no false success) when the IndexedDB write rejects mid-sync", async () => {
+    mocks.reserveSyncRun.mockResolvedValue({
+      allow: true,
+      mode: "full",
+      reason: "manual_seed",
+      leaseId: "lease-3",
+      accountKey: "acct-1",
+    });
+    mocks.fetchBookmarkPage.mockResolvedValue({
+      bookmarks: [createBookmark("tweet-1"), createBookmark("tweet-2")],
+      cursor: "cursor-1",
+      stopOnEmptyResponse: false,
+    });
+    mocks.upsertBookmarks.mockRejectedValue(new Error("IDB_WRITE_FAILED"));
+
+    const store = createRuntimeStore();
+    primeReadyState(store);
+
+    await store.getState().actions.refresh();
+
+    const state = store.getState();
+    // Persist-first: a rejected write must not leave the store ahead of the DB,
+    // and the sync must report failure instead of a green completion.
+    expect(state.syncStatus).toBe("error");
+    expect(state.bookmarks).toHaveLength(0);
+    expect(mocks.completeSyncRun).toHaveBeenCalledWith({
+      accountId: "acct-1",
+      leaseId: "lease-3",
+      mode: "full",
+      status: "failure",
+      trigger: "manual",
+      errorCode: undefined,
+    });
+  });
+
 });
 
 // ---------------------------------------------------------------------------

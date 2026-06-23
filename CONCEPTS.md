@@ -31,3 +31,17 @@ A temporary deferral that removes a saved post from Today's Read until a later d
 A saved post kept for future lookup rather than daily reading.
 
 Reference items should not keep resurfacing as Today's Read picks unless the user changes that intent.
+
+## Today's Read Engagement
+
+### End-of-Day Activation
+Time-gated behavior where Today's Read shifts from calm and minimal during the day to a gentler, more present invitation to finish in the final hours before the day ends. Calm is the default; activation is the exception, never all-day.
+*Avoid:* Urgency mode, Countdown
+
+### Reading Rhythm
+An optional, forgiving record of the days a user read at least one post — encouragement framed as a rhythm, never a chain with a loss state. Off by default, with grace days and no punitive "you lost it" moment.
+*Avoid:* Streak, Chain
+
+### Focus Mode
+A user-invoked state that softens (blurs) the Today's Read surface so it recedes without disappearing, restoring it crisply on demand. Lets the high-frequency new tab get out of the way of active work.
+*Avoid:* Hide, Dismiss, Distraction-free (as a noun)
