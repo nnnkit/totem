@@ -31,31 +31,32 @@ now — no behaviour change).
 - [x] `runtime-store` holds an `AccountDb` handle (`accountDb`), swapped in lockstep
       with `setActiveAccountId`; its 10 db calls route through the handle.
 
-### Remaining (to fully close the leak)
-- [ ] **`useAccountDb()` selector.** Expose the store's current account handle reactively
-      (put the active handle in runtime state or derive from `activeAccountId`) so React
-      consumers can read/write through it and re-render on account switch.
-- [ ] **Migrate the 14 remaining db consumers** off bare global functions onto a handle:
-      - React (via `useAccountDb()`): `components/BookmarksList.tsx`, `hooks/useContinueReading.ts`,
-        `hooks/useTodayQueue.ts`, `hooks/useHighlights.ts`, `hooks/useReadingProgress.ts`,
-        `hooks/useBookmarkSearch.ts`, `runtime/RuntimeProvider.tsx`.
-      - Non-React (handle passed/obtained explicitly): `stores/prefetch-controller.ts`,
-        `stores/hydration-store.ts`, `lib/search.ts`, `lib/reset.ts`,
-        `lib/export/quick-export.ts`, `api/core/posts.ts`.
-      - **Special:** `lib/import/run-import.ts` — creates/targets a *new* account's DB during
-        import; needs `openAccountDb(targetAccountId)` explicitly, not the current handle.
-- [ ] **Remove the global** once no one reads it: delete `setActiveAccountId`, `activeDbName`,
-      and the 4 hazard comments (`db/index.ts`, `runtime-store.ts:~554/688/1146`,
-      `selectors.ts:78`, `useReaderDetail.ts:83`, `App.tsx:798`).
-- [ ] **Demote `bookmarksLoaded`** to a pure data-readiness flag (its safety role is now the
-      `null`-handle gate). Keep `subscribeTweetDetailCache` global (cross-account listener).
+### Done this round (committed)
+- [x] **`useAccountDb()` selector** in `selectors.ts` — returns the active account's handle
+      (memoized; stable ref per account).
+- [x] **React consumers migrated** to `useAccountDb()`: `BookmarksList.tsx`, `useContinueReading`,
+      `useTodayQueue`, `useHighlights`, `useReadingProgress`, `useBookmarkSearch`.
+- [x] **`prefetch-controller`** — `getCompletedTweetIds` injected from the store's handle (no direct db import).
 
-**Acceptance:** no remaining bare global db calls; `setActiveAccountId`/`activeDbName` gone;
-typecheck + 608 tests green; logged-out/account-switch behaviour unchanged (Twitter-driven).
+### Deferred follow-up — full global removal (NOT done; deliberately scoped out)
+Removing `setActiveAccountId`/`activeDbName` requires migrating the genuinely cross-cutting
+consumers, which is invasive and risky for a behaviour-preserving pass — left for a focused follow-up:
+- [ ] `hydration-store.ts` — independent singleton via `defaultDeps()`; needs the handle wired in from the store.
+- [ ] `lib/search.ts` — module singleton (the **C11** area verification said to leave alone); index-persistence
+      calls would need the handle threaded through the singleton's interface.
+- [ ] `lib/reset.ts` + `closeDb` — cross-account teardown (`deleteDatabase` by name); `closeDb` is *inherently*
+      global. Likely stays global; only `clearTransientStores()` would need the current handle.
+- [ ] `api/core/posts.ts` — detail-cache read/write in the api layer; `fetchTweetDetail` would take a handle param.
+- [ ] `RuntimeProvider.tsx` — only `closeDb()` (correctly global) — no change needed.
+- [ ] Then delete `setActiveAccountId`/`activeDbName` + 4 hazard comments; demote `bookmarksLoaded`.
+
+**Status:** the seam exists and the store + UI + prefetch ride it; the global remains ONLY for the
+cross-cutting singletons above, kept correct by the store (still the sole `setActiveAccountId` caller).
+Behaviour unchanged; typecheck + 614 tests green.
 
 ---
 
-## ISSUE 2 — C9: Unify the article-export block-walk behind one emitter  (Worth exploring)
+## ISSUE 2 — C9: Unify the article-export block-walk behind one emitter  ✅ DONE
 
 **Files:** `src/lib/export/article-to-markdown.ts` (`blocksToMarkdown` ~92-212),
 `src/lib/export/article-to-print-html.ts` (`blocksToArticleHtml` ~34-157).
@@ -79,7 +80,7 @@ typecheck + tests green.
 
 ---
 
-## ISSUE 3 — C10: Unify the chrome.storage.sync preference lifecycle  (Worth exploring)
+## ISSUE 3 — C10: Unify the chrome.storage.sync preference lifecycle  ✅ DONE
 
 **Files:** `src/hooks/useSettings.ts` (97-145), `src/hooks/useTheme.ts` (44-99).
 
