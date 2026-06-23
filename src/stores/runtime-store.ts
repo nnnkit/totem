@@ -1045,6 +1045,7 @@ export function createRuntimeStore() {
       fetchDetail: async (tweetId) => {
         await get().actions.loadReaderDetail(tweetId);
       },
+      getCompletedTweetIds: () => accountDb.getCompletedTweetIds(),
       onSuccess: (tweetId) => {
         get().actions.detailCached(tweetId);
       },
