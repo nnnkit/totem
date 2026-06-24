@@ -1,10 +1,7 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
-import { readFileSync } from "node:fs";
+import packageJson from "../../../../../package.json";
 
-const packageJson = JSON.parse(
-  readFileSync(new URL("../../../../../package.json", import.meta.url), "utf8"),
-) as { version?: string };
 const appVersion = packageJson.version ?? "0.0.0";
 ---
 
