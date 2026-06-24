@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   CheckIcon,
   ExportIcon,
@@ -66,8 +66,15 @@ function useSettingsModalModel({
   const [confirmingReset, setConfirmingReset] = useState(false);
   const [resetAppState, setResetAppState] = useState(true);
   const [resetContent, setResetContent] = useState(false);
+  const resetPanelRef = useRef<HTMLDivElement>(null);
 
   const canReset = resetAppState || resetContent;
+
+  useEffect(() => {
+    if (confirmingReset) {
+      resetPanelRef.current?.scrollIntoView({ block: "end", behavior: "smooth" });
+    }
+  }, [confirmingReset]);
 
   const closeConfirm = () => {
     setConfirmingReset(false);
@@ -104,6 +111,7 @@ function useSettingsModalModel({
     open,
     resetAppState,
     resetContent,
+    resetPanelRef,
     setConfirmingReset,
     setResetAppState,
     setResetContent,
@@ -130,6 +138,7 @@ function renderSettingsModal({
   open,
   resetAppState,
   resetContent,
+  resetPanelRef,
   setConfirmingReset,
   setResetAppState,
   setResetContent,
@@ -394,7 +403,7 @@ function renderSettingsModal({
                 </div>
 
                 {confirmingReset ? (
-                  <div className="space-y-3">
+                  <div ref={resetPanelRef} className="space-y-3">
                     <p className="text-xs text-muted/80 leading-snug">
                       Choose what to reset. App state alone is enough to fix
                       most stuck-UI issues.
