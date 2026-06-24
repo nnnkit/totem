@@ -10,6 +10,7 @@
  */
 
 import type { MessageRequest } from "../types/messages";
+import type { SyncCompletionStatus } from "../types/sync";
 import type { HandlerMap } from "./index";
 import { getSessionSnapshot, buildRuntimeSnapshot } from "./auth";
 import { normalizeSyncAccountId } from "../lib/sw-pure";
@@ -56,7 +57,11 @@ const SYNC_ORCHESTRATOR_RATE_LIMIT_BACKOFF_MAX_MS = 15 * 60 * 1000;
 
 export interface SyncInFlight {
   leaseId: string;
-  mode: "full" | "quick" | "incremental";
+  // INVARIANT: mode and trigger are written once at reserve and are
+  // immutable for the lifetime of the lease. Completion sources them from
+  // here (the lease), never from the COMPLETE_SYNC payload — a tab cannot
+  // retroactively relabel a run it doesn't own.
+  mode: "full" | "incremental";
   trigger: "manual" | "auto";
   reason: string;
   startedAt: number;
@@ -144,12 +149,7 @@ function normalizeSyncOrchestratorState(raw: unknown): SyncOrchestratorState {
       inFlightRaw.leaseId
         ? {
             leaseId: inFlightRaw.leaseId,
-            mode:
-              inFlightRaw.mode === "full"
-                ? "full"
-                : inFlightRaw.mode === "quick"
-                  ? "quick"
-                  : "incremental",
+            mode: inFlightRaw.mode === "full" ? "full" : "incremental",
             trigger:
               inFlightRaw.trigger === "manual" ? "manual" : "auto",
             reason:
@@ -249,6 +249,114 @@ function defaultBuildRuntimeSnapshot(stateOverride: unknown) {
     null,
     defaultChromeStorage(),
   );
+}
+
+export interface SyncCompletionCacheWrite {
+  lastSync?: number;
+  lastSoftSync?: number;
+  clearSoftNeeded?: boolean;
+}
+
+export type SyncCompletionDecision =
+  | { kind: "ignored"; reason: "missing_inflight" | "lease_mismatch" }
+  | {
+      kind: "applied";
+      next: SyncAccountState;
+      mode: "full" | "incremental";
+      trigger: "manual" | "auto";
+      cache: SyncCompletionCacheWrite;
+    };
+
+/**
+ * Pure completion decision for an in-flight sync lease.
+ *
+ * Sources `mode` and `trigger` from the lease (`account.inFlight`), never
+ * from the caller — the COMPLETE_SYNC payload cannot relabel a run. Returns
+ * the next account state plus a cache-summary descriptor; the shell owns
+ * Date.now(), persistence, and the actual chrome.storage writes.
+ *
+ * The cache descriptor mirrors the legacy write contract exactly:
+ *   success     → lastSync + (incremental ? lastSoftSync) + clearSoftNeeded
+ *   timeout     → lastSync only (preserved stamp; no clear, no soft)
+ *   fail/skip   → no cache write
+ */
+export function decideCompletion(input: {
+  account: SyncAccountState | null | undefined;
+  leaseId: string;
+  status: SyncCompletionStatus;
+  errorCode: string;
+  now: number;
+}): SyncCompletionDecision {
+  const { account, leaseId, status, errorCode, now } = input;
+  if (!account || !account.inFlight)
+    return { kind: "ignored", reason: "missing_inflight" };
+  if (!leaseId || account.inFlight.leaseId !== leaseId)
+    return { kind: "ignored", reason: "lease_mismatch" };
+
+  const { mode, trigger } = account.inFlight;
+  const isRateLimited = errorCode === "RATE_LIMITED";
+  const isIncompleteFullSync = errorCode === "INCOMPLETE_FULL_SYNC";
+
+  const next: SyncAccountState = {
+    ...account,
+    inFlight: null,
+    lastCompletedAt: now,
+    lastCompletedStatus: status,
+  };
+
+  if (status === "success") {
+    next.lastSuccessAt = now;
+    if (mode === "full") {
+      next.lastFullSyncAt = now;
+    } else {
+      next.lastIncrementalSyncAt = now;
+    }
+    if (trigger === "manual") {
+      next.manualCooldownUntil =
+        now + SYNC_ORCHESTRATOR_MANUAL_SUCCESS_COOLDOWN_MS;
+    }
+    next.rateLimitConsecutive = 0;
+    next.rateLimitBackoffUntil = 0;
+    next.lastError = null;
+    next.lastFailureCode = null;
+  } else if (status !== "skipped") {
+    next.lastError = status;
+    next.lastFailureCode = errorCode || null;
+    if (trigger === "manual" && !isIncompleteFullSync) {
+      next.manualCooldownUntil = Math.max(
+        next.manualCooldownUntil,
+        now + SYNC_ORCHESTRATOR_MANUAL_FAILURE_RETRY_MS,
+      );
+    }
+    if (isRateLimited) {
+      const nextStreak = Math.max(1, next.rateLimitConsecutive + 1);
+      const backoffMs = Math.min(
+        SYNC_ORCHESTRATOR_RATE_LIMIT_BACKOFF_BASE_MS *
+          Math.pow(2, nextStreak - 1),
+        SYNC_ORCHESTRATOR_RATE_LIMIT_BACKOFF_MAX_MS,
+      );
+      next.rateLimitConsecutive = nextStreak;
+      next.rateLimitBackoffUntil = now + backoffMs;
+      next.manualCooldownUntil = Math.max(
+        next.manualCooldownUntil,
+        next.rateLimitBackoffUntil,
+      );
+    } else {
+      next.rateLimitConsecutive = 0;
+      next.rateLimitBackoffUntil = 0;
+    }
+  }
+
+  const cache: SyncCompletionCacheWrite = {};
+  if (status === "success") {
+    cache.lastSync = now;
+    cache.clearSoftNeeded = true;
+    if (mode === "incremental") cache.lastSoftSync = now;
+  } else if (status === "timeout") {
+    cache.lastSync = now;
+  }
+
+  return { kind: "applied", next, mode, trigger, cache };
 }
 
 export function createSyncHandlers(deps: SyncDeps = {}): HandlerMap {
@@ -538,106 +646,45 @@ export function createSyncHandlers(deps: SyncDeps = {}): HandlerMap {
       if (!accountKey)
         return { ok: true, ignored: true, reason: "no_account" };
 
-      const leaseId =
-        typeof msg.leaseId === "string" ? msg.leaseId : "";
-      const trigger =
-        msg.trigger === "manual" ? ("manual" as const) : ("auto" as const);
-      const mode =
-        msg.mode === "full"
-          ? ("full" as const)
-          : msg.mode === "quick"
-            ? ("quick" as const)
-            : ("incremental" as const);
-      const status =
+      const leaseId = typeof msg.leaseId === "string" ? msg.leaseId : "";
+      const status: SyncCompletionStatus =
         msg.status === "success" ||
         msg.status === "failure" ||
         msg.status === "timeout" ||
         msg.status === "skipped"
-          ? (msg.status as string)
+          ? msg.status
           : "failure";
       const errorCode =
         typeof msg.errorCode === "string" && msg.errorCode
           ? msg.errorCode.slice(0, 120)
           : "";
-      const isRateLimited = errorCode === "RATE_LIMITED";
-      const isIncompleteFullSync = errorCode === "INCOMPLETE_FULL_SYNC";
-
-      const state = await readState();
-      const account = state.accounts[accountKey];
-      if (!account || !account.inFlight) {
-        const snapshot = await buildSnapshot(state).catch(() => null);
-        if (snapshot) {
-          await persistRuntimeStateV2(snapshot).catch(() => {});
-        }
-        return { ok: true, ignored: true, reason: "missing_inflight" };
-      }
-      if (!leaseId || account.inFlight.leaseId !== leaseId) {
-        const snapshot = await buildSnapshot(state).catch(() => null);
-        if (snapshot) {
-          await persistRuntimeStateV2(snapshot).catch(() => {});
-        }
-        return { ok: true, ignored: true, reason: "lease_mismatch" };
-      }
 
       const now = Date.now();
-      const next: SyncAccountState = {
-        ...account,
-        inFlight: null,
-        lastCompletedAt: now,
-        lastCompletedStatus: status,
-      };
+      const state = await readState();
+      const decision = decideCompletion({
+        account: state.accounts[accountKey],
+        leaseId,
+        status,
+        errorCode,
+        now,
+      });
 
-      if (status === "success") {
-        next.lastSuccessAt = now;
-        if (mode === "full") {
-          next.lastFullSyncAt = now;
-        } else {
-          next.lastIncrementalSyncAt = now;
+      if (decision.kind === "ignored") {
+        const snapshot = await buildSnapshot(state).catch(() => null);
+        if (snapshot) {
+          await persistRuntimeStateV2(snapshot).catch(() => {});
         }
-        if (trigger === "manual") {
-          next.manualCooldownUntil =
-            now + SYNC_ORCHESTRATOR_MANUAL_SUCCESS_COOLDOWN_MS;
-        }
-        next.rateLimitConsecutive = 0;
-        next.rateLimitBackoffUntil = 0;
-        next.lastError = null;
-        next.lastFailureCode = null;
-      } else if (status !== "skipped") {
-        next.lastError = status;
-        next.lastFailureCode = errorCode || null;
-        if (trigger === "manual" && !isIncompleteFullSync) {
-          next.manualCooldownUntil = Math.max(
-            next.manualCooldownUntil,
-            now + SYNC_ORCHESTRATOR_MANUAL_FAILURE_RETRY_MS,
-          );
-        }
-        if (isRateLimited) {
-          const nextStreak = Math.max(
-            1,
-            next.rateLimitConsecutive + 1,
-          );
-          const backoffMs = Math.min(
-            SYNC_ORCHESTRATOR_RATE_LIMIT_BACKOFF_BASE_MS *
-              Math.pow(2, nextStreak - 1),
-            SYNC_ORCHESTRATOR_RATE_LIMIT_BACKOFF_MAX_MS,
-          );
-          next.rateLimitConsecutive = nextStreak;
-          next.rateLimitBackoffUntil = now + backoffMs;
-          next.manualCooldownUntil = Math.max(
-            next.manualCooldownUntil,
-            next.rateLimitBackoffUntil,
-          );
-        } else {
-          next.rateLimitConsecutive = 0;
-          next.rateLimitBackoffUntil = 0;
-        }
+        return { ok: true, ignored: true, reason: decision.reason };
       }
 
+      const { next, mode, trigger, cache } = decision;
       state.accounts[accountKey] = next;
       await writeState(state);
 
       // [TOTEM-DIAG] Complete — answers: "did the previous run stamp
       // lastFullSyncAt, which would push the next refresh to incremental?"
+      // mode/trigger are lease-sourced, so this reflects the reserved run,
+      // not whatever the completing tab claimed in its payload.
       console.debug("[TOTEM-DIAG] sync.complete", {
         trigger,
         mode,
@@ -654,15 +701,16 @@ export function createSyncHandlers(deps: SyncDeps = {}): HandlerMap {
       const cacheStorage = defaultChromeStorage();
       if (cacheStorage) {
         try {
-          if (status === "success") {
-            const cacheWrite: Record<string, number> = { [CS_LAST_SYNC]: now };
-            if (mode === "incremental") {
-              cacheWrite[CS_LAST_SOFT_SYNC] = now;
-            }
+          const cacheWrite: Record<string, number> = {};
+          if (cache.lastSync !== undefined)
+            cacheWrite[CS_LAST_SYNC] = cache.lastSync;
+          if (cache.lastSoftSync !== undefined)
+            cacheWrite[CS_LAST_SOFT_SYNC] = cache.lastSoftSync;
+          if (Object.keys(cacheWrite).length > 0) {
             await cacheStorage.set(cacheWrite);
+          }
+          if (cache.clearSoftNeeded) {
             await cacheStorage.remove(CS_SOFT_SYNC_NEEDED);
-          } else if (status === "timeout") {
-            await cacheStorage.set({ [CS_LAST_SYNC]: now });
           }
         } catch (err) {
           // Non-fatal: orchestrator state is already persisted, and the

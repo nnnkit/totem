@@ -5,7 +5,7 @@
 
 export type SyncTrigger = "auto" | "manual";
 export type SyncCompletionStatus = "success" | "failure" | "timeout" | "skipped";
-export type SyncMode = "full" | "incremental" | "quick";
+export type SyncMode = "full" | "incremental";
 
 export type SyncBlockedReason =
   | "in_flight"

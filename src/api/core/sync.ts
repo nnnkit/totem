@@ -39,9 +39,7 @@ export async function reserveSyncRun(input: {
   return {
     allow: response.allow === true,
     mode:
-      response.mode === "full" ||
-      response.mode === "incremental" ||
-      response.mode === "quick"
+      response.mode === "full" || response.mode === "incremental"
         ? response.mode
         : null,
     reason: typeof response.reason === "string" ? response.reason : "unknown",

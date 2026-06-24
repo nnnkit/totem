@@ -42,8 +42,6 @@ import {
   SYNC_ABORT_TIMEOUT_INCREMENTAL_MS,
   SYNC_ABORT_TIMEOUT_MAX_MS,
   SYNC_ABORT_TIMEOUT_PER_1K_MS,
-  SYNC_MAX_BOOKMARKS_PER_JOB,
-  SYNC_MAX_PAGES_PER_JOB,
 } from "../lib/constants/sync-policy";
 import { CS_DB_CLEANUP_AT } from "../lib/storage-keys";
 import type {
@@ -932,10 +930,7 @@ export function createRuntimeStore() {
       };
 
       try {
-        const firstPass = await runReconcilePass({
-          maxPages: mode === "quick" ? SYNC_MAX_PAGES_PER_JOB : undefined,
-          maxBookmarks: mode === "quick" ? SYNC_MAX_BOOKMARKS_PER_JOB : undefined,
-        });
+        const firstPass = await runReconcilePass({});
 
         let reconcileResult = firstPass;
         if (
