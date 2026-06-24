@@ -1,14 +1,91 @@
 import type {
   Bookmark,
+  BookmarkIntent,
   BookmarkQueueMetadata,
   ReadingProgress,
   TodayQueueBudgetMinutes,
   TodayQueueExposure,
+  TodayQueueExposureAction,
   TodayQueueSnapshot,
 } from "../types";
 import { estimateReadingMinutes, inferKindBadge } from "./bookmark-utils";
 import { TODAY_QUEUE, TODAY_QUEUE_WEIGHTS } from "./constants/scoring";
 import { sortIndexToTimestamp } from "./time";
+
+/**
+ * Decides the single metadata-row fact (and the exposure to record) for an
+ * intent / snooze / add-to-Today's-Read operation. Pure: `now` is injected and
+ * there is no DB access, so the whole decision — the `??` merge quirk, the
+ * neutral-row collapse, the intent→exposure mapping, and the three-way
+ * read_soon-preserve outcome — is testable without IndexedDB.
+ *
+ * The `keep` action is first-class and distinct from `delete`: it means "touch
+ * nothing" (no upsert, no delete, no updatedAt re-stamp). Callers MUST branch on
+ * `action`, never treat an absent `row` as a delete.
+ */
+export type MetadataWriteOp =
+  | { type: "setIntent"; tweetId: string; intent: BookmarkIntent }
+  | { type: "snooze"; tweetId: string; snoozedUntil: string }
+  | { type: "addToTodayRead"; tweetId: string; preserveReadSoonIntent: boolean };
+
+export interface MetadataWritePlan {
+  action: "upsert" | "delete" | "keep";
+  row?: BookmarkQueueMetadata;
+  exposure: TodayQueueExposureAction;
+}
+
+export function isNeutralMetadata(
+  row: Pick<BookmarkQueueMetadata, "intent" | "snoozedUntil">,
+): boolean {
+  return row.intent === "unset" && !row.snoozedUntil;
+}
+
+export function planMetadataWrite(
+  op: MetadataWriteOp,
+  existing: BookmarkQueueMetadata | null,
+  now: number,
+): MetadataWritePlan {
+  if (op.type === "addToTodayRead") {
+    // Adding to Today's Read normally wipes the metadata row so the item starts
+    // fresh; an auto-pick must not silently discard a deliberate read_soon
+    // intent, so keep that one and drop only a stale snooze.
+    if (op.preserveReadSoonIntent && existing?.intent === "read_soon") {
+      if (existing.snoozedUntil) {
+        return {
+          action: "upsert",
+          row: { ...existing, snoozedUntil: null, updatedAt: now },
+          exposure: "added",
+        };
+      }
+      return { action: "keep", exposure: "added" };
+    }
+    return { action: "delete", exposure: "added" };
+  }
+
+  // setIntent and snooze share the merge: an explicit snoozedUntil:null is
+  // treated as "absent" by the `??` chain, so setIntent does NOT clear an
+  // existing snooze; snooze, by passing intent:"unset", overwrites a prior
+  // reference/act intent.
+  const patch =
+    op.type === "snooze"
+      ? { intent: "unset" as BookmarkIntent, snoozedUntil: op.snoozedUntil }
+      : { intent: op.intent, snoozedUntil: null };
+  const next: BookmarkQueueMetadata = {
+    tweetId: op.tweetId,
+    intent: patch.intent ?? existing?.intent ?? "unset",
+    snoozedUntil: patch.snoozedUntil ?? existing?.snoozedUntil ?? null,
+    updatedAt: now,
+  };
+  const exposure: TodayQueueExposureAction =
+    op.type === "snooze"
+      ? "snoozed"
+      : op.intent === "reference" || op.intent === "act"
+        ? op.intent
+        : "opened";
+  return isNeutralMetadata(next)
+    ? { action: "delete", exposure }
+    : { action: "upsert", row: next, exposure };
+}
 
 export interface TodayQueueItem {
   bookmark: Bookmark;
