@@ -70,7 +70,20 @@ pick(neglected);
 while (picked.length < targetSize) {
   pick(bestRemainingCandidate);
 }
+
+// One bounded, deterministic repair pass after the fill loop: if the set repeats
+// an author or kind, swap the weakest fill-tail offender for the best
+// non-repeating unpicked candidate. Never touch the four priority slots or a
+// deliberate (in-progress / read-soon / pinned) pick; no-op if nothing fits.
+repairDiversity(picked);
 ```
+
+Score recency on a single continuous curve, not two disjoint bands. Freshness
+fades smoothly from full weight at "just saved" to zero at the two-week
+(`neglectedAfter`) mark, where the older-item ("neglected") boost takes over —
+so a mid-age save (3–14 days) is ordered by age, not by tie-break noise. The
+fresh and older *slot* predicates are independent of the score, so the set still
+structurally guarantees one fresh and one older pick when such posts exist.
 
 Suppress items that should not carry daily reading pressure:
 
@@ -107,6 +120,7 @@ Keep the UX language specific:
 - Split `Act on this` into an `Action needed` section because it is a follow-up task, not passive completion.
 - Show passive completions under `Handled today` with undo.
 - When Today's Read is clear, show completion copy and send `Browse unread` to the Unread tab, not back to an empty Today tab.
+- Offer a calm, optional `Two more` in the done-state: completion stays the headline; pressing it appends up to two budget-fitting, non-over-exposed saves chosen at random from a safe pool (the sole intentional, persisted-once randomness over the otherwise-frozen build). No streak, counter, or escalation; retire the control with an honest line when the pool is empty.
 
 Home and reading-list completion copy should stay synced:
 
@@ -144,10 +158,15 @@ Stable queue key:
 makeTodayQueueKey({
   localDate: "2026-06-08",
   budgetMinutes: 15,
-  version: 1,
+  version: 2,
 });
-// "2026-06-08:15:v1"
+// "2026-06-08:15:v2"
 ```
+
+The scoring version is part of the key, so a bump re-derives today's already-frozen
+sets under the new logic instead of waiting for the local date to roll over. A
+one-time, per-active-account load sweep drops any stored snapshot whose version is
+not current, so the bump does not leave orphaned records behind.
 
 Handled actions:
 

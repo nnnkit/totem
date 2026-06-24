@@ -16,6 +16,12 @@ The finite set of saved posts Totem asks the user to consider today.
 
 Today's Read is a daily reading surface, not a folder or permanent collection. Clearing it means the user has handled today's picks; it does not mean the saved-post archive is empty.
 
+### Continuous Recency Curve
+Internal: the daily-set freshness score fades smoothly from full weight at "just saved" to zero at the two-week mark, so every save contributes a recency score by age with no dead 3–14 day gap. The older-item ("neglected") boost beyond two weeks is separate and unchanged.
+
+### Variety Self-Heal
+Internal: a single bounded, deterministic repair after the daily set is built — if it repeats an author or kind, the weakest fill-tail pick is swapped for the best non-repeating alternative. It never touches the four priority slots or a deliberate (in-progress / read-soon / pinned) pick, and never manufactures variety the library can't supply.
+
 ### Handled Today
 The record of Today's Read items the user cleared during the current day through reading, snoozing, removing from daily pressure, or marking for action.
 
@@ -37,6 +43,10 @@ Reference items should not keep resurfacing as Today's Read picks unless the use
 ### End-of-Day Activation
 Time-gated behavior where Today's Read shifts from calm and minimal during the day to a gentler, more present invitation to finish in the final hours before the day ends. Calm is the default; activation is the exception, never all-day.
 *Avoid:* Urgency mode, Countdown
+
+### Two more
+The calm, optional control offered in the Today's Read done-state once Handled Today covers the whole set. It adds up to two more eligible saved posts chosen at random from a budget-fitting safe pool. Repeatable and unescalating — completion is always the headline, with no streak, counter, or momentum framing. Retires for the day with an honest line when no eligible posts remain.
+*Avoid:* Keep going, Next up, Load more, Streak
 
 ### Reading Rhythm
 An optional, forgiving record of the days a user read at least one post — encouragement framed as a rhythm, never a chain with a loss state. Off by default, with grace days and no punitive "you lost it" moment.

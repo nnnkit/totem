@@ -43,6 +43,8 @@ import {
 import {
   TODAY_QUEUE_DONE_MESSAGE,
   TODAY_QUEUE_DONE_TITLE,
+  TODAY_QUEUE_TWO_MORE_EXHAUSTED,
+  TODAY_QUEUE_TWO_MORE_LABEL,
 } from "../lib/constants/ui";
 import {
   getTodayQueueProgress,
@@ -173,6 +175,8 @@ interface FooterCardProps {
   onOpenBookmark: () => void;
   onOpenReading: (tab?: ReadingTab) => void;
   todayQueueDone: boolean;
+  todayQueueCanAddMore: boolean;
+  onAddTwoMore: () => void;
   todayQueueProgress: TodayQueueProgress | null;
   syncButton: SyncButtonState;
   onSync: () => void;
@@ -197,6 +201,8 @@ function FooterCard({
   onOpenBookmark,
   onOpenReading,
   todayQueueDone,
+  todayQueueCanAddMore,
+  onAddTwoMore,
   todayQueueProgress,
   syncButton,
   onSync,
@@ -529,10 +535,23 @@ function FooterCard({
             <p className="mt-4 text-pretty text-base text-home-empty">
               {TODAY_QUEUE_DONE_MESSAGE}
             </p>
+            {todayQueueCanAddMore ? (
+              <Button
+                type="button"
+                onClick={onAddTwoMore}
+                className="mt-6 border border-home-empty/25 bg-transparent text-home-fg-secondary hover:bg-white/5"
+              >
+                {TODAY_QUEUE_TWO_MORE_LABEL}
+              </Button>
+            ) : (
+              <p className="mt-6 text-sm text-home-empty/80">
+                {TODAY_QUEUE_TWO_MORE_EXHAUSTED}
+              </p>
+            )}
             <Button
               type="button"
               onClick={() => onOpenReading("unread")}
-              className="mt-6 border-0 bg-home-accent text-white hover:opacity-90"
+              className="mt-3 border-0 bg-home-accent text-white hover:opacity-90"
             >
               Browse unread
             </Button>
@@ -782,6 +801,8 @@ function useNewTabHomeModel({
     recommendationSource === "today" && todayQueue?.status === "loading";
   const todayQueueDone =
     recommendationSource === "today" && Boolean(todayQueue?.isDone);
+  const todayQueueCanAddMore =
+    todayQueueDone && Boolean(todayQueue?.canAddMore);
   const todayQueueProgress =
     recommendationSource === "today" ? getTodayQueueProgress(todayQueue) : null;
   const runtimeFooterState = useFooterState(
@@ -805,6 +826,10 @@ function useNewTabHomeModel({
     },
     [onOpenReading, recommendationSource, todayQueueDone],
   );
+
+  const handleAddTwoMore = useCallback(() => {
+    void todayQueue?.addTwoMore().catch(() => {});
+  }, [todayQueue]);
 
   const showWallpaper = Boolean(wallpaperUrl && !imgError);
 
@@ -983,6 +1008,8 @@ function useNewTabHomeModel({
     surpriseMe,
     syncButton,
     todayQueueDone,
+    todayQueueCanAddMore,
+    onAddTwoMore: handleAddTwoMore,
     todayQueueProgress,
     topSites,
     updateHomeState,
@@ -1034,6 +1061,8 @@ function renderNewTabHome({
   surpriseMe,
   syncButton,
   todayQueueDone,
+  todayQueueCanAddMore,
+  onAddTwoMore,
   todayQueueProgress,
   topSites,
   updateHomeState,
@@ -1219,6 +1248,8 @@ function renderNewTabHome({
             onOpenBookmark={() => openItem(currentItem)}
             onOpenReading={onOpenReading}
             todayQueueDone={todayQueueDone}
+            todayQueueCanAddMore={todayQueueCanAddMore}
+            onAddTwoMore={onAddTwoMore}
             todayQueueProgress={todayQueueProgress}
             syncButton={syncButton}
             onSync={onSync}

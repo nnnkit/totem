@@ -11,6 +11,7 @@ import type {
 } from "../types";
 import { sanitizeBookmark } from "../lib/sanitize";
 import { emitReaderActivity } from "../lib/reader-activity";
+import { selectStaleTodayQueueSnapshotKeys } from "../lib/today-queue";
 import {
   DB_ACCOUNT_PREFIX,
   DB_NAME,
@@ -1043,6 +1044,19 @@ export async function getAllTodayQueueSnapshots(
   return db.getAll(TODAY_QUEUE_SNAPSHOTS_STORE_NAME);
 }
 
+// Thin shell around the pure stale-key decision: drop any daily-set record left
+// behind by an earlier scoring version (including imported older-version
+// records). Safe to call with no records — it simply deletes nothing.
+export async function sweepStaleTodayQueueSnapshots(
+  dbName: string = activeDbName,
+): Promise<void> {
+  const records = await getAllTodayQueueSnapshots(dbName);
+  const staleKeys = selectStaleTodayQueueSnapshotKeys(records);
+  for (const key of staleKeys) {
+    await deleteTodayQueueSnapshot(key, dbName);
+  }
+}
+
 export async function getAllTodayQueueExposures(
   dbName: string = activeDbName,
 ): Promise<
@@ -1371,6 +1385,7 @@ export interface AccountDb {
   ): Promise<BookmarkQueueMetadata | null>;
   getAllQueueBookmarkMetadata(): Promise<BookmarkQueueMetadata[]>;
   getAllTodayQueueSnapshots(): Promise<TodayQueueSnapshot[]>;
+  sweepStaleTodayQueueSnapshots(): Promise<void>;
   getAllTodayQueueExposures(): Promise<TodayQueueExposure[]>;
   iterateTodayQueueSnapshots(): AsyncIterable<TodayQueueSnapshot>;
   iterateQueueBookmarkMetadata(): AsyncIterable<BookmarkQueueMetadata>;
@@ -1447,6 +1462,8 @@ export function openAccountDb(accountId: string | null): AccountDb {
       getQueueBookmarkMetadataByTweetId(tweetId, dbName),
     getAllQueueBookmarkMetadata: () => getAllQueueBookmarkMetadata(dbName),
     getAllTodayQueueSnapshots: () => getAllTodayQueueSnapshots(dbName),
+    sweepStaleTodayQueueSnapshots: () =>
+      sweepStaleTodayQueueSnapshots(dbName),
     getAllTodayQueueExposures: () => getAllTodayQueueExposures(dbName),
     iterateTodayQueueSnapshots: () => iterateTodayQueueSnapshots(dbName),
     iterateQueueBookmarkMetadata: () => iterateQueueBookmarkMetadata(dbName),

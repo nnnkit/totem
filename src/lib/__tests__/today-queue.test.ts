@@ -12,12 +12,16 @@ import {
   deriveActiveTodayQueueItems,
   deriveHandledTodayQueueItems,
   formatLocalDate,
+  getAdditionalTodayReadPool,
   isTodayQueueSnapshotDone,
   makeQueueExposure,
   makeTodayQueueKey,
+  pickAdditionalTodayReadItems,
+  selectStaleTodayQueueSnapshotKeys,
   shouldPersistTodayQueueSnapshot,
   toTodayQueueSnapshot,
 } from "../today-queue";
+import { TODAY_QUEUE } from "../constants/scoring";
 
 const SNOWFLAKE_EPOCH = 1288834974657n;
 const NOW = new Date("2026-06-08T12:00:00").getTime();
@@ -244,6 +248,245 @@ describe("today queue generation", () => {
   });
 });
 
+describe("balanced daily mix (v2)", () => {
+  function article(tweetId: string, savedAt: number): Bookmark {
+    return bookmark(tweetId, savedAt, {
+      tweetKind: "article",
+      article: { title: `Article ${tweetId}`, plainText: words(50) },
+    });
+  }
+
+  function withAuthor(
+    tweetId: string,
+    savedAt: number,
+    screenName: string,
+    overrides: Partial<Bookmark> = {},
+  ): Bookmark {
+    return bookmark(tweetId, savedAt, {
+      author: {
+        name: screenName,
+        screenName,
+        profileImageUrl: "https://example.com/avatar.png",
+        verified: false,
+      },
+      ...overrides,
+    });
+  }
+
+  it("orders mid-age (3–14d) saves by age rather than tie-break noise", () => {
+    // Before v2 every save older than the ~3d fresh window got zero recency
+    // score, so 4–13d posts were ordered purely by tie-break hash. The
+    // continuous curve now ranks them strictly by age.
+    const result = buildTodayQueue(
+      baseInput({
+        bookmarks: [
+          bookmark("mid_13", daysAgo(13)),
+          bookmark("mid_7", daysAgo(7)),
+          bookmark("mid_4", daysAgo(4)),
+          bookmark("mid_10", daysAgo(10)),
+        ],
+      }),
+    );
+
+    expect(result.tweetIds).toEqual(["mid_4", "mid_7", "mid_10", "mid_13"]);
+  });
+
+  it("surfaces a spread across fresh / mid-age / older bands when size permits", () => {
+    const result = buildTodayQueue(
+      baseInput({
+        bookmarks: [
+          bookmark("mid_b", daysAgo(8)),
+          bookmark("fresh", daysAgo(1)),
+          bookmark("older", daysAgo(30)),
+          bookmark("mid_c", daysAgo(11)),
+          bookmark("mid_a", daysAgo(5)),
+        ],
+      }),
+    );
+
+    // Fresh slot first, older slot second (structurally guaranteed), then the
+    // mid-age fill ordered by age — one pick from each band.
+    expect(result.tweetIds).toEqual([
+      "fresh",
+      "older",
+      "mid_a",
+      "mid_b",
+      "mid_c",
+    ]);
+  });
+
+  it("keeps the older-item (2–8 week) boost increasing with age", () => {
+    const result = buildTodayQueue(
+      baseInput({
+        bookmarks: [
+          bookmark("older_21", daysAgo(21)),
+          bookmark("older_49", daysAgo(49)),
+        ],
+      }),
+    );
+
+    // The neglected branch is unchanged: revival weight climbs with age toward
+    // the 8-week mark, so the 49d save outranks the 21d save.
+    expect(result.tweetIds).toEqual(["older_49", "older_21"]);
+  });
+
+  it("self-heals a repeated author in the fill tail without touching priority slots or deliberate reads", () => {
+    // Author "dup" appears twice: once as the in-progress pick (a deliberate
+    // read in a priority slot) and once seated by the fill loop, which tolerates
+    // the pair. Kinds are varied so no kind repeat confounds the author repair.
+    const result = buildTodayQueue(
+      baseInput({
+        bookmarks: [
+          bookmark("dup_inprogress", daysAgo(8), {
+            author: {
+              name: "Dup",
+              screenName: "dup",
+              profileImageUrl: "https://example.com/avatar.png",
+              verified: false,
+            },
+          }),
+          bookmark("dup_fill", daysAgo(4), {
+            author: {
+              name: "Dup",
+              screenName: "dup",
+              profileImageUrl: "https://example.com/avatar.png",
+              verified: false,
+            },
+          }),
+          article("article_b", daysAgo(5)),
+          article("article_c", daysAgo(6)),
+          bookmark("thread_d", daysAgo(7), { isThread: true }),
+          bookmark("link_alt", daysAgo(9), { hasLink: true }),
+        ],
+        readingProgress: [progress("dup_inprogress")],
+      }),
+    );
+
+    // The fill-tail "dup_fill" is swapped for the clean unpicked "link_alt"; the
+    // in-progress "dup_inprogress" (same author) survives untouched at the front.
+    expect(result.tweetIds).toEqual([
+      "dup_inprogress",
+      "link_alt",
+      "article_b",
+      "article_c",
+      "thread_d",
+    ]);
+    expect(result.tweetIds).not.toContain("dup_fill");
+  });
+
+  it("swaps the lowest-scoring member of a same-kind trio in the fill tail", () => {
+    // k1/k2/k3 form a post trio the fill loop tolerates; the two articles absorb
+    // the remaining fill slots so the lower-scored link stays unpicked as a clean
+    // different-kind replacement. The lowest-scoring post (k3) is the one evicted.
+    const result = buildTodayQueue(
+      baseInput({
+        bookmarks: [
+          bookmark("k1", daysAgo(4)),
+          bookmark("k2", daysAgo(5)),
+          bookmark("k3", daysAgo(6)),
+          article("m1", daysAgo(7)),
+          article("m2", daysAgo(8)),
+          bookmark("link_l", daysAgo(9), { hasLink: true }),
+        ],
+      }),
+    );
+
+    expect(result.tweetIds).toContain("link_l");
+    expect(result.tweetIds).not.toContain("k3");
+    expect(result.tweetIds).toContain("k1");
+    expect(result.tweetIds).toContain("k2");
+    expect(result.tweetIds).toHaveLength(5);
+  });
+
+  it("never evicts a read-soon pick, even as the only fill-tail repeat", () => {
+    // rs_a wins the read-soon slot; rs_b is a second read-soon save sharing the
+    // "dup" author in the fill tail. The self-heal must spare rs_b and make no
+    // swap, so the clean unpicked "clean_post" is never pulled in.
+    const result = buildTodayQueue(
+      baseInput({
+        bookmarks: [
+          withAuthor("rs_a", daysAgo(4), "dup"),
+          withAuthor("rs_b", daysAgo(5), "dup"),
+          article("art1", daysAgo(6)),
+          article("art2", daysAgo(7)),
+          bookmark("thread_c", daysAgo(8), { isThread: true }),
+          withAuthor("clean_post", daysAgo(9), "solo"),
+        ],
+        metadata: [
+          metadata("rs_a", { intent: "read_soon" }),
+          metadata("rs_b", { intent: "read_soon" }),
+        ],
+      }),
+    );
+
+    expect(result.tweetIds).toContain("rs_b");
+    expect(result.tweetIds).not.toContain("clean_post");
+  });
+
+  it("never evicts a pinned pick, even as the only fill-tail repeat", () => {
+    const result = buildTodayQueue(
+      baseInput({
+        bookmarks: [
+          withAuthor("pin_a", daysAgo(4), "dup"),
+          withAuthor("pin_b", daysAgo(5), "dup"),
+          article("art1", daysAgo(6)),
+          article("art2", daysAgo(7)),
+          bookmark("thread_c", daysAgo(8), { isThread: true }),
+          withAuthor("clean_post", daysAgo(9), "solo"),
+        ],
+        pinnedTweetIds: ["pin_a", "pin_b"],
+      }),
+    );
+
+    expect(result.tweetIds).toContain("pin_b");
+    expect(result.tweetIds).not.toContain("clean_post");
+  });
+
+  it("leaves the set as-is when variety cannot be improved", () => {
+    // Every candidate is the same kind, so evicting a fill-tail repeat finds no
+    // non-repeating replacement — variety the library can't supply is not faked.
+    const result = buildTodayQueue(
+      baseInput({
+        bookmarks: [
+          bookmark("a", daysAgo(4)),
+          bookmark("b", daysAgo(5)),
+          bookmark("c", daysAgo(6)),
+          bookmark("d", daysAgo(7)),
+        ],
+      }),
+    );
+
+    expect(result.tweetIds).toEqual(["a", "b", "c", "d"]);
+  });
+
+  it("fills to size on an all-fresh corpus", () => {
+    const result = buildTodayQueue(
+      baseInput({
+        bookmarks: [
+          bookmark("f1", NOW - 1 * 60 * 60 * 1000),
+          bookmark("f2", NOW - 2 * 60 * 60 * 1000),
+          bookmark("f3", NOW - 3 * 60 * 60 * 1000),
+          bookmark("f4", NOW - 4 * 60 * 60 * 1000),
+          bookmark("f5", NOW - 5 * 60 * 60 * 1000),
+          bookmark("f6", NOW - 6 * 60 * 60 * 1000),
+        ],
+      }),
+    );
+
+    expect(result.tweetIds).toHaveLength(5);
+  });
+
+  it("degrades gracefully on a thin corpus", () => {
+    const result = buildTodayQueue(
+      baseInput({
+        bookmarks: [bookmark("only_a", daysAgo(2)), bookmark("only_b", daysAgo(6))],
+      }),
+    );
+
+    expect(result.tweetIds).toHaveLength(2);
+  });
+});
+
 describe("today queue snapshots", () => {
   it("does not persist empty generated snapshots", () => {
     const result = buildTodayQueue(
@@ -265,10 +508,10 @@ describe("today queue snapshots", () => {
     );
 
     expect(toTodayQueueSnapshot(result)).toEqual<TodayQueueSnapshot>({
-      key: "2026-06-08:15:v1",
+      key: "2026-06-08:15:v2",
       localDate: LOCAL_DATE,
       budgetMinutes: 15,
-      version: 1,
+      version: 2,
       tweetIds: ["1"],
       generatedAt: NOW,
     });
@@ -304,16 +547,16 @@ describe("today queue snapshots", () => {
       addTweetIdToTodayQueueSnapshot({
         snapshot: null,
         tweetId: "manual",
-        key: "2026-06-08:15:v1",
+        key: "2026-06-08:15:v2",
         localDate: LOCAL_DATE,
         budgetMinutes: 15,
         generatedAt: NOW,
       }),
     ).toEqual<TodayQueueSnapshot>({
-      key: "2026-06-08:15:v1",
+      key: "2026-06-08:15:v2",
       localDate: LOCAL_DATE,
       budgetMinutes: 15,
-      version: 1,
+      version: 2,
       tweetIds: ["manual"],
       generatedAt: NOW,
     });
@@ -467,5 +710,235 @@ describe("today queue snapshots", () => {
     expect(
       isTodayQueueSnapshotDone({ snapshot, handledItems, existingTweetIds }),
     ).toBe(true);
+  });
+});
+
+describe("selectStaleTodayQueueSnapshotKeys", () => {
+  function record(key: string, version: number): TodayQueueSnapshot {
+    return {
+      key,
+      localDate: LOCAL_DATE,
+      budgetMinutes: 15,
+      version,
+      tweetIds: ["a"],
+      generatedAt: NOW,
+    };
+  }
+
+  it("returns only the keys whose version differs from the current version", () => {
+    const records = [
+      record("2026-06-08:15:v1", 1),
+      record("2026-06-07:15:v2", 2),
+      record("2026-06-08:30:v1", 1),
+      record("2026-06-08:15:v2", 2),
+    ];
+
+    expect(selectStaleTodayQueueSnapshotKeys(records, 2)).toEqual([
+      "2026-06-08:15:v1",
+      "2026-06-08:30:v1",
+    ]);
+  });
+
+  it("returns no keys when every record is the current version", () => {
+    const records = [record("2026-06-08:15:v2", 2), record("2026-06-07:15:v2", 2)];
+
+    expect(selectStaleTodayQueueSnapshotKeys(records, 2)).toEqual([]);
+  });
+
+  it("returns no keys for empty input", () => {
+    expect(selectStaleTodayQueueSnapshotKeys([], 2)).toEqual([]);
+  });
+
+  it("defaults to the current scoring version when none is passed (production call path)", () => {
+    const records = [
+      record("prev-version", TODAY_QUEUE.version - 1),
+      record("current-version", TODAY_QUEUE.version),
+    ];
+
+    expect(selectStaleTodayQueueSnapshotKeys(records)).toEqual([
+      "prev-version",
+    ]);
+  });
+});
+
+describe("pickAdditionalTodayReadItems", () => {
+  function authored(
+    tweetId: string,
+    savedAt: number,
+    screenName: string,
+    overrides: Partial<Bookmark> = {},
+  ): Bookmark {
+    return bookmark(tweetId, savedAt, {
+      author: {
+        name: screenName,
+        screenName,
+        profileImageUrl: "https://example.com/avatar.png",
+        verified: false,
+      },
+      ...overrides,
+    });
+  }
+
+  function rngFrom(values: number[]): () => number {
+    let index = 0;
+    return () => values[Math.min(index++, values.length - 1)];
+  }
+
+  const SHOWN = new Set(["shown_a", "shown_b"]);
+
+  function corpus(): Bookmark[] {
+    return [
+      authored("shown_a", daysAgo(2), "shown_author_a"),
+      authored("shown_b", daysAgo(3), "shown_author_b"),
+      authored("eligible_1", daysAgo(4), "author_one"),
+      authored("eligible_2", daysAgo(6), "author_two"),
+      authored("eligible_3", daysAgo(8), "author_three"),
+      authored("completed", daysAgo(5), "author_done"),
+      authored("snoozed", daysAgo(5), "author_snooze"),
+      authored("reference", daysAgo(5), "author_ref"),
+      authored("act", daysAgo(5), "author_act"),
+      authored("overexposed", daysAgo(5), "author_over"),
+      authored("too_long", daysAgo(5), "author_long", {
+        article: { title: "Long", plainText: words(4000) },
+        tweetKind: "article",
+      }),
+    ];
+  }
+
+  function corpusInput(overrides = {}) {
+    return {
+      ...baseInput({
+        bookmarks: corpus(),
+        readingProgress: [progress("completed", true)],
+        metadata: [
+          metadata("snoozed", { snoozedUntil: "2026-06-09" }),
+          metadata("reference", { intent: "reference" }),
+          metadata("act", { intent: "act" }),
+        ],
+        exposures: [
+          queuedExposure("overexposed", 1),
+          queuedExposure("overexposed", 2),
+          queuedExposure("overexposed", 3),
+        ],
+      }),
+      excludeTweetIds: SHOWN,
+      ...overrides,
+    };
+  }
+
+  const ELIGIBLE = ["eligible_1", "eligible_2", "eligible_3"];
+
+  it("returns up to two eligible, budget-fitting ids and excludes suppressed / already-shown", () => {
+    const picks = pickAdditionalTodayReadItems({
+      ...corpusInput(),
+      random: () => 0,
+    });
+
+    expect(picks).toHaveLength(2);
+    expect(new Set(picks).size).toBe(2);
+    for (const id of picks) {
+      expect(ELIGIBLE).toContain(id);
+    }
+  });
+
+  it("exposes the same eligible pool without consuming randomness", () => {
+    expect(new Set(getAdditionalTodayReadPool(corpusInput()))).toEqual(
+      new Set(ELIGIBLE),
+    );
+  });
+
+  it("returns the single remaining id when only one is eligible", () => {
+    const picks = pickAdditionalTodayReadItems({
+      ...corpusInput({
+        excludeTweetIds: new Set([
+          "shown_a",
+          "shown_b",
+          "eligible_2",
+          "eligible_3",
+        ]),
+      }),
+      random: () => 0.99,
+    });
+
+    expect(picks).toEqual(["eligible_1"]);
+  });
+
+  it("returns empty when nothing eligible remains", () => {
+    const picks = pickAdditionalTodayReadItems({
+      ...corpusInput({
+        excludeTweetIds: new Set([
+          "shown_a",
+          "shown_b",
+          "eligible_1",
+          "eligible_2",
+          "eligible_3",
+        ]),
+      }),
+      random: () => 0,
+    });
+
+    expect(picks).toEqual([]);
+    expect(
+      getAdditionalTodayReadPool(
+        corpusInput({
+          excludeTweetIds: new Set([
+            "shown_a",
+            "shown_b",
+            "eligible_1",
+            "eligible_2",
+            "eligible_3",
+          ]),
+        }),
+      ),
+    ).toEqual([]);
+  });
+
+  it("lets the seeded random source drive which id is picked", () => {
+    // The eligible pool is score-ordered [eligible_1, eligible_2, eligible_3]
+    // (youngest first). The injected random source selects the index, so a low
+    // draw takes the first entry and a high draw the last — proving the seed,
+    // not a constant, drives the serendipitous pick.
+    const low = pickAdditionalTodayReadItems({
+      ...corpusInput(),
+      count: 1,
+      random: () => 0,
+    });
+    const high = pickAdditionalTodayReadItems({
+      ...corpusInput(),
+      count: 1,
+      random: () => 0.99,
+    });
+
+    expect(low).toEqual(["eligible_1"]);
+    expect(high).toEqual(["eligible_3"]);
+    expect(low).not.toEqual(high);
+  });
+
+  it("is deterministic: the same seed replays the same picks", () => {
+    const seed = [0.42, 0.13, 0.87];
+    expect(
+      pickAdditionalTodayReadItems({ ...corpusInput(), random: rngFrom(seed) }),
+    ).toEqual(
+      pickAdditionalTodayReadItems({ ...corpusInput(), random: rngFrom(seed) }),
+    );
+  });
+
+  it("avoids an author already over-represented in today's set where the pool allows", () => {
+    const picks = pickAdditionalTodayReadItems({
+      ...baseInput({
+        bookmarks: [
+          authored("dom_1", daysAgo(2), "dom"),
+          authored("dom_2", daysAgo(3), "dom"),
+          authored("dom_extra", daysAgo(4), "dom"),
+          authored("fresh_voice", daysAgo(5), "solo"),
+        ],
+      }),
+      excludeTweetIds: new Set(["dom_1", "dom_2"]),
+      count: 1,
+      // Would index the "dom" candidate first if it were allowed.
+      random: () => 0,
+    });
+
+    expect(picks).toEqual(["fresh_voice"]);
   });
 });

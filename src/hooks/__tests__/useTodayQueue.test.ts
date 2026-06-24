@@ -44,10 +44,10 @@ function progress(tweetId: string, completed = false): ReadingProgress {
 
 function snapshot(tweetIds: string[]): TodayQueueSnapshot {
   return {
-    key: `${LOCAL_DATE}:15:v1`,
+    key: `${LOCAL_DATE}:15:v2`,
     localDate: LOCAL_DATE,
     budgetMinutes: 15,
-    version: 1,
+    version: 2,
     tweetIds,
     generatedAt: NOW,
   };

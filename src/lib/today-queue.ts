@@ -51,7 +51,12 @@ export interface TodayQueueBuildResult {
   generatedAt: number;
 }
 
-interface ScoredCandidate {
+interface DiversityItem {
+  authorKey: string;
+  kind: string;
+}
+
+interface ScoredCandidate extends DiversityItem {
   bookmark: Bookmark;
   progress: ReadingProgress | null;
   metadata: BookmarkQueueMetadata | null;
@@ -59,7 +64,6 @@ interface ScoredCandidate {
   tieBreak: number;
   savedAt: number;
   minutes: number;
-  kind: string;
   inProgress: boolean;
   recent: boolean;
   pinned: boolean;
@@ -94,6 +98,19 @@ export function makeTodayQueueKey({
   version?: number;
 }): string {
   return `${localDate}:${budgetMinutes}:v${version}`;
+}
+
+// A daily-set record is keyed by (date, budget, version). When the scoring
+// version is bumped, prior-version records are orphaned: nothing reads them and
+// the reader regenerates a fresh set under the current version. This pure
+// decision returns those orphaned keys so a load-time sweep can drop them.
+export function selectStaleTodayQueueSnapshotKeys(
+  records: readonly Pick<TodayQueueSnapshot, "key" | "version">[],
+  currentVersion: number = TODAY_QUEUE.version,
+): string[] {
+  return records
+    .filter((record) => record.version !== currentVersion)
+    .map((record) => record.key);
 }
 
 export function toTodayQueueSnapshot(
@@ -314,6 +331,7 @@ function createCandidate({
   const pinnedIndex = pinnedIndexByTweetId.get(bookmark.tweetId);
   const exposure = exposureSummary.get(bookmark.tweetId);
   const kind = inferKindBadge(bookmark).toLowerCase();
+  const authorKey = bookmark.author.screenName.toLowerCase();
   const recent = age <= TODAY_QUEUE.freshWindowMs;
   const neglected = age >= TODAY_QUEUE.neglectedAfterMs;
   const inProgress = Boolean(progress && !progress.completed);
@@ -326,8 +344,13 @@ function createCandidate({
   if (pinned) {
     score += Math.max(1, TODAY_QUEUE_WEIGHTS.pinned - (pinnedIndex ?? 0));
   }
-  if (recent) {
-    const freshnessRatio = 1 - age / TODAY_QUEUE.freshWindowMs;
+  // Continuous freshness curve: full weight at "just saved", fading linearly to
+  // zero at the two-week (neglectedAfter) mark, where the older-item boost takes
+  // over. Widening the denominator from freshWindow to neglectedAfter closes the
+  // dead 3–14d zone where mid-age saves used to get no recency score at all. The
+  // fresh-slot predicate (recent) is unchanged; only the score gating widens.
+  if (age < TODAY_QUEUE.neglectedAfterMs) {
+    const freshnessRatio = 1 - age / TODAY_QUEUE.neglectedAfterMs;
     score += Math.max(0, freshnessRatio * TODAY_QUEUE_WEIGHTS.freshness);
   }
   if (neglected) {
@@ -356,6 +379,7 @@ function createCandidate({
     savedAt,
     minutes,
     kind,
+    authorKey,
     inProgress,
     recent,
     pinned,
@@ -371,13 +395,11 @@ function compareCandidates(a: ScoredCandidate, b: ScoredCandidate): number {
 }
 
 function violatesDiversity(
-  candidate: ScoredCandidate,
-  picked: ScoredCandidate[],
+  candidate: DiversityItem,
+  picked: DiversityItem[],
 ): boolean {
   const sameAuthor = picked.filter(
-    (item) =>
-      item.bookmark.author.screenName.toLowerCase() ===
-      candidate.bookmark.author.screenName.toLowerCase(),
+    (item) => item.authorKey === candidate.authorKey,
   ).length;
   const sameKind = picked.filter((item) => item.kind === candidate.kind).length;
   return sameAuthor >= 2 || sameKind >= 3;
@@ -396,12 +418,69 @@ function pickBest(
   return pool.find((candidate) => !violatesDiversity(candidate, picked)) ?? pool[0];
 }
 
-export function buildTodayQueue({
+// A candidate repeats a set when the set — counting the candidate itself — holds
+// ≥2 of its author or ≥3 of its kind. This inclusive count is intentionally
+// stricter than the fill loop (which tolerates a same-author pair while placing
+// the slots), so the self-heal can improve a pair the fill loop deliberately
+// allowed, and a swapped-in replacement never recreates a repeat.
+function repeatsWithin(
+  candidate: ScoredCandidate,
+  set: ScoredCandidate[],
+): boolean {
+  return violatesDiversity(
+    candidate,
+    set.includes(candidate) ? set : [...set, candidate],
+  );
+}
+
+// One bounded, deterministic repair pass after the slots + fill loop: swap the
+// weakest fill-tail violator for the strongest non-violating unpicked candidate.
+// Never touches the four priority slots or a deliberate (in-progress / read-soon
+// / pinned) pick, and never manufactures variety the library can't supply.
+function repairDiversity(
+  candidates: ScoredCandidate[],
+  picked: ScoredCandidate[],
+  pickedIds: Set<string>,
+  prioritySlotCount: number,
+): void {
+  const evictable = picked
+    .map((candidate, index) => ({ candidate, index }))
+    .filter(
+      ({ candidate, index }) =>
+        index >= prioritySlotCount &&
+        !candidate.inProgress &&
+        !candidate.readSoon &&
+        !candidate.pinned &&
+        repeatsWithin(candidate, picked),
+    );
+  if (evictable.length === 0) return;
+
+  // compareCandidates sorts best-first, so the last entry is the lowest-scoring.
+  evictable.sort((a, b) => compareCandidates(a.candidate, b.candidate));
+  const target = evictable[evictable.length - 1];
+
+  const remaining = picked.filter((_, index) => index !== target.index);
+  const replacement = candidates.find(
+    (candidate) =>
+      !pickedIds.has(candidate.bookmark.tweetId) &&
+      !repeatsWithin(candidate, remaining),
+  );
+  if (!replacement) return;
+
+  pickedIds.delete(target.candidate.bookmark.tweetId);
+  pickedIds.add(replacement.bookmark.tweetId);
+  picked[target.index] = replacement;
+}
+
+// Suppression + scoring over the whole library, deduped and sorted best-first.
+// Shared by the daily build and the "Two more" pick so both apply identical
+// eligibility (completed / snoozed / Reference / Action Needed / over-exposed /
+// uncached are all dropped here) and identical scoring.
+function buildScoredCandidates({
   accountId,
   localDate,
   budgetMinutes,
   version = TODAY_QUEUE.version,
-  size = TODAY_QUEUE.size,
   now = Date.now(),
   bookmarks,
   readingProgress,
@@ -410,7 +489,7 @@ export function buildTodayQueue({
   pinnedTweetIds,
   detailedTweetIds = new Set<string>(),
   restrictToCachedDetails = false,
-}: TodayQueueBuildInput): TodayQueueBuildResult {
+}: TodayQueueBuildInput): ScoredCandidate[] {
   const key = makeTodayQueueKey({ localDate, budgetMinutes, version });
   const seed = `${accountId ?? "local"}:${key}`;
   const { progressByTweetId, metadataByTweetId } = toMaps(
@@ -457,6 +536,19 @@ export function buildTodayQueue({
   }
 
   candidates.sort(compareCandidates);
+  return candidates;
+}
+
+export function buildTodayQueue(input: TodayQueueBuildInput): TodayQueueBuildResult {
+  const {
+    localDate,
+    budgetMinutes,
+    version = TODAY_QUEUE.version,
+    size = TODAY_QUEUE.size,
+    now = Date.now(),
+  } = input;
+  const key = makeTodayQueueKey({ localDate, budgetMinutes, version });
+  const candidates = buildScoredCandidates({ ...input, now });
 
   const picked: ScoredCandidate[] = [];
   const pickedIds = new Set<string>();
@@ -478,11 +570,15 @@ export function buildTodayQueue({
   );
   add(pickBest(candidates, pickedIds, picked, (candidate) => candidate.neglected));
 
+  const prioritySlotCount = picked.length;
+
   while (picked.length < size) {
     const next = pickBest(candidates, pickedIds, picked, () => true);
     if (!next) break;
     add(next);
   }
+
+  repairDiversity(candidates, picked, pickedIds, prioritySlotCount);
 
   return {
     key,
@@ -492,6 +588,85 @@ export function buildTodayQueue({
     tweetIds: picked.map((candidate) => candidate.bookmark.tweetId),
     generatedAt: now,
   };
+}
+
+export interface AdditionalTodayReadInput extends TodayQueueBuildInput {
+  // Already shown today (the current snapshot's ids) — excluded from the pool.
+  excludeTweetIds: ReadonlySet<string>;
+  count?: number;
+  // Injectable so the random pick is deterministic under test.
+  random?: () => number;
+}
+
+// The safe pool for "Two more": eligible saves (suppression already applied in
+// buildScoredCandidates) that fit the reading budget and are not already in
+// today's set. Deterministic and budget-bounded — never a 40-minute monster.
+function selectAdditionalReadPool(
+  input: TodayQueueBuildInput,
+  excludeTweetIds: ReadonlySet<string>,
+): ScoredCandidate[] {
+  return buildScoredCandidates(input).filter(
+    (candidate) =>
+      candidate.minutes <= input.budgetMinutes &&
+      !excludeTweetIds.has(candidate.bookmark.tweetId),
+  );
+}
+
+// Deterministic, RNG-free view of the pool — drives the done-state's choice
+// between offering "Two more" and showing the archive-exhausted line.
+export function getAdditionalTodayReadPool({
+  excludeTweetIds,
+  ...input
+}: TodayQueueBuildInput & {
+  excludeTweetIds: ReadonlySet<string>;
+}): string[] {
+  return selectAdditionalReadPool(input, excludeTweetIds).map(
+    (candidate) => candidate.bookmark.tweetId,
+  );
+}
+
+// Up to `count` ids chosen at random from the safe pool, favoring author/kind
+// variety against what is already shown today where the pool allows. The pick
+// is intentionally serendipitous (random, not ranked); the caller persists the
+// result once, so reloads are stable.
+export function pickAdditionalTodayReadItems({
+  excludeTweetIds,
+  count = TODAY_QUEUE.additionalReadCount,
+  random = Math.random,
+  ...input
+}: AdditionalTodayReadInput): string[] {
+  if (count <= 0) return [];
+  const pool = selectAdditionalReadPool(input, excludeTweetIds);
+  if (pool.length === 0) return [];
+
+  // Seed diversity with the authors/kinds already shown today so extras add
+  // variety rather than piling onto what the reader already saw.
+  const shown: DiversityItem[] = input.bookmarks
+    .filter((bookmark) => excludeTweetIds.has(bookmark.tweetId))
+    .map((bookmark) => ({
+      authorKey: bookmark.author.screenName.toLowerCase(),
+      kind: inferKindBadge(bookmark).toLowerCase(),
+    }));
+
+  const chosen: ScoredCandidate[] = [];
+  const remaining = [...pool];
+
+  while (chosen.length < count && remaining.length > 0) {
+    const context = [...shown, ...chosen];
+    const nonRepeating = remaining.filter(
+      (candidate) => !violatesDiversity(candidate, context),
+    );
+    const choices = nonRepeating.length > 0 ? nonRepeating : remaining;
+    const index = Math.min(
+      choices.length - 1,
+      Math.max(0, Math.floor(random() * choices.length)),
+    );
+    const pick = choices[index];
+    chosen.push(pick);
+    remaining.splice(remaining.indexOf(pick), 1);
+  }
+
+  return chosen.map((candidate) => candidate.bookmark.tweetId);
 }
 
 export function deriveActiveTodayQueueItems({
