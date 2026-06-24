@@ -6,6 +6,7 @@ import {
 } from "../runtime-store";
 import type { Bookmark, RuntimeSnapshot } from "../../types";
 import type { RuntimeState } from "../runtime-store";
+import { CREATE_EVENT_DELAY_MS } from "../../lib/constants/timing";
 
 const mocks = vi.hoisted(() => {
   const detailCacheListeners = new Set<(tweetId: string) => void>();
@@ -615,6 +616,42 @@ describe("runtime-store sync", () => {
       trigger: "manual",
       errorCode: undefined,
     });
+  });
+
+  it("leaves create events un-acked and the store unchanged when the IndexedDB write rejects on a bookmark-event refresh", async () => {
+    vi.useFakeTimers();
+    try {
+      mocks.getBookmarkEvents.mockResolvedValue([
+        { id: "evt-1", type: "CreateBookmark", tweetId: "tweet-new", at: 1, source: "test" },
+      ]);
+      mocks.fetchBookmarkPage.mockResolvedValue({
+        bookmarks: [createBookmark("tweet-new")],
+        cursor: null,
+        stopOnEmptyResponse: false,
+      });
+      mocks.upsertBookmarks.mockRejectedValue(new Error("IDB_WRITE_FAILED"));
+
+      const store = createRuntimeStore();
+      primeReadyState(store, { bookmarks: [createBookmark("tweet-1")] });
+
+      const promise = store.getState().actions.handleBookmarkEvents();
+      await vi.advanceTimersByTimeAsync(CREATE_EVENT_DELAY_MS);
+      await promise;
+
+      const state = store.getState();
+      // Persist-first on the bookmark-event refresh path: a rejected IndexedDB write
+      // must leave the create events un-acked (so they retry) and must not push the
+      // in-memory store ahead of the durable DB.
+      expect(mocks.upsertBookmarks).toHaveBeenCalledWith([
+        expect.objectContaining({ tweetId: "tweet-new" }),
+      ]);
+      expect(mocks.ackBookmarkEvents).not.toHaveBeenCalled();
+      expect(state.bookmarks.map((bookmark) => bookmark.tweetId)).toEqual([
+        "tweet-1",
+      ]);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
 });
