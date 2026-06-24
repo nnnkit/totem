@@ -45,6 +45,7 @@ import {
   SYNC_MAX_BOOKMARKS_PER_JOB,
   SYNC_MAX_PAGES_PER_JOB,
 } from "../lib/constants/sync-policy";
+import { asSyncBlockedReason } from "../lib/sync-block-window";
 import { CS_DB_CLEANUP_AT } from "../lib/storage-keys";
 import type {
   ApiCapability,
@@ -169,14 +170,6 @@ export interface RuntimeState {
   lastSyncAt: number;
   actions: RuntimeActions;
 }
-
-const SYNC_BLOCKED_REASONS = new Set<SyncBlockedReason>([
-  "in_flight",
-  "cooldown",
-  "rate_limited",
-  "no_account",
-  "not_ready",
-]);
 
 const EMPTY_SET = new Set<string>();
 
@@ -798,9 +791,7 @@ export function createRuntimeStore() {
       }
 
       if (!policy.allow || !policy.mode || !policy.leaseId) {
-        const blockedReason = SYNC_BLOCKED_REASONS.has(policy.reason as SyncBlockedReason)
-          ? (policy.reason as SyncBlockedReason)
-          : null;
+        const blockedReason = asSyncBlockedReason(policy.reason);
         if (trigger === "manual") {
           setRuntimeState({
             syncBlockedReason: blockedReason || "not_ready",
