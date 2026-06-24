@@ -25,6 +25,7 @@ import type {
   TodayQueueHandledItem,
   TodayQueueHandledReason,
 } from "../lib/today-queue";
+import { deriveTodayCompletionSummary } from "../lib/today-queue";
 import { useBookmarkSearch } from "../hooks/useBookmarkSearch";
 import { pickTitle, pickSearchSnippet, inferKindBadge } from "../lib/bookmark-utils";
 import { cn } from "../lib/cn";
@@ -523,18 +524,10 @@ function useBookmarksListModel({
     () => handledTodayItems.filter((item) => item.reason !== "action"),
     [handledTodayItems],
   );
-  const todayCompletionSummary = useMemo(() => {
-    const counts = new Map<TodayQueueHandledReason, number>();
-    for (const item of handledTodayItems) {
-      counts.set(item.reason, (counts.get(item.reason) ?? 0) + 1);
-    }
-    return TODAY_COMPLETION_ORDER.flatMap((reason) => {
-      const count = counts.get(reason) ?? 0;
-      return count > 0
-        ? [{ reason, label: TODAY_COMPLETION_LABELS[reason], count }]
-        : [];
-    });
-  }, [handledTodayItems]);
+  const todayCompletionSummary = useMemo(
+    () => deriveTodayCompletionSummary(handledTodayItems, TODAY_COMPLETION_ORDER),
+    [handledTodayItems],
+  );
   const activeSort = activeTab === "today" ? "recent" : sortPreferences[activeTab];
 
   // Map tweetId → progress so search results across all tabs can show their
@@ -913,7 +906,7 @@ function useBookmarksListModel({
                     <span className="font-medium tabular-nums text-foreground/75">
                       {item.count}
                     </span>
-                    {item.label}
+                    {TODAY_COMPLETION_LABELS[item.reason]}
                   </span>
                 ))}
               </div>
