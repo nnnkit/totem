@@ -492,7 +492,7 @@ export function useTodayQueue({
   );
 
   const addToTodayQueue = useCallback(
-    async (tweetId: string) => {
+    async (tweetId: string, options?: { preserveReadSoonIntent?: boolean }) => {
       const localDate = state.localDate || formatLocalDate();
       const key = makeTodayQueueKey({ localDate, budgetMinutes });
       const storedSnapshot = await getTodayQueueSnapshot(key);
@@ -508,7 +508,24 @@ export function useTodayQueue({
         generatedAt: createdAt,
       });
 
-      await deleteQueueBookmarkMetadata(tweetId);
+      // Adding to Today's Read normally wipes the metadata row (snooze + any
+      // reference/act feedback) so the item starts fresh. An auto-pick must not
+      // silently discard a deliberate "read soon" intent the user set, so keep
+      // that one and drop only a stale snooze.
+      const existing = options?.preserveReadSoonIntent
+        ? await getQueueBookmarkMetadataByTweetId(tweetId)
+        : null;
+      if (existing?.intent === "read_soon") {
+        if (existing.snoozedUntil) {
+          await upsertQueueBookmarkMetadata({
+            ...existing,
+            snoozedUntil: null,
+            updatedAt: Date.now(),
+          });
+        }
+      } else {
+        await deleteQueueBookmarkMetadata(tweetId);
+      }
       await upsertTodayQueueSnapshot(snapshot);
       await recordTodayQueueExposures([
         makeQueueExposure({
@@ -547,7 +564,7 @@ export function useTodayQueue({
         excludeTweetIds: new Set(state.snapshot.tweetIds),
       });
       for (const tweetId of ids) {
-        await addToTodayQueue(tweetId);
+        await addToTodayQueue(tweetId, { preserveReadSoonIntent: true });
       }
     } finally {
       addingMoreRef.current = false;
