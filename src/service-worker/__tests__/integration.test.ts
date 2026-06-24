@@ -272,7 +272,7 @@ describe("sync reservation → reconcile → completion → cooldown", () => {
       accountId: "12345",
       leaseId,
       trigger: "manual",
-      mode: "quick",
+      mode: "incremental",
       status: "failure",
       errorCode: "RATE_LIMITED",
     });
@@ -568,7 +568,7 @@ describe("cross-slice auth→sync→bookmarks flow", () => {
       accountId: "12345",
       leaseId: first.leaseId as string,
       trigger: "manual",
-      mode: "quick",
+      mode: "incremental",
       status: "success",
     });
 

@@ -401,12 +401,7 @@ async function buildRuntimeSnapshot(
       inFlight: account?.inFlight
         ? {
             leaseId: account.inFlight.leaseId,
-            mode:
-              account.inFlight.mode === "full"
-                ? "full"
-                : account.inFlight.mode === "quick"
-                  ? "quick"
-                  : "incremental",
+            mode: account.inFlight.mode === "full" ? "full" : "incremental",
             trigger:
               account.inFlight.trigger === "manual" ? "manual" : "auto",
             startedAt: Number(account.inFlight.startedAt || 0),

@@ -722,7 +722,7 @@ describe("runtime-store auth flows", () => {
     // Allow sync but make fetchBookmarkPage throw NO_AUTH
     mocks.reserveSyncRun.mockResolvedValue({
       allow: true,
-      mode: "quick",
+      mode: "incremental",
       reason: "manual",
       leaseId: "lease-auth-err",
       accountKey: "acct-1",
@@ -760,7 +760,7 @@ describe("runtime-store auth flows", () => {
     // First sync: allow but fail with network error
     mocks.reserveSyncRun.mockResolvedValue({
       allow: true,
-      mode: "quick",
+      mode: "incremental",
       reason: "manual",
       leaseId: "lease-err-1",
       accountKey: "acct-1",
@@ -773,7 +773,7 @@ describe("runtime-store auth flows", () => {
     // Retry: allow sync with successful fetch
     mocks.reserveSyncRun.mockResolvedValue({
       allow: true,
-      mode: "quick",
+      mode: "incremental",
       reason: "manual",
       leaseId: "lease-ok-2",
       accountKey: "acct-1",

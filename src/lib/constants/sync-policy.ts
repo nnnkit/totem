@@ -1,6 +1,4 @@
 export const SYNC_PAGE_SIZE = 100;
-export const SYNC_MAX_PAGES_PER_JOB = 3;
-export const SYNC_MAX_BOOKMARKS_PER_JOB = 250;
 
 export const SYNC_LOCK_TTL_MS = 12 * 60 * 1000;
 export const SYNC_MANUAL_COOLDOWN_MS = 4_000;
