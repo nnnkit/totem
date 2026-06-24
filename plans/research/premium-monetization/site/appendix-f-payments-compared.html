@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Payment Gateways Compared · Totem Premium</title>
+<meta name="generator" content="Kami">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="topbar">
+  <a class="wordmark" href="index.html">Totem <span>Premium Conversion</span></a>
+  <div class="topbar-meta">Research &amp; execution plan · v1.0 · 2026.06</div>
+</header>
+<div class="layout">
+<nav class="sidebar" aria-label="Sections">
+<a class="side-brand" href="index.html">Totem <span>Premium</span></a>
+<div class="side-group"><div class="side-group-label">Overview</div>
+<a class="side-link" href="index.html">Home</a>
+</div>
+<div class="side-group"><div class="side-group-label">The Plan</div>
+<a class="side-link" href="02-the-model.html">The Model</a>
+<a class="side-link" href="03-features.html">Features &amp; Limits</a>
+<a class="side-link" href="04-tech-stack.html">Tech Stack</a>
+<a class="side-link" href="05-payments.html">Payment Gateway</a>
+<a class="side-link" href="06-license.html">License Architecture</a>
+<a class="side-link" href="07-system-changes.html">System Changes</a>
+<a class="side-link" href="08-compliance.html">CWS Compliance</a>
+<a class="side-link" href="09-paywall-ux.html">Paywall UX</a>
+<a class="side-link" href="10-rollout.html">Rollout &amp; Decisions</a>
+</div>
+<div class="side-group"><div class="side-group-label">Review</div>
+<a class="side-link" href="11-adversarial-review.html">Adversarial Review</a>
+</div>
+<div class="side-group"><div class="side-group-label">Appendices</div>
+<a class="side-link" href="appendix-a-data-sync.html">A · Data &amp; Sync</a>
+<a class="side-link" href="appendix-b-features-export.html">B · Features &amp; Export</a>
+<a class="side-link" href="appendix-c-build-release.html">C · Build &amp; Release</a>
+<a class="side-link" href="appendix-d-site-distribution.html">D · Site &amp; Dist.</a>
+<a class="side-link" href="appendix-e-ui-state-upsell.html">E · UI &amp; Upsell</a>
+<a class="side-link" href="appendix-f-payments-compared.html" aria-current="page">F · Gateways</a>
+<a class="side-link" href="appendix-g-license-arch.html">G · License &amp; DRM</a>
+<a class="side-link" href="appendix-h-market-discourse.html">H · Market Discourse</a>
+<a class="side-link" href="appendix-i-cws-policy-ux.html">I · CWS Policy</a>
+</div>
+<div class="side-group"><div class="side-group-label">Reference</div>
+<a class="side-link" href="appendix-j-references.html">J · References</a>
+</div>
+</nav>
+<main class="content">
+<div class="chapter-eyebrow">Appendix F</div><h1 class="page-title">Payment Gateways Compared</h1><p class="lead">Selling a one-time <strong>$19 lifetime</strong> Pro unlock for Totem — a Manifest V3 Chrome extension — to a privacy-conscious, indie-hacker, PKM audience. Solo dev, local-first ethos, open-source extension code, wants minimal ops and global sales tax handled.</p>
+
+<div class="takeaway"><div class="takeaway-label">BOTTOM LINE</div> For a solo dev who wants tax handled and almost no server, the realistic finalists are <strong>Merchant-of-Record (MoR)</strong> providers. <span class="hl">Polar (polar.sh) is the recommended primary pick</span> — cheapest MoR economics, modern license-key API whose <em>validate</em> endpoint is explicitly safe to call from a public client. Lemon Squeezy is the fallback (most mature, but pricier and mid-transition). ExtensionPay is easiest to wire but is <strong>not</strong> an MoR.</div>
+
+<h2 id="comparison-table">Comparison table</h2>
+
+<table class="striped">
+<thead>
+<tr>
+<th>Provider</th>
+<th>Fee (one-time sale)</th>
+<th>MoR? (handles global VAT/GST)</th>
+<th>One-time / lifetime</th>
+<th>License key API</th>
+<th>Offline / client-side validation</th>
+<th>MV3 / JS SDK ease</th>
+<th>Refunds &amp; chargebacks</th>
+<th>Payout requirements</th>
+<th>Key gotchas</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>ExtensionPay (ExtPay)</strong></td>
+<td><strong>5%</strong> at time of charge, no monthly fee; lower/flat rates for high volume by request. Runs on <strong>your own Stripe</strong> underneath (Stripe's 2.9%+30¢ on top, paid to your Stripe).</td>
+<td><strong>No.</strong> Thin layer on your Stripe — <em>you</em> are the MoR and owe sales tax/VAT.</td>
+<td>Yes — monthly, quarterly, yearly, <strong>one-time</strong>.</td>
+<td>No license keys. Identity = <strong>email magic link</strong>; paid status lives on extensionpay.com keyed to extension ID + email.</td>
+<td><strong>No.</strong> <code>getUser()</code> makes a network call to extensionpay.com every time; no documented offline cache.</td>
+<td><strong>Easiest</strong> — built for extensions. <code>ExtPay(id)</code> + <code>startBackground()</code> in SW + <code>getUser()</code>. Needs <code>storage</code> permission + CSP <code>connect-src https://extensionpay.com</code>.</td>
+<td>Handled via your Stripe dashboard (you manage disputes; you eat chargebacks).</td>
+<td>Direct to <strong>your Stripe</strong> account (Stripe payout rules apply).</td>
+<td>Hard runtime dependency on a third-party server; slow JS lib cadence; no tax handling; another origin in the trust chain for an OSS/privacy product.</td>
+</tr>
+<tr>
+<td><strong>Stripe (Payment Links / Checkout)</strong></td>
+<td><strong>2.9% + 30¢</strong> (US card).</td>
+<td><strong>No</strong> (plain Stripe). <em>You</em> are MoR; tax is your problem in every country. (Stripe Tax helps <em>calculate</em> but you still register/remit.)</td>
+<td>Yes.</td>
+<td>No built-in license keys — you build issuance + a validation endpoint yourself (needs a server/edge function + secret).</td>
+<td>Possible but <strong>you must build &amp; host it</strong>; can't safely validate against Stripe from a public client.</td>
+<td>Medium. Payment Link is trivial; reconciling "did this user pay?" needs your own backend + webhooks.</td>
+<td>You manage refunds/disputes; you pay chargeback fees.</td>
+<td>Standard Stripe payouts to your bank.</td>
+<td>Defeats the "minimal server / tax handled" goal. <strong>Stripe Managed Payments</strong> (their MoR) adds <strong>~+3.5%</strong> on top but is the heavyweight path.</td>
+</tr>
+<tr>
+<td><strong>Lemon Squeezy</strong> (Stripe-owned)</td>
+<td><strong>5% + 50¢</strong>; +1.5% intl card, +1.5% PayPal, +0.5% subscription.</td>
+<td><strong>Yes</strong> — full MoR, remits global sales tax/VAT/GST.</td>
+<td>Yes — one-time products + license keys.</td>
+<td><strong>Yes, mature.</strong> Built-in key generation + License API: <code>POST https://api.lemonsqueezy.com/v1/licenses/validate</code> and <code>/activate</code>, <code>/deactivate</code>. Endpoints take the <strong>license key itself (no secret API key)</strong>.</td>
+<td><strong>Yes</strong> — validate/activate callable client-side with just key + instance_id; cache the validated result locally.</td>
+<td>Good. Hosted overlay checkout (<code>lemon.js</code>) or hosted link; webhooks for fulfillment.</td>
+<td>MoR handles it: refunds on your behalf, <strong>$15 dispute fee</strong> + refunded amount deducted from next payout.</td>
+<td><strong>$100 minimum payout</strong>, automated on the 14th &amp; 28th.</td>
+<td><strong>Transition risk:</strong> acquired by Stripe (2024). Feb 2026 = Stripe Managed Payments public preview + migration path for LS merchants; LS still accepts signups but long-term direction is toward Stripe Managed Payments.</td>
+</tr>
+<tr>
+<td><strong>Paddle</strong></td>
+<td><strong>5% + 50¢</strong> (Starter, no monthly fee); custom on Growth/Enterprise.</td>
+<td><strong>Yes</strong> — full MoR; becomes legal seller, handles tax, fraud, chargebacks, refunds.</td>
+<td>Yes.</td>
+<td>License keys <strong>not a first-class built-in</strong> like LS/Polar; typically you provision keys yourself from the webhook. Custom flows via improved 2025–26 API.</td>
+<td>You build your own key storage/validation; feasible but more work.</td>
+<td>Medium. Good hosted + embedded checkout (<code>Paddle.js</code>), strong tax/compliance.</td>
+<td>MoR handles refunds/chargebacks.</td>
+<td>Standard Paddle payout schedule to bank.</td>
+<td>More enterprise-oriented; historically stricter merchant approval/onboarding review; license-key UX weaker than LS/Polar for indie one-time sales.</td>
+</tr>
+<tr>
+<td><strong>Polar (polar.sh)</strong></td>
+<td><strong>Starter (free): 5% + 50¢</strong>; <strong>Pro $20/mo: 3.8% + 40¢</strong>; Growth/Scale lower. +1.5% intl cards; <strong>$15 chargeback</strong>. (Orgs created before May 27, 2026 keep an "Early Member" rate.)</td>
+<td><strong>Yes</strong> — full MoR; takes on global sales-tax liability.</td>
+<td>Yes — define a <strong>one-time</strong> product.</td>
+<td><strong>Yes.</strong> License keys as a product "benefit" (auto-issued on purchase). Validate: <code>POST /v1/customer-portal/license-keys/validate</code> — explicitly "doesn't require authentication and can be safely used on a public client." Server-side variant: <code>/v1/license-keys/validate</code>.</td>
+<td><strong>Yes — best fit.</strong> Public validate endpoint is <em>designed</em> for untrusted clients, so an MV3 extension (or OSS code) can validate without embedding any secret.</td>
+<td>Good. Type-safe <code>@polar-sh/sdk</code> (npm), hosted checkout, webhooks, customer portal.</td>
+<td>MoR handles refunds; <strong>$15 per dispute</strong> regardless of outcome.</td>
+<td>Stripe-backed payouts: <strong>$2/mo active-payout fee + 0.25% + $0.25 per payout</strong>; meet minimum threshold, then on-demand.</td>
+<td>Newer/smaller than LS &amp; Paddle; 2026 pricing moved the free tier to 5%+50¢ unless you pay monthly; payout fees stack on top.</td>
+</tr>
+<tr>
+<td><strong>Gumroad</strong></td>
+<td><strong>10% + 50¢</strong> flat (Discover marketplace = 30%).</td>
+<td><strong>Yes</strong> — full MoR since <strong>Jan 1, 2025</strong> (calculates, collects, remits VAT/GST/sales tax).</td>
+<td>Yes — one-time digital products.</td>
+<td><strong>Yes</strong> — built-in license keys + verify API (<code>/v2/licenses/verify</code>).</td>
+<td>Verify endpoint callable with product_permalink + key (no secret needed); cacheable.</td>
+<td>Low/medium for extensions — checkout is web/overlay, no extension-native SDK; you'd glue email→key→extension manually.</td>
+<td>MoR handles refunds/chargebacks.</td>
+<td><strong>$10 minimum</strong>, weekly payouts (PayPal/direct deposit).</td>
+<td><strong>Highest fee (10%)</strong> — on a $19 sale ~$2.40 vs ~$1.45 (5%+50¢) vs ~$1.16 (Polar Pro 3.8%+40¢). Brand/UX feels creator-marketplace, less "software license."</td>
+</tr>
+</tbody>
+</table>
+
+<h3>MoR head-to-head (Lemon Squeezy vs Paddle vs Polar)</h3>
+<ul>
+<li><strong>All three are true MoRs</strong> — they become the legal seller and remit global VAT/GST/sales tax, so the solo dev never registers for tax anywhere. This is the single biggest reason to pick one of these over raw Stripe/ExtPay.</li>
+<li><strong>Cheapest:</strong> Polar (esp. on a paid monthly plan, 3.8%+40¢) &lt; Lemon Squeezy / Paddle (5%+50¢) &lt; Gumroad (10%+50¢).</li>
+<li><strong>Best license-key DX for a public/OSS client:</strong> <strong>Polar</strong> (auth-free public validate endpoint, stated safe for untrusted clients) and <strong>Lemon Squeezy</strong> (validate/activate take only the key, no secret) tie; <strong>Paddle</strong> trails (roll your own from webhooks).</li>
+<li><strong>Most mature / lowest "will it still exist" risk:</strong> Lemon Squeezy and Paddle. But LS now carries Stripe-acquisition/transition uncertainty (migration path to Stripe Managed Payments announced Feb 2026); Polar carries "young company" risk.</li>
+</ul>
+
+<h2 id="extensionpay-extpay-exact-model">ExtensionPay (ExtPay) — exact model</h2>
+<ul>
+<li><strong>Fee:</strong> <strong>5%</strong> transaction fee at time of charge, no monthly/upfront fee. Lower fees / flat monthly rates for high-volume accounts (email glen@extensionpay.com). It is a <strong>layer on top of Stripe</strong>: funds paid <strong>directly to your own Stripe account</strong>, data stored in Stripe so you can migrate away. All-in cost = <strong>5% (ExtPay) + Stripe's 2.9%+30¢</strong>.</li>
+<li><strong>Not an MoR:</strong> the sale settles into <em>your</em> Stripe, so <strong>you are the merchant of record and owe sales tax/VAT</strong> yourself. The decisive negative vs. LS/Paddle/Polar/Gumroad.</li>
+<li><strong>Payment ↔ user association:</strong> there is <strong>no license key</strong>. Identity is the user's <strong>email via a magic login link</strong>. Paid status stored on extensionpay.com, keyed to your <strong>registered extension ID + the user's email</strong>. On reinstall or new device, the user clicks "log in" → magic-link email → paid features reactivate.</li>
+<li><strong>Paid-status check:</strong> call <code>extpay.getUser()</code>, which <strong>makes a network call to extensionpay.com</strong> and returns <code>user.paid</code> (boolean), <code>user.paidAt</code> (Date|null), <code>user.email</code>, <code>user.plan</code>, plus subscription fields. <strong>No documented offline cache</strong> — <code>getUser()</code> hits the network each time and can throw on network failure. Events: <code>extpay.onPaid.addListener(...)</code> fires on pay or login.</li>
+<li><strong>Must call extensionpay.com? Yes.</strong> The library "only communicates with ExtensionPay.com servers to manage users' paid status." Allow that origin in CSP (<code>connect-src https://extensionpay.com</code>); Firefox may also need <code>https://extensionpay.com/*</code> in permissions; content-script callbacks need a content script matching <code>https://extensionpay.com/*</code>.</li>
+<li><strong>Integration:</strong> <code>ExtPay('your-extension-id')</code>, call <code>extpay.startBackground()</code> once in the service worker, then <code>extpay.getUser()</code> / <code>extpay.openPaymentPage()</code>. Minimum manifest permission is just <code>"storage"</code>.</li>
+<li><strong>Gotchas for Totem:</strong> (1) not local-first — every paid check phones a third-party server; (2) no tax handling; (3) JS lib update cadence slow (server side still maintained); (4) for a <em>one-time lifetime</em> unlock the email-magic-link model means a user with no network can't verify Pro.</li>
+</ul>
+
+<h2 id="recommendation-for-totem">Recommendation for Totem</h2>
+
+<div class="callout"><strong>Primary pick: Polar (polar.sh).</strong> &nbsp;·&nbsp; <strong>Fallback: Lemon Squeezy.</strong></div>
+
+<h3>Why Polar</h3>
+<ol>
+<li><strong>MoR = tax is fully handled.</strong> Solo dev never registers/remits VAT/GST anywhere — Polar is the legal seller. Directly satisfies "minimal ops + tax handled."</li>
+<li><strong>Cheapest of the MoRs.</strong> On a $19 sale: ~$1.16 net fee at Pro (3.8%+40¢) or ~$1.45 at the free 5%+50¢ tier — vs Gumroad's ~$2.40. More margin on a low-price one-time unlock.</li>
+<li><strong>License-key model fits local-first + OSS perfectly.</strong> Polar issues a license key as a purchase benefit, and its <span class="hl">public validate endpoint <code>POST /v1/customer-portal/license-keys/validate</code> requires no authentication and is explicitly documented as safe for public clients</span> (desktop/mobile/extension). The extension can validate the key <strong>without embedding any secret</strong> — essential because Totem's source is public. Validate once, cache "Pro = true" + key in <code>chrome.storage.local</code>/IndexedDB, run offline thereafter, re-check occasionally. No Totem server required.</li>
+<li><strong>Modern, type-safe <code>@polar-sh/sdk</code> + hosted checkout + webhooks.</strong> Minimal integration surface.</li>
+</ol>
+
+<h3>Why not the others as primary</h3>
+<ul>
+<li><strong>ExtPay:</strong> easiest to wire, but <strong>not an MoR</strong> (you owe tax) and forces a <strong>hard runtime dependency on extensionpay.com</strong> for every paid check — antithetical to local-first, and an extra third-party origin in the trust chain for a privacy-positioned OSS product.</li>
+<li><strong>Raw Stripe / Payment Links:</strong> <strong>not an MoR</strong> — tax becomes your problem in every country, and you'd have to build your own license server. Stripe Managed Payments (their MoR) adds ~+3.5%.</li>
+<li><strong>Gumroad:</strong> clean MoR + license keys, but <strong>10%</strong> is the highest fee and the UX reads "creator marketplace," not "software license."</li>
+<li><strong>Paddle:</strong> solid MoR, but weaker first-class license-key DX for indie one-time sales and heavier onboarding.</li>
+</ul>
+
+<h3>Why Lemon Squeezy as fallback (not primary)</h3>
+<p>It's the most battle-tested license API (validate/activate/deactivate, key-only, cacheable) and a true MoR — an excellent fit — but it's <strong>pricier than Polar</strong> (5%+50¢, $100 min payout) and now sits inside <strong>Stripe's MoR transition</strong> (Feb 2026 Managed Payments preview + LS migration path). If Polar's youth/feature-gaps become a problem, LS is the safe, mature swap.</p>
+
+<div class="takeaway"><div class="takeaway-label">PRICING NOTE</div> For the $14 founders / $19 list: all MoR fees scale fine at this price; the per-transaction fixed component (40–50¢) is the bigger relative bite on a sub-$20 product, which again favors Polar's lower fixed fee.</div>
+
+<h2 id="integration-sketch-polar-in-an-mv3-extension">Integration sketch — Polar in an MV3 extension</h2>
+<p><strong>Goal:</strong> sell a one-time $19 "Totem Pro" product in Polar, issue a license key, validate it from the extension with no secret, cache the result locally (local-first).</p>
+
+<h3>A. Polar dashboard (one-time setup, no code)</h3>
+<ul>
+<li>Create org → create a <strong>one-time product</strong> "Totem Pro — $19" ($14 founders coupon).</li>
+<li>Add the <strong>License Key</strong> benefit to the product (auto-issues a key on purchase).</li>
+<li>Grab the <strong>organization ID</strong> (public, used only to scope validation) and a hosted <strong>Checkout Link</strong>.</li>
+</ul>
+
+<h3>B. Selling</h3>
+<p>From the extension's upgrade UI, open the Polar <strong>hosted checkout</strong> in a new tab (<code>chrome.tabs.create({ url: checkoutLink })</code>). Polar collects payment, remits tax as MoR, and emails the buyer their license key + a customer-portal link. No checkout code or PCI surface in the extension.</p>
+
+<h3>C. Entering the key</h3>
+<p>The Pro settings panel has an "Enter license key" input. User pastes the key from the email.</p>
+
+<h3>D. Validation (no secret, public endpoint)</h3>
+<pre><code>// runs in the service worker; no API key embedded — safe for public/OSS code
+async function validateProKey(licenseKey) {
+  const res = await fetch('https://api.polar.sh/v1/customer-portal/license-keys/validate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      key: licenseKey,
+      organization_id: TOTEM_ORG_ID, // public scoping value, not a secret
+    }),
+  });
+  if (!res.ok) return { valid: false };
+  const data = await res.json();           // { status, key, ... }
+  return { valid: data.status === 'granted', data };
+}</code></pre>
+
+<h3>E. Local-first caching (the important part)</h3>
+<ul>
+<li>On a successful validate, store <code>{ pro: true, key, validatedAt }</code> in <code>chrome.storage.local</code> (and mirror the flag into Zustand state). Gate Pro features (MD/CSV/JSONL export, deleted-tweet preservation, bulk ops, advanced filters, annotations, thread capture) on this flag.</li>
+<li>The extension reads the <strong>local flag</strong> on every launch — <strong>fully offline</strong>. It only re-hits Polar's validate endpoint <strong>occasionally</strong> (e.g., once every N days, or on user "Re-check license") to confirm the key wasn't refunded/revoked. A failed network re-check should <strong>not</strong> instantly revoke Pro (grace period) — keeps it local-first and resilient.</li>
+</ul>
+
+<h3>F. manifest.json (MV3) needs</h3>
+<pre><code>{
+  "permissions": ["storage"],
+  "host_permissions": ["https://api.polar.sh/*"]
+}</code></pre>
+<ul>
+<li><code>host_permissions</code> (or a <code>connect-src https://api.polar.sh</code> if you ship an explicit CSP) so the service worker can <code>fetch</code> the validate endpoint.</li>
+<li><code>tabs</code> only if you use <code>chrome.tabs.create</code> for checkout (or just use a normal link / <code>window.open</code>).</li>
+<li>No client secret anywhere — the public validate endpoint + public org ID are the only Polar values in the (public) source.</li>
+</ul>
+
+<h3>G. Where the key lives</h3>
+<p>The <strong>license key string</strong> in <code>chrome.storage.local</code>; the derived <strong><code>pro</code> boolean + validatedAt</strong> alongside it (and in Zustand for runtime). Nothing sensitive, nothing server-side, no Totem backend.</p>
+
+<p><strong>Optional hardening:</strong> add a Polar <strong>webhook</strong> (<code>order.created</code> / <code>benefit_grant.created</code>) to a tiny serverless function only if you later want server-side analytics or to pre-bind keys — <strong>not required</strong> for the core unlock, keeping the no-server ethos intact.</p>
+
+<h2 id="sources">Sources</h2>
+<ul>
+<li>ExtensionPay home (5% fee, Stripe payout, one-time support): <code>https://extensionpay.com/</code></li>
+<li>ExtensionPay — CWS payments replacement / 5% context: <code>https://extensionpay.com/articles/extensionpay-is-the-chrome-web-store-payments-replacement</code></li>
+<li>ExtPay GitHub (library, no-server, methods): <code>https://github.com/Glench/ExtPay</code></li>
+<li>ExtPay README (manifest, getUser network call, magic-link model): <code>https://raw.githubusercontent.com/Glench/ExtPay/master/README.md</code></li>
+<li>Stripe fees + MoR clarification (Managed Payments ~+3.5%): <code>https://dodopayments.com/blogs/stripe-fees-calculator</code> and <code>https://freemius.com/blog/stripe-transaction-fees-real-cost/</code></li>
+<li>Stripe local payment methods pricing: <code>https://stripe.com/pricing/local-payment-methods</code></li>
+<li>Stripe acquires Lemon Squeezy (2024): <code>https://www.lemonsqueezy.com/blog/stripe-acquires-lemon-squeezy</code> and <code>https://techcrunch.com/2024/07/26/stripe-acquires-payment-processing-startup-lemon-squeezy/</code></li>
+<li>Lemon Squeezy 2026 update / Stripe Managed Payments migration path: <code>https://www.lemonsqueezy.com/blog/2026-update</code></li>
+<li>Lemon Squeezy pricing (5%+50¢, surcharges): <code>https://www.lemonsqueezy.com/pricing</code></li>
+<li>Lemon Squeezy License API (validate endpoint, no Authorization header, instance_id): <code>https://docs.lemonsqueezy.com/api/license-api/validate-license-key</code> and <code>https://docs.lemonsqueezy.com/api/license-api/activate-license-key</code></li>
+<li>Lemon Squeezy refunds/chargebacks ($15 dispute fee): <code>https://docs.lemonsqueezy.com/help/payments/refunds-chargebacks</code></li>
+<li>Lemon Squeezy payouts ($100 min, 14th/28th): <code>https://docs.lemonsqueezy.com/help/affiliates-for-merchants/payouts</code></li>
+<li>Paddle fees (5%+50¢ MoR) review: <code>https://dodopayments.com/blogs/paddle-review</code> and <code>https://dev.to/onsen/paddle-review-2026-pros-cons-pricing-explained-4cgk</code></li>
+<li>Polar pricing (tiered 2026, 5%+50¢ free / 3.8%+40¢ Pro): <code>https://polar.sh/resources/pricing</code> and <code>https://dodopayments.com/blogs/polar-sh-review</code></li>
+<li>Polar fees doc (intl +1.5%, $15 chargeback, payout fees): <code>https://polar.sh/docs/merchant-of-record/fees</code></li>
+<li>Polar is an MoR (statement): <code>https://x.com/polar_sh/status/1917551367247241542</code></li>
+<li>Polar license keys benefit + SDK: <code>https://polar.apidocumentation.com/documentation/features/benefits/license-keys</code> and <code>https://www.npmjs.com/package/@polar-sh/sdk</code></li>
+<li>Polar validate endpoint — no auth, safe for public clients: <code>https://polar.sh/docs/api-reference/customer-portal/license-keys/validate</code></li>
+<li>Gumroad fees (10%+50¢) + MoR since Jan 1 2025: <code>https://checkoutpage.com/blog/gumroad-fees</code> and <code>https://www.swell.is/content/gumroad-pricing</code></li>
+<li>Gumroad license keys: <code>https://gumroad.com/help/article/76-license-keys</code></li>
+<li>MoR comparison (Polar vs LS vs Paddle, payouts, chargebacks): <code>https://www.buildmvpfast.com/blog/lemon-squeezy-vs-polar-paddle-merchant-of-record-2026</code> and <code>https://veloxthemes.com/blog/polar-vs-lemonsqueezy-vs-gumroad</code></li>
+</ul>
+<nav class="pager"><a class="pager-link prev" href="appendix-e-ui-state-upsell.html"><span class="pager-eyebrow">Previous</span><span class="pager-title">UI State &amp; Upsell Surfaces</span></a><a class="pager-link next" href="appendix-g-license-arch.html"><span class="pager-eyebrow">Next</span><span class="pager-title">License Architecture &amp; DRM Stance</span></a></nav>
+<footer class="page-foot">Totem · premium-monetization research · compiled with kami</footer>
+</main>
+<aside class="toc"><div class="toc-label">On this page</div><a href="#comparison-table">Comparison table</a>
+<a href="#extensionpay-extpay-exact-model">ExtensionPay (ExtPay) — exact model</a>
+<a href="#recommendation-for-totem">Recommendation for Totem</a>
+<a href="#integration-sketch-polar-in-an-mv3-extension">Integration sketch — Polar in an MV3 extension</a>
+<a href="#sources">Sources</a></aside>
+</div>
+</body>
+</html>

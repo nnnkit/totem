@@ -1,0 +1,2198 @@
+<!DOCTYPE html>
+<!-- ==================================================================
+     Totem GTM Research Report · long-doc-en · parchment design system
+     16 June 2026 · 8 chapters: bets → personas → communities →
+     post formats → pricing → features → blog → niche
+     ================================================================== -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Totem GTM Research Report — June 2026</title>
+<meta name="author" content="Ankit">
+<meta name="description" content="16-agent community research sweep covering personas, communities, pricing, features, and blog ideas for Totem.">
+<meta name="keywords" content="totem, gtm, twitter bookmarks, chrome extension, growth, community research">
+<meta name="generator" content="Kami">
+<style>
+  @page {
+    size: A4;
+    margin: 20mm 22mm 22mm 22mm;
+    background: #f5f4ed;
+    @top-right {
+      content: string(section-title);
+      font-family: Charter, Georgia, Palatino, serif;
+      font-size: 8pt;
+      color: #6b6a64;
+    }
+    @bottom-center {
+      content: counter(page) "  ·  Totem GTM Research · June 2026";
+      font-family: Charter, Georgia, Palatino, serif;
+      font-size: 9pt;
+      color: #6b6a64;
+    }
+  }
+  @page:first {
+    @top-right  { content: ""; }
+    @bottom-center { content: ""; }
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --parchment: #f5f4ed;
+    --ivory:     #faf9f5;
+    --near-black:#141413;
+    --dark-warm: #3d3d3a;
+    --olive:     #504e49;
+    --stone:     #6b6a64;
+    --brand:     #1B365D;
+    --brand-lt:  #2a527f;
+    --border:    #e8e6dc;
+    --border-soft:#e5e3d8;
+    --tag-bg:    #E4ECF5;
+    --tag-green: #e2f0e8;
+    --tag-green-fg: #1a5c38;
+    --tag-amber: #fef3e2;
+    --tag-amber-fg: #7a4a00;
+    --tag-red:   #fce8e8;
+    --tag-red-fg:#7a1a1a;
+
+    --serif: Charter, Georgia, Palatino, "Times New Roman", serif;
+    --sans:  var(--serif);
+    --mono:  "SF Mono", "Fira Code", Consolas, Monaco, monospace;
+
+    --rhythm-module:  14pt;
+    --rhythm-section: 18pt;
+  }
+
+  html, body { background: var(--parchment); }
+
+  @media screen {
+    body { max-width: 860px; margin: 0 auto; padding: 40px 52px; }
+  }
+
+  body {
+    color: var(--near-black);
+    font-family: var(--serif);
+    font-size: 10.5pt;
+    line-height: 1.55;
+    widows: 3; orphans: 3;
+  }
+
+  /* ---------- COVER ---------- */
+  .cover {
+    min-height: 240mm;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 40mm 0 0 0;
+    break-after: page;
+  }
+  @media screen {
+    .cover { min-height: 80vh; padding-top: 80px; margin-bottom: 60px; }
+  }
+  .cover-eyebrow {
+    font-size: 10pt;
+    color: var(--brand);
+    letter-spacing: 2pt;
+    text-transform: uppercase;
+    font-weight: 500;
+    margin-bottom: 18pt;
+  }
+  .cover-title {
+    font-size: 40pt;
+    font-weight: 500;
+    color: var(--near-black);
+    line-height: 1.12;
+    letter-spacing: -0.5pt;
+    margin-bottom: 16pt;
+  }
+  .cover-sub {
+    font-size: 14pt;
+    color: var(--olive);
+    line-height: 1.45;
+    max-width: 85%;
+    margin-bottom: 30pt;
+  }
+  .cover-meta {
+    font-size: 10pt;
+    color: var(--stone);
+    line-height: 1.7;
+    font-variant-numeric: tabular-nums;
+    border-top: 0.5pt solid var(--border);
+    padding-top: 14pt;
+    margin-top: 30pt;
+  }
+  .cover-meta strong { color: var(--dark-warm); font-weight: 500; }
+
+  /* ---------- TOC ---------- */
+  .toc { break-after: page; }
+  @media screen { .toc { margin-bottom: 60px; } }
+  .toc h2 {
+    font-size: 22pt;
+    font-weight: 500;
+    margin-bottom: var(--rhythm-module);
+    border-left: 2.5pt solid var(--brand);
+    border-radius: 1.5pt;
+    padding-left: 10pt;
+  }
+  .toc-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 7pt 0;
+    border-bottom: 0.3pt dotted var(--border);
+    font-size: 11pt;
+  }
+  .toc-item:last-of-type { border-bottom: none; }
+  .toc-num { color: var(--brand); font-weight: 500; min-width: 36pt; }
+  .toc-title { flex: 1; color: var(--near-black); padding-left: 6pt; }
+  .toc-sub {
+    font-size: 9pt;
+    color: var(--stone);
+    display: block;
+    padding-left: 42pt;
+    padding-top: 2pt;
+    padding-bottom: 4pt;
+  }
+
+  /* ---------- CHAPTER ---------- */
+  .chapter { break-before: page; }
+  @media screen { .chapter { margin-bottom: 64px; padding-top: 48px; border-top: 1px solid var(--border); } }
+
+  .chapter-num {
+    font-size: 10pt;
+    color: var(--brand);
+    letter-spacing: 1pt;
+    text-transform: uppercase;
+    font-weight: 500;
+    margin-bottom: 6pt;
+  }
+
+  /* ---------- HEADINGS ---------- */
+  h1 {
+    font-size: 26pt;
+    font-weight: 500;
+    line-height: 1.15;
+    letter-spacing: -0.3pt;
+    margin: 0 0 12pt 0;
+    border-left: 3pt solid var(--brand);
+    border-radius: 1.5pt;
+    padding-left: 10pt;
+    color: var(--near-black);
+    break-after: avoid;
+  }
+  h2 {
+    font-size: 16pt;
+    font-weight: 500;
+    line-height: 1.25;
+    margin: 28pt 0 8pt 0;
+    color: var(--near-black);
+    break-after: avoid;
+    string-set: section-title content();
+  }
+  h3 {
+    font-size: 13pt;
+    font-weight: 500;
+    line-height: 1.3;
+    margin: 18pt 0 6pt 0;
+    color: var(--dark-warm);
+    break-after: avoid;
+  }
+  h4 {
+    font-size: 11pt;
+    font-weight: 500;
+    margin: 12pt 0 4pt 0;
+    color: var(--dark-warm);
+    break-after: avoid;
+  }
+
+  /* ---------- PARAGRAPHS ---------- */
+  p { margin: 0 0 10pt 0; line-height: 1.55; color: var(--near-black); widows: 2; orphans: 2; }
+  .lead { font-size: 12pt; line-height: 1.55; color: var(--dark-warm); margin-bottom: var(--rhythm-module); }
+  .hl { color: var(--brand); font-weight: 500; }
+  strong { font-weight: 500; }
+
+  /* ---------- LISTS ---------- */
+  ul, ol { margin: 6pt 0 10pt 0; padding-left: 20pt; line-height: 1.55; }
+  ul li::marker { color: var(--brand); }
+  ol li::marker { color: var(--brand); font-weight: 500; }
+  li { margin-bottom: 4pt; }
+  li:last-child { margin-bottom: 0; }
+
+  /* ---------- QUOTE ---------- */
+  blockquote {
+    border-left: 2pt solid var(--brand);
+    margin: 14pt 0;
+    padding: 4pt 0 4pt 16pt;
+    color: var(--olive);
+    line-height: 1.55;
+    break-inside: avoid;
+    font-style: italic;
+  }
+  blockquote .cite {
+    display: block;
+    font-style: normal;
+    font-size: 9pt;
+    color: var(--stone);
+    margin-top: 5pt;
+  }
+
+  /* ---------- CODE ---------- */
+  code {
+    font-family: var(--mono);
+    font-size: 9pt;
+    background: var(--ivory);
+    padding: 1pt 4pt;
+    border-radius: 2pt;
+    color: var(--dark-warm);
+  }
+
+  /* ---------- TABLE ---------- */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 9.5pt;
+    margin: 14pt 0;
+    break-inside: avoid;
+  }
+  th {
+    text-align: left;
+    font-weight: 500;
+    color: var(--dark-warm);
+    padding: 6pt 9pt;
+    border-bottom: 1pt solid var(--border);
+    background: var(--ivory);
+  }
+  td {
+    padding: 5pt 9pt;
+    border-bottom: 0.3pt solid var(--border-soft);
+    vertical-align: top;
+    line-height: 1.45;
+  }
+  tr:last-child td { border-bottom: none; }
+  table.striped tbody tr:nth-child(even) td { background: var(--ivory); }
+
+  /* ---------- CALLOUT ---------- */
+  .callout {
+    background: var(--ivory);
+    border-left: 2.5pt solid var(--brand);
+    padding: 10pt 16pt;
+    border-radius: 3pt;
+    margin: 14pt 0;
+    line-height: 1.55;
+    break-inside: avoid;
+  }
+  .callout p { margin-bottom: 6pt; }
+  .callout p:last-child { margin-bottom: 0; }
+
+  /* ---------- TAKEAWAY ---------- */
+  .takeaway {
+    background: var(--ivory);
+    border-radius: 4pt;
+    padding: 12pt 16pt;
+    margin: 16pt 0;
+    break-inside: avoid;
+    border: 0.5pt solid var(--border);
+  }
+  .takeaway-label {
+    font-size: 9pt;
+    color: var(--brand);
+    letter-spacing: 1pt;
+    text-transform: uppercase;
+    font-weight: 500;
+    margin-bottom: 6pt;
+  }
+
+  /* ---------- TAGS ---------- */
+  .tag {
+    display: inline-block;
+    background: var(--tag-bg);
+    color: var(--brand);
+    font-size: 8.5pt;
+    font-weight: 500;
+    padding: 1.5pt 6pt;
+    border-radius: 3pt;
+    letter-spacing: 0.4pt;
+    text-transform: uppercase;
+    margin-right: 4pt;
+    margin-bottom: 2pt;
+    white-space: nowrap;
+  }
+  .tag.green { background: var(--tag-green); color: var(--tag-green-fg); }
+  .tag.amber { background: var(--tag-amber); color: var(--tag-amber-fg); }
+  .tag.red   { background: var(--tag-red);   color: var(--tag-red-fg); }
+
+  /* ---------- PERSONA CARD ---------- */
+  .persona-card {
+    border: 0.5pt solid var(--border);
+    border-radius: 5pt;
+    padding: 16pt 18pt;
+    margin: 16pt 0;
+    break-inside: avoid;
+    background: var(--ivory);
+  }
+  .persona-rank {
+    font-size: 9pt;
+    font-weight: 500;
+    color: var(--brand);
+    letter-spacing: 1pt;
+    text-transform: uppercase;
+    margin-bottom: 4pt;
+  }
+  .persona-name {
+    font-size: 15pt;
+    font-weight: 500;
+    color: var(--near-black);
+    margin-bottom: 6pt;
+  }
+  .persona-line {
+    font-size: 10.5pt;
+    color: var(--olive);
+    margin-bottom: 12pt;
+    font-style: italic;
+  }
+  .persona-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10pt;
+    margin-bottom: 10pt;
+  }
+  @media screen and (max-width: 600px) {
+    .persona-grid { grid-template-columns: 1fr; }
+  }
+  .persona-field label {
+    display: block;
+    font-size: 8.5pt;
+    color: var(--brand);
+    font-weight: 500;
+    letter-spacing: 0.8pt;
+    text-transform: uppercase;
+    margin-bottom: 2pt;
+  }
+  .persona-field p {
+    font-size: 9.5pt;
+    color: var(--dark-warm);
+    margin: 0;
+    line-height: 1.45;
+  }
+  .convert-line {
+    background: #edf2f8;
+    border-left: 2pt solid var(--brand);
+    padding: 8pt 12pt;
+    border-radius: 2pt;
+    margin-top: 10pt;
+    font-size: 9.5pt;
+    color: var(--near-black);
+    font-style: italic;
+    break-inside: avoid;
+  }
+  .convert-line span {
+    display: block;
+    font-size: 8.5pt;
+    color: var(--stone);
+    font-style: normal;
+    margin-bottom: 3pt;
+    font-weight: 500;
+    letter-spacing: 0.5pt;
+    text-transform: uppercase;
+  }
+
+  /* ---------- COMMUNITY CARD ---------- */
+  .community-card {
+    border: 0.5pt solid var(--border);
+    border-radius: 5pt;
+    padding: 14pt 18pt;
+    margin: 14pt 0;
+    break-inside: avoid;
+  }
+  .community-header {
+    display: flex;
+    align-items: baseline;
+    gap: 10pt;
+    margin-bottom: 8pt;
+    flex-wrap: wrap;
+  }
+  .community-name {
+    font-size: 13pt;
+    font-weight: 500;
+    color: var(--near-black);
+  }
+  .example-title {
+    background: #f0f4f9;
+    border-left: 2pt solid var(--brand-lt);
+    padding: 6pt 10pt;
+    border-radius: 2pt;
+    font-size: 9.5pt;
+    color: var(--brand);
+    margin: 8pt 0;
+    font-style: italic;
+  }
+  .example-title span {
+    display: block;
+    font-size: 8.5pt;
+    font-style: normal;
+    color: var(--stone);
+    font-weight: 500;
+    letter-spacing: 0.5pt;
+    text-transform: uppercase;
+    margin-bottom: 3pt;
+  }
+  .not-todo {
+    background: var(--tag-red);
+    border-radius: 3pt;
+    padding: 6pt 10pt;
+    font-size: 9.5pt;
+    color: var(--tag-red-fg);
+    margin-top: 8pt;
+    break-inside: avoid;
+  }
+  .not-todo strong { color: var(--tag-red-fg); }
+
+  /* ---------- FEATURE CARD ---------- */
+  .feature-card {
+    border-left: 3pt solid var(--brand);
+    padding: 12pt 0 12pt 16pt;
+    margin: 14pt 0;
+    break-inside: avoid;
+  }
+  .feature-num {
+    font-size: 8.5pt;
+    font-weight: 500;
+    color: var(--brand);
+    letter-spacing: 1pt;
+    text-transform: uppercase;
+    margin-bottom: 3pt;
+  }
+  .feature-title {
+    font-size: 12.5pt;
+    font-weight: 500;
+    color: var(--near-black);
+    margin-bottom: 6pt;
+  }
+  .feature-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4pt;
+    margin-bottom: 8pt;
+  }
+  .feature-evidence {
+    font-size: 9.5pt;
+    color: var(--olive);
+    font-style: italic;
+    margin-top: 6pt;
+    border-top: 0.3pt solid var(--border-soft);
+    padding-top: 6pt;
+  }
+
+  /* ---------- BLOG CARD ---------- */
+  .blog-card {
+    border: 0.5pt solid var(--border);
+    border-radius: 4pt;
+    padding: 12pt 16pt;
+    margin: 12pt 0;
+    break-inside: avoid;
+  }
+  .blog-num {
+    font-size: 8.5pt;
+    font-weight: 500;
+    color: var(--brand);
+    letter-spacing: 1pt;
+    text-transform: uppercase;
+    margin-bottom: 3pt;
+  }
+  .blog-title {
+    font-size: 12pt;
+    font-weight: 500;
+    color: var(--near-black);
+    margin-bottom: 6pt;
+    font-style: italic;
+  }
+  .blog-evidence {
+    font-size: 9.5pt;
+    color: var(--stone);
+    margin: 4pt 0;
+    line-height: 1.45;
+  }
+
+  /* ---------- DIVIDER ---------- */
+  hr {
+    border: none;
+    border-top: 0.5pt solid var(--border);
+    margin: 18pt 0;
+  }
+
+  /* ---------- UTILITIES ---------- */
+  .mt { margin-top: 16pt; }
+  .small { font-size: 9pt; color: var(--stone); }
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14pt;
+  }
+  @media screen and (max-width: 600px) {
+    .two-col { grid-template-columns: 1fr; }
+  }
+
+  /* ---------- TODO SYSTEM ---------- */
+  .todo-check {
+    appearance: none; -webkit-appearance: none;
+    width: 13pt; height: 13pt;
+    border: 1.5pt solid var(--border);
+    border-radius: 2.5pt;
+    cursor: pointer; flex-shrink: 0;
+    background: white;
+    vertical-align: middle;
+    transition: background 0.12s, border-color 0.12s;
+  }
+  .todo-check:checked {
+    background: var(--brand);
+    border-color: var(--brand);
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 10 8' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 4l3 3 5-6' stroke='%23fff' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-size: 65%; background-position: center; background-repeat: no-repeat;
+  }
+  .todo-check:hover:not(:checked) { border-color: var(--brand-lt); }
+
+  tr.todo-done td { opacity: 0.42; }
+  tr.todo-done td:first-child { opacity: 1; }
+  tr.todo-done td:nth-child(2) { text-decoration: line-through; text-decoration-color: var(--stone); }
+
+  .card-todo-done { opacity: 0.45; }
+  .card-todo-done .community-name { text-decoration: line-through; text-decoration-color: var(--stone); }
+
+  .todo-progress-bar {
+    background: var(--ivory);
+    border: 0.5pt solid var(--border);
+    border-radius: 4pt;
+    padding: 10pt 16pt;
+    margin-bottom: 16pt;
+    display: flex;
+    align-items: center;
+    gap: 12pt;
+    flex-wrap: wrap;
+  }
+  .todo-count { font-size: 11pt; color: var(--dark-warm); }
+  .todo-count strong { color: var(--brand); }
+  .todo-bar-track {
+    flex: 1; height: 5pt;
+    background: var(--border);
+    border-radius: 3pt;
+    min-width: 80pt;
+  }
+  .todo-bar-fill {
+    height: 100%; background: var(--brand);
+    border-radius: 3pt; transition: width 0.2s;
+  }
+  .todo-reset {
+    font-size: 8.5pt; color: var(--stone);
+    cursor: pointer; background: none;
+    border: none; padding: 0;
+    text-decoration: underline;
+    font-family: var(--serif);
+  }
+  .todo-reset:hover { color: var(--brand); }
+</style>
+</head>
+<body>
+
+<!-- ================================================================
+     COVER
+     ================================================================ -->
+<section class="cover">
+  <div>
+    <div class="cover-eyebrow">GTM Research · Community Sweep · 16 Agents</div>
+    <div class="cover-title">Totem GTM<br>Research Report</div>
+    <div class="cover-sub">Who pays, where they are, what to say, what to build, and which niche to own — grounded in 30-day community data across Reddit, HN, X, and PKM forums.</div>
+  </div>
+  <div class="cover-meta">
+    <strong>usetotem.xyz</strong> · Twitter bookmarks on every new tab, local-first<br>
+    June 16, 2026 · 16-agent research sweep · 282 tool calls · ~993k tokens<br>
+    Channels: Reddit (r/nosurf, r/ObsidianMD, r/selfhosted, r/degoogle, r/PKM, r/SideProject, r/productivity, r/DataHoarder, r/privacytoolsIO) · Hacker News · X/Twitter · Indie Hackers
+  </div>
+</section>
+
+<!-- ================================================================
+     TABLE OF CONTENTS
+     ================================================================ -->
+<section class="toc">
+  <h2>Contents</h2>
+  <div class="toc-item">
+    <span class="toc-num">01</span>
+    <span class="toc-title">The 3 Bets to Make Right Now</span>
+  </div>
+  <div class="toc-item">
+    <span class="toc-num">02</span>
+    <span class="toc-title">Who Actually Pays for This — 5 Ranked Personas</span>
+  </div>
+  <div class="toc-item">
+    <span class="toc-num">03</span>
+    <span class="toc-title">Community Playbook — Where to Show Up</span>
+  </div>
+  <div class="toc-item">
+    <span class="toc-num">04</span>
+    <span class="toc-title">What Kind of Post Works — Format Analysis</span>
+  </div>
+  <div class="toc-item">
+    <span class="toc-num">05</span>
+    <span class="toc-title">Pricing — One-Time vs Subscription</span>
+  </div>
+  <div class="toc-item">
+    <span class="toc-num">06</span>
+    <span class="toc-title">Features to Build — Demand-Validated</span>
+  </div>
+  <div class="toc-item">
+    <span class="toc-num">07</span>
+    <span class="toc-title">Blog Posts to Write Next — Real Problems</span>
+  </div>
+  <div class="toc-item">
+    <span class="toc-num">08</span>
+    <span class="toc-title">The Niche to Own</span>
+  </div>
+</section>
+
+<!-- ================================================================
+     01 · THE 3 BETS
+     ================================================================ -->
+<section class="chapter">
+  <div class="chapter-num">01 · The 3 Bets</div>
+  <h1>The 3 Bets to Make Right Now</h1>
+  <p class="lead">Sixteen agents across ten research angles converge on three moves. Everything else is sequenced after these. The window for the Pocket/Omnivore displacement cohort is open <span class="hl">right now</span> — they are actively shopping.</p>
+
+  <div class="persona-card" style="border-left: 4pt solid var(--brand); border-top: none; border-right: none; border-bottom: none; border-radius: 0; background: var(--parchment);">
+    <div style="display: flex; gap: 16pt; align-items: flex-start; margin-bottom: 18pt; flex-wrap: wrap;">
+      <div style="background: var(--brand); color: #fff; font-size: 20pt; font-weight: 500; width: 36pt; height: 36pt; display: flex; align-items: center; justify-content: center; border-radius: 50%; flex-shrink: 0;">1</div>
+      <div style="flex: 1; min-width: 200px;">
+        <div style="font-size: 13pt; font-weight: 500; margin-bottom: 5pt;">Ship the $19 lifetime Pro tier this week</div>
+        <p>Gate it on Markdown/CSV/JSONL export + deleted tweet caching. The Pocket/Omnivore displacement cohort is actively shopping right now and a one-time price is a conversion trigger, not a consideration.</p>
+        <div style="margin-top: 8pt;"><span class="tag green">Revenue</span><span class="tag">Week 1</span><span class="tag amber">Complexity: Low</span></div>
+      </div>
+    </div>
+
+    <div style="display: flex; gap: 16pt; align-items: flex-start; margin-bottom: 18pt; flex-wrap: wrap;">
+      <div style="background: var(--brand); color: #fff; font-size: 20pt; font-weight: 500; width: 36pt; height: 36pt; display: flex; align-items: center; justify-content: center; border-radius: 50%; flex-shrink: 0;">2</div>
+      <div style="flex: 1; min-width: 200px;">
+        <div style="font-size: 13pt; font-weight: 500; margin-bottom: 5pt;">Post r/nosurf founder story + Show HN the same week</div>
+        <p>These two channels hit the top two paying personas at zero ad spend. r/nosurf: lead with <em>"I stopped opening X but kept reading the threads I saved"</em> — mention Totem once, near the end. Show HN: lead with GraphQL interception and IndexedDB, not what Totem does.</p>
+        <div style="margin-top: 8pt;"><span class="tag green">Acquisition</span><span class="tag">Week 1–2</span><span class="tag amber">Free</span></div>
+      </div>
+    </div>
+
+    <div style="display: flex; gap: 16pt; align-items: flex-start; flex-wrap: wrap;">
+      <div style="background: var(--brand); color: #fff; font-size: 20pt; font-weight: 500; width: 36pt; height: 36pt; display: flex; align-items: center; justify-content: center; border-radius: 50%; flex-shrink: 0;">3</div>
+      <div style="flex: 1; min-width: 200px;">
+        <div style="font-size: 13pt; font-weight: 500; margin-bottom: 5pt;">Lead with thread-aware full capture in GTM</div>
+        <p>Totem already captures thread detail into <code>TweetDetailCache</code> through the existing GraphQL detail flow, renders it in the reader, and includes it in full export hydration. This is not a core build blocker anymore — it is proof for the Obsidian/PKM persona that Totem exports the reading experience, not just raw bookmarked URLs.</p>
+        <div style="margin-top: 8pt;"><span class="tag green">Retention</span><span class="tag">Already built</span><span class="tag green">Use in launch copy</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================
+     02 · PERSONAS
+     ================================================================ -->
+<section class="chapter">
+  <div class="chapter-num">02 · Personas</div>
+  <h1>Who Actually Pays for This</h1>
+  <p class="lead">Five personas ranked by (buying signal × community size × fit with current product). All five have <span class="hl">high or medium-high</span> willingness to pay — the question is sequencing. Hit personas 1–3 first; 4–5 are one feature away.</p>
+
+  <!-- Persona 1 -->
+  <div class="persona-card">
+    <div class="persona-rank">Rank 1 · High Buying Signal</div>
+    <div class="persona-name">The Nosurf Intentional Reader</div>
+    <div class="persona-line">Uses X for curated signal from researchers and thinkers — refuses to open the app because the feed pulls them back.</div>
+    <div class="persona-grid">
+      <div class="persona-field">
+        <label>Specific Pain</label>
+        <p>They have already decided the content is worth reading. The platform architecture is what stops them. Every workaround (Feedbin RSS at $5/mo, Following-only mode) adds friction or still fires the algorithm.</p>
+      </div>
+      <div class="persona-field">
+        <label>Feature Hook</label>
+        <p>New tab reader mode. Bookmarks surface on the first screen they see. No X session, no feed, no negotiation.</p>
+      </div>
+      <div class="persona-field">
+        <label>Communities</label>
+        <p>r/nosurf <strong>302K</strong>, r/digitalminimalism <strong>199K</strong>, r/getoffmyphone</p>
+      </div>
+      <div class="persona-field">
+        <label>Ideal Price</label>
+        <p>$5–9 one-time lifetime or $2–3/month</p>
+      </div>
+    </div>
+    <div class="convert-line">
+      <span>The line that converts them</span>
+      "Read your Twitter bookmarks on every new tab without ever opening X. The content you saved is already waiting — the feed never touches you."
+    </div>
+    <div style="margin-top: 10pt; font-size: 9.5pt; color: var(--stone);">
+      <strong>Evidence:</strong> r/nosurf documents the "irony problem" — members who need X professionally but refuse to open the app. Totem solves the irony problem with less friction than every documented workaround.
+    </div>
+  </div>
+
+  <!-- Persona 2 -->
+  <div class="persona-card">
+    <div class="persona-rank">Rank 2 · High Buying Signal</div>
+    <div class="persona-name">The PKM Builder Escaping Readwise</div>
+    <div class="persona-line">Obsidian power user who wants Twitter bookmarks in their vault without paying $120/year for Readwise's bundled features they don't use.</div>
+    <div class="persona-grid">
+      <div class="persona-field">
+        <label>Specific Pain</label>
+        <p>Every plugin (Tweet to Markdown, X Bookmarks Sync) broke after April 2023 API changes. Readwise costs $120/year and they use maybe 40% of it. Post-Omnivore and post-Pocket they are actively shopping for something reliable.</p>
+      </div>
+      <div class="persona-field">
+        <label>Feature Hook</label>
+        <p>Markdown + JSONL export with YAML frontmatter. Drop files into Obsidian vault, DataView picks them up. No API key, no cloud step.</p>
+      </div>
+      <div class="persona-field">
+        <label>Communities</label>
+        <p>r/ObsidianMD, r/PKM, r/Zettelkasten, r/selfhosted, r/logseq<br><strong>1,900+ GitHub stars</strong> on kbravh/obsidian-tweet-to-markdown — that's the addressable audience quantified.</p>
+      </div>
+      <div class="persona-field">
+        <label>Ideal Price</label>
+        <p>$9–15 one-time or $3–5/month</p>
+      </div>
+    </div>
+    <div class="convert-line">
+      <span>The line that converts them</span>
+      "Export every Twitter bookmark to Markdown with YAML frontmatter — no API key, no subscription, no data leaving your machine. Drop it straight into your Obsidian vault."
+    </div>
+  </div>
+
+  <!-- Persona 3 -->
+  <div class="persona-card">
+    <div class="persona-rank">Rank 3 · High Buying Signal · Shopping NOW</div>
+    <div class="persona-name">The Privacy-First Local Hoarder</div>
+    <div class="persona-line">Post-Pocket refugee who learned the lesson: you don't own what you don't host.</div>
+    <div class="persona-grid">
+      <div class="persona-field">
+        <label>Specific Pain</label>
+        <p>Watched Pocket shut down July 8, 2025. Data deleted by November. Omnivore went dark November 2024. They treat any cloud-hosted tool as a liability. X's November 2024 terms (data shared with third parties for AI training) compounded their distrust.</p>
+      </div>
+      <div class="persona-field">
+        <label>Feature Hook</label>
+        <p>100% local IndexedDB storage with JSONL export. "No server" is not a feature — it is an existential guarantee. The architecture <em>is</em> the product.</p>
+      </div>
+      <div class="persona-field">
+        <label>Communities</label>
+        <p>r/selfhosted, r/degoogle <strong>400K+</strong>, r/privacytoolsIO, r/DataHoarder, Hacker News. Activity spikes around X policy announcements.</p>
+      </div>
+      <div class="persona-field">
+        <label>Ideal Price</label>
+        <p>$5–10 one-time or free with optional paid tier</p>
+      </div>
+    </div>
+    <div class="convert-line">
+      <span>The line that converts them</span>
+      "Your Twitter bookmarks, stored 100% in your browser. No Totem server. No account. No cloud vendor that can shut down and take your data. IndexedDB in your browser profile is the only place your saves live."
+    </div>
+    <div style="margin-top: 10pt; font-size: 9.5pt; color: var(--stone);">
+      <strong>Evidence:</strong> Pocket shutdown drove mass migration to r/selfhosted in May–July 2025. The behavioral conclusion across HN and Reddit: "You don't own what you don't host." Totem is the only Twitter bookmark tool that satisfies this without requiring Docker or a VPS.
+    </div>
+  </div>
+
+  <!-- Persona 4 -->
+  <div class="persona-card">
+    <div class="persona-rank">Rank 4 · High Buying Signal · One Feature Away</div>
+    <div class="persona-name">The Developer with a Bookmark Graveyard</div>
+    <div class="persona-line">Saves dozens of threads per week about architecture and tooling — can never find them again when the problem actually comes up.</div>
+    <div class="persona-grid">
+      <div class="persona-field">
+        <label>Specific Pain</label>
+        <p>X's bookmark search returns irrelevant results even with exact phrases. They want a searchable knowledge base with no API dependency — ideally pluggable into Claude Desktop or Cursor via MCP. ContextBolt is winning their attention today specifically because of MCP integration.</p>
+      </div>
+      <div class="persona-field">
+        <label>Feature Hook</label>
+        <p>Local full-text search now, MCP endpoint next. The test: does future-them find the half-remembered thread in five seconds?</p>
+      </div>
+      <div class="persona-field">
+        <label>Communities</label>
+        <p>Hacker News (primary), r/selfhosted, r/webdev, r/MachineLearning. Ask HN #37009892 and #40609664 document this demand directly.</p>
+      </div>
+      <div class="persona-field">
+        <label>Ideal Price</label>
+        <p>$15–29 one-time or $4–8/month</p>
+      </div>
+    </div>
+    <div class="convert-line">
+      <span>The line that converts them</span>
+      "Full-text search across every Twitter thread you ever saved, instantly, without opening X, without a server, without an API key. Your bookmark backlog becomes a searchable knowledge base."
+    </div>
+  </div>
+
+  <!-- Persona 5 -->
+  <div class="persona-card">
+    <div class="persona-rank">Rank 5 · Medium-High Buying Signal</div>
+    <div class="persona-name">The Solo Newsletter Researcher</div>
+    <div class="persona-line">Uses X as a primary research layer — bookmarks 20–50 threads per week, can never find the specific thread at writing time.</div>
+    <div class="persona-grid">
+      <div class="persona-field">
+        <label>Specific Pain</label>
+        <p>The gap between "saved on X" and "usable in writing" requires manual reconstruction every time. Tweetsmash exports to Notion at $14/month but has no search and requires manual triggering.</p>
+      </div>
+      <div class="persona-field">
+        <label>Feature Hook</label>
+        <p>Reader mode with full thread context — complete threads in clean reading order, ready to copy into a draft or export to Markdown.</p>
+      </div>
+      <div class="persona-field">
+        <label>Communities</label>
+        <p>Indie Hackers, r/Newsletters, r/indiehackers, r/content_marketing. The Substack/Beehiiv creator community on X itself is the highest-leverage channel.</p>
+      </div>
+      <div class="persona-field">
+        <label>Ideal Price</label>
+        <p>$8–15 one-time or $4–6/month. Tweetsmash proved this persona pays at $14/month.</p>
+      </div>
+    </div>
+    <div class="convert-line">
+      <span>The line that converts them</span>
+      "Stop losing research in your Twitter bookmark graveyard. Search your entire save history in seconds, read full threads in reader mode, export to Markdown — without ever opening X or losing thread context."
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================
+     03 · COMMUNITY PLAYBOOK
+     ================================================================ -->
+<section class="chapter">
+  <div class="chapter-num">03 · Community Playbook</div>
+  <h1>Where to Show Up</h1>
+  <p class="lead">Thirteen communities mapped. Six to hit immediately, four to queue after first-wave traction. Every entry has the exact angle, a real post title, rules, threads to find, and what not to do.</p>
+
+  <h2>Post Now</h2>
+
+  <!-- r/nosurf -->
+  <div class="community-card">
+    <div class="community-header">
+      <div class="community-name">r/nosurf</div>
+      <span class="tag green">Post Now</span>
+      <span class="tag">302K Members</span>
+      <span class="tag amber">No Direct Promo</span>
+    </div>
+    <p><strong>Angle:</strong> Operationalizing the nosurf philosophy for X specifically. You haven't quit Twitter because it has real signal — you just cannot access that signal without the feed pulling you back. Totem solves the architecture problem, not the discipline problem. Use Cal Newport language: "zero-sum antagonism," "extract value and exit."</p>
+    <div class="example-title">
+      <span>Example post title</span>
+      "I stopped opening Twitter but kept reading the threads I saved — here's the one change that made it stick"
+    </div>
+    <p><strong>Format:</strong> Personal transformation story. Mention Totem once, near the end, as "this is what worked for me." Build comment karma in the subreddit 2–4 weeks before posting.</p>
+    <p><strong>Threads to find and reply:</strong> "How do I use Twitter intentionally?", "RSS alternative to Twitter", "digital detox but still need Twitter for work." When commenters mention Feedbin as a workaround, reply with Totem as the zero-friction Chrome alternative.</p>
+    <div class="not-todo"><strong>Do not:</strong> Open with "I built a Chrome extension." Frame it as a productivity tool. Use words like "supercharge," "boost," or "optimize." Post without prior comment history.</div>
+  </div>
+
+  <!-- Show HN -->
+  <div class="community-card">
+    <div class="community-header">
+      <div class="community-name">Hacker News — Show HN</div>
+      <span class="tag green">Post Now</span>
+      <span class="tag amber">Tue–Thu 7–9am PT</span>
+    </div>
+    <p><strong>Angle:</strong> Technical architecture first. Passive GraphQL interception, no Totem server, IndexedDB storage, no account required. Explain why GraphQL instead of the API ($100/month, requires keys, breaks constantly). Mention MV3 compliance explicitly — this community is anxious about it.</p>
+    <div class="example-title">
+      <span>Example post title</span>
+      "Show HN: Totem – Twitter bookmarks on every new tab, local-only, no account, GraphQL interception"
+    </div>
+    <p><strong>Format:</strong> Technical explanation. Engage every comment within the first 30 minutes — HN momentum is entirely front-loaded. Show HN is the designated self-promotion vehicle; use it once for initial launch.</p>
+    <p><strong>Threads to reply to:</strong> Ask HN "How do you organize your Twitter/X bookmarks?" (id=40609664) and "Do You Want a Twitter Bookmark Organizer?" (id=37009892) — post a brief factual description and a link.</p>
+    <div class="not-todo"><strong>Do not:</strong> Use "revolutionary" or "game-changing." Post and disappear — Show HN success is determined in the first 60 minutes. Hide pricing or the technical approach.</div>
+  </div>
+
+  <!-- r/ObsidianMD -->
+  <div class="community-card">
+    <div class="community-header">
+      <div class="community-name">r/ObsidianMD</div>
+      <span class="tag green">Post Now</span>
+      <span class="tag">Include Markdown Screenshot</span>
+    </div>
+    <p><strong>Angle:</strong> Lead with the export workflow, not the new tab feature. Every Twitter plugin broke after April 2023 API changes. Readwise costs $120/year for a cloud service that owns their data. The ideal workflow (save on X → Markdown in Obsidian vault with YAML frontmatter) doesn't exist without a paid intermediary. Totem is free, local, exports JSONL and Markdown, and works without an API key.</p>
+    <div class="example-title">
+      <span>Example post title</span>
+      "Free local-first alternative to Readwise for Twitter bookmarks → Obsidian (no API key, no cloud, YAML frontmatter export)"
+    </div>
+    <p><strong>Format:</strong> Tool recommendation, not product launch. Include a screenshot of actual Markdown output with YAML frontmatter.</p>
+    <p><strong>Threads to find:</strong> "Tweet to Markdown broken," "Twitter API changes plugin," "Readwise alternative," "X bookmarks sync Obsidian." Reply with a factual explanation of Totem's export.</p>
+    <div class="not-todo"><strong>Do not:</strong> Lead with the new tab feature. Claim Obsidian integration if it requires manual steps. Ignore questions about YAML frontmatter schema compatibility.</div>
+  </div>
+
+  <!-- r/selfhosted -->
+  <div class="community-card">
+    <div class="community-header">
+      <div class="community-name">r/selfhosted</div>
+      <span class="tag green">Post Now</span>
+      <span class="tag amber">High BS Detection</span>
+    </div>
+    <p><strong>Angle:</strong> IndexedDB browser storage is the serverless version of self-hosting. Zero infrastructure, zero ops burden, zero monthly fee. Position against Wallabag (requires Docker), Karakeep (requires server), and Readwise (cloud subscription). <em>No account = no breach surface, no server = nothing to subpoena.</em></p>
+    <div class="example-title">
+      <span>Example post title</span>
+      "After Pocket died I wanted Twitter bookmarks without another cloud service — so the browser IS the server (local IndexedDB, no account)"
+    </div>
+    <p><strong>Format:</strong> Problem/solution. Be precise about IndexedDB — data in the user's browser profile directory, does not leave the device, no telemetry. Link the GitHub repo if available — this community values auditability above all else.</p>
+    <div class="not-todo"><strong>Do not:</strong> Describe Totem as a SaaS or "service." Mention any cloud components. Say "we store your data securely" — the reaction will be "why are you storing anything?"</div>
+  </div>
+
+  <!-- r/SideProject -->
+  <div class="community-card">
+    <div class="community-header">
+      <div class="community-name">r/SideProject</div>
+      <span class="tag green">Post Now</span>
+      <span class="tag">Self-Promo OK</span>
+    </div>
+    <p><strong>Angle:</strong> Pure founder story with specific numbers. Open with the pain (save 50 threads a week, never read them, opening X means 90 minutes of feed). Then describe what you built and what happened. Include install count or star rating.</p>
+    <div class="example-title">
+      <span>Example post title</span>
+      "I built a Chrome extension that puts my Twitter bookmarks on every new tab so I actually read them — 1,200 installs later here's what I learned"
+    </div>
+    <p><strong>Format:</strong> Founder story. Self-promotion is core to this subreddit. Stay in comments for at least 2 hours after posting.</p>
+    <div class="not-todo"><strong>Do not:</strong> Post and disappear. Use generic productivity language without specifics. Claim features not yet built.</div>
+  </div>
+
+  <!-- X Thread -->
+  <div class="community-card">
+    <div class="community-header">
+      <div class="community-name">X / Twitter — Indie Maker Niche</div>
+      <span class="tag green">Post Now</span>
+      <span class="tag">Thread Format</span>
+    </div>
+    <p><strong>Angle:</strong> Thread starting with a specific relatable number: <em>"I had 847 bookmarks on Twitter. I had read maybe 12 of them."</em> Walk through why people save but never read. What you built (one sentence). How the new tab changes the habit loop. CTA at tweet 8–10. The 2026 X algorithm weights replies at 27× more than likes — optimize for a provocation that makes people reply.</p>
+    <div class="example-title">
+      <span>Example tweet 1</span>
+      "I had 847 bookmarks on Twitter. I had read maybe 12 of them. So I built something. 🧵"
+    </div>
+    <div class="not-todo"><strong>Do not:</strong> Lead with the product in tweets 1–2. Put the link in tweet 1 — the algorithm down-ranks posts with early external links. Ignore replies in the first 30 minutes.</div>
+  </div>
+
+  <h2>Post Later — After First-Wave Traction</h2>
+
+  <table class="striped">
+    <thead>
+      <tr>
+        <th>Community</th>
+        <th>Angle</th>
+        <th>Example Title</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>r/PKM</strong></td>
+        <td>Twitter bookmarks as the missing first stage of the PKM pipeline — free capture layer before Obsidian/Notion</td>
+        <td>"The missing piece for Twitter → Obsidian without Readwise (free, local, JSONL + Markdown)"</td>
+      </tr>
+      <tr>
+        <td><strong>r/degoogle</strong></td>
+        <td>Most bookmark managers require OAuth to a third-party server. Totem adds zero new tracking surface.</td>
+        <td>"Organize your Twitter bookmarks without handing data to another third party — browser-only, IndexedDB only"</td>
+      </tr>
+      <tr>
+        <td><strong>r/DataHoarder</strong></td>
+        <td>X has no native bookmark export. Account suspended = bookmarks gone. Totem creates a local JSONL archive.</td>
+        <td>"Twitter/X still has no bookmark export — here's how to build a local archive (no API key)"</td>
+      </tr>
+      <tr>
+        <td><strong>r/productivity</strong></td>
+        <td>Workflow post: "here's how I actually read saved Twitter threads instead of letting them pile up." Mention Totem in comments when asked.</td>
+        <td>"How I actually read my saved Twitter threads instead of letting them pile up (changed one thing)"</td>
+      </tr>
+      <tr>
+        <td><strong>Indie Hackers</strong></td>
+        <td>Milestone post with specific metrics: first 30 days on Chrome Web Store, what worked, what didn't</td>
+        <td>"Launched a Twitter bookmark Chrome extension with zero paid marketing — here's what happened in 30 days"</td>
+      </tr>
+      <tr>
+        <td><strong>r/logseq</strong></td>
+        <td>logseq-twitter-extractor plugin broken since 2023 API changes. Totem's Markdown export as the working replacement.</td>
+        <td>"Free alternative to the broken Logseq Twitter plugin — browser-based, no API key, Markdown for graph import"</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ================================================================
+     04 · POST FORMAT ANALYSIS
+     ================================================================ -->
+<section class="chapter">
+  <div class="chapter-num">04 · Post Formats</div>
+  <h1>What Kind of Post Works</h1>
+  <p class="lead">Four formats that spread, four failure modes that die, and three exact post templates you can use this week.</p>
+
+  <h2>What Spreads</h2>
+
+  <div class="feature-card">
+    <div class="feature-title">Personal transformation story with a specific behavior at the center</div>
+    <p>The post structure that consistently earns upvotes in r/nosurf, r/digitalminimalism, and r/productivity: (1) name the behavior everyone recognizes, (2) explain why it happens structurally — not a discipline problem, (3) describe what changed, (4) mention the tool once near the end as a component of a system. The Totem story: <em>"I had 847 bookmarks, I read 12, I built something."</em> This format succeeds because readers share it before they even reach the product mention.</p>
+    <div class="feature-meta"><span class="tag">r/nosurf</span><span class="tag">r/digitalminimalism</span><span class="tag">r/productivity</span></div>
+  </div>
+
+  <div class="feature-card">
+    <div class="feature-title">Problem/solution post with a screenshot in the first comment</div>
+    <p>In r/ObsidianMD, r/PKM, and r/selfhosted, posts that include a screenshot of actual output — real Markdown with YAML frontmatter, real IndexedDB storage, real search results — convert faster than any amount of prose. The community can evaluate the claim immediately without clicking a link.</p>
+    <div class="feature-meta"><span class="tag">r/ObsidianMD</span><span class="tag">r/PKM</span><span class="tag">r/selfhosted</span></div>
+  </div>
+
+  <div class="feature-card">
+    <div class="feature-title">Technical architecture post on HN</div>
+    <p>The Show HN that explains how something works before explaining what it does. "Passive GraphQL interception" is a better HN opener than "Twitter bookmark manager." The mechanism signals trust: you understand the system you built, you are not hiding how it works, the community can audit it.</p>
+    <div class="feature-meta"><span class="tag">Hacker News</span><span class="tag">Developers</span></div>
+  </div>
+
+  <div class="feature-card">
+    <div class="feature-title">Replies in high-traffic threads before standalone posts</div>
+    <p>A well-placed reply in an Ask HN thread with 200+ upvotes or a r/nosurf thread with 1K upvotes outperforms a standalone post on a new thread. Find threads where the question is "how do I get X without the feed?" and answer it honestly, with Totem as one option among others you name.</p>
+    <div class="feature-meta"><span class="tag green">Highest ROI</span><span class="tag">Zero Risk</span></div>
+  </div>
+
+  <h2>What Dies</h2>
+
+  <table>
+    <thead><tr><th>Format</th><th>Why it fails</th><th>Affected communities</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>Feature-list posts</strong></td>
+        <td>"New tab + reader mode + local search + export" reads as advertising without a human problem at the center. Communities reject it immediately.</td>
+        <td>All</td>
+      </tr>
+      <tr>
+        <td><strong>"I built" openers</strong></td>
+        <td>"I built a Chrome extension" as the first line triggers skepticism in communities that haven't seen you before. The product must earn its mention.</td>
+        <td>r/productivity, r/nosurf</td>
+      </tr>
+      <tr>
+        <td><strong>Productivity language in minimalism communities</strong></td>
+        <td>"Supercharge," "boost," "streamline," "optimize" are hard stops in r/nosurf and r/digitalminimalism. The framing is attention protection, not productivity.</td>
+        <td>r/nosurf, r/digitalminimalism</td>
+      </tr>
+      <tr>
+        <td><strong>Posts without numbers</strong></td>
+        <td>In r/SideProject and Indie Hackers, vague "launched my side project" posts earn no comments. Specific metrics drive engagement.</td>
+        <td>r/SideProject, Indie Hackers</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Three Templates Ready to Use</h2>
+
+  <div class="callout">
+    <strong>The nosurf format:</strong><br><br>
+    <em>"I've been a r/nosurf member for [time]. I still use Twitter — [specific reason: following researchers, watching a niche]. The problem: every time I opened it to read my bookmarks, I lost 40 minutes to the For You page. [Describe what you tried that didn't work]. [What changed]. [One-sentence mention of Totem]. This is obviously not the only way to handle this, but it's what worked for me."</em>
+  </div>
+
+  <div class="callout">
+    <strong>The Obsidian format:</strong><br><br>
+    <em>"Every plugin that connected Twitter to Obsidian stopped working in April 2023 when Twitter killed the API. Here's what I've found that still works without an API key or a Readwise subscription. [Screenshot of Markdown output]. The frontmatter fields are: [list them]. DataView query that works: [show it]. Works because [one-sentence technical explanation]. Happy to answer questions about the export format."</em>
+  </div>
+
+  <div class="callout">
+    <strong>The HN Show HN format:</strong><br><br>
+    <em>"Totem replaces your Chrome new tab with your X/Twitter bookmark queue. No Totem server, no account, no OAuth grant to a third party. Data lives in IndexedDB in your browser profile. The sync mechanism: passive interception of the GraphQL responses your browser already receives when you visit X. I went this route because [specific reason API didn't work]. MV3 compliant. Export: Markdown, CSV, JSONL. Happy to answer questions about the architecture."</em>
+  </div>
+</section>
+
+<!-- ================================================================
+     05 · PRICING
+     ================================================================ -->
+<section class="chapter">
+  <div class="chapter-num">05 · Pricing</div>
+  <h1>One-Time vs Subscription</h1>
+  <p class="lead">This is not a close call. The structural evidence is clear. Target communities have <span class="hl">documented, acute subscription fatigue</span> and a strong preference for paying once for tools with no server-side costs.</p>
+
+  <div class="takeaway">
+    <div class="takeaway-label">The Recommendation</div>
+    <p><strong>Freemium with a $19 one-time lifetime Pro unlock.</strong> Founders price: <strong>$14 for the first 60 days of launch.</strong></p>
+  </div>
+
+  <h2>Free Tier (Permanent, No Time Limit)</h2>
+  <ul>
+    <li>New tab reading queue</li>
+    <li>Full local-first sync via browser session interception</li>
+    <li>Reader mode for threads</li>
+    <li>Local full-text search across all bookmarks</li>
+    <li>No bookmark count cap</li>
+    <li>No account required</li>
+  </ul>
+
+  <h2>Pro Tier — $19 One-Time Lifetime</h2>
+  <ul>
+    <li>Markdown, CSV, JSONL export</li>
+    <li>Deleted tweet caching and preservation</li>
+    <li>Bulk operations</li>
+    <li>Advanced search filters (author, date range, media type)</li>
+    <li>Inline annotations and highlights on each bookmark</li>
+    <li>Thread-aware capture and full export hydration</li>
+  </ul>
+
+  <h2>Why One-Time, Not Subscription</h2>
+  <p>Totem has no server costs. There is no AI inference bill, no cloud storage, no ongoing compute. A subscription for a Chrome extension that runs entirely in the user's browser will face immediate HN scrutiny: <em>"You are just storing data in my own browser — what am I paying for each month?"</em></p>
+
+  <blockquote>
+    "People tend to impulse-buy one-time things all the time. At $19, the question is 'is this worth a one-time payment?' At $9.99/month, it's 'do I want to pay for this forever?'"
+    <span class="cite">— r/webdev research, multiple threads</span>
+  </blockquote>
+
+  <p>The HN Verso launch ($14.99 one-time, 36 points) framed "no subscription" as a feature in the headline. The r/BuyItForLife framing — "pay once, use forever" — is the exact emotional register this audience responds to. 47% of SaaS tool subscribers churn by month 4–8.</p>
+
+  <h2>Why $19 Specifically</h2>
+  <table>
+    <thead><tr><th>Comparable Tool</th><th>Price</th><th>Model</th></tr></thead>
+    <tbody>
+      <tr><td>Readwise</td><td>$120/year</td><td>Subscription</td></tr>
+      <tr><td>ContextBolt</td><td>$6/month (~$72/year)</td><td>Subscription</td></tr>
+      <tr><td>TweetSmash</td><td>$14/month</td><td>Subscription</td></tr>
+      <tr><td>Verso (comparable indie)</td><td>$14.99 one-time</td><td>One-time</td></tr>
+      <tr><td>XArchive</td><td>$4.69/year</td><td>Annual</td></tr>
+      <tr><td><strong>Totem Pro (recommended)</strong></td><td><strong>$19 one-time</strong></td><td><strong>Lifetime</strong></td></tr>
+    </tbody>
+  </table>
+  <p>$19 sits above the $4.99 utility floor and below the $29 threshold where buyers begin demanding enterprise-level feature parity. Readwise charges $120/year partly for the Markdown export Totem provides for $19 once. The comparison writes itself.</p>
+
+  <h2>Why Export Is the Right Paywall</h2>
+  <ol>
+    <li>It requires no ongoing cost to provide</li>
+    <li>It is high-value to the PKM/Obsidian/power-user cohort willing to pay</li>
+    <li>It does not feel artificial — it clearly took engineering effort to build</li>
+    <li>The emotional framing is clean: <em>"Pay once, own your data forever."</em></li>
+  </ol>
+
+  <div class="callout">
+    <strong>Do NOT say "2 years of updates."</strong> The r/selfhosted and r/privacy communities are acutely aware of tool shutdowns (Pocket July 2025, Omnivore November 2024). A "2 years of updates" qualifier raises the question "what happens in year 3?" and implies potential abandonment. Use "lifetime" with no expiry qualifier. If Totem is truly local-first, the tool works forever even if development slows — because there is no service to shut down.
+  </div>
+
+  <h2>Fallback After 90 Days</h2>
+  <p>If freemium conversion stays below 1% after 90 days: move to a 14-day free trial of the full product followed by the $19 one-time gate. This forces the conversion decision while still allowing word-of-mouth discovery. Do not pivot to subscription.</p>
+</section>
+
+<!-- ================================================================
+     06 · FEATURES
+     ================================================================ -->
+<section class="chapter">
+  <div class="chapter-num">06 · Features</div>
+  <h1>Feature Bets — Demand-Validated</h1>
+  <p class="lead">Ranked by (revenue impact × acquisition impact) ÷ remaining complexity. Every feature is grounded in specific research evidence — not speculation. Some items are already production-built; those should be used as Pro packaging and launch proof, not treated as net-new engineering work.</p>
+
+  <div class="feature-card">
+    <div class="feature-num">01 · Already Built · Unlocks Pro Gate</div>
+    <div class="feature-title">Thread-Aware Full Capture</div>
+    <div class="feature-meta">
+      <span class="tag green">Revenue</span><span class="tag green">Acquisition</span>
+      <span class="tag green">Production-ready</span>
+      <span class="tag">Writers</span><span class="tag">PKM</span><span class="tag">Researchers</span>
+    </div>
+    <p>When Totem fetches tweet detail for a saved post, it parses the surrounding thread, stores the full thread in IndexedDB, renders it in reader view, and includes it in full export hydration. Export produces one coherent Markdown document per thread instead of a disconnected single-tweet record.</p>
+    <div class="feature-evidence">
+      <strong>Evidence:</strong> Verified in code: <code>src/api/core/posts.ts</code> stores <code>detail.thread</code>, <code>src/stores/hydration-store.ts</code> walks bookmarks missing tweet details for full export hydration, and <code>src/lib/export/tweet-export.ts</code> appends thread tweets in reading order. kbravh/obsidian-tweet-to-markdown (1,900+ GitHub stars) was built specifically for this problem. <em>"Copy-paste produces tweets out of sequence, broken by reply indentation, with quote-tweets collapsed into dead links."</em>
+    </div>
+  </div>
+
+  <div class="feature-card">
+    <div class="feature-num">02 · Build Now · Core Pro Feature</div>
+    <div class="feature-title">Deleted Tweet Preservation &amp; Local Content Caching</div>
+    <div class="feature-meta">
+      <span class="tag green">Revenue</span>
+      <span class="tag amber">Complexity: Medium</span>
+      <span class="tag">Researchers</span><span class="tag">DataHoarder</span>
+    </div>
+    <p>At sync time, capture full tweet content (text, author, media URLs, thread structure, timestamp) into IndexedDB. If the source tweet is later deleted, Totem's local copy persists. Reader view surfaces cached content with a subtle "original deleted" badge.</p>
+    <div class="feature-evidence">
+      <strong>Evidence:</strong> <em>"If the original author deletes the tweet, your bookmark will instantly become invalid, which can be a massive loss for anyone doing content research"</em> (twillot.com, 2026). Dewey's broken sync has left this position vacant. Every competitor offering deletion protection relies on cloud sync — Totem undercuts with pure local caching. HN thread April 2026: <em>"You legitimately cannot export your bookmarks from X. If that happens, your bookmarks will be lost."</em>
+    </div>
+  </div>
+
+  <div class="feature-card">
+    <div class="feature-num">03 · Already Built · Pro Monetization Gate</div>
+    <div class="feature-title">Inline Annotation &amp; Highlights on Bookmarks</div>
+    <div class="feature-meta">
+      <span class="tag green">Revenue</span><span class="tag green">Retention</span>
+      <span class="tag green">Production-ready</span>
+      <span class="tag">PKM/Obsidian</span><span class="tag">Writers</span>
+    </div>
+    <p>Users can already highlight passages within each bookmark's reader view and attach personal notes. Highlights and notes are stored locally in IndexedDB, attached to tweet ID, searchable alongside full-text content, and exported in Markdown and JSONL.</p>
+    <div class="feature-evidence">
+      <strong>Evidence:</strong> <em>"No meaningful extension does Readwise-style highlighting on x.com."</em> Readwise losing Twitter users specifically because "Readwise's focus has shifted towards their Reader app." Totem's $19 lifetime vs. $120/year for the same output is a clear narrative. The Obsidian export preset on the roadmap makes annotation-to-Markdown the natural companion feature.
+    </div>
+  </div>
+
+  <div class="feature-card">
+    <div class="feature-num">04 · Acquisition Feature · Low Effort</div>
+    <div class="feature-title">Context Menu + Keyboard Shortcut for Quick-Save</div>
+    <div class="feature-meta">
+      <span class="tag green">Acquisition</span>
+      <span class="tag green">Complexity: Low</span>
+      <span class="tag">Nosurf</span><span class="tag">Researchers</span>
+    </div>
+    <p>Right-click context menu item ("Save to Totem") on any x.com or twitter.com link anywhere on the web. Keyboard shortcut (cmd/ctrl+shift+T) saves the currently highlighted tweet URL. Immediate add to reading queue without requiring navigation to X. Toast confirmation.</p>
+    <div class="feature-evidence">
+      <strong>Evidence:</strong> <em>"Bookmarking should be as frictionless as taking a screenshot — clicking a hotkey"</em> (Ask HN #37009892). ContextBolt winning comparisons "specifically on automatic capture vs manual export step." This is the nosurf use case — users encounter X links in newsletters or HN comments and want to save them without triggering an X session. The extension already has host_permissions for x.com — context menu registration is a single-day addition.
+    </div>
+  </div>
+
+  <div class="feature-card">
+    <div class="feature-num">05 · Acquisition Surface · Genuinely Differentiated</div>
+    <div class="feature-title">Universal Tweet Preview on External Sites</div>
+    <div class="feature-meta">
+      <span class="tag green">Acquisition</span>
+      <span class="tag amber">Complexity: Medium</span>
+      <span class="tag">Nosurf</span><span class="tag">Researchers</span>
+    </div>
+    <p>When the user visits any webpage containing x.com or twitter.com links, inject an inline preview of tweet content served from local IndexedDB cache — no request to X required. If the tweet is in saved bookmarks, show a "Saved in Totem" badge. Works even when X blocks logged-out embeds (since 2023).</p>
+    <div class="feature-evidence">
+      <strong>Evidence:</strong> <em>"I absolutely refuse to go to Twitter links anymore; they don't usually work unless you're logged in."</em> X has permanently blocked public tweet embeds for logged-out users since 2023 — every newsletter that references a tweet now shows a broken embed. This is a visible daily utility that exposes Totem to users who have never opened X in the current browser session. No competing bookmark tool has shipped this.
+    </div>
+  </div>
+
+  <div class="feature-card">
+    <div class="feature-num">06 · Developer Acquisition · Competitive Necessity</div>
+    <div class="feature-title">MCP (Model Context Protocol) Endpoint</div>
+    <div class="feature-meta">
+      <span class="tag amber">Complexity: High</span>
+      <span class="tag">Developers</span><span class="tag">AI Power Users</span>
+    </div>
+    <p>Expose Totem's local IndexedDB bookmark corpus as an MCP server that AI tools (Claude Desktop, Cursor, Windsurf) can query in real time. Users ask their AI assistant "what did I save about vector databases?" and get answers pulled directly from their Totem library. MCP server runs locally as a companion process.</p>
+    <div class="feature-evidence">
+      <strong>Evidence:</strong> ContextBolt was named top Twitter bookmark manager in a 2026 nine-tool roundup <em>specifically because of MCP integration.</em> An HN builder created an MCP-connected bookmark manager in March 2026 because "X's are useless." MCP adoption among developers is the sharpest growth curve in developer tools in 2025–2026. An MCP endpoint from local IndexedDB is architecturally trivial — the data store already exists.
+    </div>
+  </div>
+
+  <div class="feature-card">
+    <div class="feature-num">07 · Retention · Power User Conversion</div>
+    <div class="feature-title">Semantic Search Over Local Corpus</div>
+    <div class="feature-meta">
+      <span class="tag amber">Complexity: High</span>
+      <span class="tag">Developers</span><span class="tag">PKM</span><span class="tag">500+ Bookmarks</span>
+    </div>
+    <p>AI-powered semantic search alongside existing full-text search. Natural language queries over local IndexedDB corpus. Implement using <code>transformers.js</code> with <code>all-MiniLM-L6-v2</code> running entirely in the browser — no API key, no cloud, no cost per query.</p>
+    <div class="feature-evidence">
+      <strong>Evidence:</strong> <em>"Sometimes even when you enter exact keywords the tweet is nowhere to be found"</em> (Twillot blog, multiple 2025–2026 sources). ContextBolt named best in category in 2026 roundup specifically for semantic search. ContextBolt's free tier caps at 150 bookmarks — users with large collections are underserved. transformers.js has matured to under 50ms per query in browser extension context. Local-first semantic search with no usage cap is a genuine moat.
+    </div>
+  </div>
+
+  <div class="feature-card">
+    <div class="feature-num">08 · Revenue · Now</div>
+    <div class="feature-title">One-Time Pro Pricing Unlock ($19 Lifetime)</div>
+    <div class="feature-meta">
+      <span class="tag green">Revenue</span>
+      <span class="tag green">Complexity: Low</span>
+      <span class="tag">All Users</span>
+    </div>
+    <p>Ship the Pro tier. Gate: Markdown/CSV/JSONL export, deleted tweet caching, bulk operations, advanced filters. Free tier remains fully functional. $14 founders price for 60 days.</p>
+    <div class="feature-evidence">
+      <strong>Evidence:</strong> All pricing research converges. "Dominant sentiment across Reddit and HN is strong preference for one-time payment over subscription for Chrome extensions — driven by acute subscription fatigue." The Pocket/Omnivore displacement cohort is primed to pay one-time for tools they trust. Every day without a Pro tier is revenue left on the table while the features to gate behind it are being built anyway.
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================
+     07 · BLOG POSTS
+     ================================================================ -->
+<section class="chapter">
+  <div class="chapter-num">07 · Blog Posts</div>
+  <h1>Blog Posts to Write Next</h1>
+  <p class="lead">Nine post ideas grounded in actual user behavior found in the research. Each one emerges from a real pain point — not keyword volume. Voice filter: behavioral hook, honest about scope, terse, specific. Totem appears near the end, never the top.</p>
+
+  <div class="blog-card">
+    <div class="blog-num">01 · r/nosurf · r/productivity · High Share Potential</div>
+    <div class="blog-title">"Your Twitter Bookmarks Are a Graveyard. Here's Why That's Not a Willpower Problem."</div>
+    <p><strong>Angle:</strong> The behavioral loop that turns saved tweets into a pile you never touch is structural, not personal. The bookmark tab is buried, opening X means the feed, and there is no surface that brings saved things back. Architecture problem, not discipline problem.</p>
+    <div class="blog-evidence"><strong>Real demand:</strong> "I saved so many tweets that I couldn't even scroll back to the beginning, eventually stopping use of bookmarks completely because they turned into a giant pile of random content" (Twillot blog, 2025). DEV Community post "Your Read Later list is a graveyard" resonated heavily with developers.</div>
+    <div style="margin-top: 6pt;"><span class="tag">r/nosurf</span><span class="tag">r/productivity</span><span class="tag">r/digitalminimalism</span><span class="tag green">High viral potential</span></div>
+  </div>
+
+  <div class="blog-card">
+    <div class="blog-num">02 · r/ObsidianMD · r/PKM · HN · SEO + Community</div>
+    <div class="blog-title">"Twitter Bookmarks to Obsidian: What Actually Works in 2026 (After the API Broke Everything)"</div>
+    <p><strong>Angle:</strong> Every plugin that connected X to Obsidian stopped working in April 2023. This post maps what still works, what broke, and why browser-session-based tools are the only reliable path now.</p>
+    <div class="blog-evidence"><strong>Real demand:</strong> "Due to changes to the Twitter API in April 2023, users must sign up for their own Twitter bearer token to use this application" (Tweet to Markdown plugin docs — widely cited frustration). kbravh/obsidian-tweet-to-markdown has 1,900+ GitHub stars. Multiple active GitHub forks on the same problem.</div>
+    <div style="margin-top: 6pt;"><span class="tag">r/ObsidianMD</span><span class="tag">r/PKM</span><span class="tag">Obsidian Forum</span><span class="tag green">HN Candidate</span></div>
+  </div>
+
+  <div class="blog-card">
+    <div class="blog-num">03 · r/nosurf · r/digitalminimalism · Short Post</div>
+    <div class="blog-title">"Reading Twitter Without Opening Twitter"</div>
+    <p><strong>Angle:</strong> X has content worth reading, but visiting X means surrendering to the feed. The communities that have figured this out share one principle: extract content before the algorithm extracts you.</p>
+    <div class="blog-evidence"><strong>Real demand:</strong> Cal Newport's "zero-sum antagonism" framing is the dominant lens in r/nosurf (302K members) and r/digitalminimalism (199K members). Feedbin RSS at $5/month is the current cited workaround.</div>
+    <div style="margin-top: 6pt;"><span class="tag">r/nosurf</span><span class="tag">r/digitalminimalism</span><span class="tag green">Also a good X thread</span></div>
+  </div>
+
+  <div class="blog-card">
+    <div class="blog-num">04 · r/selfhosted · r/degoogle · HN · Trust + Conversion</div>
+    <div class="blog-title">"What Pocket's Shutdown Taught Us About Saving Things on the Internet"</div>
+    <p><strong>Angle:</strong> Mozilla shut down Pocket on July 8, 2025. Data export window closed November 12, 2025. The lesson is not "don't use read-later apps" — it is that "where does this live?" matters more than "how good is the interface?"</p>
+    <div class="blog-evidence"><strong>Real demand:</strong> "After Pocket's shutdown in July 2025, interest in self-hosted bookmark tools spiked sharply — users learned that you don't own what you don't host." Omnivore acquihired October 2024, went dark November 15, 2024. This behavioral conclusion is the #1 insight across r/selfhosted, r/degoogle, and HN right now.</div>
+    <div style="margin-top: 6pt;"><span class="tag">r/selfhosted</span><span class="tag">r/degoogle</span><span class="tag">HN</span></div>
+  </div>
+
+  <div class="blog-card">
+    <div class="blog-num">05 · r/Twitter · r/journalism · SEO: "twitter bookmark disappeared"</div>
+    <div class="blog-title">"The Twitter Bookmark You Saved Is Gone. Here's Why."</div>
+    <p><strong>Angle:</strong> When someone deletes their tweet, every bookmark pointing to it silently breaks. No notification, no cached copy, just a dead link. This is happening to research libraries at scale every day.</p>
+    <div class="blog-evidence"><strong>Real demand:</strong> "If the original author deletes the tweet, your bookmark will instantly become invalid, which can be a massive loss for anyone doing content research" (archivlyx.com, twillot.com, getdewey.co, 2025–2026). This mechanism is under-explained — genuine SERP gap.</div>
+    <div style="margin-top: 6pt;"><span class="tag">r/Twitter</span><span class="tag">r/journalism</span><span class="tag green">SEO gap</span></div>
+  </div>
+
+  <div class="blog-card">
+    <div class="blog-num">06 · r/PKM · r/ObsidianMD · r/productivity · Conversion Post</div>
+    <div class="blog-title">"Readwise Is Overkill for Twitter Bookmarks"</div>
+    <p><strong>Angle:</strong> Readwise costs ~$120/year and bundles Kindle highlights, PDF sync, spaced repetition. Most people who use it for Twitter bookmarks don't use 60–70% of what they're paying for. This is not a hit piece — it's honest scoping.</p>
+    <div class="blog-evidence"><strong>Real demand:</strong> "The cost and complexity of Readwise just for tweets is hard to justify. Readwise's focus has shifted towards their Reader app and the original 1.0 app has seen little in terms of updates." Multiple Reddit threads confirm pricing as the top complaint. Readwise alternatives searches spiking in 2025–2026.</div>
+    <div style="margin-top: 6pt;"><span class="tag">r/PKM</span><span class="tag">r/ObsidianMD</span><span class="tag green">High conversion potential</span></div>
+  </div>
+
+  <div class="blog-card">
+    <div class="blog-num">07 · r/Twitter · r/productivity · SEO: "twitter bookmark search not working"</div>
+    <div class="blog-title">"Why Twitter Bookmark Search Still Does Not Work (Even After X Added It)"</div>
+    <p><strong>Angle:</strong> X launched bookmark search in late 2024. Users report it returns wrong results even with exact keywords. Android still has no search as of 2026. What's actually broken, why the constraint is real, and what local full-text search looks like in comparison.</p>
+    <div class="blog-evidence"><strong>Real demand:</strong> "The search function is still incredibly difficult to use, sometimes even when you enter exact keywords the tweet is nowhere to be found" (Twillot blog, multiple 2025–2026 sources). "Android has no bookmark search at all as of 2026."</div>
+    <div style="margin-top: 6pt;"><span class="tag">r/Twitter</span><span class="tag green">SEO long-tail</span></div>
+  </div>
+
+  <div class="blog-card">
+    <div class="blog-num">08 · r/ObsidianMD · r/PKM · r/logseq · r/Notion · Multi-Community</div>
+    <div class="blog-title">"Twitter Bookmarks for Obsidian, Logseq, and Notion: A Workflow Comparison"</div>
+    <p><strong>Angle:</strong> Three PKM communities, three different workflows. Maps current state for each: what plugins exist, what broke in 2023, what still works without an API key, what you actually get in each export format.</p>
+    <div class="blog-evidence"><strong>Real demand:</strong> r/ObsidianMD: "Is there an elegant solution for capturing content from Twitter?" r/logseq: logseq-twitter-extractor plugin requires API credentials, increasingly broken. Multiple GitHub repos with active forks across all three platforms.</div>
+    <div style="margin-top: 6pt;"><span class="tag">r/ObsidianMD</span><span class="tag">r/PKM</span><span class="tag">r/logseq</span><span class="tag">r/Notion</span><span class="tag">Obsidian Forum</span></div>
+  </div>
+
+  <div class="blog-card">
+    <div class="blog-num">09 · r/privacy · r/selfhosted · r/degoogle · HN · Trust Building</div>
+    <div class="blog-title">"What 'Local-First' Actually Means for a Browser Extension"</div>
+    <p><strong>Angle:</strong> Every tool that handles Twitter bookmarks makes a choice about where data lives. Most don't explain this choice clearly. "Local-first" gets used as marketing language — but the practical difference between IndexedDB in your browser and a cloud database owned by a company is concrete and consequential.</p>
+    <div class="blog-evidence"><strong>Real demand:</strong> "Zero data collection with no accounts or telemetry — this is what makes a browser extension trustworthy in 2025" (HN thread on trusting browser extensions). Strava API lock-in post: 1,698 upvotes, 296 comments on r/selfhosted. "BookmarkQ became impractical due to the Twitter API costing $100 per month" — showing systemic risk of cloud-dependent tools.</div>
+    <div style="margin-top: 6pt;"><span class="tag">r/privacy</span><span class="tag">r/selfhosted</span><span class="tag">HN</span><span class="tag green">Trust signal</span></div>
+  </div>
+</section>
+
+<!-- ================================================================
+     08 · THE NICHE TO OWN
+     ================================================================ -->
+<section class="chapter">
+  <div class="chapter-num">08 · The Niche</div>
+  <h1>The Niche to Own</h1>
+  <p class="lead">All five personas, all thirteen communities, and all eight features point at the same position. The research is unusually convergent.</p>
+
+  <div class="callout" style="font-size: 11.5pt; line-height: 1.6; padding: 16pt 20pt;">
+    <p>Totem should own the position of <strong>the Twitter bookmark tool for people who have already decided the feed is not worth the cost.</strong></p>
+    <p style="margin-top: 10pt;">This is a specific, real, and large group — not an abstract persona. It is the person who follows 40 accounts carefully, saves threads compulsively, and then never reads them because accessing bookmarks means triggering the For You page. It is the Obsidian user who has tried three broken plugins and still has no reliable path from X to their vault. It is the r/selfhosted member who watched Pocket die and is now treating every cloud-hosted tool as a liability. These three populations overlap heavily and share one belief: <strong>the content on X is worth something, but the platform is not their friend.</strong></p>
+    <p style="margin-top: 10pt;">The tools they currently use are all compromises: Feedbin RSS is powerful but technical. Readwise is expensive and overkill. Dewey is broken. ContextBolt requires a monthly fee and has a bookmark cap. Every free plugin broke in April 2023. Totem wins this position by being the only tool that treats the browser itself as the infrastructure — no server to shut down, no API to break, no subscription to resent — while being as frictionless as a new tab.</p>
+    <p style="margin-top: 10pt;">They will pay $19 once because they have already paid more than that in broken tools, wasted time, and, after Pocket, in content they can no longer access.</p>
+  </div>
+
+  <div class="takeaway">
+    <div class="takeaway-label">The Positioning Line</div>
+    <p>Not: "Twitter made better."</p>
+    <p style="margin-top: 6pt; font-size: 12pt; font-weight: 500; color: var(--brand);">"The content you saved, in the first screen you open, without touching the platform that holds it hostage."</p>
+  </div>
+
+  <h2>The Sequenced Plan</h2>
+  <table class="striped">
+    <thead><tr><th>Week</th><th>Action</th><th>Impact</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>Week 1</strong></td>
+        <td>Ship $19 Pro tier (gate: export + deleted tweet caching). Set $14 founders price.</td>
+        <td>Revenue opens</td>
+      </tr>
+      <tr>
+        <td><strong>Week 1–2</strong></td>
+        <td>Post r/nosurf founder story. Same week: Show HN with GraphQL interception angle.</td>
+        <td>Top 2 personas reached</td>
+      </tr>
+      <tr>
+        <td><strong>Month 1</strong></td>
+        <td>Promote thread-aware full capture. Post r/ObsidianMD with Markdown screenshot. Reply to existing HN threads.</td>
+        <td>PKM persona converts</td>
+      </tr>
+      <tr>
+        <td><strong>Month 1–2</strong></td>
+        <td>Write "Twitter Bookmarks Are a Graveyard" + "What Pocket's Shutdown Taught Us." Post r/selfhosted + r/degoogle.</td>
+        <td>Privacy persona + SEO</td>
+      </tr>
+      <tr>
+        <td><strong>Month 2–3</strong></td>
+        <td>Build context menu quick-save + universal tweet preview. Write Obsidian/Logseq/Notion workflow comparison.</td>
+        <td>Acquisition surface expands</td>
+      </tr>
+      <tr>
+        <td><strong>Month 3+</strong></td>
+        <td>MCP endpoint (closes ContextBolt gap for developers). Semantic search (closes ContextBolt gap for power users).</td>
+        <td>Developer persona converts</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <hr>
+  <p class="small" style="text-align: center; margin-top: 20pt;">
+    Totem GTM Research Report · June 16, 2026 · Generated by 16-agent research sweep · 282 tool calls<br>
+    usetotem.xyz · <a href="https://chromewebstore.google.com/detail/acpkgdfhoaalmnhjifhneghcgfnjkglo" style="color: var(--brand);">Chrome Web Store</a>
+  </p>
+</section>
+
+<!-- ==================================================================
+     09 · ACTION CHECKLIST
+     Code-grounded todo list — every item verified against the codebase
+     by a 5-agent parallel investigation (June 16, 2026)
+     ================================================================ -->
+<section class="chapter" id="todo-section">
+  <div class="chapter-num">09 · Action Checklist</div>
+  <h1>What to Build, Post, and Decide</h1>
+  <p class="lead">Everything below is grounded in 5-agent parallel code investigation. Several features the GTM report listed as "medium complexity to build" are already fully implemented. The real gaps are smaller and faster to close than the research implied.</p>
+
+  <!-- ── REALITY CHECK BOX ── -->
+  <div class="callout" style="margin-bottom: 20pt;">
+    <p><strong>What the code investigation changed:</strong> Highlights &amp; annotations, full-text search, Markdown export with YAML frontmatter, thread parsing, and the complete reader are <em>already production-built</em>. The GTM report's feature list describes the product as more incomplete than it is. The real engineering gaps are: (1) a tombstone write for deleted tweets — half a day in <code>posts.ts:93</code>; (2) background thread hydration — 1–2 days; (3) a paywall — no infrastructure exists yet; (4) context menu — not started; and (5) semantic search and MCP — genuinely large bets.</p>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════
+       SECTION A — THIS WEEK
+       ══════════════════════════════════════════════════════════ -->
+  <h2>A — This Week (Critical Path)</h2>
+  <p>These have zero or near-zero engineering cost and are blocking downstream actions. Do them before anything else.</p>
+
+  <div class="community-card" style="margin-bottom: 12pt;">
+    <div class="community-header">
+      <span class="community-name">1. Fix the Chrome Web Store listing title</span>
+      <span class="tag red">Blocking</span>
+      <span class="tag amber">Manual — no code</span>
+    </div>
+    <p>The live CWS title is still the old name (<em>Twitter Saver: Bookmarks on New Tab, Search &amp; Export</em>). The manifest is already updated to <em>Totem - Twitter Bookmarks on New Tab, Search &amp; Export</em> (v1.2.3) but the dashboard hasn't been changed. This is blocking the Featured badge submission because the pre-flight check fails on title mismatch.</p>
+    <ul>
+      <li>Log in to the Chrome Web Store Developer Dashboard</li>
+      <li>Update the <strong>Store listing → Name</strong> to: <em>Totem - Twitter Bookmarks on New Tab, Search &amp; Export</em></li>
+      <li>Update the <strong>Short description</strong> and <strong>Long description</strong> to the copy in <code>plans/chrome-web-store-listing.md</code></li>
+      <li>Save draft → Submit for review</li>
+    </ul>
+  </div>
+
+  <div class="community-card" style="margin-bottom: 12pt;">
+    <div class="community-header">
+      <span class="community-name">2. Post the Show HN</span>
+      <span class="tag red">High impact</span>
+      <span class="tag green">Draft ready</span>
+    </div>
+    <p>The Show HN draft is complete and noted as ready in <code>plans/next-release-growth-checklist.md</code>. Post is gated only on the CWS listing being live with the correct name. Once the dashboard update goes through:</p>
+    <ul>
+      <li>Post Tuesday–Thursday, 7–9 AM Pacific</li>
+      <li>Title: <em>Show HN: Totem – Twitter bookmarks on every new tab, local-only, no account, GraphQL interception</em></li>
+      <li>Lead with the technical architecture: passive GraphQL interception, MV3 compliance, IndexedDB, no Totem server. Explain why you didn't use the API ($100/month, breaks constantly).</li>
+      <li>Engage every comment within 30 minutes — HN momentum is entirely front-loaded</li>
+      <li>After posting: reply to existing threads at id=40609664 and id=37009892 with a brief factual description and link</li>
+    </ul>
+  </div>
+
+  <div class="community-card" style="margin-bottom: 12pt;">
+    <div class="community-header">
+      <span class="community-name">3. Post r/SideProject</span>
+      <span class="tag">Medium impact</span>
+      <span class="tag green">Draft ready</span>
+    </div>
+    <p>Draft is ready. This community explicitly exists for sharing what you are building. Lead with specific numbers (install count, star rating). Stay in comments for at least 2 hours after posting. Title format: <em>"I built a Chrome extension that puts my Twitter bookmarks on every new tab so I actually read them — [N] installs later here's what I learned."</em></p>
+  </div>
+
+  <div class="community-card" style="margin-bottom: 12pt;">
+    <div class="community-header">
+      <span class="community-name">4. Start the Pro paywall — choose a processor</span>
+      <span class="tag red">Revenue blocker</span>
+      <span class="tag amber">1–2 weeks total</span>
+    </div>
+    <p><strong>No payment infrastructure exists anywhere in the codebase.</strong> Not a single line. Every day without a Pro tier is revenue left on the table while several strong Pro features (export, highlights, local search, reader mode, and full export hydration) are already built. The remaining preservation gap is small. Decision to make today:</p>
+    <ul>
+      <li><strong>Recommended:</strong> LemonSqueezy — handles EU VAT automatically, lowest setup friction for one-time Chrome extension purchases, widely used by indie extension builders</li>
+      <li>Flow: User clicks "Unlock Pro" → LemonSqueezy checkout → on payment, LS webhook hits a Vercel edge function → edge function stores a HMAC-signed license key → extension checks key on startup via <code>chrome.storage.sync</code></li>
+      <li>Founders price: $14 for first 60 days, then $19 lifetime</li>
+      <li>Gate these features: full ZIP export, highlights, and full export hydration now; advanced search filters and deleted-tweet preservation after the specific gaps below are closed</li>
+      <li>Free tier stays: new tab reader, full-text search, reader mode, basic sync — no bookmark cap</li>
+    </ul>
+    <p style="margin-top: 8pt;"><em>Start the LemonSqueezy account setup today. The engineering is the shorter part once the account is ready.</em></p>
+  </div>
+
+  <div class="community-card" style="margin-bottom: 12pt;">
+    <div class="community-header">
+      <span class="community-name">5. Submit Featured badge application</span>
+      <span class="tag amber">Gated on #1</span>
+    </div>
+    <p>The pre-flight script (<code>pnpm cws:featured:preflight</code>) checks that the live listing title matches. Run it after the CWS dashboard update clears. Then submit via the Featured badge request form. The listing, screenshots, and promo tile are already confirmed ready in the checklist.</p>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════
+       SECTION B — FEATURE WORK (code-grounded)
+       ══════════════════════════════════════════════════════════ -->
+  <h2>B — Feature Work (Ordered by Impact ÷ Effort)</h2>
+
+  <!-- B1: Deleted tweet tombstone -->
+  <h3>B1 · Fix Deleted Tweet Preservation — 0.5 day</h3>
+  <span class="tag green">Already 80% done</span>
+  <span class="tag">Effort: half a day</span>
+  <p style="margin-top: 8pt;">The types and DB schema for deleted tweet tombstoning are fully in place (<code>detailsStatus: "unavailable"</code>, <code>unavailableReason: "deleted"</code> in <code>src/types/index.ts:180</code>). The full tweet content (text, author, media) is already stored locally at sync time. <strong>The only gap: the tombstone is never written.</strong></p>
+  <p>When <code>parseTweetDetailPayload()</code> returns <code>{ focalTweet: null }</code>, the code currently throws an error instead of persisting a tombstone. Two files to change:</p>
+  <table class="striped">
+    <thead><tr><th>File</th><th>Change</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><code>src/api/core/posts.ts:93–101</code></td>
+        <td>Detect null focalTweet → write <code>{ tweetId, fetchedAt, focalTweet: null, thread: [], detailsStatus: "unavailable", unavailableReason: "deleted" }</code> to IDB via <code>upsertTweetDetailCache</code></td>
+      </tr>
+      <tr>
+        <td><code>src/components/BookmarkReader.tsx</code></td>
+        <td>When <code>detailsStatus === "unavailable"</code>, synthesize reader content from the cached <code>Bookmark</code> row (text, author, media) instead of showing the error screen. Add a subtle "original post deleted" badge.</td>
+      </tr>
+      <tr>
+        <td><code>src/components/reader/reader-error-view.ts</code></td>
+        <td>Optional: add a "deleted but cached" view variant distinct from "network error"</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="callout">
+    <p><strong>Why this matters for conversion:</strong> "If the original author deletes the tweet, your bookmark instantly becomes invalid — a massive loss for content research." This is the #1 emotional driver for the Pro tier upgrade. The feature is half a day of work but unlocks the most compelling Pro narrative: <em>pay once, own your saves forever, even after deletion.</em></p>
+  </div>
+
+  <!-- B2: No-tab hydration -->
+  <h3>B2 · Optional No-Tab Hydration — defer</h3>
+  <span class="tag green">Full export hydration built</span>
+  <span class="tag">Effort: optional</span>
+  <p style="margin-top: 8pt;">Thread parsing, DB schema, types, reader rendering, export, and full-library export hydration are implemented. The <code>TweetDetailCache</code> with <code>thread: ThreadTweet[]</code> is stored and exported correctly, and <code>src/stores/hydration-store.ts</code> can walk bookmarks missing details without requiring the reader to be open. The only remaining optional gap is a service-worker or <code>chrome.alarms</code> version that keeps hydrating when no Totem tab is alive; the existing plan intentionally rejected that complexity because Totem is the new-tab page.</p>
+  <table class="striped">
+    <thead><tr><th>File</th><th>Change</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><code>src/stores/hydration-store.ts</code></td>
+        <td>Already provides the runtime hydration loop for full export: finds missing detail rows, fetches tweet detail, stores thread content, handles auth/rate-limit/storage pauses, and coordinates with a single-writer lock</td>
+      </tr>
+      <tr>
+        <td><code>src/service-worker/index.ts</code></td>
+        <td>Optional future enhancement only: add a <code>chrome.alarms</code>-triggered pass if you decide hydration must continue when no Totem tab is open</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>No parser, type, export, or runtime hydration changes are needed for the current product promise. Treat this as a possible reliability enhancement, not a launch blocker.</p>
+
+  <!-- B3: Context menu + keyboard shortcut -->
+  <h3>B3 · Context Menu &amp; Keyboard Shortcut — 2–4 days</h3>
+  <span class="tag red">Not started</span>
+  <span class="tag amber">Effort: 2–4 days</span>
+  <p style="margin-top: 8pt;">Zero implementation exists. No <code>contextMenus</code> permission, no <code>commands</code> section in the manifest, no <code>chrome.contextMenus</code> or <code>chrome.commands</code> usage anywhere. This is the most impactful low-complexity feature not yet started — it turns Totem into a utility for the nosurf persona who encounters tweet links in newsletters and blogs without ever wanting to visit X.</p>
+  <table class="striped">
+    <thead><tr><th>What</th><th>Where</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Add <code>"contextMenus"</code> to <code>permissions</code> and a <code>"commands"</code> section with <code>Cmd/Ctrl+Shift+S</code></td>
+        <td><code>public/manifest.json</code></td>
+      </tr>
+      <tr>
+        <td>Create <code>src/service-worker/context-menu.ts</code></td>
+        <td>Register menu item, <code>onClicked</code> handler, URL parsing to extract tweet ID from <code>x.com/*/status/*</code> or <code>twitter.com</code> patterns</td>
+      </tr>
+      <tr>
+        <td>Wire into <code>src/service-worker/index.ts</code></td>
+        <td>Register menu on install, add <code>chrome.commands.onCommand</code> listener alongside the existing handlers</td>
+      </tr>
+    </tbody>
+  </table>
+  <p><strong>Decision to make:</strong> Should a context-menu save also call the X CreateBookmark API (so it appears in X's own bookmarks too), or only save locally? Local-only = 2 days, API-backed = 3–4 days because you need to handle the auth-not-ready case gracefully when there's no UI to prompt re-auth.</p>
+
+  <!-- B4: Pro tier implementation -->
+  <h3>B4 · Pro Tier Gating in the Extension — 1 week (after B1 decision)</h3>
+  <span class="tag red">Not started</span>
+  <span class="tag amber">Effort: 1 week</span>
+  <p style="margin-top: 8pt;">Once LemonSqueezy is set up (see A4), the in-extension gating work:</p>
+  <ul>
+    <li>Add a <code>proLicense</code> field to <code>chrome.storage.sync</code> schema — syncs across user's browsers</li>
+    <li>Create a <code>src/lib/pro.ts</code> module: HMAC-verify the license key locally on load, expose an <code>isProUnlocked()</code> check</li>
+    <li>Gate in <code>ExportModal.tsx</code>: show "Pro" badge on export button, redirect to checkout if unlocked = false</li>
+    <li>Gate highlights visibility behind Pro (the UI is done; just add a check at the <code>useHighlights</code> hook entry)</li>
+    <li>Add an "Unlock Pro — $14 founders price" CTA in the settings modal and in the new-tab home</li>
+    <li>No new exports to implement — Markdown, CSV, JSONL are all already working</li>
+  </ul>
+  <div class="takeaway">
+    <div class="takeaway-label">Natural Pro Gate</div>
+    <p>Free: new tab reader, full-text search, reader mode, sync, basic stats. No cap on bookmark count.</p>
+    <p style="margin-top: 6pt;">Pro ($19 one-time, $14 founders): ZIP export (Markdown/CSV/JSONL), highlights &amp; notes, full export hydration, advanced search filters, deleted tweet preservation. Export, highlights, and full export hydration are already built; preservation needs the small implementation gap above before it becomes a clean Pro promise.</p>
+  </div>
+
+  <!-- B5: Universal tweet preview -->
+  <h3>B5 · Universal Tweet Preview on External Sites — assess before building</h3>
+  <span class="tag red">High complexity</span>
+  <span class="tag amber">Effort: 1–2 weeks + CWS review risk</span>
+  <p style="margin-top: 8pt;">No cross-site content script exists. Both current content scripts (<code>detect-user.js</code>, <code>mutation-hook.js</code>) are scoped to <code>x.com</code> only. The feature requires <code>&lt;all_urls&gt;</code> host permission, which triggers an additional Chrome Web Store manual review and requires a detailed privacy justification.</p>
+  <p><strong>Assess this before building:</strong></p>
+  <ul>
+    <li><strong>CWS risk:</strong> <code>&lt;all_urls&gt;</code> access is the permission most likely to cause CWS rejection or Featured badge denial. Consider using <code>optional_host_permissions</code> with a runtime permission request instead — user opts in, avoids the install-time flag.</li>
+    <li><strong>UI constraint:</strong> A content script cannot use React or the extension's build output. The hover card must be vanilla DOM with Shadow DOM isolation to avoid clashing with host page styles and z-index. Separate Vite entry point required (like <code>open-in-totem.ts</code>).</li>
+    <li><strong>t.co links:</strong> Most tweet links in newsletters and blogs come through t.co shorteners. Resolution adds a network round-trip per link — handle carefully to avoid slowing page loads.</li>
+    <li><strong>DB access:</strong> Content scripts cannot access the extension's IndexedDB directly (origin-scoped to <code>chrome-extension://</code>). Previews must round-trip through the service worker via <code>chrome.runtime.sendMessage</code> using the existing <code>FETCH_TWEET_DETAIL</code> message pattern.</li>
+  </ul>
+  <p><em>Defer until after Featured badge is secured. The <code>&lt;all_urls&gt;</code> permission could complicate the submission.</em></p>
+
+  <!-- B6: Semantic search -->
+  <h3>B6 · Semantic Search (transformers.js) — plan carefully</h3>
+  <span class="tag red">High complexity</span>
+  <span class="tag amber">Effort: 2 weeks</span>
+  <p style="margin-top: 8pt;">Not installed. The existing MiniSearch implementation is production-quality with fuzzy matching, BM25 scoring, recency decay, and rich query operators — it handles most user search needs well. Semantic search adds concept-retrieval when the user doesn't remember exact keywords.</p>
+  <p><strong>Key blockers to solve before starting:</strong></p>
+  <ul>
+    <li><strong>CSP blocker:</strong> The current <code>manifest.json</code> CSP is <code>script-src 'self'</code>. Loading a WASM-compiled model requires either <code>wasm-eval</code> or an <code>ArrayBuffer</code> instantiation approach. Adding <code>wasm-eval</code> to the CSP will trigger additional CWS scrutiny — same risk as <code>&lt;all_urls&gt;</code>. Check Chrome's current WASM-in-extension guidance before committing.</li>
+    <li><strong>Model size:</strong> <code>all-MiniLM-L6-v2</code> is 22MB WASM + weights. This must ship inside the extension ZIP, which increases install size and CWS review time.</li>
+    <li><strong>Initial indexing:</strong> At 20–50ms per embedding on modern hardware, 5,000 bookmarks = 100–250 seconds of blocking computation. Needs chunked background processing with a progress indicator.</li>
+    <li><strong>Storage:</strong> 5,000 bookmarks × 1.5KB per embedding = ~7.5MB of vector data in IndexedDB. Fine. 50,000 = 75MB — starts to matter.</li>
+  </ul>
+  <p>Best sequencing: build MiniSearch gaps first (<code>tag:</code> and <code>lang:</code> operators are stubs), ship context menu, then revisit semantic search after the paywall is in place and conversion data shows whether power users are paying for search.</p>
+
+  <!-- B7: MCP endpoint -->
+  <h3>B7 · MCP Endpoint — long bet, plan the architecture first</h3>
+  <span class="tag red">High complexity</span>
+  <span class="tag amber">Effort: 2–4 weeks</span>
+  <p style="margin-top: 8pt;">No MCP code exists. Chrome MV3 service workers cannot run a TCP or Unix socket server, so a direct MCP endpoint is architecturally impossible without a companion process. Options:</p>
+  <table class="striped">
+    <thead><tr><th>Approach</th><th>Pros</th><th>Cons</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>Native messaging</strong> (recommended)</td>
+        <td>Fully local, no server, aligns with privacy story</td>
+        <td>User installs a companion binary; requires CWS <code>nativeMessaging</code> permission review; distribution is manual (no auto-update)</td>
+      </tr>
+      <tr>
+        <td><strong>Hosted MCP bridge</strong></td>
+        <td>No install friction</td>
+        <td>Breaks local-first story; data leaves the device; introduces a server dependency</td>
+      </tr>
+      <tr>
+        <td><strong>WebSocket bridge</strong></td>
+        <td>Simpler than native messaging</td>
+        <td>Local server must always be running; same distribution problem</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>The bookmark data model is rich enough for MCP: <code>text</code>, <code>author</code>, <code>metrics</code>, <code>media</code>, <code>article</code> (full plainText), <code>thread</code> (full ThreadTweet[]). A <code>search_bookmarks</code> MCP tool over this corpus would close the ContextBolt gap for developers. Defer until after paywall is shipping and you have revenue to justify the engineering time.</p>
+
+  <!-- B8: Small search gaps -->
+  <h3>B8 · Fix Search Operator Stubs — 1 day</h3>
+  <span class="tag green">Quick win</span>
+  <span class="tag">Effort: 1 day</span>
+  <p style="margin-top: 8pt;">Two search operators in <code>src/lib/search/executor.ts</code> always return false and are documented as stubs:</p>
+  <ul>
+    <li><code>tag:value</code> — line 113: <code>case "tag": return false;</code> — tags are not in the data model yet</li>
+    <li><code>lang:value</code> — language is not extracted from tweet content</li>
+  </ul>
+  <p>For <code>lang:</code>: add language detection at parse time in <code>src/api/parsers.ts</code> using the <code>lang</code> field already present in the Twitter GraphQL response (it returns BCP-47 language codes). Store in the Bookmark type. Wire to executor. One day including tests.</p>
+  <p>For <code>tag:</code>: skip until a tagging UI is designed. The tag data model doesn't exist yet and designing it is a product decision, not a quick fix.</p>
+
+  <!-- ══════════════════════════════════════════════════════════
+       SECTION C — BLOG POSTS
+       ══════════════════════════════════════════════════════════ -->
+  <h2>C — Blog Posts to Add to Pipeline</h2>
+  <p>Nine ideas from the GTM research are not yet in <code>plans/blog-pipeline.md</code>. Run each through the topic filter in <code>plans/seo-agent-goal.md</code> before spending DataForSEO budget. Ordered by estimated acquisition impact.</p>
+
+  <table class="striped">
+    <thead>
+      <tr>
+        <th>Priority</th>
+        <th>Title / Angle</th>
+        <th>Primary channel</th>
+        <th>Why now</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="tag red">P0</span></td>
+        <td><strong>"Your Twitter Bookmarks Are a Graveyard. Here's Why That's Not a Willpower Problem."</strong><br><span style="font-size: 9pt; color: var(--stone);">Behavior is structural (architecture problem, not discipline). New tab removes the architectural blocker.</span></td>
+        <td>r/nosurf, r/digitalminimalism, r/productivity</td>
+        <td>Highest share potential of any post. Works as a personal-story format with product mentioned once at the end. SEO long-tail: "twitter bookmarks never read."</td>
+      </tr>
+      <tr>
+        <td><span class="tag red">P0</span></td>
+        <td><strong>"Twitter Bookmarks to Obsidian: What Actually Works in 2026 (After the API Broke Everything)"</strong><br><span style="font-size: 9pt; color: var(--stone);">Every plugin broke in April 2023. Browser-session interception is the only reliable path now. Real Markdown output screenshot required.</span></td>
+        <td>r/ObsidianMD, r/PKM, Obsidian forum</td>
+        <td>kbravh/obsidian-tweet-to-markdown has 1,900+ GitHub stars — this is the addressable audience. Totem's JSONL/Markdown export is the working answer.</td>
+      </tr>
+      <tr>
+        <td><span class="tag red">P0</span></td>
+        <td><strong>"What Pocket's Shutdown Taught Us About Saving Things on the Internet"</strong><br><span style="font-size: 9pt; color: var(--stone);">Pocket died July 8, 2025. Data export window closed November 12. The lesson: "you don't own what you don't host."</span></td>
+        <td>r/selfhosted, r/privacy, r/degoogle, HN</td>
+        <td>Peak migration sentiment is NOW. r/selfhosted activity spiked massively in May–July 2025. This is the conversion post for the privacy persona.</td>
+      </tr>
+      <tr>
+        <td><span class="tag amber">P1</span></td>
+        <td><strong>"The Twitter Bookmark You Saved Is Gone. Here's Why."</strong><br><span style="font-size: 9pt; color: var(--stone);">When someone deletes a tweet, every bookmark pointing to it silently breaks. No notification. No cached copy.</span></td>
+        <td>r/Twitter, r/journalism, HN</td>
+        <td>Good SEO long-tail: "twitter bookmark disappeared," "twitter bookmark deleted." Pairs naturally with the B1 deleted-tweet preservation feature once it ships.</td>
+      </tr>
+      <tr>
+        <td><span class="tag amber">P1</span></td>
+        <td><strong>"Readwise Is Overkill for Twitter Bookmarks"</strong><br><span style="font-size: 9pt; color: var(--stone);">$120/year for Kindle + PDF + spaced repetition when you only want Twitter → Obsidian. Not a hit piece — Readwise is good. Wrong tool for Twitter-only users.</span></td>
+        <td>r/PKM, r/ObsidianMD, r/productivity</td>
+        <td>Readwise alternatives searches spiking. High commercial intent. Direct comparison: $120/year vs $19 once.</td>
+      </tr>
+      <tr>
+        <td><span class="tag amber">P1</span></td>
+        <td><strong>"Reading Twitter Without Opening Twitter"</strong><br><span style="font-size: 9pt; color: var(--stone);">Short observational piece. X has content worth reading. Visiting X means surrendering to the feed. The irony problem, named.</span></td>
+        <td>r/nosurf, r/digitalminimalism</td>
+        <td>Cal Newport language maps directly. Can double as an X thread for the indie maker community. Short enough to write in 2 hours.</td>
+      </tr>
+      <tr>
+        <td><span class="tag">P2</span></td>
+        <td><strong>"Why Twitter Bookmark Search Still Does Not Work (Even After X Added It)"</strong><br><span style="font-size: 9pt; color: var(--stone);">X launched search in late 2024. Returns wrong results even with exact keywords. Android has no search as of 2026.</span></td>
+        <td>r/Twitter, r/productivity</td>
+        <td>Good SEO target: "twitter bookmark search not working." Natural plug for Totem's local full-text search.</td>
+      </tr>
+      <tr>
+        <td><span class="tag">P2</span></td>
+        <td><strong>"Twitter Bookmarks for Obsidian, Logseq, and Notion: A Workflow Comparison"</strong><br><span style="font-size: 9pt; color: var(--stone);">Three PKM communities, three workflows. What exists, what broke in 2023, what works without an API key.</span></td>
+        <td>r/ObsidianMD, r/PKM, r/logseq, r/Notion</td>
+        <td>High share potential across three communities if the post is honest about each platform. Totem as the extraction layer, not a replacement for any PKM tool.</td>
+      </tr>
+      <tr>
+        <td><span class="tag">P2</span></td>
+        <td><strong>"What 'Local-First' Actually Means for a Browser Extension"</strong><br><span style="font-size: 9pt; color: var(--stone);">Every tool makes a choice about where the data lives. Most don't explain it clearly. Concrete difference between IndexedDB in your browser and a cloud database.</span></td>
+        <td>r/privacy, r/selfhosted, r/degoogle, HN</td>
+        <td>Trust argument made explicit for communities that respond to technical honesty. Strava API lock-in post had 1,698 upvotes — same sentiment register.</td>
+      </tr>
+    </tbody>
+  </table>
+  <p class="small" style="margin-top: 8pt;">Before drafting any of these: add them to <code>plans/blog-pipeline.md</code> → run through the topic filter in <code>plans/seo-agent-goal.md</code> → validate with <code>/dataforseo</code> → draft in <code>plans/blog-drafts/</code>.</p>
+
+  <!-- ══════════════════════════════════════════════════════════
+       SECTION D — COMMUNITY / GTM ACTIONS
+       ══════════════════════════════════════════════════════════ -->
+  <h2>D — Community &amp; GTM Actions</h2>
+  <p>Ordered by sequencing dependency. Some are blocked on the CWS listing update (Section A1); some require 2–4 weeks of comment history first.</p>
+
+  <table class="striped">
+    <thead>
+      <tr>
+        <th>Channel</th>
+        <th>Action</th>
+        <th>Gate</th>
+        <th>Priority</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>HN — existing threads</strong></td>
+        <td>Reply to Ask HN id=40609664 ("How do you organize your Twitter/X bookmarks?") and id=37009892 ("Do You Want a Twitter Bookmark Organizer?") with a brief factual description and link. Do this separately from the Show HN.</td>
+        <td>CWS listing live</td>
+        <td><span class="tag red">Now</span></td>
+      </tr>
+      <tr>
+        <td><strong>r/SideProject</strong></td>
+        <td>Post the pre-drafted founder story with specific install numbers. Stay in comments 2+ hours.</td>
+        <td>CWS listing live</td>
+        <td><span class="tag red">Now</span></td>
+      </tr>
+      <tr>
+        <td><strong>AlternativeTo</strong></td>
+        <td>Create the listing. Category: Twitter bookmark managers, alternatives to Dewey, Readwise (for Twitter), Twillot. Free to submit. Gets organic discovery traffic.</td>
+        <td>None</td>
+        <td><span class="tag red">Now</span></td>
+      </tr>
+      <tr>
+        <td><strong>bookmarksave.com</strong></td>
+        <td>Send the outreach email (already drafted in checklist). This is a directory listing, not a review site — low effort, passive acquisition.</td>
+        <td>None</td>
+        <td><span class="tag red">Now</span></td>
+      </tr>
+      <tr>
+        <td><strong>r/nosurf</strong></td>
+        <td>Build comment history first: contribute genuine, non-promotional replies in existing threads ("How do I use Twitter intentionally?", "RSS alternative to Twitter") for 2–4 weeks. Then post the personal transformation story. Never lead with the product.</td>
+        <td>2–4 weeks comment history</td>
+        <td><span class="tag amber">Week 2+</span></td>
+      </tr>
+      <tr>
+        <td><strong>r/ObsidianMD</strong></td>
+        <td>Post after the "Twitter Bookmarks to Obsidian" blog post is live. Lead with a screenshot of actual Markdown output with YAML frontmatter. Reply to every comment asking about DataView compatibility or specific YAML fields.</td>
+        <td>Blog post live + B2 hydration shipped</td>
+        <td><span class="tag amber">Month 1</span></td>
+      </tr>
+      <tr>
+        <td><strong>r/selfhosted</strong></td>
+        <td>Post after "What Pocket's Shutdown Taught Us" blog is live. Angle: IndexedDB is the serverless version of self-hosting. Be precise about what IndexedDB means technically — data in the user's browser profile directory. Link to the GitHub repo if public.</td>
+        <td>Blog post live</td>
+        <td><span class="tag amber">Month 1</span></td>
+      </tr>
+      <tr>
+        <td><strong>X / Twitter thread</strong></td>
+        <td>Thread starting with: "I had 847 bookmarks on Twitter. I had read maybe 12 of them." Walk through why (structural), what you built, how the new tab changes the habit loop. CTA at tweet 8–10. Do not put the link in tweet 1 — algorithm down-ranks external links early.</td>
+        <td>None</td>
+        <td><span class="tag amber">Month 1</span></td>
+      </tr>
+      <tr>
+        <td><strong>r/degoogle + r/PKM</strong></td>
+        <td>Post after r/selfhosted traction is confirmed. r/degoogle angle: no OAuth token, no third-party server, passive session interception. r/PKM angle: free local-first Readwise replacement for Twitter.</td>
+        <td>First-wave traction data</td>
+        <td><span class="tag">Month 2</span></td>
+      </tr>
+      <tr>
+        <td><strong>Product Hunt</strong></td>
+        <td>Gated on 20+ CWS reviews (per checklist). Run review prompt for 4–6 weeks to build review velocity first. Then launch with a Hunter who has 1,000+ followers.</td>
+        <td>20+ CWS reviews</td>
+        <td><span class="tag">Month 2–3</span></td>
+      </tr>
+      <tr>
+        <td><strong>HN — Technical thread</strong></td>
+        <td>Post a technical essay on the GraphQL interception architecture: passive header capture, 4-tier query ID resolution, MV3 constraints, why not the API. This is a P1 roadmap item — wait until it can be posted standalone (not as Show HN).</td>
+        <td>Separate from Show HN</td>
+        <td><span class="tag">Month 2–3</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- ══════════════════════════════════════════════════════════
+       SECTION E — OPEN SOURCE DECISION
+       ══════════════════════════════════════════════════════════ -->
+  <h2>E — Open Source vs. Private Source</h2>
+  <p>The repository is currently private (confirmed: no LICENSE file, <code>"private": true</code> in package.json, no CONTRIBUTING.md, no community issue templates). The GTM report's trust signal argument for open-sourcing is real but the code investigation reveals a meaningful competitive moat worth protecting.</p>
+
+  <div class="persona-card">
+    <div class="persona-name" style="font-size: 13pt;">What's actually the moat</div>
+    <p style="margin-top: 6pt;">Two files contain the competitive advantage:</p>
+    <ul style="margin-top: 6pt;">
+      <li><code>src/service-worker/query-id.ts</code> — The 4-tier GraphQL query ID resolution chain (passive catalog from observed traffic → in-memory cache → bundle scraping → tab discovery). This is what keeps sync working when X rotates its internal API IDs. A competitor could adopt it within weeks of seeing it.</li>
+      <li><code>src/service-worker/auth.ts</code> — The auth capture mechanism. Most competing extensions have cruder approaches. This is a genuine edge.</li>
+    </ul>
+    <p style="margin-top: 8pt;">Everything else — the React UI, Zustand stores, MiniSearch engine, export pipeline, IndexedDB schema — is good engineering but reproducible. It is not the moat.</p>
+  </div>
+
+  <h3>Recommendation: Stay private through paywall launch. Then consider staged openness.</h3>
+
+  <table class="striped">
+    <thead><tr><th>Option</th><th>Pros</th><th>Cons</th><th>Verdict</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>Fully open source now</strong></td>
+        <td>Maximum trust signal for HN/CWS Featured; community backlinks; audit transparency</td>
+        <td>Competitors clone the sync engine immediately; forecloses Pro feature gating before paywall exists; no license means anyone can re-publish to CWS</td>
+        <td><span class="tag red">Don't</span></td>
+      </tr>
+      <tr>
+        <td><strong>Stay fully private</strong></td>
+        <td>Protects moat; paywall can gate anything; no CWS re-publishing risk</td>
+        <td>Weakens trust argument for privacy-first communities (r/selfhosted, r/degoogle ask for auditable code)</td>
+        <td><span class="tag amber">Default for now</span></td>
+      </tr>
+      <tr>
+        <td><strong>Open-source the export format spec</strong></td>
+        <td>Developer trust signal and backlinks with zero moat exposure; the export schema is public-facing anyway (<code>usetotem.xyz/export-format/v1</code>); already called out as a P2 play in the checklist</td>
+        <td>Small effort to write up as a standalone repo</td>
+        <td><span class="tag green">Do this</span></td>
+      </tr>
+      <tr>
+        <td><strong>Source-available UI layer</strong></td>
+        <td>Make the React/Zustand/search layer public, keep <code>src/service-worker/</code> private. Trust signal without full moat exposure.</td>
+        <td>Complex to maintain split; CWS may still not count it as "open source"</td>
+        <td><span class="tag">Consider post-paywall</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="callout">
+    <p><strong>What to do today on open source:</strong></p>
+    <ol style="margin-top: 6pt;">
+      <li>Add a <code>LICENSE</code> file — at minimum a proprietary "All Rights Reserved" notice to prevent forks from republishing to the CWS. Without any license, the legal status is ambiguous.</li>
+      <li>Create a separate public repo at <code>github.com/usetotem/export-format</code> with the export schema, field definitions, and example files. This gives HN credibility and backlinks without touching the sync engine.</li>
+      <li>After the paywall is live and revenue is positive: revisit source-available for the UI layer. The Show HN for that ("we open-sourced the UI, the sync engine stays private for now") is itself a distribution event.</li>
+    </ol>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════
+       MASTER SEQUENCING TABLE
+       ══════════════════════════════════════════════════════════ -->
+  <h2>Master Sequencing Table</h2>
+  <p>Everything on one page, ordered by dependency and impact.</p>
+
+  <table class="striped">
+    <thead>
+      <tr>
+        <th>When</th>
+        <th>Action</th>
+        <th>Type</th>
+        <th>Effort</th>
+        <th>Impact</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Day 1</strong></td>
+        <td>Fix CWS listing title + descriptions (manual dashboard update)</td>
+        <td><span class="tag amber">Manual</span></td>
+        <td>1 hour</td>
+        <td>Unblocks Featured badge, Show HN, r/SideProject</td>
+      </tr>
+      <tr>
+        <td><strong>Day 1</strong></td>
+        <td>Add LICENSE file to repo</td>
+        <td><span class="tag">Code</span></td>
+        <td>15 min</td>
+        <td>Legal clarity, required before any open-source decision</td>
+      </tr>
+      <tr>
+        <td><strong>Day 1–2</strong></td>
+        <td>Create LemonSqueezy account + product listing ($19 lifetime, $14 founders)</td>
+        <td><span class="tag amber">Manual</span></td>
+        <td>2 hours</td>
+        <td>Revenue infrastructure starts</td>
+      </tr>
+      <tr>
+        <td><strong>Day 1–2</strong></td>
+        <td>Post AlternativeTo listing + bookmarksave.com outreach</td>
+        <td><span class="tag amber">Manual</span></td>
+        <td>1 hour</td>
+        <td>Passive acquisition, no gate</td>
+      </tr>
+      <tr>
+        <td><strong>Day 2–3</strong></td>
+        <td>Post Show HN (after CWS listing live)</td>
+        <td><span class="tag amber">Manual</span></td>
+        <td>30 min to post, 2 hrs to engage</td>
+        <td>Developer persona acquisition, HN link equity</td>
+      </tr>
+      <tr>
+        <td><strong>Day 2–3</strong></td>
+        <td>Post r/SideProject</td>
+        <td><span class="tag amber">Manual</span></td>
+        <td>30 min</td>
+        <td>Maker community awareness</td>
+      </tr>
+      <tr>
+        <td><strong>Day 2–3</strong></td>
+        <td>Reply to HN threads id=40609664 and id=37009892</td>
+        <td><span class="tag amber">Manual</span></td>
+        <td>20 min</td>
+        <td>High-intent existing demand</td>
+      </tr>
+      <tr>
+        <td><strong>Day 3</strong></td>
+        <td>Submit Featured badge application (after CWS listing live)</td>
+        <td><span class="tag amber">Manual</span></td>
+        <td>30 min</td>
+        <td>CWS organic discovery</td>
+      </tr>
+      <tr>
+        <td><strong>Week 1</strong></td>
+        <td>B1: Fix deleted tweet tombstone (posts.ts:93–101 + BookmarkReader.tsx)</td>
+        <td><span class="tag">Code</span></td>
+        <td>1–1.5 days</td>
+        <td>Core Pro narrative: "pay once, own your saves forever"</td>
+      </tr>
+      <tr>
+        <td><strong>Week 1</strong></td>
+        <td>B4: Add Pro paywall gating to ExportModal + useHighlights + settings</td>
+        <td><span class="tag">Code</span></td>
+        <td>3–4 days</td>
+        <td>Revenue opens</td>
+      </tr>
+      <tr>
+        <td><strong>Week 1–2</strong></td>
+        <td>B2: Background thread hydration (prefetch-controller.ts + SW alarms)</td>
+        <td><span class="tag">Code</span></td>
+        <td>1–2 days</td>
+        <td>Export quality competitive with specialized thread tools</td>
+      </tr>
+      <tr>
+        <td><strong>Week 1–2</strong></td>
+        <td>B3: Context menu + keyboard shortcut (manifest + context-menu.ts)</td>
+        <td><span class="tag">Code</span></td>
+        <td>2–4 days</td>
+        <td>Nosurf persona: save from anywhere without opening X</td>
+      </tr>
+      <tr>
+        <td><strong>Week 1–2</strong></td>
+        <td>Start r/nosurf comment history (non-promotional replies)</td>
+        <td><span class="tag amber">Manual</span></td>
+        <td>Ongoing</td>
+        <td>Required gate for r/nosurf post in week 3–4</td>
+      </tr>
+      <tr>
+        <td><strong>Week 2–3</strong></td>
+        <td>Draft + publish "Twitter Bookmarks Are a Graveyard" blog post</td>
+        <td><span class="tag amber">Content</span></td>
+        <td>4–6 hours</td>
+        <td>r/nosurf + r/productivity acquisition</td>
+      </tr>
+      <tr>
+        <td><strong>Week 2–3</strong></td>
+        <td>Draft + publish "What Pocket's Shutdown Taught Us" blog post</td>
+        <td><span class="tag amber">Content</span></td>
+        <td>4–6 hours</td>
+        <td>r/selfhosted + r/privacy acquisition</td>
+      </tr>
+      <tr>
+        <td><strong>Week 3–4</strong></td>
+        <td>Draft + publish "Twitter Bookmarks to Obsidian" blog post (with real Markdown screenshot)</td>
+        <td><span class="tag amber">Content</span></td>
+        <td>4–6 hours</td>
+        <td>r/ObsidianMD PKM persona acquisition</td>
+      </tr>
+      <tr>
+        <td><strong>Week 3–4</strong></td>
+        <td>Post r/nosurf personal story (after 3–4 weeks comment history)</td>
+        <td><span class="tag amber">Manual</span></td>
+        <td>1 hour to post</td>
+        <td>Highest-reach persona channel</td>
+      </tr>
+      <tr>
+        <td><strong>Week 3–4</strong></td>
+        <td>Post r/ObsidianMD after blog post is live</td>
+        <td><span class="tag amber">Manual</span></td>
+        <td>30 min + comments</td>
+        <td>PKM persona, Readwise displacement</td>
+      </tr>
+      <tr>
+        <td><strong>Month 1–2</strong></td>
+        <td>Post r/selfhosted + r/degoogle after privacy blog posts live</td>
+        <td><span class="tag amber">Manual</span></td>
+        <td>1 hour</td>
+        <td>Privacy persona acquisition</td>
+      </tr>
+      <tr>
+        <td><strong>Month 1–2</strong></td>
+        <td>Post X thread: "I had 847 bookmarks on Twitter. I had read maybe 12 of them."</td>
+        <td><span class="tag amber">Manual</span></td>
+        <td>2 hours</td>
+        <td>Maker community, algorithm-amplified</td>
+      </tr>
+      <tr>
+        <td><strong>Month 1–2</strong></td>
+        <td>Create <code>github.com/usetotem/export-format</code> public repo (schema + example files)</td>
+        <td><span class="tag">Code</span></td>
+        <td>4 hours</td>
+        <td>Developer trust signal, backlinks</td>
+      </tr>
+      <tr>
+        <td><strong>Month 2–3</strong></td>
+        <td>B5: Universal tweet preview (assess CWS risk first — <code>&lt;all_urls&gt;</code> permission)</td>
+        <td><span class="tag">Code</span></td>
+        <td>1–2 weeks</td>
+        <td>Acquisition surface across the entire web</td>
+      </tr>
+      <tr>
+        <td><strong>Month 2–3</strong></td>
+        <td>Product Hunt launch (gate: 20+ CWS reviews)</td>
+        <td><span class="tag amber">Manual</span></td>
+        <td>1 day prep</td>
+        <td>Maker/tech community spike</td>
+      </tr>
+      <tr>
+        <td><strong>Month 3+</strong></td>
+        <td>B6: Semantic search (transformers.js — assess CSP/WASM risk first)</td>
+        <td><span class="tag">Code</span></td>
+        <td>2 weeks</td>
+        <td>Power user retention, closes ContextBolt gap</td>
+      </tr>
+      <tr>
+        <td><strong>Month 3+</strong></td>
+        <td>B7: MCP endpoint (native messaging companion binary)</td>
+        <td><span class="tag">Code</span></td>
+        <td>2–4 weeks</td>
+        <td>Developer persona, closes ContextBolt gap entirely</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="takeaway" style="margin-top: 20pt;">
+    <div class="takeaway-label">The One Number That Changes Everything</div>
+    <p>Every day the CWS listing shows the wrong title is a day the Featured badge application cannot be submitted. Fix that first — in 60 minutes — and every other action in this list becomes unlocked.</p>
+  </div>
+
+  <hr>
+  <p class="small" style="text-align: center; margin-top: 20pt;">
+    Action Checklist · June 16, 2026 · Code-grounded by 5-agent parallel investigation<br>
+    Every feature status verified against the live codebase at <code>src/</code>
+  </p>
+</section>
+
+<script>
+(function () {
+  const KEY = 'totem-todos-v1';
+  let state = {};
+  try { state = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) {}
+
+  const section = document.getElementById('todo-section');
+  if (!section) return;
+
+  /* ── Inject checkboxes into community cards (Section A) ── */
+  section.querySelectorAll('.community-card').forEach(function (card, i) {
+    const id = 'card-' + i;
+    const header = card.querySelector('.community-header');
+    if (!header) return;
+
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.className = 'todo-check';
+    cb.dataset.id = id;
+    cb.style.cssText = 'margin-right: 10pt; margin-top: 2pt; flex-shrink: 0;';
+    if (state[id]) { cb.checked = true; card.classList.add('card-todo-done'); }
+
+    header.style.display = 'flex';
+    header.style.alignItems = 'flex-start';
+    header.insertBefore(cb, header.firstChild);
+
+    cb.addEventListener('change', function () {
+      if (this.checked) state[id] = 1; else delete state[id];
+      card.classList.toggle('card-todo-done', this.checked);
+      save(); updateProgress();
+    });
+  });
+
+  /* ── Inject checkboxes into tables ── */
+  section.querySelectorAll('table.striped').forEach(function (table, ti) {
+    const thead = table.querySelector('thead tr');
+    if (thead) {
+      const th = document.createElement('th');
+      th.style.cssText = 'width:22pt; padding:6pt 4pt 6pt 0;';
+      thead.insertBefore(th, thead.firstChild);
+    }
+
+    table.querySelectorAll('tbody tr').forEach(function (row, ri) {
+      const id = 'tbl-' + ti + '-' + ri;
+      const td = document.createElement('td');
+      td.style.cssText = 'width:22pt; padding:5pt 4pt 5pt 0; vertical-align:middle; text-align:center;';
+
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.className = 'todo-check';
+      cb.dataset.id = id;
+      if (state[id]) { cb.checked = true; row.classList.add('todo-done'); }
+
+      td.appendChild(cb);
+      row.insertBefore(td, row.firstChild);
+
+      cb.addEventListener('change', function () {
+        if (this.checked) state[id] = 1; else delete state[id];
+        row.classList.toggle('todo-done', this.checked);
+        save(); updateProgress();
+      });
+    });
+  });
+
+  /* ── Progress bar ── */
+  const lead = section.querySelector('.lead');
+  const bar = document.createElement('div');
+  bar.className = 'todo-progress-bar';
+  bar.innerHTML =
+    '<span class="todo-count">Completed: <strong id="td-done">0</strong> of <strong id="td-total">0</strong></span>' +
+    '<div class="todo-bar-track"><div class="todo-bar-fill" id="td-bar" style="width:0%"></div></div>' +
+    '<button class="todo-reset" id="td-reset">Reset all</button>';
+  if (lead) lead.after(bar);
+
+  document.getElementById('td-reset').addEventListener('click', function () {
+    if (!confirm('Reset all completed items?')) return;
+    state = {};
+    save();
+    section.querySelectorAll('.todo-check').forEach(function (cb) {
+      cb.checked = false;
+      const c = cb.closest('.community-card');
+      if (c) c.classList.remove('card-todo-done');
+      const r = cb.closest('tr');
+      if (r) r.classList.remove('todo-done');
+    });
+    updateProgress();
+  });
+
+  function updateProgress() {
+    const all = section.querySelectorAll('.todo-check');
+    const done = Array.from(all).filter(function (c) { return c.checked; }).length;
+    const dEl = document.getElementById('td-done');
+    const tEl = document.getElementById('td-total');
+    const bEl = document.getElementById('td-bar');
+    if (dEl) dEl.textContent = done;
+    if (tEl) tEl.textContent = all.length;
+    if (bEl) bEl.style.width = (all.length ? Math.round(done / all.length * 100) : 0) + '%';
+  }
+
+  function save() { localStorage.setItem(KEY, JSON.stringify(state)); }
+
+  updateProgress();
+})();
+</script>
+</body>
+</html>
