@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Data, Sync & Entitlement Storage · Totem Premium</title>
+<meta name="generator" content="Kami">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="topbar">
+  <a class="wordmark" href="index.html">Totem <span>Premium Conversion</span></a>
+  <div class="topbar-meta">Research &amp; execution plan · v1.0 · 2026.06</div>
+</header>
+<div class="layout">
+<nav class="sidebar" aria-label="Sections">
+<a class="side-brand" href="index.html">Totem <span>Premium</span></a>
+<div class="side-group"><div class="side-group-label">Overview</div>
+<a class="side-link" href="index.html">Home</a>
+</div>
+<div class="side-group"><div class="side-group-label">The Plan</div>
+<a class="side-link" href="02-the-model.html">The Model</a>
+<a class="side-link" href="03-features.html">Features &amp; Limits</a>
+<a class="side-link" href="04-tech-stack.html">Tech Stack</a>
+<a class="side-link" href="05-payments.html">Payment Gateway</a>
+<a class="side-link" href="06-license.html">License Architecture</a>
+<a class="side-link" href="07-system-changes.html">System Changes</a>
+<a class="side-link" href="08-compliance.html">CWS Compliance</a>
+<a class="side-link" href="09-paywall-ux.html">Paywall UX</a>
+<a class="side-link" href="10-rollout.html">Rollout &amp; Decisions</a>
+</div>
+<div class="side-group"><div class="side-group-label">Review</div>
+<a class="side-link" href="11-adversarial-review.html">Adversarial Review</a>
+</div>
+<div class="side-group"><div class="side-group-label">Appendices</div>
+<a class="side-link" href="appendix-a-data-sync.html" aria-current="page">A · Data &amp; Sync</a>
+<a class="side-link" href="appendix-b-features-export.html">B · Features &amp; Export</a>
+<a class="side-link" href="appendix-c-build-release.html">C · Build &amp; Release</a>
+<a class="side-link" href="appendix-d-site-distribution.html">D · Site &amp; Dist.</a>
+<a class="side-link" href="appendix-e-ui-state-upsell.html">E · UI &amp; Upsell</a>
+<a class="side-link" href="appendix-f-payments-compared.html">F · Gateways</a>
+<a class="side-link" href="appendix-g-license-arch.html">G · License &amp; DRM</a>
+<a class="side-link" href="appendix-h-market-discourse.html">H · Market Discourse</a>
+<a class="side-link" href="appendix-i-cws-policy-ux.html">I · CWS Policy</a>
+</div>
+<div class="side-group"><div class="side-group-label">Reference</div>
+<a class="side-link" href="appendix-j-references.html">J · References</a>
+</div>
+</nav>
+<main class="content">
+<div class="chapter-eyebrow">Appendix A</div><h1 class="page-title">Data, Sync &amp; Entitlement Storage</h1><p class="lead">A codebase deep-dive into the IndexedDB schema, the end-to-end sync/interception flow, the durable-state writer-ownership model, the reactive SW&rarr;UI snapshot push, and the exact integration points where a new <code>isPro</code>/license/entitlement fact would live. All file paths are absolute; line numbers cite the code as read.</p>
+
+<h2 id="orientation-for-the-entitlement-designer">Orientation for the entitlement designer</h2>
+
+<p>Two distinct durable substrates exist: account-scoped <strong>IndexedDB</strong> (bookmark/detail/progress/highlight data, written by the runtime) and <strong>chrome.storage</strong> (auth + sync orchestrator + runtime snapshot), governed by a hard "single writer per fact" rule split across two key files.</p>
+
+<p>The architecture already ships a purpose-built <span class="hl">reactive SW&rarr;UI broadcast channel</span>: the service worker writes a <code>RuntimeSnapshot</code> to <code>chrome.storage.local[CS_RUNTIME_STATE_V2]</code>, and every open page picks it up via <code>chrome.storage.onChanged</code> (<code>src/runtime/RuntimeProvider.tsx:96-100</code>). An <code>isPro</code> field can ride this exact channel to be reactive everywhere (SW plus every new-tab/reader page) with zero new plumbing.</p>
+
+<div class="callout">A license/entitlement is a device-global, account-independent fact. It does <strong>not</strong> belong in IndexedDB (wiped on reset, account-scoped) and does <strong>not</strong> belong in the SW-owned sync orchestrator state (account-scoped, wiped on reset). The cleanest home is a new dedicated <code>chrome.storage</code> key with a single declared writer.</div>
+
+<h2 id="indexeddb-schema">IndexedDB schema</h2>
+
+<h3>Databases (account-scoped)</h3>
+
+<p>File: <code>src/db/index.ts</code>; names in <code>src/lib/storage-keys.ts:1-3</code> and <code>src/lib/constants/db.ts</code>.</p>
+
+<ul>
+<li>Default DB: <code>totem</code> (<code>IDB_DATABASE_NAME</code> / <code>DB_NAME</code>).</li>
+<li>Account DB: <code>totem_acct_&lt;accountId&gt;</code> (<code>IDB_ACCOUNT_DATABASE_PREFIX</code> = <code>"totem_acct_"</code>, joined in <code>getDbNameForAccount</code>, <code>src/db/index.ts:119-122</code>).</li>
+<li>Legacy DB: <code>xbt</code> (<code>LEGACY_IDB_DATABASE_NAME</code>), migrated forward on first open (<code>migrateLegacyDatabaseIfNeeded</code>, <code>src/db/index.ts:385-425</code>).</li>
+<li><code>DB_VERSION = 9</code> (<code>src/lib/constants/db.ts:5</code>). The whole schema is created/upgraded in one <code>upgrade()</code> callback (<code>src/db/index.ts:135-277</code>).</li>
+<li>Account selection: <code>setActiveAccountId(accountId)</code> (<code>src/db/index.ts:124-133</code>) flips a module-level <code>activeDbName</code>; <strong>every</strong> read/write goes through <code>getDb()</code> which opens whatever <code>activeDbName</code> currently points at (<code>src/db/index.ts:443-463</code>). The runtime must call <code>setActiveAccountId</code> before any read (enforced convention; see <code>hydrateCurrentAccount</code>, <code>src/stores/runtime-store.ts:549-554</code>).</li>
+</ul>
+
+<h3>Object stores (9 total)</h3>
+
+<p>Schema interface <code>XBookmarksDbSchema</code>, <code>src/db/index.ts:31-101</code>:</p>
+
+<table class="compact">
+<thead><tr><th>Store</th><th>keyPath</th><th>Indexes</th><th>Value type</th></tr></thead>
+<tbody>
+<tr><td><code>bookmarks</code></td><td><code>id</code></td><td><code>tweetId</code>, <code>sortIndex</code>, <code>createdAt</code>, <code>screenName</code> (= <code>author.screenName</code>)</td><td><code>Bookmark</code></td></tr>
+<tr><td><code>tweet_details</code></td><td><code>tweetId</code></td><td><code>fetchedAt</code></td><td><code>TweetDetailCache</code></td></tr>
+<tr><td><code>reading_progress</code></td><td><code>tweetId</code></td><td><code>lastReadAt</code></td><td><code>ReadingProgress</code></td></tr>
+<tr><td><code>highlights</code></td><td><code>id</code></td><td><code>tweetId</code>, <code>createdAt</code></td><td><code>Highlight</code></td></tr>
+<tr><td><code>saved_searches</code></td><td><code>id</code></td><td><code>sortOrder</code>, <code>createdAt</code></td><td><code>SavedSearch</code></td></tr>
+<tr><td><code>search_index</code></td><td><code>id</code></td><td>&mdash;</td><td><code>{ id, json, savedAt }</code> (serialized MiniSearch index, key <code>"minisearch-v1"</code>)</td></tr>
+<tr><td><code>today_queue_snapshots</code></td><td><code>key</code></td><td><code>localDate</code>, <code>generatedAt</code></td><td><code>TodayQueueSnapshot</code></td></tr>
+<tr><td><code>bookmark_queue_metadata</code></td><td><code>tweetId</code></td><td><code>intent</code>, <code>updatedAt</code></td><td><code>BookmarkQueueMetadata</code> (intent + snooze)</td></tr>
+<tr><td><code>today_queue_exposures</code></td><td><code>id</code></td><td><code>tweetId</code>, <code>localDate</code>, <code>createdAt</code></td><td><code>TodayQueueExposure</code></td></tr>
+</tbody>
+</table>
+
+<p>Note: ARCHITECTURE.md &sect;11 lists only the first four; the actual code has 9. The extra five (<code>saved_searches</code>, <code>search_index</code>, the today-queue trio) are real and relevant to several Pro features (advanced search filters &rarr; <code>saved_searches</code>/<code>search_index</code>; queue intent &rarr; <code>bookmark_queue_metadata</code>).</p>
+
+<h3>What a saved-post ("bookmark") record contains</h3>
+
+<p><code>Bookmark</code> interface, <code>src/types/index.ts:151-174</code>. This is rich and is the single biggest asset for the <span class="hl">deleted-tweet preservation Pro feature</span> &mdash; the full text and metadata are already persisted locally:</p>
+
+<ul>
+<li>Identity/order: <code>id</code>, <code>tweetId</code>, <code>sortIndex</code> (X's opaque cursor string), <code>createdAt</code> (ms epoch), <code>bookmarked</code> (boolean &mdash; stays <code>true</code> until unbookmarked; never deleted on unbookmark, just flipped).</li>
+<li>Content: <code>text</code> (full tweet text), <code>tweetKind</code> (<code>tweet|reply|quote|repost|thread|article</code>), <code>tweetDisplayType</code>, <code>inReplyToTweetId</code>, <code>inReplyToScreenName</code>, <code>isThread</code>.</li>
+<li><strong>Author</strong> (<code>Author</code>, <code>src/types/index.ts:44-56</code>): <code>name</code>, <code>screenName</code>, <code>profileImageUrl</code>, <code>verified</code>, optional <code>bio</code>, <code>followersCount</code>, <code>followingCount</code>, <code>website</code>, <code>createdAt</code>, <code>bannerUrl</code>, <code>affiliate</code>.</li>
+<li><strong>Metrics</strong> (<code>Metrics</code>, lines 58-64): <code>likes</code>, <code>retweets</code>, <code>replies</code>, <code>views</code>, <code>bookmarks</code>.</li>
+<li><strong>Media</strong> (<code>Media[]</code>, lines 66-73): <code>type</code> (<code>photo|video|animated_gif</code>), <code>url</code> (image), <code>videoUrl</code>, <code>width</code>, <code>height</code>, <code>altText</code>. URLs point at <code>*.twimg.com</code> (CSP <code>img-src</code>/<code>media-src</code> in <code>public/manifest.json</code> allow only twimg + self &mdash; so media is hot-linked, not blobbed locally; see Sync section).</li>
+<li><strong>URLs / cards</strong> (<code>TweetUrl[]</code>, lines 84-89): <code>url</code>, <code>displayUrl</code>, <code>expandedUrl</code>, optional <code>card</code> (<code>LinkCard</code>: title/description/imageUrl/domain/cardType).</li>
+<li><strong>Quote / repost / article</strong>: <code>quotedTweet</code> (<code>QuotedTweet</code>), <code>retweetedTweet</code>, <code>article</code> (<code>ArticleContent</code>: full <code>plainText</code>, <code>title</code>, <code>coverImageUrl</code>, <code>contentBlocks</code>, <code>entityMap</code> &mdash; i.e. the entire long-form X Article body).</li>
+<li>Convenience flags: <code>hasImage</code>, <code>hasVideo</code>, <code>hasLink</code>.</li>
+</ul>
+
+<h3>Detail cache &mdash; the reader payload (most important for "deleted-tweet preservation")</h3>
+
+<p><code>TweetDetailCache</code>, <code>src/types/index.ts:176-183</code>:</p>
+
+<pre><code>interface TweetDetailCache {
+  tweetId: string;
+  fetchedAt: number;
+  focalTweet: Bookmark | null;
+  thread: ThreadTweet[];              // thread-aware capture already exists
+  detailsStatus?: "ok" | "unavailable";
+  unavailableReason?: "deleted" | "protected" | "parse_failed" | "unknown";
+}</code></pre>
+
+<ul>
+<li><code>thread: ThreadTweet[]</code> (<code>src/types/index.ts:134-149</code>) is the <strong>already-captured thread structure</strong> &mdash; each thread tweet carries its own author/media/urls/article/quoted/retweeted + <code>inReplyToTweetId</code>. So "thread-aware capture" as a Pro feature is, at the data layer, <strong>already done</strong>; it is fetched and cached whenever a tweet is opened in the reader or warmed by the prefetch controller.</li>
+<li><code>detailsStatus</code> / <code>unavailableReason</code> fields <strong>exist in the type</strong> but the parser (<code>parseTweetDetailPayload</code>, <code>src/api/parsers.ts:1231-1265</code>) does <strong>not currently set them</strong> &mdash; it returns <code>{ focalTweet, thread }</code> only. <code>unwrapTweet</code> returns <code>null</code> for <code>TweetTombstone</code>/<code>TweetUnavailable</code> (<code>src/api/parsers.ts:111-120</code>) but the surrounding code doesn't yet stamp <code>unavailableReason: "deleted"</code>.</li>
+</ul>
+
+<div class="takeaway"><div class="takeaway-label">SMALLEST PRO HOOK</div> When a future <code>FETCH_TWEET_DETAIL</code> returns a tombstone, <strong>keep the previously-cached <code>focalTweet</code></strong> instead of overwriting, and set <code>detailsStatus: "unavailable"</code>. The retention sweep already exists (<code>cleanupOldTweetDetails</code>, <code>src/db/index.ts:1206-1226</code>, default <code>DETAIL_CACHE_RETENTION_MS</code>) and would need to <em>exempt</em> Pro-preserved rows.</div>
+
+<h3>Other store value shapes</h3>
+
+<ul>
+<li><code>ReadingProgress</code> (<code>src/types/index.ts:193-205</code>): <code>tweetId</code>, <code>openedAt</code>, <code>lastReadAt</code>, <code>scrollY</code>, <code>scrollHeight</code>, <code>completed</code>, <code>reopenCount</code>.</li>
+<li><code>Highlight</code> (<code>src/types/index.ts:207-218</code>): <code>id</code>, <code>tweetId</code>, <code>sectionId</code>, <code>startOffset</code>, <code>endOffset</code>, <code>selectedText</code>, <code>note</code> (annotations Pro feature lives here), <code>color</code>, <code>createdAt</code>, <code>type</code> (<code>highlight|note</code>).</li>
+<li><code>SavedSearch</code> (<code>src/types/index.ts:227-233</code>): <code>id</code>, <code>name</code>, <code>query</code>, <code>createdAt</code>, <code>sortOrder</code>.</li>
+<li><code>BookmarkQueueMetadata</code> (lines 259-264): <code>tweetId</code>, <code>intent</code> (<code>unset|read_soon|reference|act</code>), <code>snoozedUntil</code>, <code>updatedAt</code>.</li>
+</ul>
+
+<h3>IDB is wiped on reset and is account-scoped</h3>
+
+<p><code>clearAllLocalData</code> / <code>clearTransientStores</code> / <code>deleteBookmarksByTweetIds</code> (<code>src/db/index.ts:537-632</code>) and the full <code>resetLocalData</code> (<code>src/lib/reset.ts:135-210</code>, deletes the default DB + every <code>totem_acct_*</code> DB). <strong>Conclusion: do not store the license here.</strong> A user who hits "Reset app" or switches accounts must not lose their lifetime unlock.</p>
+
+<h2 id="sync-flow-end-to-end">Sync flow end-to-end</h2>
+
+<h3>Two content scripts (manifest)</h3>
+
+<p><code>public/manifest.json</code> registers two content scripts on <code>https://x.com/*</code> at <code>document_start</code>:</p>
+
+<ol>
+<li><code>content/detect-user.js</code> (ISOLATED world) &mdash; source <code>src/content/detect-user.ts</code>. Reads the <code>twid</code> cookie &rarr; writes <code>totem_user_id</code> + <code>totem_account_context_id</code> to <code>chrome.storage.local</code> (<code>src/content/detect-user.ts:21-44</code>); relays MAIN-world <code>postMessage</code> bookmark-mutation + query-id messages to the SW (lines 56-85).</li>
+<li><code>content/mutation-hook.js</code> (<strong>MAIN world</strong>) &mdash; <code>public/content/mutation-hook.js</code>. This is hand-written JS (not built from TS). It monkey-patches <code>XMLHttpRequest.prototype.open/send</code> and <code>window.fetch</code> (lines 98-133) to detect <code>CreateBookmark</code>/<code>DeleteBookmark</code> calls and <code>postMessage</code>s <code>{operation, tweetId}</code> to the ISOLATED script. It also scrapes X's JS bundles for GraphQL <code>queryId</code>s (<code>discoverQueryIds</code>, lines 135-202) and posts <code>{type:"query_ids", ids}</code>.</li>
+</ol>
+
+<div class="callout"><strong>Key nuance:</strong> the MAIN-world hook only observes <em>mutations</em> (create/delete), not the bookmark/timeline GraphQL <em>responses</em>. The actual bookmark/detail data is fetched by the <strong>service worker itself</strong>, replaying captured auth headers. So "intercepting GraphQL responses" in this codebase means: SW captures <em>auth headers</em> from real browsing (webRequest), then the SW makes its own authenticated GraphQL fetches.</div>
+
+<h3>Auth-header capture (the real interception)</h3>
+
+<p><code>src/service-worker/index.ts:320-391</code>, <code>chrome.webRequest.onSendHeaders</code> on <code>https://x.com/i/api/graphql/*</code>:</p>
+
+<ul>
+<li>Captures <code>authorization</code>, <code>cookie</code>, <code>x-csrf-token</code>, <code>x-client-uuid</code>, <code>x-client-transaction-id</code>, <code>x-twitter-*</code> (<code>CAPTURED_HEADERS</code>, lines 45-55).</li>
+<li>Requires the full "auth trio" + a valid <code>twid</code> before arming <code>totem_auth_headers</code> (lines 351-372) &mdash; this prevents stale-JWT re-login after logout.</li>
+<li>Also harvests X's <code>features</code> query param into <code>totem_features</code> (lines 378-387), reused when the SW builds its own requests.</li>
+<li>Mutation capture: <code>onBeforeRequest</code> (deletes &rarr; immediate event) and <code>onCompleted</code> (creates &rarr; confirmed event) at <code>src/service-worker/index.ts:395-438</code>.</li>
+<li>Auth state also tracked from response status (401/403 &rarr; logged out) at lines 442-456, and from <code>twid</code> cookie removal at lines 463-467.</li>
+</ul>
+
+<h3>SW &rarr; GraphQL fetch &rarr; parse &rarr; persist</h3>
+
+<p>The SW is the API boundary. <code>src/service-worker/api-proxy.ts</code>:</p>
+
+<ul>
+<li><code>FETCH_BOOKMARKS</code> (<code>handleFetchBookmarks</code>, lines 153-222): <code>withQueryId("Bookmarks", &hellip;)</code> builds the URL, <code>buildHeaders(storage)</code> replays captured headers (lines 78-105), fetches <code>https://x.com/i/api/graphql/&lt;queryId&gt;/Bookmarks</code>, returns <code>{ data: json }</code>. On 401/403 it does one silent re-auth retry then <code>markAuthLoggedOut</code>.</li>
+<li><code>FETCH_TWEET_DETAIL</code> (<code>handleFetchTweetDetail</code>, lines 281-365): same pattern for <code>TweetDetail</code>. <strong>This is the call that returns the full thread + author + media + article</strong> that becomes <code>TweetDetailCache</code>.</li>
+<li><code>DELETE_BOOKMARK</code>, <code>FETCH_VIEWER_PROFILE</code> also here.</li>
+</ul>
+
+<p>Parsing happens <strong>runtime-side</strong>, not in the SW. The runtime RPC wrappers live in <code>src/api/core/</code> (<code>bookmarks.ts</code>, <code>posts.ts</code>). <code>fetchTweetDetail</code> (<code>src/api/core/posts.ts:66-90+</code>) sends <code>FETCH_TWEET_DETAIL</code>, then <code>parseTweetDetailPayload</code> (<code>src/api/parsers.ts:1231</code>) turns raw JSON into <code>TweetDetailContent</code>, and <strong>upserts it into IDB</strong> via <code>upsertTweetDetailCache</code> (<code>src/api/core/posts.ts:1</code> imports it). Bookmark pages are parsed by the bookmark parsers and persisted via <code>upsertBookmarks</code> in the sync loop.</p>
+
+<h3>The sync loop (runtime side)</h3>
+
+<p><code>src/stores/runtime-store.ts</code> <code>sync()</code> (lines 775-1031):</p>
+
+<ol>
+<li><code>reserveSyncRun({accountId, trigger, localCount})</code> &rarr; SW decides allow + mode.</li>
+<li>On allow: <code>reconcileBookmarks</code> (<code>src/lib/reconcile.ts</code>) walks pages via <code>fetchBookmarkPage</code>, <code>onPage</code> merges each page into in-memory <code>bookmarks</code> and calls <code>upsertBookmarks(deduped)</code> (lines 887-907).</li>
+<li>On <code>full</code> completion with <code>staleIds</code>, deletes locally-removed bookmarks.</li>
+<li><code>releaseActiveLease(status, errorCode)</code> &rarr; SW <code>COMPLETE_SYNC</code> stamps <code>lastFullSyncAt</code>/cache-summary keys.</li>
+</ol>
+
+<h3>Data that already flows through and is cacheable</h3>
+
+<p>Everything needed to preserve a deleted tweet is <strong>already in the local stores before the tweet is deleted upstream</strong>:</p>
+
+<ul>
+<li>The <code>bookmarks</code> store holds full text/author/media-URLs/article/quote for every saved post.</li>
+<li>The <code>tweet_details</code> store holds the full reader payload + thread once a post has been opened or prefetched (the prefetch controller warms a top-of-list pool &mdash; <code>src/stores/prefetch-controller.ts</code>).</li>
+<li>Media is referenced by <code>*.twimg.com</code> URL, <strong>not</strong> stored as blobs. True "preservation" against X deleting the media would require downloading bytes (a new capability); but text/metadata/thread preservation needs <strong>no new fetch</strong> &mdash; only a policy change: on a later detail fetch that returns a tombstone, <em>don't overwrite</em> the existing cache row, and stamp <code>detailsStatus:"unavailable"</code>/<code>unavailableReason:"deleted"</code> (the fields already exist).</li>
+</ul>
+
+<h2 id="state-model-durable-state-writer-ownership">State model: durable state + writer ownership</h2>
+
+<p>ARCHITECTURE &sect;11/&sect;16 Invariant #1 ("single writer per persisted fact") is enforced at test time (<code>src/lib/__tests__/storage-invariants.test.ts</code>). Three substrates follow.</p>
+
+<h3>chrome.storage.local &mdash; split by writer across two files</h3>
+
+<p><strong>Shared keys</strong> <code>src/lib/storage-keys.ts</code> (read by anyone, written by their owner):</p>
+<ul>
+<li>SW-written: <code>CS_AUTH_HEADERS</code> (<code>totem_auth_headers</code>), <code>CS_AUTH_STATE</code>, <code>CS_AUTH_TIME</code>, <code>CS_USER_ID</code>, <code>CS_ACCOUNT_CONTEXT_ID</code>, <code>CS_VIEWER_PROFILE</code>, <code>CS_BOOKMARK_EVENTS</code>, plus undeclared SW-only strings (<code>totem_graphql_catalog</code>, <code>totem_features</code>, <code>totem_auth_state_at/_reason</code>, <code>totem_auth_diagnostics</code>).</li>
+<li>Runtime-written: <code>CS_DB_CLEANUP_AT</code>, <code>CS_RUNTIME_AUDIT</code>, <code>CS_HYDRATION_SNAPSHOT</code>, <code>CS_GROWTH_STATE</code>.</li>
+<li>Either: <code>CS_BOOKMARK_EVENTS</code> (SW enqueues, runtime acks via <code>ACK_BOOKMARK_EVENTS</code>).</li>
+<li>Broadcast: <code>CS_RESET_EPOCH</code> (<code>reset.ts</code> writes; SW + every page drop IDB handles).</li>
+</ul>
+
+<p><strong>SW-exclusive keys</strong> <code>src/service-worker/storage-keys-sw.ts</code> (non-SW imports forbidden except <code>reset.ts</code> + <code>RuntimeProvider.tsx</code>):</p>
+<ul>
+<li><code>CS_SYNC_ORCHESTRATOR_STATE</code> (<code>totem_sync_orchestrator_state</code>) &mdash; leases, cooldowns, <strong><code>lastFullSyncAt</code></strong>, per-account map.</li>
+<li><code>CS_RUNTIME_STATE_V2</code> (<code>totem_runtime_state_v2</code>) &mdash; the full <code>RuntimeSnapshot</code>.</li>
+<li><code>CS_LAST_SYNC</code>, <code>CS_LAST_SOFT_SYNC</code>, <code>CS_SOFT_SYNC_NEEDED</code> &mdash; cache-summary timestamps.</li>
+</ul>
+
+<p>Enforcement: <code>ALLOWED_WRITERS = ["service-worker/"]</code> for SW-owned keys; <code>ALLOWED_IMPORTERS = ["service-worker/", "lib/reset.ts", "runtime/RuntimeProvider.tsx"]</code> for the SW key file (<code>src/lib/__tests__/storage-invariants.test.ts:98-149</code>).</p>
+
+<h3>chrome.storage.sync &mdash; cross-device, survives reinstall on the same Google profile</h3>
+
+<p><code>src/lib/storage-keys.ts:70-76</code>: <code>SYNC_SETTINGS</code> (<code>totem_settings</code>) and <code>SYNC_THEME</code> (<code>totem_theme</code>). Read/written by <code>useSettings</code> (<code>src/hooks/useSettings.ts:104-145</code>) and <code>useTheme</code>. This is the <strong>only substrate that survives a reinstall and propagates across the user's devices</strong>. Tradeoff for licensing: convenient for "unlock follows the user," but it is also the easiest for a user to read/edit, and a full reset wipes it (<code>reset.ts:204-205</code>, only on non-<code>keepUserContent</code>).</p>
+
+<h3>Zustand runtime store &mdash; ephemeral, never persisted</h3>
+
+<p><code>src/stores/runtime-store.ts</code>. Holds <code>authPhase</code>, <code>capability</code>, <code>bookmarks</code>, <code>detailedTweetIds</code>, <code>syncStatus</code>, generations, etc. (<code>RuntimeState</code>, lines 154-174). It is a <strong>mirror</strong> of SW-owned facts + IDB contents; it writes IDB and reads everything else. It would be the place an <code>isPro</code> value is <strong>exposed to React</strong>, but never the <strong>owner</strong> of the persisted bit.</p>
+
+<h3>localStorage &mdash; app-local UI prefs only</h3>
+
+<p><code>LOCAL_STORAGE_KEYS</code> (<code>src/lib/storage-keys.ts:16-28</code>): reading tab, sorts, wallpaper, pinned tweets, reader activity, recent searches, export-ready dismissal. Per-device, not synced, wiped on reset. Wrong home for a license (trivially editable, per-device, lost on reset).</p>
+
+<h3>Who should own a new <code>isPro</code> / license fact</h3>
+
+<p>Per "single writer per persisted fact," <code>isPro</code> needs exactly one writer. The recommendation:</p>
+
+<div class="takeaway"><div class="takeaway-label">RECOMMENDED OWNER</div> The <strong>service worker</strong>, writing a new dedicated key <code>CS_ENTITLEMENT</code> (<code>totem_entitlement</code>), declared in <code>src/service-worker/storage-keys-sw.ts</code> so the existing import-boundary test makes the SW the sole writer for free. The value is a small record: <code>{ isPro: boolean, plan: "lifetime"|"founders"|null, licenseKey?: string, source: "gumroad"|"manual"|&hellip;, verifiedAt: number, signature?: string }</code>.</div>
+
+<ul>
+<li><strong>Why the SW:</strong> it is the trust boundary, it already owns the snapshot, and (critically) license <em>verification</em> (a network call to the licensing vendor / a signature check) is naturally a SW responsibility &mdash; the SW already makes authenticated network calls and is the only context that should hold any secret-ish verification logic. Putting the writer in the SW also makes the entitlement <strong>account-independent and reset-surviving by policy</strong>: keep <code>CS_ENTITLEMENT</code> out of <code>CHROME_LOCAL_RESET_KEYS</code> in <code>src/lib/reset.ts</code> (mirror how auth headers are deliberately <em>preserved</em> across reset, <code>reset.ts:30-32</code> comment) so "Reset app" never revokes a paid unlock.</li>
+<li><strong>Physical location: <code>chrome.storage.local</code></strong> (device-local). If you want the unlock to follow the user across devices, <em>additionally</em> mirror a verification token into <code>chrome.storage.sync</code> under a new key &mdash; but treat <code>chrome.storage.local[CS_ENTITLEMENT]</code>, written by the SW after verification, as the authoritative readable fact.</li>
+<li><strong>Do NOT</strong> put it in IDB (account-scoped + wiped) or in the sync orchestrator account map (account-scoped + wiped). It is not a per-account fact.</li>
+</ul>
+
+<p>Because the SW already builds and persists <code>RuntimeSnapshot</code>, the entitlement should also be <strong>stamped into the snapshot</strong> (one new field) so it propagates reactively.</p>
+
+<h2 id="reactive-sw-ui-snapshot-push-can-ispro-ride-it-yes">Reactive SW &rarr; UI snapshot push (can <code>isPro</code> ride it? &mdash; yes)</h2>
+
+<h3>How the push works today</h3>
+
+<p><code>RuntimeSnapshotData</code> (<code>src/types/messages.ts:174-182</code>) is the snapshot shape: <code>sessionState</code>, <code>authPhase</code>, <code>accountContextId</code>, <code>capability</code>, <code>syncPolicy</code>, <code>blockedReason</code>, <code>cacheSummary</code>.</p>
+
+<ul>
+<li>The SW <strong>builds</strong> it in <code>buildRuntimeSnapshot</code> (<code>src/service-worker/auth.ts:364-427</code>) and <strong>persists</strong> it via <code>persistRuntimeStateV2</code> (<code>src/service-worker/auth.ts:429-471</code>) &rarr; writes <code>chrome.storage.local[CS_RUNTIME_STATE_V2]</code>. This persist is called after <strong>every</strong> reservation/completion (<code>src/service-worker/sync.ts:368-371, 509-512, 668-679</code>) and on <code>GET_RUNTIME_SNAPSHOT</code>/<code>SET_ACCOUNT_CONTEXT</code> (<code>src/service-worker/auth.ts:810-815, 843-848</code>).</li>
+<li>Every open page subscribes in <code>src/runtime/RuntimeProvider.tsx:64-105</code>. On a <code>CS_RUNTIME_STATE_V2</code> change (and no concurrent auth-key change), it calls <code>actions.applyRuntimeSnapshot(snapshot)</code> (lines 96-100).</li>
+<li><code>applyRuntimeSnapshot</code> (<code>src/stores/runtime-store.ts:1186-1192</code>) normalizes via <code>normalizeAuthPayloadFromSnapshot</code> and calls <code>applyAuthPayload(&hellip;, { allowHydration:false, allowAutoSync:false })</code> &mdash; it only updates auth/capability/session mirrors; never re-reads IDB, never starts a sync.</li>
+</ul>
+
+<h3>Riding <code>isPro</code> on this channel</h3>
+
+<p>Yes &mdash; this is the intended mechanism and the cleanest gating path:</p>
+
+<ol>
+<li>Add <code>isPro</code> (or a small <code>entitlement</code> object) to <code>RuntimeSnapshotData</code> (<code>src/types/messages.ts:174-182</code>).</li>
+<li>Populate it in <code>buildRuntimeSnapshot</code> (<code>src/service-worker/auth.ts:394-426</code>) by reading <code>CS_ENTITLEMENT</code>, and include it in the safe-defaults in <code>persistRuntimeStateV2</code> (<code>src/service-worker/auth.ts:459-470</code>).</li>
+<li>Mirror it into the Zustand store: add an <code>isPro</code> field to <code>RuntimeState</code> (<code>src/stores/runtime-store.ts:154-174</code>), set it inside <code>applyAuthPayload</code> (lines 695-724) from the normalized payload, and read it in <code>normalizeAuthPayloadFromSnapshot</code> (lines 202-222).</li>
+<li>Expose a <code>useIsPro()</code> selector in <code>src/stores/selectors.ts</code> (alongside <code>useAuthPhase</code>, etc.).</li>
+</ol>
+
+<div class="callout">Result: when the SW verifies a purchase and writes <code>CS_ENTITLEMENT</code> + re-persists the snapshot, <span class="hl">every open new-tab and reader page flips to Pro on the same event-loop tick</span>, exactly like a capability upgrade does today &mdash; no heartbeat wait, no reload. The SW, the UI, and any <code>chrome.storage.onChanged</code> listener all see the same single fact.</div>
+
+<p>One caveat to respect: <code>applyRuntimeSnapshot</code> deliberately uses <code>allowHydration:false</code>. An <code>isPro</code> flip must <strong>not</strong> trigger a re-hydration or sync &mdash; it is purely a capability mirror, so adding it as a snapshot field is safe and consistent with the existing guardrails.</p>
+
+<h2 id="concrete-integration-points-file-paths">Concrete integration points (file paths)</h2>
+
+<h3>(a) Where the entitlement value would be stored (the single writer)</h3>
+<ul>
+<li><strong>Declare the key:</strong> <code>src/service-worker/storage-keys-sw.ts</code> &mdash; add <code>export const CS_ENTITLEMENT = "totem_entitlement";</code>. This automatically makes the SW the only allowed writer and keeps runtime code from writing it (enforced by <code>src/lib/__tests__/storage-invariants.test.ts</code>).</li>
+<li><strong>Write it:</strong> a new SW handler module, e.g. <code>src/service-worker/entitlement.ts</code>, exporting a <code>HandlerMap</code> merged in <code>src/service-worker/index.ts:133-141</code> (alongside <code>authHandlers</code>, <code>syncHandlers</code>, &hellip;). Handlers like <code>ACTIVATE_LICENSE</code> / <code>VERIFY_LICENSE</code> / <code>GET_ENTITLEMENT</code> call <code>chrome.storage.local.set({ [CS_ENTITLEMENT]: &hellip; })</code> after verification. Add the new message types to <code>src/types/messages.ts</code> (<code>MessageRequest</code> union, lines 147-167).</li>
+<li><strong>Reset policy:</strong> in <code>src/lib/reset.ts</code>, keep <code>CS_ENTITLEMENT</code> <strong>out of</strong> <code>CHROME_LOCAL_RESET_KEYS</code> (lines 33-45) so a reset never revokes a paid unlock &mdash; and if you ever do want a "deactivate license" path, make it explicit, not a side effect of reset.</li>
+<li><strong>Optional cross-device mirror:</strong> add a sync key to <code>CHROME_SYNC_KEYS</code> (<code>src/lib/storage-keys.ts:73-76</code>) if the unlock should follow the user; written by the SW too.</li>
+</ul>
+
+<h3>(b) Where it is read by the service worker</h3>
+<ul>
+<li><code>src/service-worker/auth.ts</code> &mdash; <code>buildRuntimeSnapshot</code> (lines 364-427) reads <code>CS_ENTITLEMENT</code> and adds it to the returned snapshot; <code>persistRuntimeStateV2</code> (lines 429-471) includes it with safe defaults.</li>
+<li>Any Pro-gated SW capability (e.g. a future bulk-export proxy, or "don't overwrite cache on tombstone") reads <code>CS_ENTITLEMENT</code> directly in the relevant handler in <code>src/service-worker/api-proxy.ts</code>.</li>
+<li><code>src/api/core/auth.ts</code> <code>getRuntimeSnapshot()</code> (lines 21-33) already returns <code>response.data</code> verbatim, so the new field reaches the runtime with no wrapper change.</li>
+</ul>
+
+<h3>(c) Where it is exposed to React components</h3>
+<ul>
+<li><code>src/stores/runtime-store.ts</code>: add <code>isPro</code> to <code>RuntimeState</code> (lines 154-174) and to <code>createInitialState</code> (lines 355-380); set it in <code>applyAuthPayload</code> (lines 695-724) and read it from the snapshot in <code>normalizeAuthPayloadFromSnapshot</code> (lines 202-222) and from the <code>CHECK_AUTH</code> path in <code>normalizeAuthPayloadFromStatus</code> (lines 224-250) if you also surface it via <code>CHECK_AUTH</code>.</li>
+<li><code>src/runtime/RuntimeProvider.tsx</code>: <strong>no change needed</strong> &mdash; the existing <code>CS_RUNTIME_STATE_V2</code> <code>onChanged</code> branch (lines 96-100) already delivers the snapshot reactively.</li>
+<li><code>src/stores/selectors.ts</code>: add <code>export function useIsPro(): boolean { return useRuntimeStoreBase((s) =&gt; s.isPro); }</code> (mirrors <code>useAuthPhase</code>, lines 53-55). Components (<code>ExportModal.tsx</code>, <code>SettingsModal.tsx</code>, reader <code>ArticleExportMenu.tsx</code>, <code>BookmarksList.tsx</code> bulk-ops, etc.) gate on <code>useIsPro()</code>.</li>
+<li>For non-React surfaces (the reader route, the export library in <code>src/lib/export/*</code>): read the store directly via <code>runtimeStore.getState().isPro</code> (<code>src/stores/runtime-store.ts:1347-1351</code>) or pass the flag in.</li>
+</ul>
+
+<h3>(d) Supporting reference points already in place</h3>
+<ul>
+<li>Settings precedent for a sync-stored, reactively-updated boolean: <code>src/hooks/useSettings.ts</code> (<code>showOpenInTotem</code> etc. over <code>chrome.storage.sync</code> with an <code>onChanged</code> listener).</li>
+<li>Capability-mirror precedent (the exact pattern <code>isPro</code> should copy): <code>ApiCapability</code> in <code>src/types/auth.ts:11-14</code>, flowing snapshot &rarr; store &rarr; selector.</li>
+</ul>
+
+<h2 id="risks-sharp-edges-for-the-entitlement-design">Risks / sharp edges for the entitlement design</h2>
+
+<ol>
+<li><strong>Local-first means client-trusted.</strong> Every substrate here (<code>chrome.storage.local/.sync</code>, IDB, localStorage) is user-readable/editable in DevTools. A purely local <code>isPro:true</code> is trivially forgeable. To match the "no Totem server" ethos while resisting casual piracy, the realistic option is a <span class="hl">signed license token verified by the SW</span> (vendor-issued signature over the license + a public key shipped in the extension). True server-side enforcement contradicts the no-server ethos; design for "honest-majority + raise the effort," not DRM.</li>
+<li><strong>Reset must not revoke.</strong> Default reset wipes <code>chrome.storage.sync</code> and all of IDB. Keep the entitlement key off both reset lists. Document it next to the auth-preservation comment in <code>reset.ts</code>.</li>
+<li><strong>Account switching.</strong> The entitlement is device/user-global, not per-account &mdash; keep it out of the per-account orchestrator map (<code>SyncAccountState</code>, <code>src/service-worker/sync.ts:65-86</code>) and out of account-scoped IDB.</li>
+<li><strong>Snapshot guardrail.</strong> When adding <code>isPro</code> to the snapshot, ensure the <code>applyRuntimeSnapshot</code> path keeps <code>allowHydration:false</code>/<code>allowAutoSync:false</code> (it already does) so an entitlement change never triggers IDB re-reads or syncs.</li>
+<li><strong>The MAIN-world hook is plain JS</strong> (<code>public/content/mutation-hook.js</code>) and is <strong>not</strong> a place to read entitlements &mdash; it has no access to the verified fact and shouldn't.</li>
+</ol>
+
+<h2 id="one-paragraph-mental-model-for-the-entitlement">One-paragraph mental model for the entitlement</h2>
+
+<div class="callout">The license is a <strong>device-global, account-independent, reset-surviving fact</strong> whose single writer is the <strong>service worker</strong> (after verifying a signed token), physically stored in a new <code>chrome.storage.local</code> key (<code>CS_ENTITLEMENT</code>, declared in <code>src/service-worker/storage-keys-sw.ts</code>), stamped into the existing <code>RuntimeSnapshot</code>, and pushed reactively to every UI surface through the already-built <code>CS_RUNTIME_STATE_V2</code> &rarr; <code>chrome.storage.onChanged</code> &rarr; <code>applyRuntimeSnapshot</code> &rarr; Zustand &rarr; <code>useIsPro()</code> channel. IndexedDB stores the <em>content</em> a Pro feature acts on (full bookmark/detail/thread payloads &mdash; already enough to preserve deleted tweets' text and structure with only a cache-overwrite policy change), but never the entitlement itself.</div>
+<nav class="pager"><a class="pager-link prev" href="11-adversarial-review.html"><span class="pager-eyebrow">Previous</span><span class="pager-title">Adversarial Review — What the Red-Team Caught</span></a><a class="pager-link next" href="appendix-b-features-export.html"><span class="pager-eyebrow">Next</span><span class="pager-title">Features &amp; Export Surface</span></a></nav>
+<footer class="page-foot">Totem · premium-monetization research · compiled with kami</footer>
+</main>
+<aside class="toc"><div class="toc-label">On this page</div><a href="#orientation-for-the-entitlement-designer">Orientation for the entitlement designer</a>
+<a href="#indexeddb-schema">IndexedDB schema</a>
+<a href="#sync-flow-end-to-end">Sync flow end-to-end</a>
+<a href="#state-model-durable-state-writer-ownership">State model: durable state + writer ownership</a>
+<a href="#reactive-sw-ui-snapshot-push-can-ispro-ride-it-yes">Reactive SW → UI snapshot push (can isPro ride it? — yes)</a>
+<a href="#concrete-integration-points-file-paths">Concrete integration points (file paths)</a>
+<a href="#risks-sharp-edges-for-the-entitlement-design">Risks / sharp edges for the entitlement design</a>
+<a href="#one-paragraph-mental-model-for-the-entitlement">One-paragraph mental model for the entitlement</a></aside>
+</div>
+</body>
+</html>
