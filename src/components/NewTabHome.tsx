@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import {
+  ArchiveIcon,
   ArrowsClockwiseIcon,
   CaretLeftIcon,
   CaretRightIcon,
   EnvelopeSimpleIcon,
+  EyeSlashIcon,
   GearSixIcon,
   InfoIcon,
   LinkBreakIcon,
@@ -76,6 +78,31 @@ import {
 } from "../lib/export/full-export-ready-dismissal";
 
 import { CLOCK_UPDATE_MS } from "../lib/constants/timing";
+
+const DISTRACTION_FREE_KEY = "totem_distraction_free_until";
+const DISTRACTION_FREE_MS = 4 * 60 * 60 * 1000;
+
+function readDistractionFreeUntil(): number | null {
+  try {
+    const v = localStorage.getItem(DISTRACTION_FREE_KEY);
+    if (!v) return null;
+    const n = parseInt(v, 10);
+    return isNaN(n) ? null : n;
+  } catch {
+    return null;
+  }
+}
+
+function formatDistractionFreeRemaining(until: number, nowMs: number): string {
+  const remainingMs = until - nowMs;
+  if (remainingMs <= 0) return "Distraction free";
+  const totalMinutes = Math.ceil(remainingMs / 60_000);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours === 0) return `Distraction free for ${minutes}m`;
+  if (minutes === 0) return `Distraction free for ${hours}h`;
+  return `Distraction free for ${hours}h ${minutes}m`;
+}
 
 interface Props {
   bookmarks: Bookmark[];
@@ -185,6 +212,7 @@ interface FooterCardProps {
   showTodayQueueNavigation: boolean;
   onMovePrev: () => void;
   onMoveNext: () => void;
+  onArchive: () => void;
 }
 
 function FooterCard({
@@ -211,6 +239,7 @@ function FooterCard({
   showTodayQueueNavigation,
   onMovePrev,
   onMoveNext,
+  onArchive,
 }: FooterCardProps) {
   switch (footerState) {
     case "loading":
@@ -407,6 +436,8 @@ function FooterCard({
           )}
         </div>
       );
+      const iconControlClass =
+        "flex size-8 items-center justify-center rounded text-home-fg-muted/70 transition-colors duration-150 ease-hover hover:text-home-fg-secondary focus-visible:text-home-fg-secondary focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-focus-ring";
       const todayQueueFooter = isTodayQueue ? (
         <div className="flex items-center justify-between gap-2 border-t border-home-secondary-border bg-black/[0.02] px-4 py-2.5 dark:bg-black/[0.07]">
           <div className="flex min-w-0 items-center gap-2">
@@ -427,7 +458,7 @@ function FooterCard({
             </div>
           </div>
           <div
-            className="flex shrink-0 items-center gap-1"
+            className="flex shrink-0 items-center gap-2"
             role="toolbar"
             aria-label="Queue controls"
           >
@@ -442,30 +473,39 @@ function FooterCard({
                 L
               </kbd>
             </Button>
-            {showTodayQueueNavigation && (
-              <>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  className="size-8 text-home-fg-muted transition-colors duration-150 ease-hover hover:text-home-fg-secondary"
-                  aria-label="Previous Today's Read item"
-                  onClick={onMovePrev}
-                >
-                  <CaretLeftIcon className="size-3.5" />
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  className="size-8 text-home-fg-muted transition-colors duration-150 ease-hover hover:text-home-fg-secondary"
-                  aria-label="Next Today's Read item"
-                  onClick={onMoveNext}
-                >
-                  <CaretRightIcon className="size-3.5" />
-                </Button>
-              </>
-            )}
+            <div className="flex items-center gap-0.5">
+              {showTodayQueueNavigation && (
+                <>
+                  <button
+                    type="button"
+                    className={iconControlClass}
+                    aria-label="Previous Today's Read item"
+                    title="Previous (←)"
+                    onClick={onMovePrev}
+                  >
+                    <CaretLeftIcon className="size-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    className={iconControlClass}
+                    aria-label="Next Today's Read item"
+                    title="Next (→)"
+                    onClick={onMoveNext}
+                  >
+                    <CaretRightIcon className="size-3.5" />
+                  </button>
+                </>
+              )}
+              <button
+                type="button"
+                className={iconControlClass}
+                aria-label="Archive this post"
+                title="Archive (A)"
+                onClick={onArchive}
+              >
+                <ArchiveIcon className="size-3.5" />
+              </button>
+            </div>
             <Button
               type="button"
               className="h-8 border-0 bg-home-accent px-3 text-xs font-semibold leading-none text-[#18100d] hover:opacity-90"
@@ -535,26 +575,28 @@ function FooterCard({
             <p className="mt-4 text-pretty text-base text-home-empty">
               {TODAY_QUEUE_DONE_MESSAGE}
             </p>
-            {todayQueueCanAddMore ? (
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-2.5">
+              {todayQueueCanAddMore ? (
+                <Button
+                  type="button"
+                  onClick={onAddTwoMore}
+                  className="border border-home-empty/25 bg-transparent text-home-fg-secondary hover:bg-white/5"
+                >
+                  {TODAY_QUEUE_TWO_MORE_LABEL}
+                </Button>
+              ) : (
+                <p className="text-sm text-home-empty/80">
+                  {TODAY_QUEUE_TWO_MORE_EXHAUSTED}
+                </p>
+              )}
               <Button
                 type="button"
-                onClick={onAddTwoMore}
-                className="mt-6 border border-home-empty/25 bg-transparent text-home-fg-secondary hover:bg-white/5"
+                onClick={() => onOpenReading("unread")}
+                className="border-0 bg-home-accent text-white hover:opacity-90"
               >
-                {TODAY_QUEUE_TWO_MORE_LABEL}
+                Browse unread
               </Button>
-            ) : (
-              <p className="mt-6 text-sm text-home-empty/80">
-                {TODAY_QUEUE_TWO_MORE_EXHAUSTED}
-              </p>
-            )}
-            <Button
-              type="button"
-              onClick={() => onOpenReading("unread")}
-              className="mt-3 border-0 bg-home-accent text-white hover:opacity-90"
-            >
-              Browse unread
-            </Button>
+            </div>
           </article>
         );
       }
@@ -732,6 +774,19 @@ function useNewTabHomeModel({
     mountSeed,
     todayQueueIndex,
   } = homeState;
+  const [distractionFreeUntil, setDistractionFreeUntil] = useState(readDistractionFreeUntil);
+
+  const activateDistractionFree = useCallback(() => {
+    const until = Date.now() + DISTRACTION_FREE_MS;
+    try { localStorage.setItem(DISTRACTION_FREE_KEY, String(until)); } catch {}
+    setDistractionFreeUntil(until);
+  }, []);
+
+  const deactivateDistractionFree = useCallback(() => {
+    try { localStorage.removeItem(DISTRACTION_FREE_KEY); } catch {}
+    setDistractionFreeUntil(null);
+  }, []);
+
   const searchRef = useRef<HTMLInputElement>(null);
   const { wallpaperUrl, wallpaperCredit, gradientCss } =
     useWallpaper(backgroundMode);
@@ -830,6 +885,13 @@ function useNewTabHomeModel({
   const handleAddTwoMore = useCallback(() => {
     void todayQueue?.addTwoMore().catch(() => {});
   }, [todayQueue]);
+
+  const archiveCurrentItem = useCallback(() => {
+    if (recommendationSource !== "today" || !currentItem) return;
+    void todayQueue
+      ?.setIntent(currentItem.bookmark.tweetId, "reference")
+      .catch(() => {});
+  }, [currentItem, recommendationSource, todayQueue]);
 
   const showWallpaper = Boolean(wallpaperUrl && !imgError);
 
@@ -944,9 +1006,24 @@ function useNewTabHomeModel({
     [moveTodayQueueItem],
   );
 
+  useHotkeys(
+    "a",
+    () => archiveCurrentItem(),
+    {
+      preventDefault: true,
+    },
+    [archiveCurrentItem],
+  );
+
   const showCardButtons = footerState === "bookmark_card";
   const showTodayQueueNavigation =
     recommendationSource === "today" && todayQueueItems.length > 1;
+
+  const nowMs = now.getTime();
+  const isDistractionFree = distractionFreeUntil !== null && distractionFreeUntil > nowMs;
+  const distractionFreeLabel = isDistractionFree
+    ? formatDistractionFreeRemaining(distractionFreeUntil, nowMs)
+    : "Distraction free";
 
   const cardBase =
     "relative min-h-40 overflow-hidden rounded px-6 py-6 bg-main-bg shadow-glass transition-colors duration-150 ease-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring max-sm:min-h-36 max-sm:px-4 max-sm:py-4";
@@ -970,12 +1047,16 @@ function useNewTabHomeModel({
   }, []);
 
   return {
+    activateDistractionFree,
+    archiveCurrentItem,
     bookmarks,
     cardBase,
     cardCentered,
     cardEngaged,
     currentItem,
+    deactivateDistractionFree,
     detailedTweetIds,
+    distractionFreeLabel,
     footerState,
     getBookmarkHref,
     gradientCss,
@@ -987,6 +1068,7 @@ function useNewTabHomeModel({
     hydrationStatus,
     hydrationTotal,
     imgLoaded,
+    isDistractionFree,
     now,
     offlineMode,
     openItem,
@@ -1023,12 +1105,16 @@ export function NewTabHome(props: Props) {
 }
 
 function renderNewTabHome({
+  activateDistractionFree,
+  archiveCurrentItem,
   bookmarks,
   cardBase,
   cardCentered,
   cardEngaged,
   currentItem,
+  deactivateDistractionFree,
   detailedTweetIds,
+  distractionFreeLabel,
   footerState,
   getBookmarkHref,
   gradientCss,
@@ -1040,6 +1126,7 @@ function renderNewTabHome({
   hydrationStatus,
   hydrationTotal,
   imgLoaded,
+  isDistractionFree,
   moveTodayQueueItem,
   now,
   offlineMode,
@@ -1112,6 +1199,21 @@ function renderNewTabHome({
               </span>
             </Button>
           )}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={isDistractionFree ? deactivateDistractionFree : activateDistractionFree}
+            className={cn(
+              "border border-transparent bg-transparent hover:border-white/15 hover:bg-white/5",
+              isDistractionFree
+                ? "text-on-bg"
+                : "text-on-bg-muted hover:text-on-bg",
+            )}
+            aria-label={isDistractionFree ? "Exit distraction free mode" : "Enter distraction free mode"}
+            title={distractionFreeLabel}
+          >
+            <EyeSlashIcon className="size-5" />
+          </Button>
           <Button
             variant="ghost"
             size="icon"
@@ -1234,31 +1336,50 @@ function renderNewTabHome({
         </main>
 
         <footer className="mx-auto w-full max-w-lg space-y-6 pb-6">
-          <FooterCard
-            footerState={footerState}
-            bookmarkCount={bookmarks.length}
-            currentItem={currentItem}
-            getBookmarkHref={getBookmarkHref}
-            cardBase={cardBase}
-            cardCentered={cardCentered}
-            cardEngaged={cardEngaged}
-            onCardEngagedChange={(engaged) => updateHomeState({ cardEngaged: engaged })}
-            recommendationSource={recommendationSource}
-            offlineMode={offlineMode}
-            onOpenBookmark={() => openItem(currentItem)}
-            onOpenReading={onOpenReading}
-            todayQueueDone={todayQueueDone}
-            todayQueueCanAddMore={todayQueueCanAddMore}
-            onAddTwoMore={onAddTwoMore}
-            todayQueueProgress={todayQueueProgress}
-            syncButton={syncButton}
-            onSync={onSync}
-            handleLoginButton={handleLoginButton}
-            onOpenImport={onOpenImport}
-            showTodayQueueNavigation={showTodayQueueNavigation}
-            onMovePrev={() => moveTodayQueueItem(-1)}
-            onMoveNext={() => moveTodayQueueItem(1)}
-          />
+          <div className="group relative">
+            <div
+              className={cn(
+                "transition-opacity duration-500 ease-out",
+                isDistractionFree &&
+                  "pointer-events-none select-none opacity-20 group-hover:opacity-100",
+              )}
+            >
+              <FooterCard
+                footerState={footerState}
+                bookmarkCount={bookmarks.length}
+                currentItem={currentItem}
+                getBookmarkHref={getBookmarkHref}
+                cardBase={cardBase}
+                cardCentered={cardCentered}
+                cardEngaged={cardEngaged}
+                onCardEngagedChange={(engaged) => updateHomeState({ cardEngaged: engaged })}
+                recommendationSource={recommendationSource}
+                offlineMode={offlineMode}
+                onOpenBookmark={() => openItem(currentItem)}
+                onOpenReading={onOpenReading}
+                todayQueueDone={todayQueueDone}
+                todayQueueCanAddMore={todayQueueCanAddMore}
+                onAddTwoMore={onAddTwoMore}
+                todayQueueProgress={todayQueueProgress}
+                syncButton={syncButton}
+                onSync={onSync}
+                handleLoginButton={handleLoginButton}
+                onOpenImport={onOpenImport}
+                showTodayQueueNavigation={showTodayQueueNavigation}
+                onMovePrev={() => moveTodayQueueItem(-1)}
+                onMoveNext={() => moveTodayQueueItem(1)}
+                onArchive={archiveCurrentItem}
+              />
+            </div>
+            {isDistractionFree && (
+              <button
+                type="button"
+                className="absolute inset-0 cursor-pointer"
+                onClick={deactivateDistractionFree}
+                aria-label="Click to exit distraction free mode"
+              />
+            )}
+          </div>
 
           {recommendationSource !== "today" && (
             <div
