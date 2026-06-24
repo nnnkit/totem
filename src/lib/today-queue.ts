@@ -825,6 +825,29 @@ export function deriveHandledTodayQueueItems({
   return items;
 }
 
+/**
+ * Tallies handled items into ordered, zero-filtered completion counts for the
+ * done-state chips. `order` is the allow-list AND the display order (data,
+ * injected by the caller) so this stays free of the view's label/icon tables;
+ * a reason absent from `order` is dropped (never throws), and a reason with a
+ * zero tally is omitted so the chips show only what actually happened. Pure.
+ */
+export function deriveTodayCompletionSummary(
+  handledItems: ReadonlyArray<{ reason: TodayQueueHandledReason }>,
+  order: ReadonlyArray<TodayQueueHandledReason>,
+): { reason: TodayQueueHandledReason; count: number }[] {
+  const counts = new Map<TodayQueueHandledReason, number>();
+  for (const item of handledItems) {
+    counts.set(item.reason, (counts.get(item.reason) ?? 0) + 1);
+  }
+  const result: { reason: TodayQueueHandledReason; count: number }[] = [];
+  for (const reason of order) {
+    const count = counts.get(reason) ?? 0;
+    if (count > 0) result.push({ reason, count });
+  }
+  return result;
+}
+
 // Two exposures for the same tweet + action can land in the same millisecond
 // (e.g. queue rebuild plus manual add); a sequence keeps their ids distinct so
 // one row doesn't silently overwrite the other.
