@@ -21,8 +21,10 @@ import {
   makeQueueExposure,
   makeTodayQueueKey,
   pickAdditionalTodayReadItems,
+  planMetadataWrite,
   shouldPersistTodayQueueSnapshot,
   toTodayQueueSnapshot,
+  type MetadataWriteOp,
   type TodayQueueHandledItem,
   type TodayQueueHandledReason,
   type TodayQueueItem,
@@ -127,10 +129,6 @@ function nextLocalDate(): string {
 // the active DB without remounting, so each account must be swept when it first
 // becomes active — a single page-load flag would only ever clean the first one.
 const sweptAccountIds = new Set<string>();
-
-function isNeutralMetadata(row: BookmarkQueueMetadata): boolean {
-  return row.intent === "unset" && !row.snoozedUntil;
-}
 
 export function useTodayQueue({
   enabled,
@@ -422,36 +420,25 @@ export function useTodayQueue({
     [db, refresh, state.localDate],
   );
 
-  const writeMetadata = useCallback(
-    async (
-      tweetId: string,
-      patch: Pick<BookmarkQueueMetadata, "intent" | "snoozedUntil">,
-      action: TodayQueueExposureAction,
-    ) => {
-      const existing = await db.getQueueBookmarkMetadataByTweetId(tweetId);
-      const next: BookmarkQueueMetadata = {
-        tweetId,
-        intent: patch.intent ?? existing?.intent ?? "unset",
-        snoozedUntil: patch.snoozedUntil ?? existing?.snoozedUntil ?? null,
-        updatedAt: Date.now(),
-      };
-      if (isNeutralMetadata(next)) {
-        await db.deleteQueueBookmarkMetadata(tweetId);
-      } else {
-        await db.upsertQueueBookmarkMetadata(next);
+  const applyMetadataPlan = useCallback(
+    async (op: MetadataWriteOp) => {
+      const existing = await db.getQueueBookmarkMetadataByTweetId(op.tweetId);
+      const plan = planMetadataWrite(op, existing, Date.now());
+      if (plan.action === "upsert" && plan.row) {
+        await db.upsertQueueBookmarkMetadata(plan.row);
+      } else if (plan.action === "delete") {
+        await db.deleteQueueBookmarkMetadata(op.tweetId);
       }
-      await recordAction(tweetId, action);
+      await recordAction(op.tweetId, plan.exposure);
     },
     [db, recordAction],
   );
 
   const setIntent = useCallback(
     async (tweetId: string, intent: BookmarkIntent) => {
-      const action =
-        intent === "reference" || intent === "act" ? intent : "opened";
-      await writeMetadata(tweetId, { intent, snoozedUntil: null }, action);
+      await applyMetadataPlan({ type: "setIntent", tweetId, intent });
     },
-    [writeMetadata],
+    [applyMetadataPlan],
   );
 
   const clearFeedback = useCallback(async (tweetId: string) => {
@@ -473,13 +460,13 @@ export function useTodayQueue({
 
   const snooze = useCallback(
     async (tweetId: string) => {
-      await writeMetadata(
+      await applyMetadataPlan({
+        type: "snooze",
         tweetId,
-        { intent: "unset", snoozedUntil: nextLocalDate() },
-        "snoozed",
-      );
+        snoozedUntil: nextLocalDate(),
+      });
     },
-    [writeMetadata],
+    [applyMetadataPlan],
   );
 
   const addToTodayQueue = useCallback(
@@ -499,22 +486,25 @@ export function useTodayQueue({
         generatedAt: createdAt,
       });
 
-      // Adding to Today's Read normally wipes the metadata row (snooze + any
-      // reference/act feedback) so the item starts fresh. An auto-pick must not
-      // silently discard a deliberate "read soon" intent the user set, so keep
-      // that one and drop only a stale snooze.
+      // The metadata-row decision (wipe vs preserve a read_soon intent and drop
+      // only a stale snooze) lives in planMetadataWrite; the snapshot append and
+      // its createdAt-stamped "added" exposure below are not metadata facts and
+      // stay inline (recording them here avoids a double exposure).
       const existing = options?.preserveReadSoonIntent
         ? await db.getQueueBookmarkMetadataByTweetId(tweetId)
         : null;
-      if (existing?.intent === "read_soon") {
-        if (existing.snoozedUntil) {
-          await db.upsertQueueBookmarkMetadata({
-            ...existing,
-            snoozedUntil: null,
-            updatedAt: Date.now(),
-          });
-        }
-      } else {
+      const plan = planMetadataWrite(
+        {
+          type: "addToTodayRead",
+          tweetId,
+          preserveReadSoonIntent: options?.preserveReadSoonIntent ?? false,
+        },
+        existing,
+        Date.now(),
+      );
+      if (plan.action === "upsert" && plan.row) {
+        await db.upsertQueueBookmarkMetadata(plan.row);
+      } else if (plan.action === "delete") {
         await db.deleteQueueBookmarkMetadata(tweetId);
       }
       await db.upsertTodayQueueSnapshot(snapshot);
