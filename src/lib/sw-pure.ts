@@ -1,4 +1,5 @@
 import type { AuthState } from "../types/auth";
+import { SYNC_MANUAL_RECLAIM_MS } from "./constants/sync-policy";
 
 export interface ParsedGraphqlEndpoint {
   queryId: string;
@@ -233,8 +234,6 @@ export interface SyncAccountLike {
   manualCooldownUntil?: number;
 }
 
-const SYNC_ORCHESTRATOR_MANUAL_RECLAIM_MS = 90_000;
-
 export type SyncBlockedReason =
   | "no_account"
   | "not_ready"
@@ -265,7 +264,7 @@ export function getSyncBlockedReason(
   if (account?.inFlight) {
     const startedAt = Number(account.inFlight.startedAt || 0);
     const lockAge = now - startedAt;
-    if (lockAge < SYNC_ORCHESTRATOR_MANUAL_RECLAIM_MS) {
+    if (lockAge < SYNC_MANUAL_RECLAIM_MS) {
       return "in_flight";
     }
   }

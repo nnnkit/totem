@@ -21,26 +21,19 @@ import {
   CS_SYNC_ORCHESTRATOR_STATE,
   CS_RUNTIME_STATE_V2,
 } from "./storage-keys-sw";
+import {
+  SYNC_AUTO_BACKOFF_MS,
+  SYNC_AUTO_INTERVAL_MS,
+  SYNC_AUTO_RECLAIM_MS,
+  SYNC_LOCK_TTL_MS,
+  SYNC_MANUAL_RECLAIM_MS,
+  SYNC_SEED_BACKOFF_MS,
+} from "../lib/constants/sync-policy";
+import { syncRetryAfterMs } from "../lib/sync-block-window";
 
 // ── Constants ───────────────────────────────────────────────────
 
 const SYNC_ORCHESTRATOR_VERSION = 1;
-const SYNC_ORCHESTRATOR_LOCK_TTL_MS = 12 * 60 * 1000;
-const SYNC_ORCHESTRATOR_AUTO_BACKOFF_MS = 5 * 60 * 1000;
-// When the seed has never completed (`lastFullSyncAt === 0`), an auto-sync
-// retry represents a user reloading to resume — not unsolicited polling.
-// The 5-minute window is appropriate for incremental polling; it's wrong
-// for seed resume. Use a short window so a reload actually retries.
-const SYNC_ORCHESTRATOR_SEED_BACKOFF_MS = 30 * 1000;
-const SYNC_ORCHESTRATOR_AUTO_INTERVAL_MS = 4 * 60 * 60 * 1000;
-const SYNC_ORCHESTRATOR_MANUAL_RECLAIM_MS = 90_000;
-// An auto-triggered reserve can also reclaim an in-flight lease that's
-// older than this threshold. This recovers from orphaned leases — the
-// previous sync tab closed before its COMPLETE_SYNC could be delivered
-// (MV3 service-worker messaging during tab unload is unreliable). Without
-// reclaim, every reload gets blocked with `in_flight` for up to
-// SYNC_ORCHESTRATOR_LOCK_TTL_MS (12 min). Symmetric with the manual path.
-const SYNC_ORCHESTRATOR_AUTO_RECLAIM_MS = 90_000;
 // Window within which a repeat of the same block reason for the same
 // account is considered noise. Multiple open pages + focus/visibility
 // events fan out into redundant REQUEST_SYNC calls; suppressing the log
@@ -264,7 +257,7 @@ export function createSyncHandlers(deps: SyncDeps = {}): HandlerMap {
    *
    * Block reasons and their retry windows:
    *   no_account / not_ready   — no retry (session issue)
-   *   in_flight                — SYNC_ORCHESTRATOR_LOCK_TTL_MS (12 min hard cap)
+   *   in_flight                — SYNC_LOCK_TTL_MS (12 min hard cap)
    *                              reclaimable early at MANUAL_RECLAIM / AUTO_RECLAIM (90s each)
    *                              for orphaned leases from SW-unload races
    *   rate_limited             — exponential (base 60s, cap 15 min) per-account
@@ -302,54 +295,17 @@ export function createSyncHandlers(deps: SyncDeps = {}): HandlerMap {
         (msg.accountId as string) || sessionSnapshot.accountContextId,
       );
 
-      const retryAfterFor = (
-        reason: string,
-        account: SyncAccountState | null,
-      ): number => {
-        if (!account) return 0;
-        if (reason === "cooldown") {
-          return Math.max(0, account.manualCooldownUntil - now);
-        }
-        if (reason === "rate_limited") {
-          return Math.max(0, account.rateLimitBackoffUntil - now);
-        }
-        if (reason === "in_flight" && account.inFlight) {
-          const startedAt = account.inFlight.startedAt;
-          if (!startedAt) return 0;
-          if (trigger === "manual") {
-            return Math.max(
-              0,
-              startedAt + SYNC_ORCHESTRATOR_MANUAL_RECLAIM_MS - now,
-            );
-          }
-          return Math.max(
-            0,
-            startedAt + SYNC_ORCHESTRATOR_LOCK_TTL_MS - now,
-          );
-        }
-        if (reason === "auto_backoff") {
-          // Match whichever backoff window the block used: seed-incomplete
-          // accounts use the short one, post-seed accounts the 5-min one.
-          const window = account.lastFullSyncAt <= 0
-            ? SYNC_ORCHESTRATOR_SEED_BACKOFF_MS
-            : SYNC_ORCHESTRATOR_AUTO_BACKOFF_MS;
-          return Math.max(0, account.lastAttemptAt + window - now);
-        }
-        if (reason === "fresh_cache") {
-          return Math.max(
-            0,
-            account.lastSuccessAt + SYNC_ORCHESTRATOR_AUTO_INTERVAL_MS - now,
-          );
-        }
-        return 0;
-      };
-
       const returnBlocked = async (
         reason: string,
         account?: SyncAccountState | null,
       ) => {
         const safeAccountKey = accountKey || "__none__";
-        const retryAfterMs = retryAfterFor(reason, account ?? null);
+        const retryAfterMs = syncRetryAfterMs({
+          reason,
+          now,
+          trigger,
+          account: account ?? null,
+        });
         // Suppress log spam when multiple pages (or rapid-fire subscribers)
         // all hit the same block decision in quick succession. The previous
         // decision we persisted tells us whether this is a duplicate.
@@ -407,7 +363,7 @@ export function createSyncHandlers(deps: SyncDeps = {}): HandlerMap {
       // Expired lock TTL
       if (
         account.inFlight &&
-        now - account.inFlight.startedAt >= SYNC_ORCHESTRATOR_LOCK_TTL_MS
+        now - account.inFlight.startedAt >= SYNC_LOCK_TTL_MS
       ) {
         account = { ...account, inFlight: null };
       }
@@ -416,10 +372,10 @@ export function createSyncHandlers(deps: SyncDeps = {}): HandlerMap {
         const leaseAge = now - account.inFlight.startedAt;
         const canReclaimManualLock =
           trigger === "manual" &&
-          leaseAge >= SYNC_ORCHESTRATOR_MANUAL_RECLAIM_MS;
+          leaseAge >= SYNC_MANUAL_RECLAIM_MS;
         const canReclaimAutoLock =
           trigger === "auto" &&
-          leaseAge >= SYNC_ORCHESTRATOR_AUTO_RECLAIM_MS;
+          leaseAge >= SYNC_AUTO_RECLAIM_MS;
         if (canReclaimManualLock || canReclaimAutoLock) {
           // [TOTEM-DIAG] Lease reclaim — the previous sync tab died without
           // completing its run. Clearing the orphaned lease so this one can
@@ -466,7 +422,7 @@ export function createSyncHandlers(deps: SyncDeps = {}): HandlerMap {
       } else if (needsFullSync) {
         if (
           account.lastAttemptAt > 0 &&
-          now - account.lastAttemptAt < SYNC_ORCHESTRATOR_SEED_BACKOFF_MS
+          now - account.lastAttemptAt < SYNC_SEED_BACKOFF_MS
         ) {
           return returnBlocked("auto_backoff", account);
         }
@@ -483,13 +439,13 @@ export function createSyncHandlers(deps: SyncDeps = {}): HandlerMap {
         if (
           lastCompletionWasSuccess &&
           account.lastSuccessAt > 0 &&
-          now - account.lastSuccessAt < SYNC_ORCHESTRATOR_AUTO_INTERVAL_MS
+          now - account.lastSuccessAt < SYNC_AUTO_INTERVAL_MS
         ) {
           return returnBlocked("fresh_cache", account);
         }
         if (
           account.lastAttemptAt > 0 &&
-          now - account.lastAttemptAt < SYNC_ORCHESTRATOR_AUTO_BACKOFF_MS
+          now - account.lastAttemptAt < SYNC_AUTO_BACKOFF_MS
         ) {
           return returnBlocked("auto_backoff", account);
         }
