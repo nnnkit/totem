@@ -440,8 +440,9 @@ async function migrateFromFirstAvailableDatabase(
   return migrateFromFirstAvailableDatabase(db, dbName, sourceNames, index + 1);
 }
 
-async function getDb(): Promise<IDBPDatabase<XBookmarksDbSchema>> {
-  const dbName = activeDbName;
+async function getDb(
+  dbName: string = activeDbName,
+): Promise<IDBPDatabase<XBookmarksDbSchema>> {
   let dbPromise = dbPromises.get(dbName);
   if (!dbPromise) {
     dbPromise = (async () => {
@@ -470,10 +471,13 @@ export function closeDb(): void {
   }
 }
 
-export async function upsertBookmarks(bookmarks: Bookmark[]): Promise<void> {
+export async function upsertBookmarks(
+  bookmarks: Bookmark[],
+  dbName: string = activeDbName,
+): Promise<void> {
   if (bookmarks.length === 0) return;
 
-  const db = await getDb();
+  const db = await getDb(dbName);
   const tx = db.transaction(STORE_NAME, "readwrite");
   for (const bookmark of bookmarks) {
     tx.store.put(bookmark);
@@ -489,17 +493,22 @@ function normalizeBookmarkForRead(bookmark: Bookmark): Bookmark {
   return bookmark;
 }
 
-export async function getBookmarkById(id: string): Promise<Bookmark | null> {
+export async function getBookmarkById(
+  id: string,
+  dbName: string = activeDbName,
+): Promise<Bookmark | null> {
   if (!id) return null;
-  const db = await getDb();
+  const db = await getDb(dbName);
   const bookmark = await db.get(STORE_NAME, id);
   return bookmark ? normalizeBookmarkForRead(bookmark) : null;
 }
 
-export function iterateBookmarks(): AsyncIterable<Bookmark> {
+export function iterateBookmarks(
+  dbName: string = activeDbName,
+): AsyncIterable<Bookmark> {
   return {
     async *[Symbol.asyncIterator](): AsyncIterator<Bookmark> {
-      const db = await getDb();
+      const db = await getDb(dbName);
       const tx = db.transaction(STORE_NAME, "readonly");
       const rows: Bookmark[] = [];
       let cursor = await tx.store.index("sortIndex").openCursor(null, "prev");
@@ -516,8 +525,10 @@ export function iterateBookmarks(): AsyncIterable<Bookmark> {
   };
 }
 
-export async function getAllBookmarks(): Promise<Bookmark[]> {
-  const db = await getDb();
+export async function getAllBookmarks(
+  dbName: string = activeDbName,
+): Promise<Bookmark[]> {
+  const db = await getDb(dbName);
   const tx = db.transaction(STORE_NAME, "readonly");
   const rows: Bookmark[] = [];
 
@@ -534,8 +545,10 @@ export async function getAllBookmarks(): Promise<Bookmark[]> {
   return rows;
 }
 
-export async function clearAllLocalData(): Promise<void> {
-  const db = await getDb();
+export async function clearAllLocalData(
+  dbName: string = activeDbName,
+): Promise<void> {
+  const db = await getDb(dbName);
   const tx = db.transaction(
     [
       STORE_NAME,
@@ -561,8 +574,10 @@ export async function clearAllLocalData(): Promise<void> {
 // Clears caches and the bookmarks store (which re-syncs from upstream),
 // but preserves user-generated content: highlights, reading progress,
 // and saved searches. Used by the "Reset app" path.
-export async function clearTransientStores(): Promise<void> {
-  const db = await getDb();
+export async function clearTransientStores(
+  dbName: string = activeDbName,
+): Promise<void> {
+  const db = await getDb(dbName);
   const tx = db.transaction(
     [
       STORE_NAME,
@@ -586,6 +601,7 @@ export interface DeleteBookmarksOptions {
 export async function deleteBookmarksByTweetIds(
   tweetIds: string[],
   options: DeleteBookmarksOptions = {},
+  dbName: string = activeDbName,
 ): Promise<void> {
   if (tweetIds.length === 0) return;
 
@@ -593,7 +609,7 @@ export async function deleteBookmarksByTweetIds(
   if (uniqueIds.length === 0) return;
   const { purgeHighlights = false } = options;
 
-  const db = await getDb();
+  const db = await getDb(dbName);
   const tx = db.transaction(
     [
       STORE_NAME,
@@ -633,16 +649,18 @@ export async function deleteBookmarksByTweetIds(
 
 export async function upsertTweetDetailCache(
   detail: TweetDetailCache,
+  dbName: string = activeDbName,
 ): Promise<void> {
-  await upsertTweetDetailCaches([detail]);
+  await upsertTweetDetailCaches([detail], dbName);
 }
 
 export async function upsertTweetDetailCaches(
   details: TweetDetailCache[],
+  dbName: string = activeDbName,
 ): Promise<void> {
   if (details.length === 0) return;
 
-  const db = await getDb();
+  const db = await getDb(dbName);
   const tx = db.transaction(DETAIL_STORE_NAME, "readwrite");
   for (const detail of details) {
     tx.store.put(detail);
@@ -670,26 +688,29 @@ export function subscribeTweetDetailCache(
 
 export async function getTweetDetailCache(
   tweetId: string,
+  dbName: string = activeDbName,
 ): Promise<TweetDetailCache | null> {
   if (!tweetId) return null;
 
-  const db = await getDb();
+  const db = await getDb(dbName);
   const cached = await db.get(DETAIL_STORE_NAME, tweetId);
   return cached || null;
 }
 
 export async function upsertReadingProgress(
   progress: ReadingProgress,
+  dbName: string = activeDbName,
 ): Promise<void> {
-  await upsertReadingProgressRows([progress]);
+  await upsertReadingProgressRows([progress], dbName);
 }
 
 export async function upsertReadingProgressRows(
   progressRows: ReadingProgress[],
+  dbName: string = activeDbName,
 ): Promise<void> {
   if (progressRows.length === 0) return;
 
-  const db = await getDb();
+  const db = await getDb(dbName);
   const tx = db.transaction(PROGRESS_STORE_NAME, "readwrite");
   for (const progress of progressRows) {
     tx.store.put(progress);
@@ -703,9 +724,10 @@ const REOPEN_DEBOUNCE_MS = 5 * 60 * 1000;
 
 export async function ensureReadingProgressExists(
   tweetId: string,
+  dbName: string = activeDbName,
 ): Promise<void> {
   if (!tweetId) return;
-  const db = await getDb();
+  const db = await getDb(dbName);
   const existing = await db.get(PROGRESS_STORE_NAME, tweetId);
   const now = Date.now();
   if (existing) {
@@ -733,9 +755,10 @@ export async function ensureReadingProgressExists(
 
 export async function markReadingProgressCompleted(
   tweetId: string,
+  dbName: string = activeDbName,
 ): Promise<void> {
   if (!tweetId) return;
-  const db = await getDb();
+  const db = await getDb(dbName);
   const existing = await db.get(PROGRESS_STORE_NAME, tweetId);
   const now = Date.now();
   if (existing) {
@@ -759,9 +782,10 @@ export async function markReadingProgressCompleted(
 
 export async function markReadingProgressUncompleted(
   tweetId: string,
+  dbName: string = activeDbName,
 ): Promise<void> {
   if (!tweetId) return;
-  const db = await getDb();
+  const db = await getDb(dbName);
   const existing = await db.get(PROGRESS_STORE_NAME, tweetId);
   if (existing) {
     await db.put(PROGRESS_STORE_NAME, {
@@ -775,15 +799,18 @@ export async function markReadingProgressUncompleted(
 
 export async function getReadingProgress(
   tweetId: string,
+  dbName: string = activeDbName,
 ): Promise<ReadingProgress | null> {
   if (!tweetId) return null;
-  const db = await getDb();
+  const db = await getDb(dbName);
   const record = await db.get(PROGRESS_STORE_NAME, tweetId);
   return record || null;
 }
 
-export async function getAllReadingProgress(): Promise<ReadingProgress[]> {
-  const db = await getDb();
+export async function getAllReadingProgress(
+  dbName: string = activeDbName,
+): Promise<ReadingProgress[]> {
+  const db = await getDb(dbName);
   const tx = db.transaction(PROGRESS_STORE_NAME, "readonly");
   const rows: ReadingProgress[] = [];
 
@@ -797,10 +824,12 @@ export async function getAllReadingProgress(): Promise<ReadingProgress[]> {
   return rows;
 }
 
-export function iterateReadingProgress(): AsyncIterable<ReadingProgress> {
+export function iterateReadingProgress(
+  dbName: string = activeDbName,
+): AsyncIterable<ReadingProgress> {
   return {
     async *[Symbol.asyncIterator](): AsyncIterator<ReadingProgress> {
-      const db = await getDb();
+      const db = await getDb(dbName);
       const tx = db.transaction(PROGRESS_STORE_NAME, "readonly");
       const ids: string[] = [];
       let cursor = await tx.store.index("lastReadAt").openKeyCursor(null, "prev");
@@ -818,14 +847,18 @@ export function iterateReadingProgress(): AsyncIterable<ReadingProgress> {
   };
 }
 
-export async function getDetailedTweetIds(): Promise<Set<string>> {
-  const db = await getDb();
+export async function getDetailedTweetIds(
+  dbName: string = activeDbName,
+): Promise<Set<string>> {
+  const db = await getDb(dbName);
   const keys = await db.getAllKeys(DETAIL_STORE_NAME);
   return new Set(keys);
 }
 
-export async function getCompletedTweetIds(): Promise<Set<string>> {
-  const db = await getDb();
+export async function getCompletedTweetIds(
+  dbName: string = activeDbName,
+): Promise<Set<string>> {
+  const db = await getDb(dbName);
   const tx = db.transaction(PROGRESS_STORE_NAME, "readonly");
   const ids = new Set<string>();
   let cursor = await tx.store.openCursor();
@@ -837,14 +870,20 @@ export async function getCompletedTweetIds(): Promise<Set<string>> {
   return ids;
 }
 
-export async function upsertHighlight(highlight: Highlight): Promise<void> {
-  await upsertHighlights([highlight]);
+export async function upsertHighlight(
+  highlight: Highlight,
+  dbName: string = activeDbName,
+): Promise<void> {
+  await upsertHighlights([highlight], dbName);
 }
 
-export async function upsertHighlights(highlights: Highlight[]): Promise<void> {
+export async function upsertHighlights(
+  highlights: Highlight[],
+  dbName: string = activeDbName,
+): Promise<void> {
   if (highlights.length === 0) return;
 
-  const db = await getDb();
+  const db = await getDb(dbName);
   const tx = db.transaction(HIGHLIGHTS_STORE_NAME, "readwrite");
   for (const highlight of highlights) {
     tx.store.put(highlight);
@@ -853,22 +892,31 @@ export async function upsertHighlights(highlights: Highlight[]): Promise<void> {
   emitReaderActivity();
 }
 
-export async function deleteHighlight(id: string): Promise<void> {
+export async function deleteHighlight(
+  id: string,
+  dbName: string = activeDbName,
+): Promise<void> {
   if (!id) return;
-  const db = await getDb();
+  const db = await getDb(dbName);
   await db.delete(HIGHLIGHTS_STORE_NAME, id);
   emitReaderActivity();
 }
 
-export async function getHighlightById(id: string): Promise<Highlight | null> {
+export async function getHighlightById(
+  id: string,
+  dbName: string = activeDbName,
+): Promise<Highlight | null> {
   if (!id) return null;
-  const db = await getDb();
+  const db = await getDb(dbName);
   return (await db.get(HIGHLIGHTS_STORE_NAME, id)) ?? null;
 }
 
-export async function getHighlightsByTweetId(tweetId: string): Promise<Highlight[]> {
+export async function getHighlightsByTweetId(
+  tweetId: string,
+  dbName: string = activeDbName,
+): Promise<Highlight[]> {
   if (!tweetId) return [];
-  const db = await getDb();
+  const db = await getDb(dbName);
   return db.getAllFromIndex(HIGHLIGHTS_STORE_NAME, "tweetId", tweetId);
 }
 
@@ -879,10 +927,11 @@ export interface HighlightCounts {
 
 export async function getHighlightCountsByTweetIds(
   tweetIds: string[],
+  dbName: string = activeDbName,
 ): Promise<Map<string, HighlightCounts>> {
   const result = new Map<string, HighlightCounts>();
   if (tweetIds.length === 0) return result;
-  const db = await getDb();
+  const db = await getDb(dbName);
   const index = db.transaction(HIGHLIGHTS_STORE_NAME, "readonly").store.index("tweetId");
   const entries = await Promise.all(tweetIds.map(async (tweetId) => {
     const highlights = await index.getAll(IDBKeyRange.only(tweetId));
@@ -907,12 +956,14 @@ export async function getHighlightCountsByTweetIds(
  * Build a lightweight per-bookmark signals map for ranking — last-read
  * timestamp and reopen count. Used by the search engine's `boostDocument`.
  */
-export async function getBookmarkSignals(): Promise<
+export async function getBookmarkSignals(
+  dbName: string = activeDbName,
+): Promise<
   Map<string, { lastReadAt?: number; reopenCount?: number }>
 > {
   const out = new Map<string, { lastReadAt?: number; reopenCount?: number }>();
   try {
-    const all = await getAllReadingProgress();
+    const all = await getAllReadingProgress(dbName);
     for (const row of all) {
       out.set(row.tweetId, {
         lastReadAt: row.lastReadAt,
@@ -927,23 +978,26 @@ export async function getBookmarkSignals(): Promise<
 
 export async function getTodayQueueSnapshot(
   key: string,
+  dbName: string = activeDbName,
 ): Promise<TodayQueueSnapshot | null> {
   if (!key) return null;
-  const db = await getDb();
+  const db = await getDb(dbName);
   return (await db.get(TODAY_QUEUE_SNAPSHOTS_STORE_NAME, key)) ?? null;
 }
 
 export async function upsertTodayQueueSnapshot(
   snapshot: TodayQueueSnapshot,
+  dbName: string = activeDbName,
 ): Promise<void> {
-  await upsertTodayQueueSnapshots([snapshot]);
+  await upsertTodayQueueSnapshots([snapshot], dbName);
 }
 
 export async function upsertTodayQueueSnapshots(
   snapshots: TodayQueueSnapshot[],
+  dbName: string = activeDbName,
 ): Promise<void> {
   if (snapshots.length === 0) return;
-  const db = await getDb();
+  const db = await getDb(dbName);
   const tx = db.transaction(TODAY_QUEUE_SNAPSHOTS_STORE_NAME, "readwrite");
   for (const snapshot of snapshots) {
     tx.store.put(snapshot);
@@ -952,70 +1006,86 @@ export async function upsertTodayQueueSnapshots(
   emitReaderActivity();
 }
 
-export async function deleteTodayQueueSnapshot(key: string): Promise<void> {
+export async function deleteTodayQueueSnapshot(
+  key: string,
+  dbName: string = activeDbName,
+): Promise<void> {
   if (!key) return;
-  const db = await getDb();
+  const db = await getDb(dbName);
   await db.delete(TODAY_QUEUE_SNAPSHOTS_STORE_NAME, key);
   emitReaderActivity();
 }
 
 export async function getQueueBookmarkMetadataByTweetId(
   tweetId: string,
+  dbName: string = activeDbName,
 ): Promise<BookmarkQueueMetadata | null> {
   if (!tweetId) return null;
-  const db = await getDb();
+  const db = await getDb(dbName);
   return (await db.get(BOOKMARK_QUEUE_METADATA_STORE_NAME, tweetId)) ?? null;
 }
 
-export async function getAllQueueBookmarkMetadata(): Promise<
+export async function getAllQueueBookmarkMetadata(
+  dbName: string = activeDbName,
+): Promise<
   BookmarkQueueMetadata[]
 > {
-  const db = await getDb();
+  const db = await getDb(dbName);
   return db.getAll(BOOKMARK_QUEUE_METADATA_STORE_NAME);
 }
 
-export async function getAllTodayQueueSnapshots(): Promise<
+export async function getAllTodayQueueSnapshots(
+  dbName: string = activeDbName,
+): Promise<
   TodayQueueSnapshot[]
 > {
-  const db = await getDb();
+  const db = await getDb(dbName);
   return db.getAll(TODAY_QUEUE_SNAPSHOTS_STORE_NAME);
 }
 
-export async function getAllTodayQueueExposures(): Promise<
+export async function getAllTodayQueueExposures(
+  dbName: string = activeDbName,
+): Promise<
   TodayQueueExposure[]
 > {
-  const db = await getDb();
+  const db = await getDb(dbName);
   return db.getAll(TODAY_QUEUE_EXPOSURES_STORE_NAME);
 }
 
-export function iterateTodayQueueSnapshots(): AsyncIterable<TodayQueueSnapshot> {
+export function iterateTodayQueueSnapshots(
+  dbName: string = activeDbName,
+): AsyncIterable<TodayQueueSnapshot> {
   return {
     async *[Symbol.asyncIterator](): AsyncIterator<TodayQueueSnapshot> {
-      const db = await getDb();
+      const db = await getDb(dbName);
       const rows = await db.getAll(TODAY_QUEUE_SNAPSHOTS_STORE_NAME);
       for (const row of rows) yield row;
     },
   };
 }
 
-export function iterateQueueBookmarkMetadata(): AsyncIterable<
+export function iterateQueueBookmarkMetadata(
+  dbName: string = activeDbName,
+): AsyncIterable<
   BookmarkQueueMetadata
 > {
   return {
     async *[Symbol.asyncIterator](): AsyncIterator<BookmarkQueueMetadata> {
-      const db = await getDb();
+      const db = await getDb(dbName);
       const rows = await db.getAll(BOOKMARK_QUEUE_METADATA_STORE_NAME);
       for (const row of rows) yield row;
     },
   };
 }
 
-export function iterateTodayQueueExposures(): AsyncIterable<
+export function iterateTodayQueueExposures(
+  dbName: string = activeDbName,
+): AsyncIterable<
   TodayQueueExposure
 > {
   return {
     async *[Symbol.asyncIterator](): AsyncIterator<TodayQueueExposure> {
-      const db = await getDb();
+      const db = await getDb(dbName);
       const rows = await db.getAll(TODAY_QUEUE_EXPOSURES_STORE_NAME);
       for (const row of rows) yield row;
     },
@@ -1024,9 +1094,10 @@ export function iterateTodayQueueExposures(): AsyncIterable<
 
 export async function upsertQueueBookmarkMetadataRows(
   rows: BookmarkQueueMetadata[],
+  dbName: string = activeDbName,
 ): Promise<void> {
   if (rows.length === 0) return;
-  const db = await getDb();
+  const db = await getDb(dbName);
   const tx = db.transaction(BOOKMARK_QUEUE_METADATA_STORE_NAME, "readwrite");
   for (const row of rows) {
     tx.store.put(row);
@@ -1037,30 +1108,34 @@ export async function upsertQueueBookmarkMetadataRows(
 
 export async function upsertQueueBookmarkMetadata(
   row: BookmarkQueueMetadata,
+  dbName: string = activeDbName,
 ): Promise<void> {
-  await upsertQueueBookmarkMetadataRows([row]);
+  await upsertQueueBookmarkMetadataRows([row], dbName);
 }
 
 export async function deleteQueueBookmarkMetadata(
   tweetId: string,
+  dbName: string = activeDbName,
 ): Promise<void> {
   if (!tweetId) return;
-  const db = await getDb();
+  const db = await getDb(dbName);
   await db.delete(BOOKMARK_QUEUE_METADATA_STORE_NAME, tweetId);
   emitReaderActivity();
 }
 
 export async function recordTodayQueueExposures(
   exposures: TodayQueueExposure[],
+  dbName: string = activeDbName,
 ): Promise<void> {
-  await upsertTodayQueueExposures(exposures);
+  await upsertTodayQueueExposures(exposures, dbName);
 }
 
 export async function upsertTodayQueueExposures(
   exposures: TodayQueueExposure[],
+  dbName: string = activeDbName,
 ): Promise<void> {
   if (exposures.length === 0) return;
-  const db = await getDb();
+  const db = await getDb(dbName);
   const tx = db.transaction(TODAY_QUEUE_EXPOSURES_STORE_NAME, "readwrite");
   for (const exposure of exposures) {
     tx.store.put(exposure);
@@ -1071,8 +1146,9 @@ export async function upsertTodayQueueExposures(
 
 export async function getTodayQueueExposuresSince(
   sinceMs: number,
+  dbName: string = activeDbName,
 ): Promise<TodayQueueExposure[]> {
-  const db = await getDb();
+  const db = await getDb(dbName);
   const tx = db.transaction(TODAY_QUEUE_EXPOSURES_STORE_NAME, "readonly");
   const rows: TodayQueueExposure[] = [];
   let cursor = await tx.store.index("createdAt").openCursor(
@@ -1090,9 +1166,11 @@ export async function getTodayQueueExposuresSince(
 // ─── Search index persistence ────────────────────────────────────────────
 
 /** Load the serialized MiniSearch index, or null if none exists / is stale. */
-export async function loadSearchIndexJson(): Promise<string | null> {
+export async function loadSearchIndexJson(
+  dbName: string = activeDbName,
+): Promise<string | null> {
   try {
-    const db = await getDb();
+    const db = await getDb(dbName);
     const row = await db.get(SEARCH_INDEX_STORE_NAME, SEARCH_INDEX_KEY);
     return row?.json ?? null;
   } catch {
@@ -1100,9 +1178,12 @@ export async function loadSearchIndexJson(): Promise<string | null> {
   }
 }
 
-export async function saveSearchIndexJson(json: string): Promise<void> {
+export async function saveSearchIndexJson(
+  json: string,
+  dbName: string = activeDbName,
+): Promise<void> {
   try {
-    const db = await getDb();
+    const db = await getDb(dbName);
     await db.put(SEARCH_INDEX_STORE_NAME, {
       id: SEARCH_INDEX_KEY,
       json,
@@ -1113,17 +1194,24 @@ export async function saveSearchIndexJson(json: string): Promise<void> {
   }
 }
 
-export async function clearSearchIndexJson(): Promise<void> {
+export async function clearSearchIndexJson(
+  dbName: string = activeDbName,
+): Promise<void> {
   try {
-    const db = await getDb();
+    const db = await getDb(dbName);
     await db.delete(SEARCH_INDEX_STORE_NAME, SEARCH_INDEX_KEY);
   } catch {
     // ignore
   }
 }
 
-export async function findNextBookmarkNeedingHydration(): Promise<string | null> {
-  const [detailedIds, db] = await Promise.all([getDetailedTweetIds(), getDb()]);
+export async function findNextBookmarkNeedingHydration(
+  dbName: string = activeDbName,
+): Promise<string | null> {
+  const [detailedIds, db] = await Promise.all([
+    getDetailedTweetIds(dbName),
+    getDb(dbName),
+  ]);
   const tx = db.transaction(STORE_NAME, "readonly");
   let cursor = await tx.store.openCursor();
   while (cursor) {
@@ -1136,8 +1224,13 @@ export async function findNextBookmarkNeedingHydration(): Promise<string | null>
   return null;
 }
 
-export async function countBookmarksNeedingHydration(): Promise<number> {
-  const [detailedIds, db] = await Promise.all([getDetailedTweetIds(), getDb()]);
+export async function countBookmarksNeedingHydration(
+  dbName: string = activeDbName,
+): Promise<number> {
+  const [detailedIds, db] = await Promise.all([
+    getDetailedTweetIds(dbName),
+    getDb(dbName),
+  ]);
   const tx = db.transaction(STORE_NAME, "readonly");
   let count = 0;
   let cursor = await tx.store.openCursor();
@@ -1151,20 +1244,26 @@ export async function countBookmarksNeedingHydration(): Promise<number> {
   return count;
 }
 
-export async function getAllTweetDetails(): Promise<TweetDetailCache[]> {
-  const db = await getDb();
+export async function getAllTweetDetails(
+  dbName: string = activeDbName,
+): Promise<TweetDetailCache[]> {
+  const db = await getDb(dbName);
   return db.getAll(DETAIL_STORE_NAME);
 }
 
-export async function getAllHighlights(): Promise<Highlight[]> {
-  const db = await getDb();
+export async function getAllHighlights(
+  dbName: string = activeDbName,
+): Promise<Highlight[]> {
+  const db = await getDb(dbName);
   return db.getAll(HIGHLIGHTS_STORE_NAME);
 }
 
-export function iterateTweetDetails(): AsyncIterable<TweetDetailCache> {
+export function iterateTweetDetails(
+  dbName: string = activeDbName,
+): AsyncIterable<TweetDetailCache> {
   return {
     async *[Symbol.asyncIterator](): AsyncIterator<TweetDetailCache> {
-      const db = await getDb();
+      const db = await getDb(dbName);
       const tx = db.transaction(DETAIL_STORE_NAME, "readonly");
       const keys: string[] = [];
       let cursor = await tx.store.openKeyCursor();
@@ -1182,10 +1281,12 @@ export function iterateTweetDetails(): AsyncIterable<TweetDetailCache> {
   };
 }
 
-export function iterateHighlights(): AsyncIterable<Highlight> {
+export function iterateHighlights(
+  dbName: string = activeDbName,
+): AsyncIterable<Highlight> {
   return {
     async *[Symbol.asyncIterator](): AsyncIterator<Highlight> {
-      const db = await getDb();
+      const db = await getDb(dbName);
       const tx = db.transaction(HIGHLIGHTS_STORE_NAME, "readonly");
       const keys: string[] = [];
       let cursor = await tx.store.openKeyCursor();
@@ -1205,11 +1306,12 @@ export function iterateHighlights(): AsyncIterable<Highlight> {
 
 export async function cleanupOldTweetDetails(
   maxAgeMs: number,
+  dbName: string = activeDbName,
 ): Promise<number> {
   if (!Number.isFinite(maxAgeMs) || maxAgeMs <= 0) return 0;
 
   const cutoff = Date.now() - maxAgeMs;
-  const db = await getDb();
+  const db = await getDb(dbName);
   const tx = db.transaction(DETAIL_STORE_NAME, "readwrite");
   const fetchedAtIndex = tx.store.index("fetchedAt");
 
@@ -1223,4 +1325,159 @@ export async function cleanupOldTweetDetails(
 
   await tx.done;
   return removed;
+}
+
+export interface AccountDb {
+  upsertBookmarks(bookmarks: Bookmark[]): Promise<void>;
+  getBookmarkById(id: string): Promise<Bookmark | null>;
+  iterateBookmarks(): AsyncIterable<Bookmark>;
+  getAllBookmarks(): Promise<Bookmark[]>;
+  clearAllLocalData(): Promise<void>;
+  clearTransientStores(): Promise<void>;
+  deleteBookmarksByTweetIds(
+    tweetIds: string[],
+    options?: DeleteBookmarksOptions,
+  ): Promise<void>;
+  upsertTweetDetailCache(detail: TweetDetailCache): Promise<void>;
+  upsertTweetDetailCaches(details: TweetDetailCache[]): Promise<void>;
+  getTweetDetailCache(tweetId: string): Promise<TweetDetailCache | null>;
+  upsertReadingProgress(progress: ReadingProgress): Promise<void>;
+  upsertReadingProgressRows(progressRows: ReadingProgress[]): Promise<void>;
+  ensureReadingProgressExists(tweetId: string): Promise<void>;
+  markReadingProgressCompleted(tweetId: string): Promise<void>;
+  markReadingProgressUncompleted(tweetId: string): Promise<void>;
+  getReadingProgress(tweetId: string): Promise<ReadingProgress | null>;
+  getAllReadingProgress(): Promise<ReadingProgress[]>;
+  iterateReadingProgress(): AsyncIterable<ReadingProgress>;
+  getDetailedTweetIds(): Promise<Set<string>>;
+  getCompletedTweetIds(): Promise<Set<string>>;
+  upsertHighlight(highlight: Highlight): Promise<void>;
+  upsertHighlights(highlights: Highlight[]): Promise<void>;
+  deleteHighlight(id: string): Promise<void>;
+  getHighlightById(id: string): Promise<Highlight | null>;
+  getHighlightsByTweetId(tweetId: string): Promise<Highlight[]>;
+  getHighlightCountsByTweetIds(
+    tweetIds: string[],
+  ): Promise<Map<string, HighlightCounts>>;
+  getBookmarkSignals(): Promise<
+    Map<string, { lastReadAt?: number; reopenCount?: number }>
+  >;
+  getTodayQueueSnapshot(key: string): Promise<TodayQueueSnapshot | null>;
+  upsertTodayQueueSnapshot(snapshot: TodayQueueSnapshot): Promise<void>;
+  upsertTodayQueueSnapshots(snapshots: TodayQueueSnapshot[]): Promise<void>;
+  deleteTodayQueueSnapshot(key: string): Promise<void>;
+  getQueueBookmarkMetadataByTweetId(
+    tweetId: string,
+  ): Promise<BookmarkQueueMetadata | null>;
+  getAllQueueBookmarkMetadata(): Promise<BookmarkQueueMetadata[]>;
+  getAllTodayQueueSnapshots(): Promise<TodayQueueSnapshot[]>;
+  getAllTodayQueueExposures(): Promise<TodayQueueExposure[]>;
+  iterateTodayQueueSnapshots(): AsyncIterable<TodayQueueSnapshot>;
+  iterateQueueBookmarkMetadata(): AsyncIterable<BookmarkQueueMetadata>;
+  iterateTodayQueueExposures(): AsyncIterable<TodayQueueExposure>;
+  upsertQueueBookmarkMetadataRows(rows: BookmarkQueueMetadata[]): Promise<void>;
+  upsertQueueBookmarkMetadata(row: BookmarkQueueMetadata): Promise<void>;
+  deleteQueueBookmarkMetadata(tweetId: string): Promise<void>;
+  recordTodayQueueExposures(exposures: TodayQueueExposure[]): Promise<void>;
+  upsertTodayQueueExposures(exposures: TodayQueueExposure[]): Promise<void>;
+  getTodayQueueExposuresSince(sinceMs: number): Promise<TodayQueueExposure[]>;
+  loadSearchIndexJson(): Promise<string | null>;
+  saveSearchIndexJson(json: string): Promise<void>;
+  clearSearchIndexJson(): Promise<void>;
+  findNextBookmarkNeedingHydration(): Promise<string | null>;
+  countBookmarksNeedingHydration(): Promise<number>;
+  getAllTweetDetails(): Promise<TweetDetailCache[]>;
+  getAllHighlights(): Promise<Highlight[]>;
+  iterateTweetDetails(): AsyncIterable<TweetDetailCache>;
+  iterateHighlights(): AsyncIterable<Highlight>;
+  cleanupOldTweetDetails(maxAgeMs: number): Promise<number>;
+}
+
+const accountDbHandles = new Map<string, AccountDb>();
+
+export function openAccountDb(accountId: string | null): AccountDb {
+  const dbName = getDbNameForAccount(accountId);
+  const existing = accountDbHandles.get(dbName);
+  if (existing) return existing;
+
+  const handle: AccountDb = {
+    upsertBookmarks: (bookmarks) => upsertBookmarks(bookmarks, dbName),
+    getBookmarkById: (id) => getBookmarkById(id, dbName),
+    iterateBookmarks: () => iterateBookmarks(dbName),
+    getAllBookmarks: () => getAllBookmarks(dbName),
+    clearAllLocalData: () => clearAllLocalData(dbName),
+    clearTransientStores: () => clearTransientStores(dbName),
+    deleteBookmarksByTweetIds: (tweetIds, options) =>
+      deleteBookmarksByTweetIds(tweetIds, options, dbName),
+    upsertTweetDetailCache: (detail) => upsertTweetDetailCache(detail, dbName),
+    upsertTweetDetailCaches: (details) =>
+      upsertTweetDetailCaches(details, dbName),
+    getTweetDetailCache: (tweetId) => getTweetDetailCache(tweetId, dbName),
+    upsertReadingProgress: (progress) =>
+      upsertReadingProgress(progress, dbName),
+    upsertReadingProgressRows: (progressRows) =>
+      upsertReadingProgressRows(progressRows, dbName),
+    ensureReadingProgressExists: (tweetId) =>
+      ensureReadingProgressExists(tweetId, dbName),
+    markReadingProgressCompleted: (tweetId) =>
+      markReadingProgressCompleted(tweetId, dbName),
+    markReadingProgressUncompleted: (tweetId) =>
+      markReadingProgressUncompleted(tweetId, dbName),
+    getReadingProgress: (tweetId) => getReadingProgress(tweetId, dbName),
+    getAllReadingProgress: () => getAllReadingProgress(dbName),
+    iterateReadingProgress: () => iterateReadingProgress(dbName),
+    getDetailedTweetIds: () => getDetailedTweetIds(dbName),
+    getCompletedTweetIds: () => getCompletedTweetIds(dbName),
+    upsertHighlight: (highlight) => upsertHighlight(highlight, dbName),
+    upsertHighlights: (highlights) => upsertHighlights(highlights, dbName),
+    deleteHighlight: (id) => deleteHighlight(id, dbName),
+    getHighlightById: (id) => getHighlightById(id, dbName),
+    getHighlightsByTweetId: (tweetId) =>
+      getHighlightsByTweetId(tweetId, dbName),
+    getHighlightCountsByTweetIds: (tweetIds) =>
+      getHighlightCountsByTweetIds(tweetIds, dbName),
+    getBookmarkSignals: () => getBookmarkSignals(dbName),
+    getTodayQueueSnapshot: (key) => getTodayQueueSnapshot(key, dbName),
+    upsertTodayQueueSnapshot: (snapshot) =>
+      upsertTodayQueueSnapshot(snapshot, dbName),
+    upsertTodayQueueSnapshots: (snapshots) =>
+      upsertTodayQueueSnapshots(snapshots, dbName),
+    deleteTodayQueueSnapshot: (key) => deleteTodayQueueSnapshot(key, dbName),
+    getQueueBookmarkMetadataByTweetId: (tweetId) =>
+      getQueueBookmarkMetadataByTweetId(tweetId, dbName),
+    getAllQueueBookmarkMetadata: () => getAllQueueBookmarkMetadata(dbName),
+    getAllTodayQueueSnapshots: () => getAllTodayQueueSnapshots(dbName),
+    getAllTodayQueueExposures: () => getAllTodayQueueExposures(dbName),
+    iterateTodayQueueSnapshots: () => iterateTodayQueueSnapshots(dbName),
+    iterateQueueBookmarkMetadata: () => iterateQueueBookmarkMetadata(dbName),
+    iterateTodayQueueExposures: () => iterateTodayQueueExposures(dbName),
+    upsertQueueBookmarkMetadataRows: (rows) =>
+      upsertQueueBookmarkMetadataRows(rows, dbName),
+    upsertQueueBookmarkMetadata: (row) =>
+      upsertQueueBookmarkMetadata(row, dbName),
+    deleteQueueBookmarkMetadata: (tweetId) =>
+      deleteQueueBookmarkMetadata(tweetId, dbName),
+    recordTodayQueueExposures: (exposures) =>
+      recordTodayQueueExposures(exposures, dbName),
+    upsertTodayQueueExposures: (exposures) =>
+      upsertTodayQueueExposures(exposures, dbName),
+    getTodayQueueExposuresSince: (sinceMs) =>
+      getTodayQueueExposuresSince(sinceMs, dbName),
+    loadSearchIndexJson: () => loadSearchIndexJson(dbName),
+    saveSearchIndexJson: (json) => saveSearchIndexJson(json, dbName),
+    clearSearchIndexJson: () => clearSearchIndexJson(dbName),
+    findNextBookmarkNeedingHydration: () =>
+      findNextBookmarkNeedingHydration(dbName),
+    countBookmarksNeedingHydration: () =>
+      countBookmarksNeedingHydration(dbName),
+    getAllTweetDetails: () => getAllTweetDetails(dbName),
+    getAllHighlights: () => getAllHighlights(dbName),
+    iterateTweetDetails: () => iterateTweetDetails(dbName),
+    iterateHighlights: () => iterateHighlights(dbName),
+    cleanupOldTweetDetails: (maxAgeMs) =>
+      cleanupOldTweetDetails(maxAgeMs, dbName),
+  };
+
+  accountDbHandles.set(dbName, handle);
+  return handle;
 }

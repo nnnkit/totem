@@ -1,13 +1,10 @@
 ---
 import { getCollection } from "astro:content";
-import { readFileSync } from "node:fs";
 import BaseLayout from "../layouts/BaseLayout.astro";
 import { LandingPage } from "../react/SiteApp";
 import { SITE_LINKS } from "../react/site-content";
+import packageJson from "../../../../package.json";
 
-const packageJson = JSON.parse(
-  readFileSync(new URL("../../../../package.json", import.meta.url), "utf8"),
-) as { version?: string };
 const appVersion = packageJson.version ?? "0.0.0";
 
 function dateTime(value: unknown): number {

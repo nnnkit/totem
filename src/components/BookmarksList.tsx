@@ -55,9 +55,10 @@ import {
   type ReadingTab,
 } from "../lib/reading-list";
 import { sortIndexToTimestamp, timeAgo } from "../lib/time";
-import { getHighlightCountsByTweetIds, type HighlightCounts } from "../db";
+import { type HighlightCounts } from "../db";
 import { subscribeToReaderActivity } from "../lib/reader-activity";
 import {
+  useAccountDb,
   useIsOffline,
   useRuntimeActions,
   useSyncButtonState,
@@ -223,6 +224,7 @@ function useBookmarksListModel({
   onLogin,
 }: Props) {
   const containerWidthClass = "max-w-3xl";
+  const db = useAccountDb();
   const runtimeSyncButton = useSyncButtonState();
   const runtimeOfflineMode = useIsOffline();
   const actions = useRuntimeActions();
@@ -414,7 +416,7 @@ function useBookmarksListModel({
     }
 
     let cancelled = false;
-    getHighlightCountsByTweetIds(tweetIds)
+    db.getHighlightCountsByTweetIds(tweetIds)
       .then((counts) => {
         if (!cancelled) updateListState({ highlightCounts: counts });
       })
@@ -425,7 +427,7 @@ function useBookmarksListModel({
     return () => {
       cancelled = true;
     };
-  }, [visibleTweetIds]);
+  }, [visibleTweetIds, db]);
 
   useEffect(() => {
     return refreshHighlightCounts();

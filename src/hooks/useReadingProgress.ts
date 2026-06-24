@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { getReadingProgress } from "../db";
+import { useAccountDb } from "../stores/selectors";
 import type { ReadingProgress } from "../types";
 import { READING_HEIGHT_CHANGE_RATIO } from "../lib/constants/timing";
 
@@ -16,6 +16,7 @@ export function useReadingProgress({
   tweetId,
   contentReady,
 }: UseReadingProgressOptions): UseReadingProgressResult {
+  const db = useAccountDb();
   const savedProgress = useRef<ReadingProgress | null>(null);
   const restoredRef = useRef(false);
   const [progressState, setProgressState] = useState({
@@ -31,7 +32,7 @@ export function useReadingProgress({
     savedProgress.current = null;
     setProgressState({ loaded: false, isCompleted: false });
 
-    getReadingProgress(currentTweetId)
+    db.getReadingProgress(currentTweetId)
       .then((progress) => {
         if (cancelled) return;
         savedProgress.current = progress;
@@ -49,7 +50,7 @@ export function useReadingProgress({
     return () => {
       cancelled = true;
     };
-  }, [tweetId]);
+  }, [tweetId, db]);
 
   useEffect(() => {
     if (!contentReady || !progressState.loaded || restoredRef.current) return;
