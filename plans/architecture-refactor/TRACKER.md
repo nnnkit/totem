@@ -87,7 +87,8 @@ typecheck + tests green.
 **Problem:** both hooks reimplement the identical synced-preference lifecycle —
 `hasChromeStorageSync()`-guarded load with a cancelled-flag race guard, an
 `onChanged`/`areaName==='sync'`+key listener, and a guarded swallow-on-fail set.
-(`useTheme`'s `onChanged` is even missing the cancelled re-check — a latent bug.)
+(The cancelled flag guards only the async initial load; the synchronous
+`onChanged` listener neither has nor needs one.)
 
 **Plan:** extract `useSyncedPreference<T>(key, normalize, default)` owning the
 platform guard, areaName filter, cancelled-load race guard, and swallow-on-fail set.
@@ -96,8 +97,8 @@ platform guard, areaName filter, cancelled-load race guard, and swallow-on-fail 
 and `useTheme`'s `matchMedia`/`resolvedTheme`/`root.dataset` DOM effect OUTSIDE the
 primitive, or it becomes shallow.
 
-**Acceptance:** settings + theme load/persist/cross-tab behaviour unchanged; the
-`useTheme` cancelled-recheck bug fixed; typecheck + tests green.
+**Acceptance:** settings + theme load/persist/cross-tab behaviour unchanged; both
+hooks share one synced-preference lifecycle; typecheck + tests green.
 
 ---
 

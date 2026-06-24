@@ -1,10 +1,8 @@
 import type {
-  ArticleContent,
   ArticleContentBlock,
   ArticleContentEntity,
 } from "../../types";
 import {
-  detectArticleHeadings,
   groupBlocks,
   headingBlockMatchesArticleTitle,
 } from "../../components/reader/utils";
@@ -140,32 +138,4 @@ export function walkArticleBlocks<T>(
   }
 
   return out;
-}
-
-export type ArticleShape =
-  | { kind: "blocks"; blocks: ArticleContentBlock[] }
-  | { kind: "richText"; plainText: string }
-  | {
-      kind: "heading-chunks";
-      plainText: string;
-      headings: { index: number; text: string }[];
-    };
-
-export function resolveArticleShape(
-  article: ArticleContent,
-  plainText: string,
-): ArticleShape {
-  const hasBlocks =
-    article.contentBlocks !== undefined && article.contentBlocks.length > 0;
-  if (hasBlocks) {
-    return { kind: "blocks", blocks: article.contentBlocks! };
-  }
-
-  const headings = detectArticleHeadings(plainText, {
-    articleTitle: article.title?.trim(),
-  });
-  if (headings.length === 0) {
-    return { kind: "richText", plainText };
-  }
-  return { kind: "heading-chunks", plainText, headings };
 }
