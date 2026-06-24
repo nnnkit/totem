@@ -20,7 +20,11 @@ import {
   isReaderRoute,
   type ReturnSurface,
 } from "./lib/reader-navigation";
-import { resolveReaderRouteBookmarks } from "./lib/reader-route";
+import {
+  resolveReaderRouteBookmarks,
+  selectReaderDisplayBookmark,
+  shouldFetchExternalDetail,
+} from "./lib/reader-route";
 import type { ReadingTab } from "./lib/reading-list";
 import { LS_READING_TAB } from "./lib/storage-keys";
 import { NewTabHome } from "./components/NewTabHome";
@@ -776,8 +780,11 @@ function ReaderRouteApp() {
     [allBookmarks, displayBookmarks, readTweetId],
   );
 
-  const fetchExternalDetail =
-    Boolean(readTweetId) && !localBookmark && !hiddenBookmark;
+  const fetchExternalDetail = shouldFetchExternalDetail({
+    tweetId: readTweetId,
+    localBookmark,
+    hiddenBookmark,
+  });
   const { state: readerDetail, refetch: refetchReaderDetail } = useReaderDetail(
     fetchExternalDetail ? readTweetId : null,
   );
@@ -822,16 +829,27 @@ function ReaderRouteApp() {
     }
   }, [localBookmark?.tweetId]); // eslint-disable-line react-hooks/exhaustive-deps -- sync snapshot when ID changes, not on every bookmark object update
 
-  const externalBookmark = useMemo(() => {
-    if (readerDetail.status !== "success") return null;
-    if (externalUnbookmarkedTweetId === readerDetail.tweetId) {
-      return { ...readerDetail.data.focalTweet, bookmarked: false };
-    }
-    return readerDetail.data.focalTweet;
-  }, [readerDetail, externalUnbookmarkedTweetId]);
-
-  const displayBookmark =
-    localBookmark || localBookmarkSnapshot || externalBookmark;
+  const displayBookmark = useMemo(
+    () =>
+      selectReaderDisplayBookmark({
+        localBookmark,
+        localBookmarkSnapshot,
+        externalDetail:
+          readerDetail.status === "success"
+            ? {
+                tweetId: readerDetail.tweetId,
+                focalTweet: readerDetail.data.focalTweet,
+              }
+            : null,
+        externalUnbookmarkedTweetId,
+      }),
+    [
+      localBookmark,
+      localBookmarkSnapshot,
+      readerDetail,
+      externalUnbookmarkedTweetId,
+    ],
+  );
 
   const relatedBookmarks = useMemo(
     () => pickRelatedBookmarks(displayBookmark, displayBookmarks, 3, shuffleSeed > 0),
