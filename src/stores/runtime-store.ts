@@ -47,7 +47,6 @@ import { asSyncBlockedReason } from "../lib/sync-block-window";
 import { CS_DB_CLEANUP_AT } from "../lib/storage-keys";
 import type {
   ApiCapability,
-  ApiCapabilityState,
   AuthPhase,
   AuthState as SessionAuthState,
   AuthStatus,
@@ -59,6 +58,7 @@ import type {
   SyncStatus,
 } from "../types";
 import { createPrefetchController } from "./prefetch-controller";
+import { deriveAuthTransition, type AuthPayload } from "./auth-transition";
 
 export type RuntimeMode =
   | "initializing"
@@ -98,18 +98,6 @@ export type FooterState =
 export interface ReaderAvailabilityState {
   offlineMode: boolean;
   canLogin: boolean;
-}
-
-interface AuthPayload {
-  hasUser: boolean;
-  hasAuth: boolean;
-  authState: SessionAuthState;
-  sessionState: SessionState;
-  userId: string | null;
-  accountContextId: string | null;
-  bookmarksApi: ApiCapabilityState;
-  detailApi: ApiCapabilityState;
-  lastSyncAt: number;
 }
 
 interface ActiveSyncController {
@@ -603,16 +591,6 @@ export function createRuntimeStore() {
       }
     };
 
-    const maybeStartAuthCaptureForPayload = (
-      payload: AuthPayload,
-      interactive: boolean,
-    ) => {
-      if (payload.sessionState === "logged_in" || payload.hasAuth || !payload.hasUser) {
-        return;
-      }
-      void startAuthCapture({ interactive }).catch(() => {});
-    };
-
     const applyAuthPayload = async (
       payload: AuthPayload,
       options: {
@@ -620,115 +598,39 @@ export function createRuntimeStore() {
         allowAutoSync: boolean;
       },
     ): Promise<void> => {
-      const state = get();
-      const nextAccountId =
-        payload.sessionState === "logged_out" || payload.authState === "logged_out"
-          ? state.activeAccountId || payload.accountContextId || null
-          : payload.userId || payload.accountContextId || state.activeAccountId;
+      const { patch, effects } = deriveAuthTransition(get(), payload, options);
+      setRuntimeState(patch);
 
-      let phase: AuthPhase;
-      let sessionState: SessionState;
-      let authRetryDelayMs: number | null = null;
-
-      if (payload.sessionState === "logged_out" || payload.authState === "logged_out") {
-        phase = "need_login";
-        sessionState = "logged_out";
-      } else if (payload.sessionState === "logged_in") {
-        phase = "ready";
-        sessionState = "logged_in";
-      } else if (!payload.hasUser && !payload.hasAuth) {
-        phase = "need_login";
-        sessionState = "logged_out";
-      } else {
-        phase = "connecting";
-        sessionState = payload.sessionState;
-        authRetryDelayMs = AUTH_QUICK_CHECK_MS;
+      for (const effect of effects) {
+        switch (effect.kind) {
+          case "releaseActiveWork":
+            stopSync();
+            void releaseActiveLease("skipped");
+            break;
+          case "clearScheduledAutoRetry":
+            clearScheduledAutoRetry();
+            break;
+          case "startAuthCapture":
+            void startAuthCapture({ interactive: effect.interactive }).catch(
+              () => {},
+            );
+            break;
+          case "hydrate":
+            // Terminal: hydrateCurrentAccount runs its own post-hydrate
+            // auto-sync + prefetch reconcile, so no further effects follow.
+            await hydrateCurrentAccount(
+              effect.bootGeneration,
+              effect.allowAutoSync,
+            );
+            return;
+          case "maybeAutoSync":
+            maybeStartAutomaticSync();
+            break;
+          case "reconcilePrefetch":
+            prefetchController.reconcile();
+            break;
+        }
       }
-
-      const accountChanged = nextAccountId !== state.activeAccountId;
-      const needsHydration = options.allowHydration &&
-        (accountChanged || !state.bookmarksLoaded || !state.detailedIdsLoaded);
-      const phaseChanged = phase !== state.authPhase;
-
-      // Invalidate any in-flight sync when the runtime's view of the session
-      // becomes non-ready. Without this, a push snapshot reporting
-      // logged_out / connecting while a sync is mid-flight would leave the
-      // local lease and activeSyncController alive, continuing to write into
-      // a DB the runtime no longer owns.
-      const shouldReleaseActiveWork =
-        needsHydration ||
-        (state.syncStatus === "syncing" && phase !== "ready");
-
-      if (shouldReleaseActiveWork) {
-        stopSync();
-        void releaseActiveLease("skipped");
-      }
-
-      // An auth/account transition invalidates whatever block window a prior
-      // sync decision set up — the account we're talking to may have changed,
-      // and a pending long timer (e.g. 4h fresh_cache) would otherwise silence
-      // the post-login auto-sync. See the guard in maybeStartAutomaticSync.
-      if (accountChanged || (phaseChanged && phase === "ready")) {
-        clearScheduledAutoRetry();
-      }
-
-      const nextBootGeneration = needsHydration
-        ? state.bootGeneration + 1
-        : state.bootGeneration;
-
-      // On the snapshot-push path (allowHydration=false) we can't also call
-      // setActiveAccountId on the DB layer, so leave activeAccountId as-is
-      // and let the follow-up checkAuth be the sole writer that moves the
-      // store + IDB pointer together.
-      const nextStoreAccountId =
-        accountChanged && !options.allowHydration ? state.activeAccountId : nextAccountId;
-      const recoveredFromReauth = phase === "ready" && state.syncStatus === "reauthing";
-
-      setRuntimeState({
-        authPhase: phase,
-        authState: payload.authState,
-        sessionState,
-        capability: {
-          bookmarksApi: payload.bookmarksApi,
-          detailApi: payload.detailApi,
-        },
-        activeAccountId: nextStoreAccountId,
-        authRetryDelayMs,
-        bootGeneration: nextBootGeneration,
-        bookmarksLoaded: needsHydration ? false : state.bookmarksLoaded,
-        detailedIdsLoaded: needsHydration ? false : state.detailedIdsLoaded,
-        bookmarks: needsHydration ? [] : state.bookmarks,
-        detailedTweetIds: needsHydration ? new Set<string>() : state.detailedTweetIds,
-        // Take the max: SW can push a snapshot after Date.now() already advanced
-        // lastSyncAt in this session, and we never want to regress it.
-        lastSyncAt: payload.lastSyncAt > state.lastSyncAt ? payload.lastSyncAt : state.lastSyncAt,
-        syncStatus:
-          phase === "need_login" && state.syncStatus === "syncing"
-            ? "idle"
-            : recoveredFromReauth
-              ? "idle"
-            : state.syncStatus,
-        syncJobKind:
-          (phase === "need_login" && state.syncStatus === "syncing") ||
-          recoveredFromReauth
-            ? "none"
-            : state.syncJobKind,
-      });
-
-      if (phase === "connecting") {
-        maybeStartAuthCaptureForPayload(payload, false);
-      }
-
-      if (needsHydration) {
-        await hydrateCurrentAccount(nextBootGeneration, options.allowAutoSync && !recoveredFromReauth);
-        return;
-      }
-
-      if (options.allowAutoSync && !recoveredFromReauth) {
-        maybeStartAutomaticSync();
-      }
-
-      prefetchController.reconcile();
     };
 
     const runAuthCheck = (): Promise<void> => {
