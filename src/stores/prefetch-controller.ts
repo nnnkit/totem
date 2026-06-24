@@ -1,4 +1,3 @@
-import { getCompletedTweetIds } from "../db";
 import {
   OFFLINE_PREFETCH_POOL,
   OFFLINE_PREFETCH_UNREAD_MAX,
@@ -84,6 +83,7 @@ export interface PrefetchController {
 interface CreatePrefetchControllerOptions {
   getSnapshot: () => PrefetchSnapshot;
   fetchDetail: (tweetId: string) => Promise<void>;
+  getCompletedTweetIds: () => Promise<Set<string>>;
   onSuccess: (tweetId: string) => void;
   onStatusChange?: (status: "idle" | "running" | "paused") => void;
 }
@@ -91,6 +91,7 @@ interface CreatePrefetchControllerOptions {
 export function createPrefetchController({
   getSnapshot,
   fetchDetail,
+  getCompletedTweetIds,
   onSuccess,
   onStatusChange,
 }: CreatePrefetchControllerOptions): PrefetchController {

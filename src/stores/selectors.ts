@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useShallow } from "zustand/react/shallow";
+import { openAccountDb, type AccountDb } from "../db";
 import {
   classifyDetailError,
   type DetailErrorKind,
@@ -89,6 +90,12 @@ export function useDetailedTweetIds() {
 
 export function useActiveAccountId() {
   return useRuntimeStoreBase(selectActiveAccountId);
+}
+
+// Account-bound persistence handle for the active account. openAccountDb
+// memoizes per db name, so this returns a stable ref until the account changes.
+export function useAccountDb(): AccountDb {
+  return openAccountDb(useRuntimeStoreBase(selectActiveAccountId));
 }
 
 export function useIsOffline() {

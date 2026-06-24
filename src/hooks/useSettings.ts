@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef } from "react";
 import type {
   BackgroundMode,
   RecommendationSource,
@@ -6,8 +6,8 @@ import type {
   TodayQueueBudgetMinutes,
   UserSettings,
 } from "../types";
-import { hasChromeStorageSync, hasChromeStorageOnChanged } from "../lib/chrome";
 import { SYNC_SETTINGS } from "../lib/storage-keys";
+import { useSyncedPreference } from "./useSyncedPreference";
 import {
   DEFAULT_HIGHLIGHT_COLOR,
   resolveHighlightColor,
@@ -91,57 +91,17 @@ function normalizeSettings(value: unknown): UserSettings {
 }
 
 export function useSettings() {
-  const [settings, setSettings] = useState<UserSettings>(DEFAULT_SETTINGS);
   const userPatchedRef = useRef(false);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const load = async () => {
-      if (!hasChromeStorageSync()) return;
-
-      try {
-        const stored = await chrome.storage.sync.get({
-          [SYNC_SETTINGS]: DEFAULT_SETTINGS,
-        });
-        if (!cancelled && !userPatchedRef.current) {
-          setSettings(normalizeSettings(stored[SYNC_SETTINGS]));
-        }
-      } catch {}
-    };
-
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!hasChromeStorageOnChanged()) return;
-
-    const onStorageChange = (
-      changes: Record<string, chrome.storage.StorageChange>,
-      areaName: string,
-    ) => {
-      if (areaName !== "sync") return;
-      const change = changes[SYNC_SETTINGS];
-      if (!change) return;
-      setSettings(normalizeSettings(change.newValue));
-    };
-
-    chrome.storage.onChanged.addListener(onStorageChange);
-    return () => chrome.storage.onChanged.removeListener(onStorageChange);
-  }, []);
+  const [settings, setSettings] = useSyncedPreference<UserSettings>(
+    SYNC_SETTINGS,
+    normalizeSettings,
+    DEFAULT_SETTINGS,
+    { skipInitialLoad: () => userPatchedRef.current },
+  );
 
   const updateSettings = (patch: Partial<UserSettings>) => {
     userPatchedRef.current = true;
-    setSettings((prev) => {
-      const next = { ...prev, ...patch };
-      if (hasChromeStorageSync()) {
-        chrome.storage.sync.set({ [SYNC_SETTINGS]: next }).catch(() => {});
-      }
-      return next;
-    });
+    setSettings((prev) => ({ ...prev, ...patch }));
   };
 
   return { settings, updateSettings };

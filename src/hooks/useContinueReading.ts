@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import type { Bookmark, ReadingProgress } from "../types";
-import { getAllReadingProgress } from "../db";
+import { useAccountDb } from "../stores/selectors";
 import { subscribeToReaderActivity } from "../lib/reader-activity";
 
 export interface ContinueReadingItem {
@@ -48,13 +48,14 @@ export function useContinueReading(
   bookmarks: Bookmark[],
   refreshKey: unknown = 0,
 ): UseContinueReadingReturn {
+  const db = useAccountDb();
   const [allProgress, setAllProgress] = useState<ReadingProgress[]>([]);
 
   const refresh = useCallback(() => {
-    getAllReadingProgress()
+    db.getAllReadingProgress()
       .then(setAllProgress)
       .catch(() => setAllProgress([]));
-  }, []);
+  }, [db]);
 
   useEffect(() => {
     refresh();

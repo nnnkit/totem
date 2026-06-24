@@ -9,18 +9,7 @@ import type {
   TodayQueueExposureAction,
   TodayQueueSnapshot,
 } from "../types";
-import {
-  deleteQueueBookmarkMetadata,
-  getAllQueueBookmarkMetadata,
-  getQueueBookmarkMetadataByTweetId,
-  getTodayQueueExposuresSince,
-  getTodayQueueSnapshot,
-  markReadingProgressUncompleted,
-  recordTodayQueueExposures,
-  sweepStaleTodayQueueSnapshots,
-  upsertQueueBookmarkMetadata,
-  upsertTodayQueueSnapshot,
-} from "../db";
+import { useAccountDb } from "../stores/selectors";
 import {
   addTweetIdToTodayQueueSnapshot,
   buildTodayQueue,
@@ -152,6 +141,7 @@ export function useTodayQueue({
   budgetMinutes,
   restrictToCachedDetails,
 }: UseTodayQueueInput): UseTodayQueueResult {
+  const db = useAccountDb();
   const [state, setState] = useState<TodayQueueState>(EMPTY_STATE);
   // refresh() is called from effects and action handlers alike; a monotonic
   // sequence lets a newer run supersede an older in-flight one so the slower
@@ -181,9 +171,9 @@ export function useTodayQueue({
       const localDate = formatLocalDate(new Date(now));
       const key = makeTodayQueueKey({ localDate, budgetMinutes });
       const [storedSnapshot, metadata, exposures] = await Promise.all([
-        getTodayQueueSnapshot(key),
-        getAllQueueBookmarkMetadata(),
-        getTodayQueueExposuresSince(now - TODAY_QUEUE.exposureWindowMs),
+        db.getTodayQueueSnapshot(key),
+        db.getAllQueueBookmarkMetadata(),
+        db.getTodayQueueExposuresSince(now - TODAY_QUEUE.exposureWindowMs),
       ]);
 
       if (bookmarks.length === 0) {
@@ -220,8 +210,8 @@ export function useTodayQueue({
         });
         snapshot = toTodayQueueSnapshot(result);
         if (shouldPersistTodayQueueSnapshot(snapshot)) {
-          await upsertTodayQueueSnapshot(snapshot);
-          await recordTodayQueueExposures(
+          await db.upsertTodayQueueSnapshot(snapshot);
+          await db.recordTodayQueueExposures(
             snapshot.tweetIds.map((tweetId) =>
               makeQueueExposure({
                 tweetId,
@@ -256,6 +246,7 @@ export function useTodayQueue({
     enabled,
     readingProgress,
     restrictToCachedDetails,
+    db,
   ]);
 
   useEffect(() => {
@@ -269,8 +260,8 @@ export function useTodayQueue({
     const sweepKey = accountId ?? "local";
     if (sweptAccountIds.has(sweepKey)) return;
     sweptAccountIds.add(sweepKey);
-    void sweepStaleTodayQueueSnapshots().catch(() => {});
-  }, [enabled, accountId]);
+    void db.sweepStaleTodayQueueSnapshots().catch(() => {});
+  }, [enabled, accountId, db]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -419,7 +410,7 @@ export function useTodayQueue({
 
   const recordAction = useCallback(
     async (tweetId: string, action: TodayQueueExposureAction) => {
-      await recordTodayQueueExposures([
+      await db.recordTodayQueueExposures([
         makeQueueExposure({
           tweetId,
           action,
@@ -428,7 +419,7 @@ export function useTodayQueue({
       ]);
       refresh();
     },
-    [refresh, state.localDate],
+    [db, refresh, state.localDate],
   );
 
   const writeMetadata = useCallback(
@@ -437,7 +428,7 @@ export function useTodayQueue({
       patch: Pick<BookmarkQueueMetadata, "intent" | "snoozedUntil">,
       action: TodayQueueExposureAction,
     ) => {
-      const existing = await getQueueBookmarkMetadataByTweetId(tweetId);
+      const existing = await db.getQueueBookmarkMetadataByTweetId(tweetId);
       const next: BookmarkQueueMetadata = {
         tweetId,
         intent: patch.intent ?? existing?.intent ?? "unset",
@@ -445,13 +436,13 @@ export function useTodayQueue({
         updatedAt: Date.now(),
       };
       if (isNeutralMetadata(next)) {
-        await deleteQueueBookmarkMetadata(tweetId);
+        await db.deleteQueueBookmarkMetadata(tweetId);
       } else {
-        await upsertQueueBookmarkMetadata(next);
+        await db.upsertQueueBookmarkMetadata(next);
       }
       await recordAction(tweetId, action);
     },
-    [recordAction],
+    [db, recordAction],
   );
 
   const setIntent = useCallback(
@@ -464,20 +455,20 @@ export function useTodayQueue({
   );
 
   const clearFeedback = useCallback(async (tweetId: string) => {
-    await deleteQueueBookmarkMetadata(tweetId);
+    await db.deleteQueueBookmarkMetadata(tweetId);
     refresh();
-  }, [refresh]);
+  }, [db, refresh]);
 
   const undoHandled = useCallback(
     async (tweetId: string, reason: TodayQueueHandledReason) => {
       if (reason === "read") {
-        await markReadingProgressUncompleted(tweetId);
+        await db.markReadingProgressUncompleted(tweetId);
       } else {
-        await deleteQueueBookmarkMetadata(tweetId);
+        await db.deleteQueueBookmarkMetadata(tweetId);
       }
       refresh();
     },
-    [refresh],
+    [db, refresh],
   );
 
   const snooze = useCallback(
@@ -495,7 +486,7 @@ export function useTodayQueue({
     async (tweetId: string, options?: { preserveReadSoonIntent?: boolean }) => {
       const localDate = state.localDate || formatLocalDate();
       const key = makeTodayQueueKey({ localDate, budgetMinutes });
-      const storedSnapshot = await getTodayQueueSnapshot(key);
+      const storedSnapshot = await db.getTodayQueueSnapshot(key);
       const currentSnapshot =
         storedSnapshot ?? (state.snapshot?.key === key ? state.snapshot : null);
       const createdAt = Date.now();
@@ -513,21 +504,21 @@ export function useTodayQueue({
       // silently discard a deliberate "read soon" intent the user set, so keep
       // that one and drop only a stale snooze.
       const existing = options?.preserveReadSoonIntent
-        ? await getQueueBookmarkMetadataByTweetId(tweetId)
+        ? await db.getQueueBookmarkMetadataByTweetId(tweetId)
         : null;
       if (existing?.intent === "read_soon") {
         if (existing.snoozedUntil) {
-          await upsertQueueBookmarkMetadata({
+          await db.upsertQueueBookmarkMetadata({
             ...existing,
             snoozedUntil: null,
             updatedAt: Date.now(),
           });
         }
       } else {
-        await deleteQueueBookmarkMetadata(tweetId);
+        await db.deleteQueueBookmarkMetadata(tweetId);
       }
-      await upsertTodayQueueSnapshot(snapshot);
-      await recordTodayQueueExposures([
+      await db.upsertTodayQueueSnapshot(snapshot);
+      await db.recordTodayQueueExposures([
         makeQueueExposure({
           tweetId,
           action: "added",
@@ -537,7 +528,7 @@ export function useTodayQueue({
       ]);
       refresh();
     },
-    [budgetMinutes, refresh, state.localDate, state.snapshot],
+    [budgetMinutes, db, refresh, state.localDate, state.snapshot],
   );
 
   // "Two more": pick once from the safe pool (random in production) and persist
