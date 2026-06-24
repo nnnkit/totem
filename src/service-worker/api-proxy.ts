@@ -1,10 +1,13 @@
 /**
  * API proxy module — bookmark and tweet detail API handlers.
  *
- * Extracted from the SW monolith. Uses `withQueryId` from the query ID
- * module instead of manual retry logic.
+ * Extracted from the SW monolith. Query ID resolution/retry lives in
+ * `withQueryId`; the auth-expiry policy (header attach, 401/403 handling,
+ * session marking) lives in `withAuthedRequest`. Handlers only describe the
+ * request and interpret operation-specific status codes.
  *
- * Handler map for FETCH_BOOKMARKS, DELETE_BOOKMARK, FETCH_TWEET_DETAIL.
+ * Handler map for FETCH_BOOKMARKS, DELETE_BOOKMARK, FETCH_TWEET_DETAIL,
+ * FETCH_VIEWER_PROFILE.
  */
 
 import type { MessageRequest } from "../types/messages";
@@ -132,6 +135,7 @@ interface ApiProxyDeps {
   storage?: typeof chrome.storage.local;
   tabs?: typeof chrome.tabs;
   fetchFn?: typeof fetch;
+  reAuth?: () => Promise<boolean>;
 }
 
 function defaultChromeStorage(): typeof chrome.storage.local {
@@ -149,10 +153,41 @@ export function createApiProxyHandlers(deps: ApiProxyDeps = {}): HandlerMap {
   const storage = deps.storage ?? defaultChromeStorage();
   const tabs = deps.tabs ?? defaultChromeTabs();
   const fetchFn = deps.fetchFn ?? fetch;
+  const reAuth = deps.reAuth ?? (() => reAuthSilently(storage, tabs));
+
+  /**
+   * Owns the auth-expiry policy for every X API call: attaches captured
+   * headers, treats 401/403 as expiry (clear headers → one silent re-auth
+   * retry → mark logged out → AuthExpiredError), and marks the session
+   * authenticated on any 2xx. Operation-specific status codes (400 stale
+   * query ID, 429 rate limit) are left to the caller.
+   */
+  async function withAuthedRequest(
+    operation: string,
+    perform: (headers: Record<string, string>) => Promise<Response>,
+    retried = false,
+  ): Promise<Response> {
+    const headers = await buildHeaders(storage);
+    const response = await perform(headers);
+
+    if (response.status === 401 || response.status === 403) {
+      await storage.remove(["totem_auth_headers", "totem_auth_time"]);
+      if (!retried && (await reAuth())) {
+        return withAuthedRequest(operation, perform, true);
+      }
+      await markAuthLoggedOut(`${operation}_${response.status}`, true, storage);
+      throw new AuthExpiredError();
+    }
+
+    if (response.ok) {
+      await markAuthAuthenticated(`${operation}_ok`, storage);
+    }
+
+    return response;
+  }
 
   async function handleFetchBookmarks(
     message: MessageRequest,
-    _retried = false,
   ): Promise<unknown> {
     const msg = message as unknown as Record<string, unknown>;
     const cursor = typeof msg.cursor === "string" ? msg.cursor : undefined;
@@ -162,10 +197,7 @@ export function createApiProxyHandlers(deps: ApiProxyDeps = {}): HandlerMap {
         : 100;
 
     return withQueryId("Bookmarks", async (queryId) => {
-      const stored = await storage.get(["totem_auth_headers", "totem_features"]);
-      if (!parseCapturedAuthHeaders(stored.totem_auth_headers).ok) {
-        throw new Error("NO_AUTH");
-      }
+      const stored = await storage.get(["totem_features"]);
 
       const variables: Record<string, unknown> = {
         count,
@@ -182,27 +214,14 @@ export function createApiProxyHandlers(deps: ApiProxyDeps = {}): HandlerMap {
       });
 
       const url = `https://x.com/i/api/graphql/${queryId}/Bookmarks?${params}`;
-      const requestHeaders = await buildHeaders(storage);
 
-      const response = await fetchFn(url, {
-        method: "GET",
-        credentials: "include",
-        headers: requestHeaders,
-      });
-
-      if (response.status === 401 || response.status === 403) {
-        await storage.remove(["totem_auth_headers", "totem_auth_time"]);
-        if (!_retried) {
-          const success = await reAuthSilently(storage, tabs);
-          if (success) return handleFetchBookmarks(message, true);
-        }
-        await markAuthLoggedOut(
-          `bookmarks_${response.status}`,
-          true,
-          storage,
-        );
-        throw new AuthExpiredError();
-      }
+      const response = await withAuthedRequest("bookmarks", (headers) =>
+        fetchFn(url, {
+          method: "GET",
+          credentials: "include",
+          headers,
+        }),
+      );
 
       if (!response.ok) {
         if (response.status === 429) throw new RateLimitError();
@@ -216,51 +235,31 @@ export function createApiProxyHandlers(deps: ApiProxyDeps = {}): HandlerMap {
       }
 
       const json = await response.json();
-      await markAuthAuthenticated("bookmarks_ok", storage);
       return { data: json };
     });
   }
 
   async function handleDeleteBookmark(
     message: MessageRequest,
-    _retried = false,
   ): Promise<unknown> {
     const msg = message as unknown as Record<string, unknown>;
     const tweetId = typeof msg.tweetId === "string" ? msg.tweetId : "";
     if (!tweetId) throw new Error("MISSING_TWEET_ID");
 
     return withQueryId("DeleteBookmark", async (queryId) => {
-      const stored = await storage.get(["totem_auth_headers"]);
-      if (!parseCapturedAuthHeaders(stored.totem_auth_headers).ok) {
-        throw new Error("NO_AUTH");
-      }
-
       const url = `https://x.com/i/api/graphql/${queryId}/DeleteBookmark`;
-      const requestHeaders = await buildHeaders(storage);
 
-      const response = await fetchFn(url, {
-        method: "POST",
-        credentials: "include",
-        headers: requestHeaders,
-        body: JSON.stringify({
-          variables: { tweet_id: tweetId },
-          queryId,
+      const response = await withAuthedRequest("delete", (headers) =>
+        fetchFn(url, {
+          method: "POST",
+          credentials: "include",
+          headers,
+          body: JSON.stringify({
+            variables: { tweet_id: tweetId },
+            queryId,
+          }),
         }),
-      });
-
-      if (response.status === 401 || response.status === 403) {
-        await storage.remove(["totem_auth_headers", "totem_auth_time"]);
-        if (!_retried) {
-          const success = await reAuthSilently(storage, tabs);
-          if (success) return handleDeleteBookmark(message, true);
-        }
-        await markAuthLoggedOut(
-          `delete_${response.status}`,
-          true,
-          storage,
-        );
-        throw new AuthExpiredError();
-      }
+      );
 
       if (!response.ok) {
         if (response.status === 400) {
@@ -273,27 +272,19 @@ export function createApiProxyHandlers(deps: ApiProxyDeps = {}): HandlerMap {
       }
 
       const json = await response.json().catch(() => null);
-      await markAuthAuthenticated("delete_ok", storage);
       return { ok: true, queryId, data: json };
     });
   }
 
   async function handleFetchTweetDetail(
     message: MessageRequest,
-    _retried = false,
   ): Promise<unknown> {
     const msg = message as unknown as Record<string, unknown>;
     const tweetId = typeof msg.tweetId === "string" ? msg.tweetId : "";
     if (!tweetId) throw new Error("MISSING_TWEET_ID");
 
     return withQueryId("TweetDetail", async (queryId) => {
-      const stored = await storage.get([
-        "totem_auth_headers",
-        "totem_features",
-      ]);
-      if (!parseCapturedAuthHeaders(stored.totem_auth_headers).ok) {
-        throw new Error("NO_AUTH");
-      }
+      const stored = await storage.get(["totem_features"]);
 
       const featureSet = {
         ...DEFAULT_FEATURES,
@@ -326,27 +317,14 @@ export function createApiProxyHandlers(deps: ApiProxyDeps = {}): HandlerMap {
       });
 
       const url = `https://x.com/i/api/graphql/${queryId}/TweetDetail?${params}`;
-      const requestHeaders = await buildHeaders(storage);
 
-      const response = await fetchFn(url, {
-        method: "GET",
-        credentials: "include",
-        headers: requestHeaders,
-      });
-
-      if (response.status === 401 || response.status === 403) {
-        await storage.remove(["totem_auth_headers", "totem_auth_time"]);
-        if (!_retried) {
-          const success = await reAuthSilently(storage, tabs);
-          if (success) return handleFetchTweetDetail(message, true);
-        }
-        await markAuthLoggedOut(
-          `detail_${response.status}`,
-          true,
-          storage,
-        );
-        throw new AuthExpiredError();
-      }
+      const response = await withAuthedRequest("detail", (headers) =>
+        fetchFn(url, {
+          method: "GET",
+          credentials: "include",
+          headers,
+        }),
+      );
 
       if (!response.ok) {
         if (response.status === 400) {
@@ -359,26 +337,17 @@ export function createApiProxyHandlers(deps: ApiProxyDeps = {}): HandlerMap {
       }
 
       const json = await response.json();
-      await markAuthAuthenticated("detail_ok", storage);
       return { data: json };
     });
   }
 
   async function handleFetchViewerProfile(): Promise<unknown> {
     return withQueryId("UserByRestId", async (queryId) => {
-      const stored = await storage.get([
-        "totem_auth_headers",
-        "totem_user_id",
-        "totem_features",
-      ]);
+      const stored = await storage.get(["totem_user_id", "totem_features"]);
 
       const userId =
         typeof stored.totem_user_id === "string" ? stored.totem_user_id : "";
       if (!userId) throw new Error("NO_USER_ID");
-
-      if (!parseCapturedAuthHeaders(stored.totem_auth_headers).ok) {
-        throw new Error("NO_AUTH");
-      }
 
       const features =
         (stored.totem_features as string) || JSON.stringify(DEFAULT_FEATURES);
@@ -395,13 +364,14 @@ export function createApiProxyHandlers(deps: ApiProxyDeps = {}): HandlerMap {
       });
 
       const url = `https://x.com/i/api/graphql/${queryId}/UserByRestId?${params}`;
-      const requestHeaders = await buildHeaders(storage);
 
-      const response = await fetchFn(url, {
-        method: "GET",
-        credentials: "include",
-        headers: requestHeaders,
-      });
+      const response = await withAuthedRequest("viewer", (headers) =>
+        fetchFn(url, {
+          method: "GET",
+          credentials: "include",
+          headers,
+        }),
+      );
 
       if (!response.ok) {
         if (response.status === 400) {
