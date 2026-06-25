@@ -17,6 +17,16 @@ export function useSyncedPreference<T>(
 ): [T, SetSyncedValue<T>] {
   const [value, setValue] = useState<T>(defaultValue);
 
+  // Mirrors the latest value so setSyncedValue can resolve a functional update
+  // and persist OUTSIDE the setState updater. Keeping the updater pure (a plain
+  // value, no side effect) stops React's StrictMode / concurrent double-invoke
+  // from firing chrome.storage.sync.set twice for a single set.
+  const valueRef = useRef(value);
+  const applyValue = (next: T) => {
+    valueRef.current = next;
+    setValue(next);
+  };
+
   const normalizeRef = useRef(normalize);
   normalizeRef.current = normalize;
   const skipInitialLoadRef = useRef(options.skipInitialLoad);
@@ -31,7 +41,7 @@ export function useSyncedPreference<T>(
       try {
         const stored = await chrome.storage.sync.get({ [key]: defaultValue });
         if (!cancelled && !skipInitialLoadRef.current?.()) {
-          setValue(normalizeRef.current(stored[key]));
+          applyValue(normalizeRef.current(stored[key]));
         }
       } catch {}
     };
@@ -53,7 +63,7 @@ export function useSyncedPreference<T>(
       if (areaName !== "sync") return;
       const change = changes[key];
       if (!change) return;
-      setValue(normalizeRef.current(change.newValue));
+      applyValue(normalizeRef.current(change.newValue));
     };
 
     chrome.storage.onChanged.addListener(onStorageChange);
@@ -61,14 +71,14 @@ export function useSyncedPreference<T>(
   }, [key]);
 
   const setSyncedValue: SetSyncedValue<T> = (next) => {
-    setValue((prev) => {
-      const resolved =
-        typeof next === "function" ? (next as (prev: T) => T)(prev) : next;
-      if (hasChromeStorageSync()) {
-        chrome.storage.sync.set({ [key]: resolved }).catch(() => {});
-      }
-      return resolved;
-    });
+    const resolved =
+      typeof next === "function"
+        ? (next as (prev: T) => T)(valueRef.current)
+        : next;
+    applyValue(resolved);
+    if (hasChromeStorageSync()) {
+      chrome.storage.sync.set({ [key]: resolved }).catch(() => {});
+    }
   };
 
   return [value, setSyncedValue];

@@ -68,6 +68,26 @@ describe("useSyncedPreference", () => {
     expect(setSpy).not.toHaveBeenCalled();
   });
 
+  it("fires storage.sync.set exactly once per set, even under StrictMode", async () => {
+    const setSpy = vi.spyOn(fakeChrome.storage.sync, "set");
+    const { result } = await renderHook(
+      () => useSyncedPreference(KEY, normalize, "default"),
+      { strictMode: true },
+    );
+    await flushAsync();
+    setSpy.mockClear();
+
+    await act(async () => {
+      result.current[1]("chosen");
+    });
+    await flushAsync();
+
+    // The write lives outside the setState updater, so StrictMode's double
+    // invoke of the updater can't persist twice.
+    expect(setSpy).toHaveBeenCalledTimes(1);
+    expect(result.current[0]).toBe("chosen");
+  });
+
   it("drops the initial load when the hook unmounts before it resolves", async () => {
     const normalizeSpy = vi.fn(normalize);
     const resolveGet = deferGet();
@@ -116,23 +136,41 @@ describe("useSyncedPreference", () => {
   });
 
   it("ignores a sync change for a different key", async () => {
+    // Start from a non-default value so a spurious update would be observable:
+    // softening the changes[key] guard to change?.newValue would normalize
+    // undefined back to "default" and flip this.
+    await fakeChrome.storage.sync.set({ [KEY]: "real-value" });
+    const normalizeSpy = vi.fn(normalize);
     const { result } = await renderHook(() =>
-      useSyncedPreference(KEY, normalize, "default"),
+      useSyncedPreference(KEY, normalizeSpy, "default"),
     );
     await flushAsync();
+    expect(result.current[0]).toBe("real-value");
+    normalizeSpy.mockClear();
 
     await act(async () => {
       await fakeChrome.storage.sync.set({ "totem:other-pref": "unrelated" });
     });
     await flushAsync();
 
-    expect(result.current[0]).toBe("default");
+    expect(normalizeSpy).not.toHaveBeenCalled();
+    expect(result.current[0]).toBe("real-value");
   });
 
-  it("swallows a rejected storage.sync.set and keeps the optimistic value", async () => {
-    fakeChrome.storage.sync.set = vi
-      .fn()
-      .mockRejectedValue(new Error("quota exceeded"));
+  it("attaches a catch to a rejected storage.sync.set so it never leaks", async () => {
+    // Deterministic alternative to watching for an unhandled rejection (which
+    // surfaces non-deterministically): assert setSyncedValue actually attaches a
+    // rejection handler to the promise it gets back from set().
+    let catchHandlers = 0;
+    fakeChrome.storage.sync.set = vi.fn(() => {
+      const rejected = Promise.reject(new Error("quota exceeded"));
+      const realCatch = rejected.catch.bind(rejected);
+      rejected.catch = ((onRejected?: (reason: unknown) => unknown) => {
+        catchHandlers += 1;
+        return realCatch(onRejected);
+      }) as typeof rejected.catch;
+      return rejected;
+    });
 
     const { result } = await renderHook(() =>
       useSyncedPreference(KEY, normalize, "default"),
@@ -148,6 +186,7 @@ describe("useSyncedPreference", () => {
     expect(fakeChrome.storage.sync.set).toHaveBeenCalledWith({
       [KEY]: "optimistic",
     });
+    expect(catchHandlers).toBeGreaterThan(0);
   });
 
   it("is a no-op writer when storage.sync is unavailable", async () => {
