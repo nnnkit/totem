@@ -2,6 +2,29 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.5] - 2026-06-25
+
+- fix: prefetch all today's reads immediately, bypass pool cap and unread limit
+- fix: restart prefetch loop when today's read queue first loads
+- perf: skip prefetch delay for today's read items
+- feat: prioritize today's read items in offline prefetch queue
+- fix(hooks): persist synced preferences outside the setState updater
+- polish(today): pending Two more state, theme skipInitialLoad parity, single-tx sweep
+- fix: scroll reset panel into view when expanded in settings modal
+- restore: bring back premium-monetization and GTM research into plans/research/
+- feat: add archive control to today's read footer and restyle nav arrows
+- merge main into feat/todays-read-mix; route Today-queue stale-snapshot sweep through the account DB handle
+- fix(today): preserve read_soon intent when 'Two more' auto-picks an item
+- add: scheduled tasks
+- fix(site): upgrade to astro 6.4.8 to clear high audit advisories; CI Node 20→22
+- fix(site): upgrade to astro 6.4.8 to clear high audit advisories; CI Node 20→22
+- fix(today): sweep stale records per active account; guard Two more against double-press
+- feat(today): calm "Two more" extension on the done-state (#57)
+- feat(today): balanced daily mix — continuous recency curve + variety self-heal (#56)
+- feat(today): sweep stale daily-set records on load (#55)
+- add: todays research
+- fix: persist bookmarks before in-memory update so failed IndexedDB writes fail the sync (#48)
+
 ## [1.2.4] - 2026-06-20
 
 - feat: add premium docs
