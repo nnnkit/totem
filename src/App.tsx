@@ -466,6 +466,11 @@ function NewTabRouteApp() {
     restrictToCachedDetails: offlineMode,
   });
 
+  useEffect(() => {
+    const ids = new Set(todayQueue.snapshot?.tweetIds ?? []);
+    actions.setTodayQueueTweetIds(ids);
+  }, [actions, todayQueue.snapshot]);
+
   const restoreReadingTab = useCallback(() => {
     updateRouteState({ readingTab: readStoredReadingTab() });
   }, []);

@@ -29,6 +29,7 @@ function makeState(overrides: Partial<RuntimeState> = {}): RuntimeState {
     bootGeneration: 1,
     syncGeneration: 1,
     readerActive: false,
+    todayQueueTweetIds: new Set<string>(),
     prefetchStatus: "idle",
     lastSyncAt: 0,
     actions: {
@@ -44,6 +45,7 @@ function makeState(overrides: Partial<RuntimeState> = {}): RuntimeState {
       unbookmark: async () => ({}),
       releaseLease: vi.fn(),
       setReaderActive: vi.fn(),
+      setTodayQueueTweetIds: vi.fn(),
       detailCached: vi.fn(),
       loadReaderDetail: async () => ({ focalTweet: null, thread: [] }),
       applyRuntimeSnapshot: async () => {},

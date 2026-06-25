@@ -130,6 +130,7 @@ export interface RuntimeActions {
   unbookmark: (tweetId: string) => Promise<{ apiError?: string }>;
   releaseLease: () => void;
   setReaderActive: (active: boolean) => void;
+  setTodayQueueTweetIds: (ids: ReadonlySet<string>) => void;
   detailCached: (tweetId: string) => void;
   loadReaderDetail: (tweetId: string) => ReturnType<typeof fetchTweetDetail>;
   applyRuntimeSnapshot: (snapshot: RuntimeSnapshot) => Promise<void>;
@@ -152,6 +153,7 @@ export interface RuntimeState {
   bootGeneration: number;
   syncGeneration: number;
   readerActive: boolean;
+  todayQueueTweetIds: ReadonlySet<string>;
   prefetchStatus: "idle" | "running" | "paused";
   lastSyncAt: number;
   actions: RuntimeActions;
@@ -349,6 +351,7 @@ function createInitialState(actions: RuntimeActions): RuntimeState {
     bootGeneration: 0,
     syncGeneration: 0,
     readerActive: false,
+    todayQueueTweetIds: EMPTY_SET,
     prefetchStatus: "idle",
     lastSyncAt: 0,
     actions,
@@ -928,6 +931,7 @@ export function createRuntimeStore() {
           detailedTweetIds: state.detailedTweetIds,
           readerActive: state.readerActive,
           onlineReady: deriveRuntimeMode(state) === "online_ready",
+          todayQueueTweetIds: state.todayQueueTweetIds,
         };
       },
       fetchDetail: async (tweetId) => {
@@ -1201,6 +1205,11 @@ export function createRuntimeStore() {
           prefetchController.reconcile();
           return;
         }
+        prefetchController.reconcile();
+      },
+
+      setTodayQueueTweetIds: (ids) => {
+        setRuntimeState({ todayQueueTweetIds: ids });
         prefetchController.reconcile();
       },
 

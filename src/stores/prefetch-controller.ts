@@ -12,6 +12,7 @@ export interface PrefetchSnapshot {
   detailedTweetIds: ReadonlySet<string>;
   readerActive: boolean;
   onlineReady: boolean;
+  todayQueueTweetIds: ReadonlySet<string>;
 }
 
 interface PrefetchLoopOptions {
@@ -53,10 +54,16 @@ function pickPrefetchCandidates(
   bookmarks: Bookmark[],
   detailedTweetIds: ReadonlySet<string>,
   completedIds: ReadonlySet<string>,
+  todayQueueTweetIds: ReadonlySet<string>,
 ): string[] {
-  const pool = bookmarks
+  const uncached = bookmarks
     .slice(0, OFFLINE_PREFETCH_POOL)
     .filter((bookmark) => !detailedTweetIds.has(bookmark.tweetId));
+
+  // Today's Read items always go first so they're available offline.
+  const todayFirst = uncached.filter((b) => todayQueueTweetIds.has(b.tweetId));
+  const rest = uncached.filter((b) => !todayQueueTweetIds.has(b.tweetId));
+  const pool = [...todayFirst, ...rest];
 
   const read: Bookmark[] = [];
   const unread: Bookmark[] = [];
@@ -157,6 +164,7 @@ export function createPrefetchController({
           snapshot.bookmarks,
           snapshot.detailedTweetIds,
           completedIds,
+          snapshot.todayQueueTweetIds,
         );
 
         if (candidateIds.length === 0) {
