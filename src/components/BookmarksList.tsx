@@ -41,6 +41,7 @@ import {
   TODAY_QUEUE_DONE_TITLE,
   TODAY_QUEUE_TWO_MORE_EXHAUSTED,
   TODAY_QUEUE_TWO_MORE_LABEL,
+  TODAY_QUEUE_TWO_MORE_PENDING,
 } from "../lib/constants/ui";
 import {
   getPinnedTweetIds,
@@ -915,9 +916,13 @@ function useBookmarksListModel({
               <Button
                 variant="ghost"
                 onClick={handleAddTwoMore}
+                disabled={todayQueue?.isAddingMore}
+                aria-busy={todayQueue?.isAddingMore}
                 className="mt-5"
               >
-                {TODAY_QUEUE_TWO_MORE_LABEL}
+                {todayQueue?.isAddingMore
+                  ? TODAY_QUEUE_TWO_MORE_PENDING
+                  : TODAY_QUEUE_TWO_MORE_LABEL}
               </Button>
             ) : (
               <p className="mt-5 text-sm text-subtle/80">

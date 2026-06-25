@@ -19,4 +19,5 @@ export const TODAY_QUEUE_DONE_MESSAGE =
 // repeatable; no streak, counter, or momentum language (done is always the
 // headline). When the safe pool is empty the control retires for the day.
 export const TODAY_QUEUE_TWO_MORE_LABEL = "Two more";
+export const TODAY_QUEUE_TWO_MORE_PENDING = "Adding…";
 export const TODAY_QUEUE_TWO_MORE_EXHAUSTED = "Nothing else to add today.";
