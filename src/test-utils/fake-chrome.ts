@@ -14,6 +14,13 @@ type StorageChangeCallback = (
   changes: Record<string, StorageChange>,
 ) => void;
 
+type GlobalStorageChangeCallback = (
+  changes: Record<string, StorageChange>,
+  areaName: string,
+) => void;
+
+type GetKeys = string | string[] | Record<string, unknown> | null | undefined;
+
 type MessageCallback = (
   message: unknown,
   sender: { id?: string },
@@ -21,20 +28,46 @@ type MessageCallback = (
 ) => boolean | void;
 
 export function createFakeChrome() {
-  // Storage
-  let storageData: StorageData = {};
-  const storageChangeListeners: StorageChangeCallback[] = [];
+  // Storage. Each area is independent; mutations notify the area's own
+  // onChanged listeners (single-arg) and the global chrome.storage.onChanged
+  // listeners (with areaName), matching the real extension API.
+  const globalStorageChangeListeners: GlobalStorageChangeCallback[] = [];
 
-  const storage = {
-    local: {
-      async get(keys?: string | string[] | null): Promise<StorageData> {
-        if (!keys) return { ...storageData };
-        const keyList = typeof keys === "string" ? [keys] : keys;
-        const result: StorageData = {};
-        for (const key of keyList) {
-          if (key in storageData) {
-            result[key] = storageData[key];
+  function notifyGlobal(
+    changes: Record<string, StorageChange>,
+    areaName: string,
+  ) {
+    for (const listener of globalStorageChangeListeners) {
+      listener(changes, areaName);
+    }
+  }
+
+  function createStorageArea(areaName: string) {
+    let data: StorageData = {};
+    const areaListeners: StorageChangeCallback[] = [];
+
+    function emit(changes: Record<string, StorageChange>) {
+      for (const listener of areaListeners) listener(changes);
+      notifyGlobal(changes, areaName);
+    }
+
+    const area = {
+      async get(keys?: GetKeys): Promise<StorageData> {
+        if (keys === undefined || keys === null) return { ...data };
+        if (typeof keys === "string") {
+          return keys in data ? { [keys]: data[keys] } : {};
+        }
+        if (Array.isArray(keys)) {
+          const result: StorageData = {};
+          for (const key of keys) {
+            if (key in data) result[key] = data[key];
           }
+          return result;
+        }
+        // Object form: each value is the default returned when the key is absent.
+        const result: StorageData = {};
+        for (const [key, fallback] of Object.entries(keys)) {
+          result[key] = key in data ? data[key] : fallback;
         }
         return result;
       },
@@ -42,38 +75,56 @@ export function createFakeChrome() {
       async set(items: StorageData): Promise<void> {
         const changes: Record<string, StorageChange> = {};
         for (const [key, value] of Object.entries(items)) {
-          changes[key] = { oldValue: storageData[key], newValue: value };
-          storageData[key] = value;
+          changes[key] = { oldValue: data[key], newValue: value };
+          data[key] = value;
         }
-        for (const listener of storageChangeListeners) {
-          listener(changes);
-        }
+        emit(changes);
       },
 
       async remove(keys: string | string[]): Promise<void> {
         const keyList = typeof keys === "string" ? [keys] : keys;
         const changes: Record<string, StorageChange> = {};
         for (const key of keyList) {
-          if (key in storageData) {
-            changes[key] = { oldValue: storageData[key], newValue: undefined };
-            delete storageData[key];
+          if (key in data) {
+            changes[key] = { oldValue: data[key], newValue: undefined };
+            delete data[key];
           }
         }
-        if (Object.keys(changes).length > 0) {
-          for (const listener of storageChangeListeners) {
-            listener(changes);
-          }
-        }
+        if (Object.keys(changes).length > 0) emit(changes);
       },
 
       onChanged: {
         addListener(fn: StorageChangeCallback) {
-          storageChangeListeners.push(fn);
+          areaListeners.push(fn);
         },
         removeListener(fn: StorageChangeCallback) {
-          const idx = storageChangeListeners.indexOf(fn);
-          if (idx >= 0) storageChangeListeners.splice(idx, 1);
+          const idx = areaListeners.indexOf(fn);
+          if (idx >= 0) areaListeners.splice(idx, 1);
         },
+      },
+    };
+
+    function reset() {
+      data = {};
+      areaListeners.length = 0;
+    }
+
+    return { area, reset };
+  }
+
+  const local = createStorageArea("local");
+  const sync = createStorageArea("sync");
+
+  const storage = {
+    local: local.area,
+    sync: sync.area,
+    onChanged: {
+      addListener(fn: GlobalStorageChangeCallback) {
+        globalStorageChangeListeners.push(fn);
+      },
+      removeListener(fn: GlobalStorageChangeCallback) {
+        const idx = globalStorageChangeListeners.indexOf(fn);
+        if (idx >= 0) globalStorageChangeListeners.splice(idx, 1);
       },
     },
   };
@@ -148,8 +199,9 @@ export function createFakeChrome() {
 
   // Reset all state for test isolation
   function reset() {
-    storageData = {};
-    storageChangeListeners.length = 0;
+    local.reset();
+    sync.reset();
+    globalStorageChangeListeners.length = 0;
     messageListeners.length = 0;
     tabIdCounter = 1;
     tabRemoveListeners.length = 0;
