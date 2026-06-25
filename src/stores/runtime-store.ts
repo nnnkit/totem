@@ -1209,7 +1209,13 @@ export function createRuntimeStore() {
       },
 
       setTodayQueueTweetIds: (ids) => {
+        const prev = get().todayQueueTweetIds;
+        if (ids.size === prev.size && [...ids].every((id) => prev.has(id))) return;
         setRuntimeState({ todayQueueTweetIds: ids });
+        // Restart the loop so candidates are re-picked with the updated priority
+        // order. Without this, a loop that started before the queue loaded would
+        // run its full candidate list in general-list order with 2-min pauses.
+        if (ids.size > 0) prefetchController.stop();
         prefetchController.reconcile();
       },
 
