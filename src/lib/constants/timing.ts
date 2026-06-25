@@ -34,4 +34,3 @@ export const PAGE_FETCH_TIMEOUT_MS = 45_000;
 export const READER_DETAIL_TIMEOUT_MS = 12_000;
 
 export const PREFETCH_INTERVAL_MS = 2 * 60 * 1000;
-export const PREFETCH_TODAY_INTERVAL_MS = 10 * 1000;

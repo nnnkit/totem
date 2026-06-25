@@ -2,10 +2,7 @@ import {
   OFFLINE_PREFETCH_POOL,
   OFFLINE_PREFETCH_UNREAD_MAX,
 } from "../lib/constants/ui";
-import {
-  PREFETCH_INTERVAL_MS,
-  PREFETCH_TODAY_INTERVAL_MS,
-} from "../lib/constants/timing";
+import { PREFETCH_INTERVAL_MS } from "../lib/constants/timing";
 import type { Bookmark } from "../types";
 
 export interface PrefetchSnapshot {
@@ -18,16 +15,14 @@ export interface PrefetchSnapshot {
 
 interface PrefetchLoopOptions {
   tweetIds: string[];
-  priorityCount: number;
   fetchDetail: (tweetId: string) => Promise<void>;
   onSuccess: (tweetId: string) => void;
   shouldStop: () => boolean;
-  pauseBetween?: () => Promise<void>;
+  pauseBetween?: (tweetId: string) => Promise<void>;
 }
 
 export async function runPrefetchLoop({
   tweetIds,
-  priorityCount,
   fetchDetail,
   onSuccess,
   shouldStop,
@@ -37,15 +32,7 @@ export async function runPrefetchLoop({
     if (shouldStop()) return Promise.resolve();
     if (index >= tweetIds.length) return Promise.resolve();
 
-    let pause: Promise<void>;
-    if (index === 0) {
-      pause = Promise.resolve();
-    } else if (index < priorityCount) {
-      pause = new Promise((resolve) => setTimeout(resolve, PREFETCH_TODAY_INTERVAL_MS));
-    } else {
-      pause = pauseBetween ? pauseBetween() : Promise.resolve();
-    }
-
+    const pause = index > 0 && pauseBetween ? pauseBetween(tweetIds[index]) : Promise.resolve();
     return pause.then(() => {
       if (shouldStop()) return undefined;
 
@@ -61,41 +48,39 @@ export async function runPrefetchLoop({
   return runAt(0);
 }
 
-interface PrefetchCandidates {
-  ids: string[];
-  priorityCount: number;
-}
-
 function pickPrefetchCandidates(
   bookmarks: Bookmark[],
   detailedTweetIds: ReadonlySet<string>,
   completedIds: ReadonlySet<string>,
   todayQueueTweetIds: ReadonlySet<string>,
-): PrefetchCandidates {
-  const uncached = bookmarks
+): string[] {
+  // Today's queue items come from the full list — they may live beyond OFFLINE_PREFETCH_POOL.
+  const todayUncached = bookmarks.filter(
+    (b) => todayQueueTweetIds.has(b.tweetId) && !detailedTweetIds.has(b.tweetId),
+  );
+
+  // General items use the capped pool, excluding today's items already handled above.
+  const generalPool = bookmarks
     .slice(0, OFFLINE_PREFETCH_POOL)
-    .filter((b) => !detailedTweetIds.has(b.tweetId));
+    .filter((b) => !todayQueueTweetIds.has(b.tweetId) && !detailedTweetIds.has(b.tweetId));
 
-  const todayFirst = uncached.filter((b) => todayQueueTweetIds.has(b.tweetId));
-  const rest = uncached.filter((b) => !todayQueueTweetIds.has(b.tweetId));
-  const pool = [...todayFirst, ...rest];
+  const generalRead: Bookmark[] = [];
+  const generalUnread: Bookmark[] = [];
 
-  const read: Bookmark[] = [];
-  const unread: Bookmark[] = [];
-
-  for (const bookmark of pool) {
+  for (const bookmark of generalPool) {
     if (completedIds.has(bookmark.tweetId)) {
-      read.push(bookmark);
+      generalRead.push(bookmark);
       continue;
     }
-    if (unread.length < OFFLINE_PREFETCH_UNREAD_MAX) {
-      unread.push(bookmark);
+    if (generalUnread.length < OFFLINE_PREFETCH_UNREAD_MAX) {
+      generalUnread.push(bookmark);
     }
   }
 
-  const ids = [...read, ...unread].map((b) => b.tweetId);
-  const priorityCount = ids.filter((id) => todayQueueTweetIds.has(id)).length;
-  return { ids, priorityCount };
+  return [
+    ...todayUncached.map((b) => b.tweetId),
+    ...[...generalRead, ...generalUnread].map((b) => b.tweetId),
+  ];
 }
 
 export interface PrefetchController {
@@ -135,13 +120,15 @@ export function createPrefetchController({
     return snapshot.onlineReady && !snapshot.readerActive && snapshot.bookmarks.length > 0;
   };
 
-  const pauseBetween = () =>
-    new Promise<void>((resolve) => {
+  const pauseBetween = (tweetId: string) => {
+    if (getSnapshot().todayQueueTweetIds.has(tweetId)) return Promise.resolve();
+    return new Promise<void>((resolve) => {
       timerId = setTimeout(() => {
         timerId = null;
         resolve();
       }, PREFETCH_INTERVAL_MS);
     });
+  };
 
   const stop = () => {
     stopped = true;
@@ -176,18 +163,17 @@ export function createPrefetchController({
         if (stopped || token !== runToken) return;
         const completedIds = await getCompletedTweetIds().catch(() => new Set<string>());
 
-        const { ids, priorityCount } = pickPrefetchCandidates(
+        const candidateIds = pickPrefetchCandidates(
           snapshot.bookmarks,
           snapshot.detailedTweetIds,
           completedIds,
           snapshot.todayQueueTweetIds,
         );
 
-        if (ids.length === 0) return;
+        if (candidateIds.length === 0) return;
 
         await runPrefetchLoop({
-          tweetIds: ids,
-          priorityCount,
+          tweetIds: candidateIds,
           fetchDetail,
           onSuccess,
           shouldStop: () => stopped || token !== runToken || !shouldRun(),
