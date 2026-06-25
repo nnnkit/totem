@@ -12,6 +12,7 @@ describe("runPrefetchLoop", () => {
 
     await runPrefetchLoop({
       tweetIds: ["1", "2", "3"],
+      priorityCount: 0,
       fetchDetail,
       onSuccess,
       shouldStop: () => false,
@@ -32,6 +33,7 @@ describe("runPrefetchLoop", () => {
 
     await runPrefetchLoop({
       tweetIds: ["1", "2", "3"],
+      priorityCount: 0,
       fetchDetail,
       onSuccess,
       shouldStop: () => cancelled,
