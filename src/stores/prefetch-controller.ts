@@ -20,7 +20,7 @@ interface PrefetchLoopOptions {
   fetchDetail: (tweetId: string) => Promise<void>;
   onSuccess: (tweetId: string) => void;
   shouldStop: () => boolean;
-  pauseBetween?: () => Promise<void>;
+  pauseBetween?: (tweetId: string) => Promise<void>;
 }
 
 export async function runPrefetchLoop({
@@ -34,7 +34,7 @@ export async function runPrefetchLoop({
     if (shouldStop()) return Promise.resolve();
     if (index >= tweetIds.length) return Promise.resolve();
 
-    const pause = index > 0 && pauseBetween ? pauseBetween() : Promise.resolve();
+    const pause = index > 0 && pauseBetween ? pauseBetween(tweetIds[index]) : Promise.resolve();
     return pause.then(() => {
       if (shouldStop()) return undefined;
 
@@ -119,13 +119,15 @@ export function createPrefetchController({
     return snapshot.onlineReady && !snapshot.readerActive && snapshot.bookmarks.length > 0;
   };
 
-  const pauseBetween = () =>
-    new Promise<void>((resolve) => {
+  const pauseBetween = (tweetId: string) => {
+    if (getSnapshot().todayQueueTweetIds.has(tweetId)) return Promise.resolve();
+    return new Promise<void>((resolve) => {
       timerId = setTimeout(() => {
         timerId = null;
         resolve();
       }, PREFETCH_INTERVAL_MS);
     });
+  };
 
   const stop = () => {
     stopped = true;
