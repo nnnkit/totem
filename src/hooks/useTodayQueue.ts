@@ -70,6 +70,8 @@ export interface UseTodayQueueResult {
   // True only in the done-state: at least one eligible saved post remains for a
   // calm "Two more". When false in the done-state the archive is exhausted today.
   canAddMore: boolean;
+  // True while addTwoMore is appending, so the button can show a pending state.
+  isAddingMore: boolean;
   refresh: () => void;
   addToTodayQueue: (tweetId: string) => Promise<void>;
   addTwoMore: () => Promise<void>;
@@ -150,6 +152,10 @@ export function useTodayQueue({
   // and each rolls the RNG independently — appending up to four items instead of
   // two and rolling randomness twice.
   const addingMoreRef = useRef(false);
+  // Reactive mirror of addingMoreRef so the done-state can disable the "Two more"
+  // button and show a pending label while the append runs (the ref alone can't
+  // drive a re-render).
+  const [isAddingMore, setIsAddingMore] = useState(false);
 
   const refresh = useCallback(() => {
     const requestId = ++refreshSeqRef.current;
@@ -528,6 +534,7 @@ export function useTodayQueue({
   const addTwoMore = useCallback(async () => {
     if (!state.snapshot || addingMoreRef.current) return;
     addingMoreRef.current = true;
+    setIsAddingMore(true);
     try {
       const localDate = state.localDate || formatLocalDate();
       const ids = pickAdditionalTodayReadItems({
@@ -549,6 +556,7 @@ export function useTodayQueue({
       }
     } finally {
       addingMoreRef.current = false;
+      setIsAddingMore(false);
     }
   }, [
     accountId,
@@ -577,6 +585,7 @@ export function useTodayQueue({
     completedCount,
     isDone,
     canAddMore,
+    isAddingMore,
     refresh,
     addToTodayQueue,
     addTwoMore,

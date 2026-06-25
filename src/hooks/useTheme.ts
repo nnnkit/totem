@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { SYNC_THEME } from "../lib/storage-keys";
 import { useSyncedPreference } from "./useSyncedPreference";
 
@@ -21,12 +21,22 @@ function normalizeThemePreference(value: unknown): ThemePreference {
 }
 
 export function useTheme() {
-  const [themePreference, setThemePreference] =
+  // Mirrors useSettings: once the user picks a theme, a slower initial
+  // storage.sync load must not clobber that choice when it resolves.
+  const userPatchedRef = useRef(false);
+  const [themePreference, setSyncedThemePreference] =
     useSyncedPreference<ThemePreference>(
       SYNC_THEME,
       normalizeThemePreference,
       "system",
+      { skipInitialLoad: () => userPatchedRef.current },
     );
+  const setThemePreference = (
+    next: ThemePreference | ((prev: ThemePreference) => ThemePreference),
+  ) => {
+    userPatchedRef.current = true;
+    setSyncedThemePreference(next);
+  };
   const [systemTheme, setSystemTheme] = useState<ResolvedTheme>(() => getSystemTheme());
   const resolvedTheme: ResolvedTheme =
     themePreference === "system" ? systemTheme : themePreference;

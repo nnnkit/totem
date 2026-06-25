@@ -1046,15 +1046,22 @@ export async function getAllTodayQueueSnapshots(
 
 // Thin shell around the pure stale-key decision: drop any daily-set record left
 // behind by an earlier scoring version (including imported older-version
-// records). Safe to call with no records — it simply deletes nothing.
+// records). All stale keys are removed in a single readwrite transaction so the
+// sweep is one commit and one reader-activity emit, not one per key. Safe to
+// call with no records — it simply deletes nothing.
 export async function sweepStaleTodayQueueSnapshots(
   dbName: string = activeDbName,
 ): Promise<void> {
-  const records = await getAllTodayQueueSnapshots(dbName);
+  const db = await getDb(dbName);
+  const records = await db.getAll(TODAY_QUEUE_SNAPSHOTS_STORE_NAME);
   const staleKeys = selectStaleTodayQueueSnapshotKeys(records);
+  if (staleKeys.length === 0) return;
+  const tx = db.transaction(TODAY_QUEUE_SNAPSHOTS_STORE_NAME, "readwrite");
   for (const key of staleKeys) {
-    await deleteTodayQueueSnapshot(key, dbName);
+    if (key) tx.store.delete(key);
   }
+  await tx.done;
+  emitReaderActivity();
 }
 
 export async function getAllTodayQueueExposures(

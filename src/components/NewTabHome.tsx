@@ -47,6 +47,7 @@ import {
   TODAY_QUEUE_DONE_TITLE,
   TODAY_QUEUE_TWO_MORE_EXHAUSTED,
   TODAY_QUEUE_TWO_MORE_LABEL,
+  TODAY_QUEUE_TWO_MORE_PENDING,
 } from "../lib/constants/ui";
 import {
   getTodayQueueProgress,
@@ -203,6 +204,7 @@ interface FooterCardProps {
   onOpenReading: (tab?: ReadingTab) => void;
   todayQueueDone: boolean;
   todayQueueCanAddMore: boolean;
+  todayQueueAddingMore: boolean;
   onAddTwoMore: () => void;
   todayQueueProgress: TodayQueueProgress | null;
   syncButton: SyncButtonState;
@@ -230,6 +232,7 @@ function FooterCard({
   onOpenReading,
   todayQueueDone,
   todayQueueCanAddMore,
+  todayQueueAddingMore,
   onAddTwoMore,
   todayQueueProgress,
   syncButton,
@@ -580,9 +583,13 @@ function FooterCard({
                 <Button
                   type="button"
                   onClick={onAddTwoMore}
+                  disabled={todayQueueAddingMore}
+                  aria-busy={todayQueueAddingMore}
                   className="border border-home-empty/25 bg-transparent text-home-fg-secondary hover:bg-white/5"
                 >
-                  {TODAY_QUEUE_TWO_MORE_LABEL}
+                  {todayQueueAddingMore
+                    ? TODAY_QUEUE_TWO_MORE_PENDING
+                    : TODAY_QUEUE_TWO_MORE_LABEL}
                 </Button>
               ) : (
                 <p className="text-sm text-home-empty/80">
@@ -858,6 +865,7 @@ function useNewTabHomeModel({
     recommendationSource === "today" && Boolean(todayQueue?.isDone);
   const todayQueueCanAddMore =
     todayQueueDone && Boolean(todayQueue?.canAddMore);
+  const todayQueueAddingMore = Boolean(todayQueue?.isAddingMore);
   const todayQueueProgress =
     recommendationSource === "today" ? getTodayQueueProgress(todayQueue) : null;
   const runtimeFooterState = useFooterState(
@@ -1091,6 +1099,7 @@ function useNewTabHomeModel({
     syncButton,
     todayQueueDone,
     todayQueueCanAddMore,
+    todayQueueAddingMore,
     onAddTwoMore: handleAddTwoMore,
     todayQueueProgress,
     topSites,
@@ -1149,6 +1158,7 @@ function renderNewTabHome({
   syncButton,
   todayQueueDone,
   todayQueueCanAddMore,
+  todayQueueAddingMore,
   onAddTwoMore,
   todayQueueProgress,
   topSites,
@@ -1359,6 +1369,7 @@ function renderNewTabHome({
                 onOpenReading={onOpenReading}
                 todayQueueDone={todayQueueDone}
                 todayQueueCanAddMore={todayQueueCanAddMore}
+                todayQueueAddingMore={todayQueueAddingMore}
                 onAddTwoMore={onAddTwoMore}
                 todayQueueProgress={todayQueueProgress}
                 syncButton={syncButton}

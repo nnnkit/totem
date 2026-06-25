@@ -99,7 +99,60 @@ const headingChunksArticle: ArticleContent = {
   coverImageUrl: "",
 };
 
+function videoBlockArticle(
+  title: string,
+  data: Record<string, unknown>,
+): ArticleContent {
+  return {
+    title,
+    plainText: "ignored when blocks present",
+    coverImageUrl: "",
+    entityMap: { "0": { type: "MEDIA", data } },
+    contentBlocks: [
+      {
+        type: "atomic",
+        text: " ",
+        inlineStyleRanges: [],
+        entityRanges: [{ offset: 0, length: 1, key: 0 }],
+        depth: 0,
+      },
+    ],
+  };
+}
+
+const VIDEO_NO_SOURCE_FALLBACK =
+  "*Video — open the source URL in the front matter on X.*";
+
 describe("article render golden", () => {
+  // The blocks-path golden above always supplies a postUrl, so the markdown
+  // emitter's video-without-source fallback (the else branch of mediaVideo) is
+  // only covered here. C9 — see issue #63.
+  it("markdown — video block without a source URL emits the front-matter fallback", () => {
+    expect(
+      articleToMarkdown(
+        videoBlockArticle("Video Without Source", {
+          videoUrl: "https://video.example.com/clip.mp4",
+        }),
+        { includeCoverImage: false },
+      ),
+    ).toBe(`# Video Without Source\n\n${VIDEO_NO_SOURCE_FALLBACK}\n`);
+  });
+
+  it("markdown — video without a source keeps the poster preview above the fallback", () => {
+    const markdown = articleToMarkdown(
+      videoBlockArticle("Video With Poster", {
+        videoUrl: "https://video.example.com/clip.mp4",
+        imageUrl: "https://img.example.com/poster.jpg",
+      }),
+      { includeCoverImage: false },
+    );
+    expect(markdown).toContain(
+      "![Video preview](https://img.example.com/poster.jpg)",
+    );
+    expect(markdown).toContain(VIDEO_NO_SOURCE_FALLBACK);
+    expect(markdown).not.toContain("Watch on X");
+  });
+
   it("markdown — blocks path (all block types + title skip + metadata + cover)", () => {
     expect(
       articleToMarkdown(blocksArticle, { metadata: blocksMetadata }),
