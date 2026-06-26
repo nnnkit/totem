@@ -24,7 +24,7 @@ html, body { width: 1280px; height: 800px; overflow: hidden; }
 }
 
 /* Left copy column */
-.copy { position: absolute; left: 88px; top: 50%; transform: translateY(-50%); width: 430px; z-index: 3; }
+.copy { position: absolute; left: 52px; top: 50%; transform: translateY(-50%); width: 430px; z-index: 3; }
 .logo-row { display: flex; align-items: center; gap: 11px; margin-bottom: 28px; }
 .logo-row svg { width: 38px; height: 38px; border-radius: 9px; display: block; box-shadow: 0 4px 14px -6px rgba(40,20,10,.5); }
 .logo-row .wm { font-weight: 600; font-size: 20px; letter-spacing: .2px; color: var(--ink); }
@@ -35,7 +35,7 @@ html, body { width: 1280px; height: 800px; overflow: hidden; }
 /* Browser window — bleeds off the right edge; holds the product screenshot.
    Wider/larger than before so the UI reads bigger and the left gap is smaller. */
 .window {
-  position: absolute; top: 84px; left: 536px; width: 936px; height: 632px;
+  position: absolute; top: 84px; left: 500px; width: 972px; height: 632px;
   background: #0e0f12; border-radius: 14px 14px 0 0;
   box-shadow: 0 40px 90px -36px rgba(30,18,12,.62), 0 8px 24px -16px rgba(30,18,12,.4);
   overflow: hidden; z-index: 2; border: 1px solid rgba(255,255,255,.06);
