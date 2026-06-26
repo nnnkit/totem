@@ -455,6 +455,7 @@ function useDemoNewTabModel() {
       completedCount: handledItems.filter((item) => item.reason === "read").length,
       isDone: snapshotTweetIds.length > 0 && activeCount === 0,
       canAddMore: false,
+      isAddingMore: false,
       refresh: () => {},
       addToTodayQueue: async (tweetId: string) => restoreDemoTodayQueueItem(tweetId),
       addTwoMore: async () => {},
