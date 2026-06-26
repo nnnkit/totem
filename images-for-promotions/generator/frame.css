@@ -1,0 +1,57 @@
+/* Shared styles for Totem promo compositions.
+   Frames are authored at 1280x800 (CWS) or tile sizes; the build script
+   re-renders at 2x via body zoom for the @2x source set. */
+@import url('https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,600;0,700;1,400&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 1280px; height: 800px; overflow: hidden; }
+
+:root {
+  --warm: linear-gradient(125deg, #f7ece2 0%, #f4e9ea 45%, #ece6f1 100%);
+  --ink: #211c1a;
+  --muted: #6b625c;
+  --totem: #e07a5f;
+  --serif: 'Spectral', Charter, Georgia, serif;
+  --sans: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+  /* dark app tokens (match src/index.css dark theme) */
+  --d-surface:#161618; --d-surface-card:#1E1E20; --d-foreground:rgba(245,243,240,.92);
+  --d-muted:rgba(255,255,255,.55); --d-border:#2A2A2D; --d-accent:#e07a5f; --d-success:#22c55e;
+}
+
+.stage {
+  width: 1280px; height: 800px; position: relative; overflow: hidden;
+  background: var(--warm); font-family: var(--sans); -webkit-font-smoothing: antialiased;
+}
+
+/* Left copy column */
+.copy { position: absolute; left: 88px; top: 50%; transform: translateY(-50%); width: 430px; z-index: 3; }
+.logo-row { display: flex; align-items: center; gap: 11px; margin-bottom: 28px; }
+.logo-row svg { width: 38px; height: 38px; border-radius: 9px; display: block; box-shadow: 0 4px 14px -6px rgba(40,20,10,.5); }
+.logo-row .wm { font-weight: 600; font-size: 20px; letter-spacing: .2px; color: var(--ink); }
+.headline { font-family: var(--serif); font-weight: 700; font-size: 54px; line-height: 1.05; letter-spacing: -.5px; color: var(--ink); }
+.headline .accent { color: var(--totem); }
+.sub { font-family: var(--sans); font-weight: 400; font-size: 18px; line-height: 1.5; color: var(--muted); margin-top: 20px; max-width: 27ch; }
+
+/* Browser window — bleeds off the right edge; holds the product screenshot.
+   Wider/larger than before so the UI reads bigger and the left gap is smaller. */
+.window {
+  position: absolute; top: 84px; left: 536px; width: 936px; height: 632px;
+  background: #0e0f12; border-radius: 14px 14px 0 0;
+  box-shadow: 0 40px 90px -36px rgba(30,18,12,.62), 0 8px 24px -16px rgba(30,18,12,.4);
+  overflow: hidden; z-index: 2; border: 1px solid rgba(255,255,255,.06);
+}
+.titlebar { height: 38px; background: #17181c; display: flex; align-items: center; gap: 8px; padding: 0 16px; border-bottom: 1px solid #23252b; }
+.dot { width: 11px; height: 11px; border-radius: 50%; }
+.dot.r { background: #ff5f57; } .dot.y { background: #febc2e; } .dot.g { background: #28c840; }
+
+/* Product screenshot, zoomed via background-size/position to crop empty margins.
+   Each frame sets --zoom (e.g. 140%) and --pos (e.g. 50% 0%). */
+.shot {
+  width: 100%; height: calc(100% - 38px);
+  background-repeat: no-repeat;
+  background-size: var(--zoom, cover);
+  background-position: var(--pos, 50% 0%);
+}
+
+/* Built dark panels (privacy, offline) */
+.appwrap { width:100%; height:calc(100% - 38px); position:relative; background:#161618; font-family:var(--sans); color:var(--d-foreground); }

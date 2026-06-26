@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Totem — Promo Image Preview</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Spectral:wght@400;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+  :root{ --warm:#f5f1ea; --ink:#211c1a; --muted:#6b625c; --totem:#e07a5f; --line:#e3dccf;
+         --serif:'Spectral',Georgia,serif; --sans:'Space Grotesk',system-ui,sans-serif; }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--warm);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;padding:48px 40px 90px}
+  .wrap{max-width:1320px;margin:0 auto}
+  h1{font-family:var(--serif);font-size:38px;font-weight:700;letter-spacing:-.5px}
+  .lede{color:var(--muted);font-size:16px;margin-top:8px;max-width:70ch;line-height:1.5}
+  h2{font-family:var(--serif);font-size:23px;font-weight:600;margin:46px 0 6px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+  .sec-note{color:var(--muted);font-size:13.5px;margin:-2px 0 20px}
+  .grid{display:grid;gap:22px}
+  .g2{grid-template-columns:repeat(2,1fr)}
+  .g3{grid-template-columns:repeat(3,1fr)}
+  .card{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:0 10px 30px -22px rgba(20,20,19,.5)}
+  .card img{display:block;width:100%;height:auto;background:#0e0f12}
+  .meta{padding:11px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;border-top:1px solid var(--line)}
+  .nm{font-size:13px;font-weight:600}
+  .nm small{display:block;font-weight:400;color:var(--muted);font-family:ui-monospace,monospace;font-size:11px;margin-top:2px}
+  .tag{font-size:10.5px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;padding:4px 9px;border-radius:20px;white-space:nowrap}
+  .t-real{background:#e7f0e9;color:#2f6b4f}
+  .t-rebuilt{background:#f0e0d8;color:#8b4513}
+  .t-panel{background:#e4ecf5;color:#1B365D}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:14px;font-size:12.5px;color:var(--muted)}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .dot{width:10px;height:10px;border-radius:3px}
+  .full img{max-height:none}
+  .toolbar{position:fixed;top:16px;right:18px;z-index:50;display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.9);backdrop-filter:blur(8px);border:1px solid var(--line);border-radius:30px;padding:7px 8px 7px 16px;box-shadow:0 8px 24px -14px rgba(20,20,19,.45)}
+  .toolbar .ts{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+  .toolbar button{font-family:var(--sans);font-size:13px;font-weight:600;color:#fff;background:var(--totem);border:none;border-radius:22px;padding:8px 15px;cursor:pointer}
+  .toolbar label{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:5px;cursor:pointer}
+</style>
+</head>
+<body>
+<div class="toolbar">
+  <span class="ts" id="ts">—</span>
+  <label><input type="checkbox" id="auto"> auto</label>
+  <button id="reload">↻ Reload images</button>
+</div>
+<div class="wrap">
+  <h1>Totem — promo images</h1>
+  <p class="lede">Every generated asset on one page — all UI frames now use <b style="color:#2f6b4f">real screenshots</b>, rendered 2× supersampled for crisp edges. Only <b style="color:#1B365D">privacy</b> and <b style="color:#1B365D">offline</b> are designed panels (no dedicated in-app screen). Regenerate anytime with <code>generator/build.sh</code>.</p>
+  <div class="legend">
+    <span><span class="dot" style="background:#2f6b4f"></span>Real captured UI</span>
+    <span><span class="dot" style="background:#1B365D"></span>Designed panel — no real screen</span>
+  </div>
+
+  <h2>Chrome Web Store — Screenshots · 1280×800</h2>
+  <div class="grid g2">
+    <div class="card"><img src="chrome-web-store/screenshots/01-twitter-bookmarks-on-every-new-tab.png"><div class="meta"><div class="nm">1 · Hero — Today's Read<small>01-twitter-bookmarks-on-every-new-tab.png</small></div><span class="tag t-real">Real</span></div></div>
+    <div class="card"><img src="chrome-web-store/screenshots/02-read-twitter-threads-without-the-feed.png"><div class="meta"><div class="nm">2 · Reader<small>02-read-twitter-threads-without-the-feed.png</small></div><span class="tag t-real">Real</span></div></div>
+    <div class="card"><img src="chrome-web-store/screenshots/03-search-saved-posts-authors-links-threads.png"><div class="meta"><div class="nm">3 · Search<small>03-search-saved-posts-authors-links-threads.png</small></div><span class="tag t-real">Real</span></div></div>
+    <div class="card"><img src="chrome-web-store/screenshots/04-export-twitter-bookmarks-markdown-csv-notion.png"><div class="meta"><div class="nm">4 · Export<small>04-export-twitter-bookmarks-markdown-csv-notion.png</small></div><span class="tag t-real">Real</span></div></div>
+    <div class="card"><img src="chrome-web-store/screenshots/05-local-first-no-account-no-server.png"><div class="meta"><div class="nm">5 · Privacy<small>05-local-first-no-account-no-server.png</small></div><span class="tag t-panel">Panel</span></div></div>
+  </div>
+
+  <h2>Promo tiles</h2>
+  <p class="sec-note">marquee 1400×560 · small 440×280</p>
+  <div class="grid g2">
+    <div class="card"><img src="chrome-web-store/marquee-promo-tile.png"><div class="meta"><div class="nm">Marquee tile<small>marquee-promo-tile.png</small></div><span class="tag t-real">Real</span></div></div>
+    <div class="card"><img src="chrome-web-store/small-promo-tile.png"><div class="meta"><div class="nm">Small tile<small>small-promo-tile.png</small></div><span class="tag t-real">Text</span></div></div>
+  </div>
+
+  <h2>@2x source / marketing set</h2>
+  <p class="sec-note">2560×1600 (marquee 2800×1120 · small 880×560) — shown scaled to fit</p>
+  <div class="grid g2">
+    <div class="card"><img src="01-read-x-bookmarks-not-the-feed@2x.png"><div class="meta"><div class="nm">01 · Today's Read / new tab<small>01-read-x-bookmarks-not-the-feed@2x.png</small></div><span class="tag t-real">Real</span></div></div>
+    <div class="card"><img src="02-read-threads-without-feeds@2x.png"><div class="meta"><div class="nm">02 · Reader<small>02-read-threads-without-feeds@2x.png</small></div><span class="tag t-real">Real</span></div></div>
+    <div class="card"><img src="03-find-any-bookmark-fast@2x.png"><div class="meta"><div class="nm">03 · Search<small>03-find-any-bookmark-fast@2x.png</small></div><span class="tag t-real">Real</span></div></div>
+    <div class="card"><img src="04-highlight-and-save-notes@2x.png"><div class="meta"><div class="nm">04 · Highlights<small>04-highlight-and-save-notes@2x.png</small></div><span class="tag t-real">Real</span></div></div>
+    <div class="card"><img src="05-track-what-you-ve-read@2x.png"><div class="meta"><div class="nm">05 · Track read<small>05-track-what-you-ve-read@2x.png</small></div><span class="tag t-real">Real</span></div></div>
+    <div class="card"><img src="06-export-csv-markdown@2x.png"><div class="meta"><div class="nm">06 · Export<small>06-export-csv-markdown@2x.png</small></div><span class="tag t-real">Real</span></div></div>
+    <div class="card"><img src="07-keep-reading-offline@2x.png"><div class="meta"><div class="nm">07 · Offline<small>07-keep-reading-offline@2x.png</small></div><span class="tag t-panel">Panel</span></div></div>
+    <div class="card"><img src="08-your-calm-new-tab-reader@2x.png"><div class="meta"><div class="nm">08 · Calm new tab<small>08-your-calm-new-tab-reader@2x.png</small></div><span class="tag t-real">Real</span></div></div>
+  </div>
+  <div class="grid g2" style="margin-top:22px">
+    <div class="card full"><img src="09-marquee-promo@2x.png"><div class="meta"><div class="nm">09 · Marquee<small>09-marquee-promo@2x.png</small></div><span class="tag t-real">Real</span></div></div>
+    <div class="card full"><img src="10-small-promo@2x.png"><div class="meta"><div class="nm">10 · Small<small>10-small-promo@2x.png</small></div><span class="tag t-real">Text</span></div></div>
+  </div>
+</div>
+<script>
+  // Cache-bust every image so a reload always shows the latest build output,
+  // even though filenames stay the same.
+  const imgs = [...document.querySelectorAll('.card img')];
+  imgs.forEach(img => img.dataset.base = img.getAttribute('src'));
+  const pad = n => String(n).padStart(2, '0');
+  function bust() {
+    const t = Date.now();
+    imgs.forEach(img => { img.src = img.dataset.base + '?t=' + t; });
+    const d = new Date();
+    document.getElementById('ts').textContent =
+      'updated ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+  }
+  document.getElementById('reload').addEventListener('click', bust);
+  let timer = null;
+  document.getElementById('auto').addEventListener('change', e => {
+    if (e.target.checked) { bust(); timer = setInterval(bust, 4000); }
+    else { clearInterval(timer); timer = null; }
+  });
+  bust();
+</script>
+</body>
+</html>

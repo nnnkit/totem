@@ -39,7 +39,7 @@ Design + evidence: `plans/premium-conversion-plan.md`, `plans/research/premium-m
 Consolidated launch tracker (merges old growth checklist + phase-2 outreach + GTM "3 Bets"). HITL: mostly external actions.
 
 **Tasks**
-- [ ] Resubmit CWS listing with compliant name `Totem - Twitter / X Bookmarks`.
+- [ ] Resubmit CWS listing with keyword-first name `Twitter & X Bookmarks on New Tab — Totem`.
 - [ ] Featured-badge submission prep + submission.
 - [ ] Ship/scope: omnibox, side panel, reading stats.
 - [ ] Launch: r/nosurf founder story, Show HN, r/SideProject, bookmarksave.com outreach.

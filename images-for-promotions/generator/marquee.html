@@ -1,0 +1,21 @@
+<!DOCTYPE html><html><head><meta charset="UTF-8"><link rel="stylesheet" href="frame.css"><style>
+ html,body{width:1400px;height:560px}
+ .mstage{width:1400px;height:560px;position:relative;overflow:hidden;background:var(--warm);font-family:var(--sans);-webkit-font-smoothing:antialiased}
+ .mcopy{position:absolute;left:78px;top:50%;transform:translateY(-50%);width:600px;z-index:3}
+ .mcopy .logo-row{display:flex;align-items:center;gap:13px;margin-bottom:24px}
+ .mcopy .logo-row svg{width:46px;height:46px;border-radius:11px;box-shadow:0 5px 16px -6px rgba(40,20,10,.5)}
+ .mcopy .wm{font-weight:600;font-size:24px;color:var(--ink)}
+ .mhead{font-family:var(--serif);font-weight:700;font-size:58px;line-height:1.04;letter-spacing:-.6px;color:var(--ink)}
+ .mhead .accent{color:var(--totem)}
+ .msub{font-size:20px;color:var(--muted);margin-top:20px;max-width:27ch;line-height:1.45}
+ .mwin{position:absolute;top:58px;left:744px;width:800px;height:444px;background:#0e0f12;border-radius:14px;overflow:hidden;box-shadow:0 44px 90px -34px rgba(30,18,12,.6);border:1px solid rgba(255,255,255,.06)}
+ .mwin .titlebar{height:38px}
+ .mwin .shot{height:calc(100% - 38px)}
+</style></head><body>
+<div class="mstage">
+ <div class="mcopy"><div class="logo-row"><svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="ts" x1="0" y1="0" x2="0.3" y2="1"><stop offset="0%" stop-color="white" stop-opacity="0.45"/><stop offset="50%" stop-color="white" stop-opacity="0.1"/><stop offset="100%" stop-color="white" stop-opacity="0"/></linearGradient></defs><rect width="100" height="100" rx="18" fill="#1c1c1e"/><path d="M20 80L80 80L80 20Z" fill="#e07a5f"/><path d="M80 20L52.5 47.5L80 80Z" fill="#c96b50"/><path d="M52.5 47.5L80 20" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"/><path d="M20 80L80 80L80 20Z" fill="url(#ts)"/></svg><span class="wm">Totem</span></div>
+ <div class="mhead">Your Twitter&nbsp;&amp;&nbsp;X bookmarks, <span class="accent">finally read</span>.</div>
+ <div class="msub">A calm new-tab reading queue. Search, highlight, and export &mdash; local-first.</div></div>
+ <div class="mwin"><div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span></div>
+ <div class="shot" style="background-image:url('input/todays-read.png'); --zoom:101%; --pos:50% 0%;"></div></div>
+</div></body></html>

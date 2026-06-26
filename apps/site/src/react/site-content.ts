@@ -201,9 +201,9 @@ export const SITE_COPY = {
   landing: {
     hero: {
       eyebrow: "Chrome Extension",
-      title: "Twitter bookmarks on every new tab.",
+      title: "Twitter & X bookmarks on every new tab.",
       description:
-        "Your Twitter bookmarks show up on every new tab, ready to read — locally, without opening X.",
+        "Your Twitter & X bookmarks, waiting on every new tab — so you finally read the posts you saved instead of forgetting them.",
       installButtonLabel: installButtonLabel,
       videoTitle: "Totem quick walkthrough video",
       chips: ["No account", "No backend", "Local-first"],

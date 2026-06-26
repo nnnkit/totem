@@ -5,9 +5,9 @@ import { basename, join, resolve } from "node:path";
 const rootDir = process.cwd();
 
 const expected = {
-  name: "Twitter Saver: Bookmarks on New Tab, Search & Export",
+  name: "Twitter & X Bookmarks on New Tab — Totem",
   description:
-    "Read, search, and export Twitter / X bookmarks from your new tab. Local-first, no Totem account, no server.",
+    "Your Twitter & X bookmarks, waiting on every new tab — finally read what you saved. Search, highlight, export. Local-first.",
   extensionId: "acpkgdfhoaalmnhjifhneghcgfnjkglo",
   homepageUrl: "https://usetotem.xyz/",
   screenshots: [

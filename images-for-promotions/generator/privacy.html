@@ -1,0 +1,26 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><link rel="stylesheet" href="frame.css">
+<style>
+ .privwrap{position:absolute;inset:0;padding:46px 52px;display:flex;flex-direction:column;justify-content:center;background:radial-gradient(120% 120% at 80% 0%,#201a18 0%,#141315 50%,#0e0d0f 100%);font-family:var(--sans);color:var(--d-foreground)}
+ .priv-eyebrow{font-size:12px;letter-spacing:2.5px;text-transform:uppercase;color:var(--d-accent);font-weight:600;margin-bottom:14px}
+ .priv-h{font-family:var(--serif);font-weight:700;font-size:38px;line-height:1.08;letter-spacing:-.4px;max-width:18ch;margin-bottom:8px}
+ .priv-sub{font-size:15px;color:var(--d-muted);max-width:48ch;margin-bottom:26px;line-height:1.5}
+ .priv-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:760px}
+ .priv-card{background:rgba(255,255,255,.03);border:1px solid var(--d-border);border-radius:11px;padding:15px 17px}
+ .pc-k{font-family:ui-monospace,monospace;font-size:12px;font-weight:600;color:var(--d-foreground);margin-bottom:5px;display:flex;align-items:center;gap:7px}
+ .pc-dot{width:7px;height:7px;border-radius:50%;background:var(--d-success)}
+ .pc-v{font-size:12.5px;color:var(--d-muted);line-height:1.45}
+</style></head><body><div class="stage">
+<div class="copy"><div class="logo-row"><svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="ts" x1="0" y1="0" x2="0.3" y2="1"><stop offset="0%" stop-color="white" stop-opacity="0.45"/><stop offset="50%" stop-color="white" stop-opacity="0.1"/><stop offset="100%" stop-color="white" stop-opacity="0"/></linearGradient></defs><rect width="100" height="100" rx="18" fill="#1c1c1e"/><path d="M20 80L80 80L80 20Z" fill="#e07a5f"/><path d="M80 20L52.5 47.5L80 80Z" fill="#c96b50"/><path d="M52.5 47.5L80 20" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"/><path d="M20 80L80 80L80 20Z" fill="url(#ts)"/></svg><span class="wm">Totem</span></div>
+<div class="headline">Local-first. No account.<br>No <span class="accent">server</span>.</div>
+<div class="sub">Your bookmarks, notes, and highlights live in your browser. We can&rsquo;t see your data, because we never receive it.</div></div>
+<div class="window"><div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span></div>
+<div class="appwrap"><div class="privwrap">
+<div class="priv-eyebrow">Privacy</div>
+<div class="priv-h">Your data never leaves your browser.</div>
+<div class="priv-sub">No Totem account, no server, no analytics pipeline. Totem reads bookmarks from your own X session and stores everything locally.</div>
+<div class="priv-grid">
+<div class="priv-card"><div class="pc-k"><span class="pc-dot"></span>x.com access</div><div class="pc-v">Reads bookmarks from your active X session &mdash; nothing else.</div></div>
+<div class="priv-card"><div class="pc-k"><span class="pc-dot"></span>cookies</div><div class="pc-v">Identifies your X account locally to scope your library.</div></div>
+<div class="priv-card"><div class="pc-k"><span class="pc-dot"></span>webRequest</div><div class="pc-v">Captures auth headers locally. Never blocks or modifies requests.</div></div>
+<div class="priv-card"><div class="pc-k"><span class="pc-dot"></span>No Totem backend</div><div class="pc-v">Stored in your browser&rsquo;s IndexedDB. We never receive it.</div></div>
+</div></div></div></div></div></body></html>

@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "Twitter Saver: Bookmarks on New Tab, Search & Export",
+  "name": "Twitter & X Bookmarks on New Tab — Totem",
   "short_name": "Totem",
   "version": "1.2.5",
-  "description": "Read, search, and export Twitter / X bookmarks from your new tab. Local-first, no Totem account, no server.",
+  "description": "Your Twitter & X bookmarks, waiting on every new tab — finally read what you saved. Search, highlight, export. Local-first.",
   "homepage_url": "https://usetotem.xyz/",
   "offline_enabled": true,
   "icons": {

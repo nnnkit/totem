@@ -1,0 +1,23 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><link rel="stylesheet" href="frame.css">
+<style>
+ .of-wrap{position:absolute;inset:0;background:radial-gradient(120% 120% at 75% 20%,#20242c 0%,#15171b 50%,#0f1013 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:var(--sans);color:var(--d-foreground);text-align:center;padding:40px}
+ .of-badge{display:inline-flex;align-items:center;gap:9px;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.3);color:#4ade80;font-size:13px;font-weight:600;padding:7px 15px;border-radius:30px;margin-bottom:24px}
+ .of-dot{width:8px;height:8px;border-radius:50%;background:#4ade80}
+ .of-ic{font-size:54px;margin-bottom:18px}
+ .of-h{font-family:var(--serif);font-weight:700;font-size:32px;letter-spacing:-.3px;margin-bottom:12px}
+ .of-p{font-size:15px;color:var(--d-muted);max-width:40ch;line-height:1.55}
+ .of-stack{margin-top:28px;display:flex;gap:11px}
+ .of-card{background:rgba(255,255,255,.04);border:1px solid var(--d-border);border-radius:11px;padding:13px 18px;font-size:12.5px;color:var(--d-muted)}
+ .of-card b{color:var(--d-foreground);display:block;font-size:14px;margin-bottom:3px}
+</style></head><body><div class="stage">
+<div class="copy"><div class="logo-row"><svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="ts" x1="0" y1="0" x2="0.3" y2="1"><stop offset="0%" stop-color="white" stop-opacity="0.45"/><stop offset="50%" stop-color="white" stop-opacity="0.1"/><stop offset="100%" stop-color="white" stop-opacity="0"/></linearGradient></defs><rect width="100" height="100" rx="18" fill="#1c1c1e"/><path d="M20 80L80 80L80 20Z" fill="#e07a5f"/><path d="M80 20L52.5 47.5L80 80Z" fill="#c96b50"/><path d="M52.5 47.5L80 20" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"/><path d="M20 80L80 80L80 20Z" fill="url(#ts)"/></svg><span class="wm">Totem</span></div>
+<div class="headline">Keep reading <span class="accent">offline</span></div>
+<div class="sub">Totem prefetches your saved posts, so you can keep reading on a plane or a weak connection.</div></div>
+<div class="window"><div class="titlebar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span></div>
+<div class="appwrap"><div class="of-wrap">
+<div class="of-badge"><span class="of-dot"></span>Offline &mdash; still reading</div>
+<div class="of-ic">&#9992;&#65039;</div>
+<div class="of-h">Your library lives in your browser.</div>
+<div class="of-p">Saved posts, threads, and articles are cached locally &mdash; no server round-trip required.</div>
+<div class="of-stack"><div class="of-card"><b>248</b>posts cached</div><div class="of-card"><b>IndexedDB</b>on-device</div><div class="of-card"><b>0</b>network needed</div></div>
+</div></div></div></div></body></html>

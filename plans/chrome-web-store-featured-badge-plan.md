@@ -48,11 +48,11 @@ Live Chrome Web Store page checked on 2026-06-15:
 
 Repo readiness:
 
-- `public/manifest.json` keeps the current title
-  `Twitter Saver: Bookmarks on New Tab, Search & Export` while the Chrome Web
-  Store growth spike is active.
-- `public/manifest.json` keeps the current short description:
-  `Read, search, and export Twitter / X bookmarks from your new tab. Local-first, no Totem account, no server.`
+- `public/manifest.json` now uses the keyword-first title
+  `Twitter & X Bookmarks on New Tab — Totem` (updated 2026-06-26; the live store
+  push is deferred until the install spike settles).
+- `public/manifest.json` now uses the short description:
+  `Your Twitter & X bookmarks, waiting on every new tab — finally read what you saved. Search, highlight, export. Local-first.`
 - `public/manifest.json` now declares `https://usetotem.xyz/` as the homepage
   and `offline_enabled: true`.
 - Chrome Web Store asset folder has exactly five screenshots plus marquee and
@@ -86,8 +86,8 @@ Repo readiness:
 1. Use `plans/chrome-web-store-dashboard-update-packet.md` as the dashboard
    copy-paste packet for the listing, assets, privacy practices, and permission
    justifications.
-2. Publish a CWS update with the current manifest title and short description
-   preserved.
+2. Publish a CWS update with the keyword-first manifest title and short
+   description (see `plans/research/totem-cws-listing-positioning-2026-06-26.html`).
 3. In the dashboard, paste the exact long description from
    `plans/chrome-web-store-listing.md`.
 4. Keep the category as `Productivity` during the growth-observation window.

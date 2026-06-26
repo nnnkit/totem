@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Totem · Chrome Web Store Positioning Study</title>
+<meta name="description" content="Research-backed recommendation for Totem's Chrome Web Store title, description, and listing images.">
+<meta name="generator" content="Kami">
+<style>
+  :root{
+    --parchment:#f5f4ed; --ivory:#faf9f5; --border:#e8e6dc; --border-soft:#e5e3d8;
+    --brand:#1B365D; --brand-tint:#EEF2F7; --tag-bg:#E4ECF5;
+    --near-black:#141413; --dark-warm:#3d3d3a; --charcoal:#4d4c48; --olive:#504e49; --stone:#6b6a64;
+    --warn-bg:#f0e0d8; --warn-fg:#8b4513;
+    --good:#2f6b4f; --good-bg:#e7f0e9; --bad:#8b3a2f; --bad-bg:#f3e2dd;
+    --totem:#e8512f;
+    --serif:Charter,Georgia,Palatino,"Times New Roman",serif;
+    --mono:"JetBrains Mono","SF Mono","Fira Code",Consolas,Monaco,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--parchment)}
+  body{color:var(--near-black);font-family:var(--serif);font-size:17px;line-height:1.55;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1180px;margin:0 auto;padding:64px 40px 120px}
+  a{color:var(--brand)}
+
+  .eyebrow{display:inline-flex;align-items:center;gap:9px;font-size:12.5px;letter-spacing:2px;text-transform:uppercase;color:var(--brand);font-weight:600}
+  .eyebrow::before{content:"";width:18px;height:2px;border-radius:1px;background:var(--brand)}
+
+  h1.title{font-size:46px;line-height:1.1;letter-spacing:-.5px;font-weight:600;margin:18px 0 14px;max-width:18ch}
+  .subtitle{font-size:20px;color:var(--olive);line-height:1.45;max-width:62ch}
+  .meta{margin-top:18px;font-size:13.5px;color:var(--stone);font-variant-numeric:tabular-nums}
+  .meta strong{color:var(--dark-warm);font-weight:600}
+
+  .rule{height:1px;background:var(--border);margin:40px 0}
+
+  section{margin-top:54px}
+  .sec-num{font-size:12.5px;letter-spacing:2px;text-transform:uppercase;color:var(--brand);font-weight:600}
+  h2{font-size:27px;font-weight:600;letter-spacing:-.3px;border-left:3px solid var(--brand);border-radius:1.5px;padding-left:12px;margin:8px 0 18px;line-height:1.2}
+  h3{font-size:19px;font-weight:600;margin:0 0 6px}
+  p{margin:0 0 14px;max-width:74ch}
+  .lead{font-size:18.5px;color:var(--dark-warm)}
+
+  .verdict{background:var(--ivory);border:1px solid var(--border);border-left:3px solid var(--brand);border-radius:8px;padding:24px 28px;margin-top:26px}
+  .verdict .k{font-size:12.5px;letter-spacing:1.5px;text-transform:uppercase;color:var(--brand);font-weight:600;margin-bottom:8px}
+  .verdict p{font-size:19px;color:var(--near-black);margin:0}
+  .verdict .big{font-family:var(--mono);font-size:18px;background:var(--brand-tint);border:1px solid #d8e2ee;color:var(--brand);padding:2px 10px;border-radius:6px;display:inline-block;margin-top:12px;font-weight:600}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+  @media(max-width:880px){.grid2,.grid3{grid-template-columns:1fr}}
+
+  .card{background:var(--ivory);border:1px solid var(--border);border-radius:10px;padding:22px 24px}
+  .card .k{font-family:var(--mono);font-size:12px;color:var(--stone);font-weight:600;letter-spacing:.5px}
+  .card h3{margin-top:6px}
+  .card p{font-size:15.5px;color:var(--charcoal);margin-bottom:0}
+  .chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:14px}
+  .chip{font-family:var(--mono);font-size:11.5px;background:var(--parchment);border:1px solid var(--border-soft);border-radius:20px;padding:4px 11px;color:var(--olive)}
+  .chip.warn{background:var(--warn-bg);border-color:#e6cbbd;color:var(--warn-fg)}
+
+  table.cmp{width:100%;border-collapse:collapse;margin-top:18px;font-size:15px}
+  table.cmp th,table.cmp td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--border)}
+  table.cmp th{font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--stone);font-weight:600}
+  table.cmp td.name{font-family:var(--mono);font-size:13px;color:var(--near-black)}
+  table.cmp tr.me td{background:var(--brand-tint)}
+  table.cmp .tag{font-size:12px;color:var(--stone)}
+
+  .twocol{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:18px}
+  @media(max-width:880px){.twocol{grid-template-columns:1fr}}
+  .listbox{border:1px solid var(--border);border-radius:10px;padding:20px 22px;background:var(--ivory)}
+  .listbox.kill{border-left:3px solid var(--bad)}
+  .listbox.keep{border-left:3px solid var(--good)}
+  .listbox h3{display:flex;align-items:center;gap:9px}
+  .pill{font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;padding:3px 9px;border-radius:20px}
+  .pill.bad{background:var(--bad-bg);color:var(--bad)}
+  .pill.good{background:var(--good-bg);color:var(--good)}
+  .listbox ul{list-style:none;margin:12px 0 0}
+  .listbox li{font-size:15px;color:var(--charcoal);padding:7px 0 7px 26px;position:relative;border-bottom:1px solid var(--border-soft)}
+  .listbox li:last-child{border-bottom:none}
+  .listbox li::before{position:absolute;left:0;top:7px;font-weight:700}
+  .listbox.kill li::before{content:"✕";color:var(--bad)}
+  .listbox.keep li::before{content:"✓";color:var(--good)}
+  .listbox li b{color:var(--near-black);font-weight:600}
+
+  /* TITLE OPTION CARDS */
+  .titlecard{background:var(--ivory);border:1px solid var(--border);border-radius:10px;padding:20px 22px;position:relative}
+  .titlecard.rec{border:1.5px solid var(--brand);box-shadow:0 6px 22px -14px rgba(27,54,93,.5)}
+  .ribbon{position:absolute;top:-11px;left:20px;background:var(--brand);color:#fff;font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;padding:4px 11px;border-radius:20px}
+  .sample{font-family:var(--mono);font-size:16px;color:var(--near-black);background:var(--parchment);border:1px solid var(--border-soft);border-radius:7px;padding:11px 13px;line-height:1.4}
+  .cc{font-size:12.5px;color:var(--stone);margin-top:9px;font-variant-numeric:tabular-nums}
+  .cc b{color:var(--good);font-weight:600}
+  .pc{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:13px;font-size:13.5px}
+  .pc div{padding:8px 11px;border-radius:7px}
+  .pc .pro{background:var(--good-bg);color:#2c5743}
+  .pc .con{background:#f4ece3;color:var(--charcoal)}
+
+  .desc{background:#1b1f24;color:#e7e9ea;border-radius:10px;padding:22px 24px;font-family:var(--mono);font-size:13.5px;line-height:1.7;white-space:pre-wrap;margin-top:8px;overflow:auto}
+  .desc .muted{color:#8b949e}
+
+  /* ===== MOCKUP BOARD ===== */
+  .board{margin-top:24px;display:flex;flex-direction:column;gap:40px}
+  .dirhead{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+  .dirhead .dl{font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--brand)}
+  .dirhead .dn{font-size:21px;font-weight:600}
+  .dirhead .dr{font-size:14.5px;color:var(--olive)}
+  .dirmeta{display:flex;gap:22px;flex-wrap:wrap;font-size:13.5px;color:var(--charcoal);margin:10px 0 14px}
+  .dirmeta b{color:var(--near-black)}
+
+  .frame{width:100%;aspect-ratio:1280/800;border-radius:12px;overflow:hidden;position:relative;container-type:inline-size;border:1px solid var(--border);box-shadow:0 18px 50px -28px rgba(20,20,19,.55)}
+  .frame .pad{position:absolute;inset:0;display:flex;align-items:center;gap:4cqw;padding:0 6.5cqw}
+  .frame .copy{width:40cqw;flex:none}
+  .frame .head{font-family:var(--serif);font-weight:600;font-size:5.6cqw;line-height:1.08;letter-spacing:-.1cqw}
+  .frame .sub{font-size:2.05cqw;line-height:1.4;margin-top:2.6cqw;opacity:.85}
+  .frame .logo-row{display:flex;align-items:center;gap:1.6cqw;margin-bottom:3.4cqw}
+  .frame .logo-row .nm{font-weight:600;font-size:2.3cqw;letter-spacing:.2cqw}
+
+  /* direction palettes */
+  .dir-a{background:linear-gradient(125deg,#f7ece2 0%,#f1e7ee 55%,#ece6f1 100%)}
+  .dir-a .head{color:#231f1d}
+  .dir-a .sub{color:#5b524c}
+  .dir-a .nm{color:#231f1d}
+  .dir-b{background:radial-gradient(120% 120% at 78% 30%,#3a2218 0%,#1d1512 45%,#120d0b 100%)}
+  .dir-b .head{color:#f6efe9}
+  .dir-b .sub{color:#cbb7aa}
+  .dir-b .nm{color:#f6efe9}
+  .dir-c{background:var(--parchment)}
+  .dir-c .head{color:#141413}
+  .dir-c .sub{color:#504e49}
+  .dir-c .nm{color:#141413}
+
+  .tlogo{border-radius:24%;display:block}
+  .frame .tlogo{width:5.4cqw;height:5.4cqw}
+
+  /* app mock (dark, fixed look across directions) */
+  .app{width:52cqw;flex:none;background:#16181c;border:.25cqw solid #292d33;border-radius:1.8cqw;box-shadow:0 4cqw 8cqw -3cqw rgba(0,0,0,.5);overflow:hidden;font-size:1.85cqw}
+  .app .bar{display:flex;align-items:center;gap:.9cqw;padding:1.3cqw 1.6cqw;border-bottom:.18cqw solid #23262c}
+  .app .dot{width:1.05cqw;height:1.05cqw;border-radius:50%;background:#3a3f47}
+  .app .bar .ttl{margin-left:1cqw;font-weight:600;color:#e7e9ea;font-family:var(--serif);font-size:2.1cqw}
+  .app .bar .srch{margin-left:auto;background:#1f2329;border:.18cqw solid #2c313a;border-radius:1cqw;color:#6b7280;padding:.7cqw 1.4cqw;font-size:1.5cqw;min-width:16cqw}
+  .app .tabs{display:flex;gap:2.2cqw;padding:1.2cqw 1.8cqw .2cqw}
+  .app .tab{font-size:1.6cqw;color:#71767b;padding-bottom:1cqw}
+  .app .tab .n{font-variant-numeric:tabular-nums;color:#565b62;margin-left:.5cqw}
+  .app .tab.on{color:#e7e9ea;border-bottom:.3cqw solid var(--totem)}
+  .app .tab.on .n{color:var(--totem)}
+  .app .sort{float:right;color:#565b62;font-size:1.4cqw;padding:1.2cqw 1.8cqw}
+  .app .list{padding:.6cqw 0 1cqw}
+  .app .row{display:flex;gap:1.2cqw;padding:1.15cqw 1.8cqw;border-bottom:.16cqw solid #1d2025}
+  .app .row:last-child{border-bottom:none}
+  .app .av{width:3cqw;height:3cqw;border-radius:50%;flex:none;font-size:1.4cqw;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600}
+  .app .rc{min-width:0}
+  .app .rn{font-size:1.6cqw;color:#e7e9ea;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .app .rn span{color:#71767b;font-weight:400;margin-left:.6cqw}
+  .app .rt{font-size:1.55cqw;color:#a3a8af;line-height:1.32;margin-top:.3cqw;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+
+  /* annotation for direction C */
+  .annot{position:absolute;z-index:5;background:var(--brand);color:#fff;font-family:var(--serif);font-size:1.85cqw;line-height:1.3;padding:1.3cqw 1.7cqw;border-radius:1.4cqw;max-width:26cqw;box-shadow:0 2cqw 5cqw -2cqw rgba(27,54,93,.6)}
+  .annot.a1{top:7cqw;right:5cqw}
+  .annot svg{position:absolute;overflow:visible}
+
+  /* store-listing context card */
+  .store{background:#fff;border:1px solid var(--border);border-radius:14px;padding:26px 28px;margin-top:10px;box-shadow:0 10px 34px -22px rgba(20,20,19,.5)}
+  .store-top{display:flex;gap:18px;align-items:flex-start}
+  .store .ic{width:60px;height:60px;border-radius:15px;flex:none}
+  .store .st-title{font-size:24px;font-weight:600;letter-spacing:-.2px;line-height:1.2}
+  .store .st-dev{display:flex;align-items:center;gap:10px;margin-top:7px;font-size:14px;color:var(--stone)}
+  .store .feat{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:#1a73e8;background:#e8f0fe;padding:3px 9px;border-radius:20px}
+  .store .stars{color:#fbbc04;font-size:15px;letter-spacing:1px}
+  .store .st-meta{font-size:13.5px;color:var(--stone);margin-top:3px}
+  .store .strip{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:20px}
+  .mini{aspect-ratio:1280/800;border-radius:8px;overflow:hidden;container-type:inline-size;position:relative;border:1px solid var(--border-soft)}
+  .mini .mh{position:absolute;left:7cqw;top:50%;transform:translateY(-50%);width:42cqw;font-weight:600;font-size:6.4cqw;line-height:1.06;color:#231f1d}
+  .mini .mapp{position:absolute;right:5cqw;top:14cqw;bottom:14cqw;width:44cqw;background:#16181c;border-radius:2.6cqw;border:.4cqw solid #292d33}
+  .mini .mapp::before{content:"";position:absolute;left:6%;top:11%;right:34%;height:5%;background:#2a2e35;border-radius:2cqw;box-shadow:0 9cqw 0 #20242a,0 18cqw 0 #20242a,0 27cqw 0 #20242a}
+
+  /* filmstrip */
+  .strip5{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-top:8px}
+  @media(max-width:880px){.strip5{grid-template-columns:repeat(2,1fr)}}
+  .fcell .fr{aspect-ratio:1280/800;border-radius:9px;overflow:hidden;container-type:inline-size;position:relative;border:1px solid var(--border-soft);background:linear-gradient(125deg,#f7ece2,#ece6f1)}
+  .fcell .fr .fn{position:absolute;left:7cqw;top:8cqw;font-size:3.4cqw;font-weight:700;color:var(--totem);font-family:var(--mono)}
+  .fcell .fr .fh{position:absolute;left:7cqw;right:7cqw;top:20cqw;font-size:6.6cqw;font-weight:600;line-height:1.05;color:#231f1d}
+  .fcell .cap{font-size:13px;color:var(--charcoal);margin-top:9px;line-height:1.35}
+  .fcell .cap b{color:var(--near-black);font-weight:600;display:block;font-size:13.5px}
+
+  .next{background:var(--ivory);border:1px solid var(--border);border-radius:10px;padding:22px 26px;margin-top:26px}
+  .next ol{margin:8px 0 0 20px}
+  .next li{font-size:15.5px;color:var(--charcoal);padding:5px 0}
+  .next li b{color:var(--near-black);font-weight:600}
+
+  .foot{margin-top:60px;padding-top:22px;border-top:1px solid var(--border);font-size:13px;color:var(--stone);line-height:1.6}
+  .src{font-size:13px;color:var(--stone);margin-top:6px}
+  .src b{color:var(--dark-warm);font-weight:600}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="eyebrow">Chrome Web Store · Positioning Study</div>
+  <h1 class="title">Stop saying &ldquo;Saver.&rdquo; Start saying what Totem actually is.</h1>
+  <p class="subtitle">A research-backed recommendation for the listing title, description, and screenshots — so the store stops confusing people, and Totem reads as the one thing no competitor offers.</p>
+  <div class="meta"><strong>Prepared</strong> 2026-06-26 &nbsp;·&nbsp; <strong>For</strong> usetotem.xyz &nbsp;·&nbsp; <strong>Basis</strong> live CWS listing audit, competitor listings (Dewey, BookmarkSave, Twillot, XSaved), CWS title/image guidelines, Pocket-shutdown read-it-later landscape</div>
+
+  <div class="verdict">
+    <div class="k">The one-line answer</div>
+    <p>Your instinct is right — change it. But two jobs at once: <b>lead with the words people actually search (&ldquo;Twitter bookmarks&rdquo;), and claim the one promise no rival makes</b> — the saves you forgot, waiting where you&rsquo;ll see them.</p>
+    <span class="big">Twitter &amp; X Bookmarks on New Tab — Totem</span>
+  </div>
+
+  <div class="rule"></div>
+
+  <!-- ============ FINDINGS ============ -->
+  <section>
+    <div class="sec-num">01 · What the research found</div>
+    <h2>Five findings that decide the wording</h2>
+    <p class="lead">The current title — <b>&ldquo;Twitter Saver: Bookmarks on New Tab, Search &amp; Export&rdquo;</b> — has three problems at once: a word that means something else, a category it doesn&rsquo;t claim, and a promise it buries. Here is the evidence.</p>
+
+    <div class="grid2" style="margin-top:22px">
+      <div class="card">
+        <div class="k">FINDING 01 — the killer</div>
+        <h3>&ldquo;Saver&rdquo; reads as a video downloader</h3>
+        <p>Search the store and the open web for &ldquo;twitter saver&rdquo; / &ldquo;tweet saver&rdquo; and you get media downloaders, not bookmark readers. Leading with &ldquo;Saver&rdquo; files Totem next to throwaway utilities and invites the wrong installs (and the wrong reviews).</p>
+        <div class="chips">
+          <span class="chip warn">Twitter Video Saver</span>
+          <span class="chip warn">VidSaver.io</span>
+          <span class="chip warn">ssstwitter</span>
+          <span class="chip warn">Tweeload</span>
+          <span class="chip warn">Media Harvest</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="k">FINDING 02 — the category word</div>
+        <h3>The term people actually search is &ldquo;bookmark manager&rdquo;</h3>
+        <p>Every serious competitor anchors on <b>Twitter / X Bookmarks</b> and the verbs save · search · organize · export. That phrase is the searchable doorway. Totem should claim it plainly — not dress it up.</p>
+        <div class="chips">
+          <span class="chip">Dewey</span>
+          <span class="chip">BookmarkSave</span>
+          <span class="chip">Twillot</span>
+          <span class="chip">XSaved</span>
+          <span class="chip">Tweetsmash</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="k">FINDING 03 — the wedge</div>
+        <h3>Rivals help you <i>file</i> saves. None help you <i>read</i> them.</h3>
+        <p>Dewey sells &ldquo;order for the chaos of the web.&rdquo; The category framing is retrieval: <i>&ldquo;the problem isn&rsquo;t that bookmarks are disorganised — it&rsquo;s that you can&rsquo;t find the tweet&rdquo;</i> (folders, tags, Notion export). Totem&rsquo;s new-tab reading queue is the only tool built around <b>actually returning to read</b>. That is the whole difference — lead with it.</p>
+        <div class="chips">
+          <span class="chip">folders / tags</span><span class="chip">export to Notion</span><span class="chip">AI search</span><span class="chip" style="background:var(--brand-tint);border-color:#d8e2ee;color:var(--brand)">★ reading queue = ours</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="k">FINDING 04 — the trust tax</div>
+        <h3>&ldquo;New tab&rdquo; extensions carry baggage</h3>
+        <p>New-tab extensions are a documented abuse category — clipboard reads, search hijacking, brand impersonation. Users hesitate. The antidote is to say the quiet part loudly: <b>local-first, no account, no server, no analytics.</b> That line is a feature, not fine print.</p>
+        <div class="chips">
+          <span class="chip">local-first</span><span class="chip">no account</span><span class="chip">no server</span><span class="chip">no tracking</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:18px">
+      <div class="k">FINDING 05 — the timing</div>
+      <h3>Pocket&rsquo;s shutdown left a wave of read-it-later refugees</h3>
+      <p>Mozilla shut Pocket down through late 2025; people are actively shopping for replacements (Raindrop, Readwise Reader, Instapaper, Wallabag) and the language they respond to is reading-and-ownership: <b>reading queue, clutter-free reader, import my saves, keep it local.</b> Totem isn&rsquo;t an article reader — but &ldquo;read-it-later for the stuff you save on X&rdquo; lands in a category people are primed to adopt right now.</p>
+    </div>
+  </section>
+
+  <!-- ============ HOW WE COMPARE ============ -->
+  <section>
+    <div class="sec-num">02 · The title in context</div>
+    <h2>How the shelf reads today</h2>
+    <p>Put the titles side by side. The strong listings lead with a brand and one clean category. The current Totem title does neither — it leads with a misleading word and stuffs four features in.</p>
+    <table class="cmp">
+      <thead><tr><th>Listing</th><th>Title pattern</th><th>Reads as</th></tr></thead>
+      <tbody>
+        <tr><td class="name">XSaved — Bookmark Manager for X (Twitter)</td><td class="tag">brand + category</td><td class="tag">clean, on-shelf</td></tr>
+        <tr><td class="name">dewey. — bookmarks for X, LinkedIn, Bluesky…</td><td class="tag">brand + category</td><td class="tag">clean, multi-platform</td></tr>
+        <tr><td class="name">Twitter Bookmarks Search by Twillot</td><td class="tag">category + brand</td><td class="tag">SEO-led</td></tr>
+        <tr><td class="name">Twitter Video Saver</td><td class="tag">&ldquo;saver&rdquo; = downloader</td><td class="tag warn" style="color:var(--warn-fg)">media utility</td></tr>
+        <tr class="me"><td class="name">Twitter Saver: Bookmarks on New Tab, Search &amp; Export</td><td class="tag">keyword-stuffed, &ldquo;saver&rdquo;-led</td><td class="tag" style="color:var(--bad)">confusing · downloader-adjacent</td></tr>
+        <tr class="me"><td class="name">Totem — Twitter &amp; X Bookmarks on New Tab</td><td class="tag">brand + category + wedge</td><td class="tag" style="color:var(--good)">clear · ownable · Featured-safe</td></tr>
+      </tbody>
+    </table>
+    <p class="src"><b>Note on the Featured badge:</b> the keyword-stuffed title is also what your own <code>chrome-web-store-featured-badge-plan.md</code> flags as a blocker, and the <code>1.2.0</code> draft was already rejected once for &ldquo;Spam and Placement.&rdquo; Brand-first fixes both at once. Changing the live store title triggers a fresh review, so push it once the current install spike has settled.</p>
+  </section>
+
+  <!-- ============ KILL / KEEP ============ -->
+  <section>
+    <div class="sec-num">03 · The rule of thumb</div>
+    <h2>What to stop and start saying</h2>
+    <div class="twocol">
+      <div class="listbox kill">
+        <h3><span class="pill bad">Stop</span> Words that confuse or dilute</h3>
+        <ul>
+          <li><b>&ldquo;Saver&rdquo;</b> — collides with video downloaders</li>
+          <li><b>Feature pile-ups</b> in the title (&ldquo;Search &amp; Export&rdquo;) — reads as spam to reviewers</li>
+          <li><b>Keyword lists</b> in the description — the exact thing that got 1.2.0 rejected</li>
+          <li><b>&ldquo;No data&rdquo; / vague privacy</b> — say what is local, not what is absent</li>
+          <li><b>Generic &ldquo;bookmark manager&rdquo; alone</b> — true, but it&rsquo;s the rivals&rsquo; turf</li>
+        </ul>
+      </div>
+      <div class="listbox keep">
+        <h3><span class="pill good">Start</span> Words that place and differentiate</h3>
+        <ul>
+          <li><b>&ldquo;Twitter &amp; X Bookmarks&rdquo;</b> — the searched category, claimed plainly</li>
+          <li><b>&ldquo;on your New Tab&rdquo;</b> — the mechanic only Totem has</li>
+          <li><b>&ldquo;finally read the posts you saved&rdquo;</b> — the emotional job-to-be-done</li>
+          <li><b>&ldquo;local-first · no account · no server&rdquo;</b> — turns the trust tax into a selling point</li>
+          <li><b>Brand-first</b> (&ldquo;Totem —&rdquo;) — Featured-badge safe, builds the name</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ TITLE OPTIONS ============ -->
+  <section>
+    <div class="sec-num">04 · Title &amp; CWS search SEO</div>
+    <h2>Win the search before the click</h2>
+    <p class="lead">Chrome Web Store search is a stripped-down Google. <b>The title is the single biggest lever</b> — an exact keyword match in the name outranks the same word buried in the description. So the first ~35 visible characters should go to the words people type, not to a brand nobody searches yet.</p>
+
+    <div class="grid3" style="margin-top:20px">
+      <div class="card"><div class="k">RANK FACTOR 01</div><h3>Title keywords decide the tier</h3><p>Title + summary + description must all <i>contain</i> the query to qualify. An exact match in the <b>title</b> ranks above the same word that lives only in the description.</p></div>
+      <div class="card"><div class="k">RANK FACTOR 02</div><h3>Front-load — ~35 chars show</h3><p>Results truncate near 35 characters. Lead with <code>Twitter &amp; X Bookmarks</code>; let the brand ride at the end. The field allows 75 chars, so tail words still index.</p></div>
+      <div class="card"><div class="k">RANK FACTOR 03</div><h3>Ratings sort within the tier</h3><p>Once relevance buckets you, weekly users + rating count + score order it. Your 5.0 helps — but only after the keywords get you into the right bucket.</p></div>
+    </div>
+
+    <h3 style="margin-top:28px">Keyword coverage map — every &ldquo;twitter ___&rdquo; query gets a home</h3>
+    <p>To surface across the searches people actually run, spread the terms over all three indexed fields — as natural phrases, never a list.</p>
+    <table class="cmp">
+      <thead><tr><th>What people search</th><th>Carried by</th><th>Field</th></tr></thead>
+      <tbody>
+        <tr><td class="name">twitter bookmarks · x bookmarks</td><td>&ldquo;Twitter &amp; X Bookmarks&rdquo;</td><td class="tag">Title</td></tr>
+        <tr><td class="name">twitter bookmarks new tab</td><td>&ldquo;on New Tab&rdquo;</td><td class="tag">Title</td></tr>
+        <tr><td class="name">twitter bookmark manager</td><td>&ldquo;bookmark manager for Twitter / X&rdquo;</td><td class="tag">Long desc opener</td></tr>
+        <tr><td class="name">save / export twitter bookmarks</td><td>&ldquo;save … export&rdquo;</td><td class="tag">Short + long desc</td></tr>
+        <tr><td class="name">read twitter bookmarks · read it later</td><td>&ldquo;finally read … read-it-later&rdquo;</td><td class="tag">Short + long desc</td></tr>
+        <tr><td class="name">twitter bookmarks search</td><td>&ldquo;search everything you saved&rdquo;</td><td class="tag">Long desc</td></tr>
+      </tbody>
+    </table>
+
+    <h3 style="margin-top:28px">Three titles you could ship</h3>
+    <div class="grid3" style="margin-top:14px">
+      <div class="titlecard rec">
+        <div class="ribbon">Recommended · SEO</div>
+        <div class="sample">Twitter &amp; X Bookmarks on New Tab — Totem</div>
+        <div class="cc"><b>40 chars</b> · keyword in the first 32 — always visible</div>
+        <div class="pc">
+          <div class="pro">Front-loads the exact phrase people search. Covers Twitter + X + new tab. Brand still present.</div>
+          <div class="con">Brand reads second — fine while &ldquo;Totem&rdquo; has no search volume to defend.</div>
+        </div>
+      </div>
+      <div class="titlecard">
+        <div class="sample">Totem — Twitter &amp; X Bookmarks on New Tab</div>
+        <div class="cc"><b>40 chars</b> · brand-first / Featured-clean</div>
+        <div class="pc">
+          <div class="pro">Cleanest for the Featured reviewer and brand-building. Keyword still in view.</div>
+          <div class="con">Spends the top 8 chars on a word nobody searches → weaker for &ldquo;twitter bookmarks.&rdquo;</div>
+        </div>
+      </div>
+      <div class="titlecard">
+        <div class="sample">Twitter &amp; X Bookmarks: Save, Read &amp; Export — Totem</div>
+        <div class="cc"><b>50 chars</b> · SEO-extended (more long-tail)</div>
+        <div class="pc">
+          <div class="pro">Indexes save / read / export too. Tail hidden from view but still searchable.</div>
+          <div class="con">Edges toward feature-stuffing — slightly more reviewer risk. Keep it a phrase, not a list.</div>
+        </div>
+      </div>
+    </div>
+    <p class="src" style="margin-top:16px"><b>The one tradeoff to decide:</b> keyword-first (#1) ranks better for &ldquo;twitter bookmarks&rdquo;; brand-first (#2) is marginally cleaner for the Featured nomination. Both <i>contain</i> the keywords, so both <i>appear</i> in search — this only moves <i>position</i>. Given the goal is discovery, lead with the keyword; swap to brand-first only in the cycle where you submit for Featured.</p>
+  </section>
+
+  <!-- ============ STORE CONTEXT ============ -->
+  <section>
+    <div class="sec-num">05 · In the store chrome</div>
+    <h2>How the recommended title reads on the shelf</h2>
+    <div class="store">
+      <div class="store-top">
+        <svg class="ic" viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" rx="24" fill="#1a1714"/><path d="M28 24 L74 50 L28 76 Z" fill="#e8512f"/><path d="M28 24 L28 76 L48 64 L48 36 Z" fill="#0f0d0c"/></svg>
+        <div>
+          <div class="st-title">Totem — Twitter &amp; X Bookmarks on New Tab</div>
+          <div class="st-dev">usetotem.xyz <span class="feat">✦ Featured</span></div>
+          <div class="stars">★★★★★ <span style="color:var(--stone)">5.0 (8)</span></div>
+          <div class="st-meta">Productivity · 22 users · Local-first, no account</div>
+        </div>
+      </div>
+      <div class="strip">
+        <div class="mini"><div class="mh">Your bookmarks, on every new tab</div><div class="mapp"></div></div>
+        <div class="mini"><div class="mh">Read threads without the feed</div><div class="mapp"></div></div>
+        <div class="mini"><div class="mh">Find any save in seconds</div><div class="mapp"></div></div>
+      </div>
+    </div>
+    <p class="src" style="margin-top:14px">Logo is a CSS approximation of the Totem mark — swap in the real icon when you build the assets. &ldquo;Featured&rdquo; is aspirational, shown for context.</p>
+  </section>
+
+  <!-- ============ DESCRIPTIONS ============ -->
+  <section>
+    <div class="sec-num">06 · Descriptions</div>
+    <h2>Short summary (the line under the title)</h2>
+    <p>CWS caps this at 132 characters. Lead with the wedge, end with the trust line.</p>
+
+    <div style="margin-top:14px">
+      <div class="titlecard rec" style="margin-bottom:14px">
+        <div class="ribbon">Recommended</div>
+        <div class="sample" style="font-family:var(--serif);font-size:16.5px">Your Twitter &amp; X bookmarks, waiting on every new tab — finally read what you saved. Search, highlight, export. Local-first.</div>
+        <div class="cc"><b>123 / 132 chars</b> · wedge + features + trust, in one breath</div>
+      </div>
+      <div class="titlecard">
+        <div class="sample" style="font-family:var(--serif);font-size:16.5px">Twitter &amp; X bookmarks on your new tab. Read, search, and export your saves locally — no account, no server, no tracking.</div>
+        <div class="cc"><b>≈120 chars</b> · trust-forward alternative</div>
+      </div>
+    </div>
+
+    <h2 style="margin-top:40px">Detailed description</h2>
+    <p>Full, feature-complete version — every feature below was verified against the current codebase (stubs like folders/tags, the saved-search UI, and Pocket import were deliberately left out). Sentence-led with scannable headers; no keyword block, so it stays clear of the spam trigger that killed 1.2.0.</p>
+    <div class="desc"><span class="muted">// paste verbatim into the CWS dashboard</span>
+Totem is a local-first bookmark manager for Twitter and X, built around the one thing the others skip: actually reading what you save. It turns your Chrome new tab into a calm reading queue for your Twitter/X bookmarks — a read-it-later for tweets, threads, and X articles — so the posts you save come back to you instead of vanishing.
+
+Most people bookmark tweets and never return. And opening X to "check your bookmarks" turns into twenty minutes of doom-scrolling. Totem fixes both: your saved posts wait for you on every new tab. No feed, no algorithm, no noise.
+
+
+EVERY NEW TAB IS YOUR READING QUEUE
+• Your Twitter/X bookmarks appear automatically each time you open a tab
+• Today's Read — a small, finite set of saved posts sized to your time (5, 15, or 30 minutes a day) so you make progress instead of drowning
+• Clear reading states — Unread, Reading, and Read — with your scroll position saved and restored, right where you left off
+• Snooze a post for later, file one as a reference, flag one as "action needed," or pull in "two more" when you're on a roll
+• Pin up to 6 favorites; sort by recent, oldest, or annotated
+• Keyboard-friendly throughout (j/k to move, / to search, Space to open)
+
+
+A CLEAN READER FOR TWEETS &amp; THREADS
+• Distraction-free reader for single tweets and full Twitter threads, rebuilt in order so you read the whole thing in one place
+• Reads X long-form Articles in full — headings, lists, images, and video
+• Rich link previews, quoted tweets, reposts, images, and video
+• Jump to the next or previous bookmark, or hit "Surprise me" for a random unread
+• Add an "Open in Totem" button right on X to send any tweet straight to the reader
+
+
+SEARCH EVERY TWITTER BOOKMARK YOU'VE SAVED
+Full-text search across your entire library, with fuzzy matching and did-you-mean. Narrow it with real operators:
+• from: / to: — by author
+• since: / until: / within: — by date
+• has:image, has:video, has:link, has:thread, has:article — by content type
+• min_faves:, min_retweets:, min_replies: — by engagement
+• Combine with AND / OR / NOT, "quoted phrases," and ( ) groups
+
+
+HIGHLIGHT &amp; ANNOTATE
+• Highlight any passage in a tweet or article, in four colors
+• Add private notes to anything you save
+• Send a highlight to Grok with one click
+• Highlights and notes stay on your device
+
+
+EXPORT TWITTER BOOKMARKS &amp; OWN YOUR LIBRARY
+Your bookmarks are yours to take. Export the whole library to a single ZIP with:
+• Markdown — one clean file per bookmark, threads included
+• CSV — opens in Excel, Google Sheets, and Notion
+• JSON (JSONL) — complete, re-importable data
+• A manifest with SHA-256 checksums so you can verify the archive
+You can also copy any post as Markdown, copy it for an AI assistant, or Print to PDF — and back up and restore your full library anytime.
+
+
+WORKS OFFLINE
+Totem prefetches your saved posts so you can keep reading on a plane or a weak connection. Your library lives in your browser, not on a server.
+
+
+A CALMER NEW TAB
+• A quiet clock and an optional web-search box (Google, Bing, DuckDuckGo, Brave, Ecosia, Yahoo, or your browser default)
+• Optional Quick Links to your most-visited sites
+• Curated wallpapers or generated gradients
+• Light, dark, and system themes
+• A focus mode that dims everything but what you're reading
+
+
+PRIVATE BY DESIGN
+• Local-first: no Totem account, no login, no server
+• Your bookmarks, highlights, and notes are stored in your browser's IndexedDB
+• We can't see your data, because we never receive it
+• Signed into more than one X account? Each gets its own separate local library
+• Totem uses your existing X session only to sync your own bookmarks — no X Premium required
+
+
+WHY TOTEM vs other Twitter bookmark managers
+• It lives on your new tab. Other bookmark managers are websites you have to remember to open — Totem shows up on its own, every time you start browsing.
+• It's built for reading, not just filing. Most tools help you store and export; Totem helps you actually finish what you saved.
+• No bookmark limit, and no subscription to search your own saves.
+• Local-first and private by default.
+
+
+WHO IT'S FOR
+• Heavy Twitter/X readers who save threads and never get back to them
+• Anyone who wants a read-it-later for the posts they save on X
+• People who want a calmer, more intentional new tab
+• Privacy-conscious users who don't want a third-party server holding their saves
+
+Open a new tab and start reading what you saved. That's Totem.</div>
+    <p class="src" style="margin-top:14px"><b>Still open:</b> (1) <b>Pocket</b> — left out (flagged as a spam-rejection risk in <code>chrome-web-store-listing.md</code>); add one natural line in WHO IT&rsquo;S FOR if you want that search traffic. (2) <b>Length</b> — this is the thorough cut; the New Tab / Why / Who sections can shrink ~40% if you want it tighter. <b>SEO phrases woven in:</b> bookmark manager for Twitter and X · Twitter/X bookmarks · read-it-later for tweets/threads · search &amp; export Twitter bookmarks · read Twitter threads · bookmarks on every new tab.</p>
+  </section>
+
+  <!-- ============ IMAGE STRATEGY ============ -->
+  <section>
+    <div class="sec-num">07 · Image strategy</div>
+    <h2>What the screenshots must do</h2>
+    <p class="lead">Your current five screenshots tell the right <i>story</i> (new tab → reader → search → export → privacy) — but two things undercut them: the palette jumps from peach to dark maroon between frames, and the captions describe features instead of selling the one promise.</p>
+    <div class="grid3" style="margin-top:20px">
+      <div class="card"><div class="k">PRINCIPLE 01</div><h3>One palette, all five</h3><p>CWS guidelines ask for branding consistent across every image. Pick one background system and hold it. Mixed peach/maroon reads as two different products.</p></div>
+      <div class="card"><div class="k">PRINCIPLE 02</div><h3>Frame 1 carries the install</h3><p>The first screenshot is the one most people see. It must land the wedge in a glance: <b>saved posts, on a new tab.</b> No feature tour — one idea.</p></div>
+      <div class="card"><div class="k">PRINCIPLE 03</div><h3>Benefit captions, real UI</h3><p>Show the actual dark Totem reader, with a short benefit headline. &ldquo;Find any save in seconds&rdquo; beats &ldquo;Search.&rdquo; Visual aids over feature nouns.</p></div>
+    </div>
+  </section>
+
+  <!-- ============ THE BOARD ============ -->
+  <section>
+    <div class="sec-num">08 · Demo mockups</div>
+    <h2>Three art directions for Frame 1</h2>
+    <p>Same product UI, same promise — three ways to dress the hero. Rendered at true 1280×800 proportion so you can judge them as they&rsquo;ll appear in the store.</p>
+
+    <div class="board">
+
+      <!-- DIRECTION A -->
+      <div>
+        <div class="dirhead"><span class="dl">Direction A</span><span class="dn">Calm Editorial</span><span class="dr">refines what you have — unified, warm, serif</span></div>
+        <div class="dirmeta"><span><b>Best for:</b> continuity with the current brand &amp; site</span><span><b>Tradeoff:</b> safe; least &ldquo;new&rdquo;-feeling</span><span><b>Mood:</b> quiet, premium</span></div>
+        <div class="frame dir-a">
+          <div class="pad">
+            <div class="copy">
+              <div class="logo-row"><svg class="tlogo" viewBox="0 0 100 100"><rect width="100" height="100" rx="24" fill="#1a1714"/><path d="M28 24 L74 50 L28 76 Z" fill="#e8512f"/><path d="M28 24 L28 76 L48 64 L48 36 Z" fill="#0f0d0c"/></svg><span class="nm">Totem</span></div>
+              <div class="head">Your Twitter bookmarks, on every new tab.</div>
+              <div class="sub">Open Chrome and the posts you meant to read are already waiting.</div>
+            </div>
+            <div class="app">
+              <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="ttl">Reading</span><span class="srch">Search your library</span></div>
+              <div class="tabs"><span class="tab on">Unread<span class="n">31</span></span><span class="tab">Reading<span class="n">3</span></span><span class="tab">Read</span></div>
+              <div class="list">
+                <div class="row"><div class="av" style="background:#7c4dff">M</div><div class="rc"><div class="rn">Maya Okafor <span>@mayabuilds</span></div><div class="rt">I love this simple $30k/year side project — magicians can&rsquo;t get gigs, so he built a booking marketplace just for them.</div></div></div>
+                <div class="row"><div class="av" style="background:#e8512f">J</div><div class="rc"><div class="rn">Jonas Reed <span>@jreed</span></div><div class="rt">Think I finally figured out good creative writing with AI. The trick is to stop asking for the whole thing at once.</div></div></div>
+                <div class="row"><div class="av" style="background:#1d9bf0">D</div><div class="rc"><div class="rn">Devon Park <span>@devonp</span></div><div class="rt">How to build a one-person services business that keeps running when you step away for a week.</div></div></div>
+                <div class="row"><div class="av" style="background:#00ba7c">S</div><div class="rc"><div class="rn">Sana Vij <span>@sanav</span></div><div class="rt">Startup idea: a self-hostable read-it-later for X. 20k GitHub stars waiting to happen.</div></div></div>
+                <div class="row"><div class="av" style="background:#f4b400">A</div><div class="rc"><div class="rn">Aria Long <span>@arialong</span></div><div class="rt">Reverse-engineering GPT, Claude and Gemini taught me more about prompting than any course.</div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DIRECTION B -->
+      <div>
+        <div class="dirhead"><span class="dl">Direction B</span><span class="dn">Dark Product</span><span class="dr">the app is the hero; bolder, more &ldquo;software&rdquo;</span></div>
+        <div class="dirmeta"><span><b>Best for:</b> standing out in a row of pastel listings</span><span><b>Tradeoff:</b> louder; further from current site</span><span><b>Mood:</b> focused, modern</span></div>
+        <div class="frame dir-b">
+          <div class="pad">
+            <div class="copy">
+              <div class="logo-row"><svg class="tlogo" viewBox="0 0 100 100"><rect width="100" height="100" rx="24" fill="#241a16"/><path d="M28 24 L74 50 L28 76 Z" fill="#e8512f"/><path d="M28 24 L28 76 L48 64 L48 36 Z" fill="#161210"/></svg><span class="nm">Totem</span></div>
+              <div class="head">The posts you saved. Finally read.</div>
+              <div class="sub">Every new tab becomes a calm reading queue for your X bookmarks — local, no account.</div>
+            </div>
+            <div class="app">
+              <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="ttl">Reading</span><span class="srch">Search your library</span></div>
+              <div class="tabs"><span class="tab on">Unread<span class="n">31</span></span><span class="tab">Reading<span class="n">3</span></span><span class="tab">Read</span></div>
+              <div class="list">
+                <div class="row"><div class="av" style="background:#7c4dff">M</div><div class="rc"><div class="rn">Maya Okafor <span>@mayabuilds</span></div><div class="rt">I love this simple $30k/year side project — magicians can&rsquo;t get gigs, so he built a booking marketplace just for them.</div></div></div>
+                <div class="row"><div class="av" style="background:#e8512f">J</div><div class="rc"><div class="rn">Jonas Reed <span>@jreed</span></div><div class="rt">Think I finally figured out good creative writing with AI. The trick is to stop asking for the whole thing at once.</div></div></div>
+                <div class="row"><div class="av" style="background:#1d9bf0">D</div><div class="rc"><div class="rn">Devon Park <span>@devonp</span></div><div class="rt">How to build a one-person services business that keeps running when you step away for a week.</div></div></div>
+                <div class="row"><div class="av" style="background:#00ba7c">S</div><div class="rc"><div class="rn">Sana Vij <span>@sanav</span></div><div class="rt">Startup idea: a self-hostable read-it-later for X. 20k GitHub stars waiting to happen.</div></div></div>
+                <div class="row"><div class="av" style="background:#f4b400">A</div><div class="rc"><div class="rn">Aria Long <span>@arialong</span></div><div class="rt">Reverse-engineering GPT, Claude and Gemini taught me more about prompting than any course.</div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DIRECTION C -->
+      <div>
+        <div class="dirhead"><span class="dl">Direction C</span><span class="dn">Annotated · Benefit-first</span><span class="dr">explains the mechanic in one glance — least confusing</span></div>
+        <div class="dirmeta"><span><b>Best for:</b> first-time visitors who don&rsquo;t get &ldquo;new tab&rdquo; yet</span><span><b>Tradeoff:</b> busier; needs careful type</span><span><b>Mood:</b> clear, friendly</span></div>
+        <div class="frame dir-c">
+          <div class="annot a1">Your saves appear the moment you open a tab — no opening X, no scrolling.
+            <svg width="120" height="60" viewBox="0 0 120 60" style="left:-6cqw;top:7cqw"><path d="M110 6 Q40 4 8 46" fill="none" stroke="#1B365D" stroke-width="2.4"/><path d="M8 46 l13 -3 l-6 -8 z" fill="#1B365D"/></svg>
+          </div>
+          <div class="pad">
+            <div class="copy">
+              <div class="logo-row"><svg class="tlogo" viewBox="0 0 100 100"><rect width="100" height="100" rx="24" fill="#1a1714"/><path d="M28 24 L74 50 L28 76 Z" fill="#e8512f"/><path d="M28 24 L28 76 L48 64 L48 36 Z" fill="#0f0d0c"/></svg><span class="nm">Totem</span></div>
+              <div class="head">Stop losing what you save.</div>
+              <div class="sub">Totem puts your Twitter &amp; X bookmarks on your new tab, so you actually read them.</div>
+            </div>
+            <div class="app">
+              <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="ttl">Reading</span><span class="srch">Search your library</span></div>
+              <div class="tabs"><span class="tab on">Unread<span class="n">31</span></span><span class="tab">Reading<span class="n">3</span></span><span class="tab">Read</span></div>
+              <div class="list">
+                <div class="row"><div class="av" style="background:#7c4dff">M</div><div class="rc"><div class="rn">Maya Okafor <span>@mayabuilds</span></div><div class="rt">I love this simple $30k/year side project — magicians can&rsquo;t get gigs, so he built a booking marketplace just for them.</div></div></div>
+                <div class="row"><div class="av" style="background:#e8512f">J</div><div class="rc"><div class="rn">Jonas Reed <span>@jreed</span></div><div class="rt">Think I finally figured out good creative writing with AI. The trick is to stop asking for the whole thing at once.</div></div></div>
+                <div class="row"><div class="av" style="background:#1d9bf0">D</div><div class="rc"><div class="rn">Devon Park <span>@devonp</span></div><div class="rt">How to build a one-person services business that keeps running when you step away for a week.</div></div></div>
+                <div class="row"><div class="av" style="background:#00ba7c">S</div><div class="rc"><div class="rn">Sana Vij <span>@sanav</span></div><div class="rt">Startup idea: a self-hostable read-it-later for X. 20k GitHub stars waiting to happen.</div></div></div>
+                <div class="row"><div class="av" style="background:#f4b400">A</div><div class="rc"><div class="rn">Aria Long <span>@arialong</span></div><div class="rt">Reverse-engineering GPT, Claude and Gemini taught me more about prompting than any course.</div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="verdict" style="margin-top:34px">
+      <div class="k">Recommendation</div>
+      <p>Ship <b>Direction A&rsquo;s palette discipline</b> with <b>Direction C&rsquo;s single annotation on Frame 1 only.</b> You keep the calm, premium brand you already have, but the very first screenshot — the one that wins the install — explains the &ldquo;new tab&rdquo; mechanic instead of assuming people get it. Frames 2–5 stay clean.</p>
+    </div>
+  </section>
+
+  <!-- ============ FILMSTRIP ============ -->
+  <section>
+    <div class="sec-num">09 · The five-frame story</div>
+    <h2>Caption set for the full carousel</h2>
+    <p>Keep the narrative you have; sharpen each caption toward a benefit, hold one palette, annotate only Frame 1.</p>
+    <div class="strip5">
+      <div class="fcell"><div class="fr"><div class="fn">01</div><div class="fh">Your bookmarks, on every new tab</div></div><div class="cap"><b>The hook</b>New-tab reading queue (annotated)</div></div>
+      <div class="fcell"><div class="fr"><div class="fn">02</div><div class="fh">Read threads without the feed</div></div><div class="cap"><b>The reader</b>Clean thread view, reading progress</div></div>
+      <div class="fcell"><div class="fr"><div class="fn">03</div><div class="fh">Find any save in seconds</div></div><div class="cap"><b>Retrieval</b>Search text, authors, links, threads</div></div>
+      <div class="fcell"><div class="fr"><div class="fn">04</div><div class="fh">Export to Markdown, CSV, Notion</div></div><div class="cap"><b>Ownership</b>Take your library anywhere</div></div>
+      <div class="fcell"><div class="fr"><div class="fn">05</div><div class="fh">Local-first. No account, no server.</div></div><div class="cap"><b>Trust</b>Answers the new-tab fear head-on</div></div>
+    </div>
+  </section>
+
+  <!-- ============ NEXT ============ -->
+  <section>
+    <div class="sec-num">10 · How to move forward</div>
+    <h2>The sequence (low-risk first)</h2>
+    <div class="next">
+      <ol>
+        <li><b>Lock the title (keyword-first):</b> <code>Twitter &amp; X Bookmarks on New Tab — Totem</code>. Update <code>manifest.json</code> <code>name</code>, the marketing site, and the CWS dashboard packet docs.</li>
+        <li><b>Spread the keywords</b> across all three indexed fields — title, short summary, and the first lines of the long description — as natural phrases. No keyword block; that is what got 1.2.0 rejected.</li>
+        <li><b>Re-shoot the 5 screenshots</b> in one palette, with the new benefit captions; annotate Frame 1 only.</li>
+        <li><b>Time the live CWS push:</b> the title/description/image change triggers a fresh review and can reset ranking momentum — push it once the current install spike has 7–10 days of stable funnel data (per your own deferral note).</li>
+        <li><b>Then nominate for Featured</b> — brand-first title clears the blocker you already documented.</li>
+      </ol>
+    </div>
+  </section>
+
+  <div class="foot">
+    <b>Sources &amp; method.</b> Live listing audit of <code>chromewebstore.google.com/detail/acpkgdfhoaalmnhjifhneghcgfnjkglo</code>; competitor listings and roundups (Dewey, BookmarkSave, Twillot, XSaved, Tweetsmash, ContextBolt); &ldquo;twitter saver / tweet saver&rdquo; SERP (video-downloader dominance); Chrome Web Store image &amp; listing best-practice docs; Pocket-shutdown read-it-later landscape (Raindrop, Readwise Reader, Instapaper, Wallabag); internal plans <code>chrome-web-store-featured-badge-plan.md</code> and <code>chrome-web-store-dashboard-update-packet.md</code>.
+    <div class="src" style="margin-top:10px">Note: the <code>/last30days</code> community pass returned no usable signal this run (Reddit search 403 + X auth blocked in this environment), so findings rest on live web/SERP/listing research rather than fresh Reddit/X discourse. Mockup logo is a CSS stand-in for the real Totem mark. Tweet rows are illustrative, not real accounts.</div>
+  </div>
+
+</div>
+</body>
+</html>

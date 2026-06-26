@@ -90,7 +90,7 @@ That gives the return path a different shape:
 
 This does not replace X bookmarks. It makes them visible enough to use.
 
-If your real question is not "where are my bookmarks" but "how do I stop forgetting them," [add Totem to Chrome](https://chromewebstore.google.com/detail/acpkgdfhoaalmnhjifhneghcgfnjkglo?utm_source=blog&utm_medium=inline_cta&utm_campaign=where-are-my-bookmarks-on-x). Your Twitter bookmarks show up on every new tab, locally, without opening X first.
+If your real question is not "where are my bookmarks" but "how do I stop forgetting them," [add Totem to Chrome](https://chromewebstore.google.com/detail/acpkgdfhoaalmnhjifhneghcgfnjkglo?utm_source=blog&utm_medium=inline_cta&utm_campaign=where-are-my-bookmarks-on-x). Your Twitter and X bookmarks show up on every new tab, locally, without opening X first.
 
 ## Quick answers
 
