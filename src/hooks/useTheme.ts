@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { SYNC_THEME } from "../lib/storage-keys";
 import { useSyncedPreference } from "./useSyncedPreference";
 
@@ -31,12 +31,16 @@ export function useTheme() {
       "system",
       { skipInitialLoad: () => userPatchedRef.current },
     );
-  const setThemePreference = (
-    next: ThemePreference | ((prev: ThemePreference) => ThemePreference),
-  ) => {
-    userPatchedRef.current = true;
-    setSyncedThemePreference(next);
-  };
+  // Stable identity: the website demo keeps this setter in an effect
+  // dependency array; an unstable setter re-ran that effect on every render
+  // and turned its one-time seed load into an infinite request loop.
+  const setThemePreference = useCallback(
+    (next: ThemePreference | ((prev: ThemePreference) => ThemePreference)) => {
+      userPatchedRef.current = true;
+      setSyncedThemePreference(next);
+    },
+    [setSyncedThemePreference],
+  );
   const [systemTheme, setSystemTheme] = useState<ResolvedTheme>(() => getSystemTheme());
   const resolvedTheme: ResolvedTheme =
     themePreference === "system" ? systemTheme : themePreference;

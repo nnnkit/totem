@@ -129,7 +129,6 @@ interface RuntimeSeed {
 }
 
 const DEMO_READING_TAB_KEY = `${LS_READING_TAB}:website-demo`;
-const DEMO_DATA_URL = "/demo-data.json";
 
 function getDemoReaderHref(tweetId: string): string {
   return `#read=${encodeURIComponent(tweetId)}`;
@@ -297,10 +296,11 @@ function buildRuntimeSeed(payload: TotemSeedPayload): RuntimeSeed {
 
 async function loadPayloadFromFile(): Promise<TotemSeedPayload | null> {
   try {
-    const response = await fetch(DEMO_DATA_URL);
-    if (!response.ok) return null;
-
-    const data = (await response.json()) as Partial<TotemSeedPayload>;
+    // Bundled at build time (content-hashed, immutably cached) instead of
+    // fetching /demo-data.json — a runtime fetch here once turned into an
+    // infinite request loop against production when the seed effect re-ran.
+    const data = (await import("../../data/demo-data.json"))
+      .default as unknown as Partial<TotemSeedPayload>;
     if (!data || typeof data !== "object") return null;
     if (!data.detailByTweetId || typeof data.detailByTweetId !== "object") return null;
 
@@ -516,13 +516,13 @@ function useDemoNewTabModel() {
         ? (() => {
             const count = seed.bookmarks.length;
             const tweetLabel = count === 1 ? "tweet" : "tweets";
-            const sourceLabel = seed.source || "demo-data.json";
+            const sourceLabel = seed.source || "bundled demo data";
             return {
               message: `Demo ready: ${count} ${tweetLabel} loaded from ${sourceLabel}.`,
             };
           })()
         : {
-            message: "Could not load demo-data.json, so we loaded fallback demo data.",
+            message: "Could not load the bundled demo data, so we loaded fallback demo data.",
           };
       updateState((current) => ({
         bookmarks: seed.bookmarks,
@@ -904,7 +904,7 @@ function renderDemoContent({
         <div>
           <p className="text-sm uppercase tracking-[0.18em] text-white/60">Totem Demo</p>
           <h1 className="mt-3 text-2xl font-semibold">Loading demo data</h1>
-          <p className="mt-2 text-white/70">Preparing detailed tweets from <code>demo-data.json</code>.</p>
+          <p className="mt-2 text-white/70">Preparing detailed tweets.</p>
         </div>
       </div>
     );

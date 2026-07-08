@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { hasChromeStorageSync, hasChromeStorageOnChanged } from "../lib/chrome";
 
 type UseSyncedPreferenceOptions = {
@@ -22,10 +22,10 @@ export function useSyncedPreference<T>(
   // value, no side effect) stops React's StrictMode / concurrent double-invoke
   // from firing chrome.storage.sync.set twice for a single set.
   const valueRef = useRef(value);
-  const applyValue = (next: T) => {
+  const applyValue = useCallback((next: T) => {
     valueRef.current = next;
     setValue(next);
-  };
+  }, []);
 
   const normalizeRef = useRef(normalize);
   normalizeRef.current = normalize;
@@ -70,16 +70,21 @@ export function useSyncedPreference<T>(
     return () => chrome.storage.onChanged.removeListener(onStorageChange);
   }, [key]);
 
-  const setSyncedValue: SetSyncedValue<T> = (next) => {
-    const resolved =
-      typeof next === "function"
-        ? (next as (prev: T) => T)(valueRef.current)
-        : next;
-    applyValue(resolved);
-    if (hasChromeStorageSync()) {
-      chrome.storage.sync.set({ [key]: resolved }).catch(() => {});
-    }
-  };
+  // Stable identity: consumers put this setter in effect dependency arrays; a
+  // fresh function each render would re-run those effects on every render.
+  const setSyncedValue: SetSyncedValue<T> = useCallback(
+    (next) => {
+      const resolved =
+        typeof next === "function"
+          ? (next as (prev: T) => T)(valueRef.current)
+          : next;
+      applyValue(resolved);
+      if (hasChromeStorageSync()) {
+        chrome.storage.sync.set({ [key]: resolved }).catch(() => {});
+      }
+    },
+    [key, applyValue],
+  );
 
   return [value, setSyncedValue];
 }
