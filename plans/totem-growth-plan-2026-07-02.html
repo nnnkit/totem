@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<!-- ==================================================================
+     LONG DOCUMENT · English · parchment design system
+     Totem growth plan · July 2026 · built from /last30days research
+     Flow: cover -> toc -> exec summary -> chapters -> appendix
+     ================================================================== -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Totem Growth Plan · July 2026</title>
+<meta name="author" content="Totem">
+<meta name="description" content="A selective growth plan for the Totem Chrome extension: six net-new moves ranked against what actually grows an extension in 2026.">
+<meta name="keywords" content="Totem, Chrome extension growth, Chrome Web Store SEO, GEO, launch plan, positioning">
+<meta name="generator" content="Kami">
+<style>
+  /* Palatino is a system font, no @font-face needed */
+  @font-face { font-family: "JetBrains Mono"; src: url("../fonts/JetBrainsMono.woff2") format("woff2"); font-weight: 400; font-style: normal; }
+  @font-face { font-family: "JetBrains Mono"; src: url("../fonts/JetBrainsMono.woff2") format("woff2"); font-weight: 500; font-style: normal; }
+
+  @page {
+    size: A4;
+    margin: 20mm 22mm 22mm 22mm;
+    background: #f5f4ed;
+
+    @top-right {
+      content: string(section-title);
+      font-family: Charter, Georgia, Palatino, serif;
+      font-size: 8pt;
+      color: #6b6a64;
+    }
+
+    @bottom-center {
+      content: counter(page) "  ·  Totem Growth Plan · July 2026";
+      font-family: Charter, Georgia, Palatino, serif;
+      font-size: 9pt;
+      color: #6b6a64;
+    }
+  }
+  @page:first {
+    @top-right { content: ""; }
+    @bottom-center { content: ""; }
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --parchment: #f5f4ed;
+    --ivory:     #faf9f5;
+    --near-black:#141413;
+    --dark-warm: #3d3d3a;
+    --olive:     #504e49;
+    --stone:     #6b6a64;
+    --brand:     #1B365D;
+    --border:    #e8e6dc;
+    --border-soft:#e5e3d8;
+    --tag-bg:    #E4ECF5;
+
+    --serif: Charter, Georgia,
+             Palatino, "Times New Roman", serif;
+    --sans: var(--serif);
+    --mono:  "JetBrains Mono", "SF Mono", "Fira Code",
+             Consolas, Monaco, monospace;
+
+    --rhythm-module:  14pt;
+    --rhythm-section: 18pt;
+  }
+
+  html, body { background: var(--parchment); }
+
+  /* Screen readability: print keeps pt sizes; browser reads at 16px body */
+  @media screen {
+    body {
+      max-width: 210mm;
+      margin: 0 auto;
+      padding: 20mm 22mm 22mm 22mm;
+      font-size: 16px;
+      line-height: 1.65;
+    }
+    p, ul, ol, blockquote, .quote, .callout, .takeaway { line-height: 1.65; }
+    .lead { font-size: 19px; line-height: 1.6; }
+    h1 { font-size: 34px; }
+    h2 { font-size: 25px; margin-top: 34px; }
+    h3 { font-size: 20px; }
+    .chapter-num, .cover-eyebrow { font-size: 13px; }
+    .cover-sub { font-size: 20px; }
+    .cover-meta { font-size: 14px; }
+    .toc h2 { font-size: 30px; }
+    .toc-item { font-size: 16px; padding: 9px 0; }
+    blockquote .cite, .quote .cite { font-size: 13px; }
+    code, pre { font-size: 13.5px; }
+    table, .kami-table { font-size: 14px; }
+    table th, .kami-table th { padding: 9px 10px; }
+    table td, .kami-table td { padding: 8px 10px; }
+    .takeaway-label, .tag { font-size: 12px; }
+    figcaption { font-size: 13px; }
+  }
+
+  body {
+    color: var(--near-black);
+    font-family: var(--serif);
+    font-size: 10.5pt;
+    line-height: 1.55;
+    widows: 3;
+    orphans: 3;
+  }
+
+  .sans { font-family: var(--sans); }
+
+  /* COVER */
+  .cover {
+    min-height: 240mm;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 40mm 0 0 0;
+    break-after: page;
+  }
+  .cover-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8pt;
+    font-family: var(--sans);
+    font-size: 10pt;
+    color: var(--brand);
+    letter-spacing: 2pt;
+    text-transform: uppercase;
+    font-weight: 500;
+    margin-bottom: 18pt;
+  }
+  .cover-eyebrow::before {
+    content: "";
+    width: 9pt;
+    height: 1.5pt;
+    border-radius: 0.75pt;
+    background: var(--brand);
+    flex-shrink: 0;
+  }
+  .cover-title {
+    font-size: 40pt;
+    font-weight: 500;
+    color: var(--near-black);
+    line-height: 1.12;
+    letter-spacing: -0.5pt;
+    margin-bottom: 16pt;
+  }
+  .cover-sub {
+    font-family: var(--sans);
+    font-size: 14pt;
+    color: var(--olive);
+    line-height: 1.45;
+    max-width: 85%;
+    margin-bottom: 30pt;
+  }
+  .cover-meta {
+    font-family: var(--sans);
+    font-size: 10pt;
+    color: var(--stone);
+    line-height: 1.55;
+    font-variant-numeric: tabular-nums;
+  }
+  .cover-meta strong { color: var(--dark-warm); font-weight: 500; }
+
+  /* TOC */
+  .toc { break-after: page; }
+  .toc h2 {
+    font-size: 22pt;
+    font-weight: 500;
+    margin-bottom: var(--rhythm-module);
+    border-left: 2.5pt solid var(--brand);
+    border-radius: 1.5pt;
+    padding-left: 8pt;
+  }
+  .toc-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 6pt 0;
+    border-bottom: 0.3pt dotted var(--border);
+    font-size: 11pt;
+  }
+  .toc-item:last-of-type { border-bottom: none; }
+  .toc-num {
+    color: var(--brand);
+    font-weight: 500;
+    min-width: 30pt;
+    font-variant-numeric: tabular-nums;
+  }
+  .toc-title {
+    flex: 1;
+    color: var(--near-black);
+    padding-left: 6pt;
+  }
+  .toc-page {
+    color: var(--stone);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* HEADINGS */
+  h1 {
+    font-size: 24pt;
+    font-weight: 500;
+    line-height: 1.15;
+    letter-spacing: -0.3pt;
+    margin: 0 0 10pt 0;
+    border-left: 2.5pt solid var(--brand);
+    border-radius: 1.5pt;
+    padding-left: 8pt;
+    color: var(--near-black);
+    break-after: avoid;
+  }
+  h2 {
+    font-size: 16pt;
+    font-weight: 500;
+    line-height: 1.25;
+    margin: 24pt 0 8pt 0;
+    color: var(--near-black);
+    break-after: avoid;
+    string-set: section-title content();
+  }
+  h3 {
+    font-size: 13pt;
+    font-weight: 500;
+    line-height: 1.3;
+    margin: 18pt 0 6pt 0;
+    color: var(--dark-warm);
+    break-after: avoid;
+  }
+
+  .chapter-num {
+    font-family: var(--sans);
+    font-size: 10pt;
+    color: var(--brand);
+    letter-spacing: 1pt;
+    text-transform: uppercase;
+    font-weight: 500;
+    margin-bottom: 6pt;
+  }
+
+  /* PARAGRAPHS */
+  p { margin: 0 0 10pt 0; line-height: 1.55; color: var(--near-black); widows: 2; orphans: 2; }
+
+  .lead {
+    font-size: 12pt;
+    line-height: 1.55;
+    color: var(--dark-warm);
+    margin-bottom: var(--rhythm-module);
+  }
+
+  .hl { color: var(--brand); font-weight: 500; }
+  strong { font-weight: 500; }
+
+  /* LISTS */
+  ul, ol {
+    margin: 6pt 0 10pt 0;
+    padding-left: 20pt;
+    line-height: 1.55;
+  }
+  ul li::marker { color: var(--brand); }
+  ol li::marker { color: var(--brand); font-weight: 500; }
+
+  /* QUOTE */
+  blockquote, .quote {
+    border-left: 2pt solid var(--brand);
+    margin: 12pt 0;
+    padding: 4pt 0 4pt 16pt;
+    color: var(--olive);
+    line-height: 1.55;
+    break-inside: avoid;
+  }
+  blockquote .cite, .quote .cite {
+    display: block;
+    font-family: var(--sans);
+    font-size: 9pt;
+    color: var(--stone);
+    margin-top: 4pt;
+  }
+
+  /* CODE */
+  code {
+    font-family: var(--mono);
+    font-size: 9pt;
+    background: var(--ivory);
+    padding: 1pt 4pt;
+    border-radius: 2pt;
+    color: var(--dark-warm);
+  }
+  pre {
+    font-family: var(--mono);
+    font-size: 9pt;
+    line-height: 1.5;
+    background: var(--ivory);
+    border-radius: 4pt;
+    padding: 10pt 14pt;
+    margin: 10pt 0;
+    white-space: pre-wrap;
+    color: var(--near-black);
+    break-inside: avoid;
+  }
+  pre code { background: transparent; padding: 0; font-size: inherit; }
+
+  /* TABLE (kami-table) */
+  table, .kami-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 9.5pt;
+    margin: 12pt 0;
+    break-inside: avoid;
+  }
+  table th, .kami-table th {
+    text-align: left;
+    font-family: var(--sans);
+    font-weight: 500;
+    color: var(--dark-warm);
+    padding: 6pt 8pt;
+    border-bottom: 1pt solid var(--border);
+    background: var(--ivory);
+  }
+  table td, .kami-table td {
+    padding: 5pt 8pt;
+    border-bottom: 0.3pt solid var(--border-soft);
+    vertical-align: top;
+  }
+  table.compact th, .kami-table.compact th { padding: 3pt 6pt; font-size: 8pt; }
+  table.compact td, .kami-table.compact td { padding: 2pt 6pt; font-size: 8pt; line-height: 1.4; }
+  table.financial td:not(:first-child), .kami-table.financial td:not(:first-child) {
+    text-align: right; font-variant-numeric: tabular-nums;
+  }
+  table.financial th:not(:first-child), .kami-table.financial th:not(:first-child) { text-align: right; }
+  table.striped tbody tr:nth-child(even) td, .kami-table.striped tbody tr:nth-child(even) td {
+    background: var(--ivory);
+  }
+  table .total td, .kami-table .total td {
+    font-weight: 500; border-top: 1pt solid var(--brand); border-bottom: none; color: var(--near-black);
+  }
+
+  /* CALLOUT / TAKEAWAY */
+  .callout {
+    background: var(--ivory);
+    border-left: 2pt solid var(--brand);
+    padding: 10pt 14pt;
+    border-radius: 3pt;
+    margin: 12pt 0;
+    line-height: 1.55;
+    break-inside: avoid;
+  }
+  .callout blockquote,
+  .callout .quote {
+    border-left: none;
+    padding-left: 0;
+    margin: 6pt 0;
+    color: var(--olive);
+  }
+  .callout blockquote:first-child,
+  .callout .quote:first-child { margin-top: 0; }
+  .callout blockquote:last-child,
+  .callout .quote:last-child  { margin-bottom: 0; }
+  .takeaway {
+    background: var(--ivory);
+    border-radius: 4pt;
+    padding: 10pt 14pt;
+    margin: 14pt 0;
+    break-inside: avoid;
+  }
+  .takeaway-label {
+    font-family: var(--sans);
+    font-size: 9pt;
+    color: var(--brand);
+    letter-spacing: 1pt;
+    text-transform: uppercase;
+    font-weight: 500;
+    margin-bottom: 4pt;
+  }
+
+  /* TAG */
+  .tag {
+    display: inline-block;
+    background: var(--tag-bg);
+    color: var(--brand);
+    font-family: var(--sans);
+    font-size: 9pt;
+    font-weight: 500;
+    padding: 1pt 6pt;
+    border-radius: 3pt;
+    letter-spacing: 0.4pt;
+    text-transform: uppercase;
+    margin-right: 4pt;
+  }
+
+  /* FIGURE */
+  figure { margin: 14pt 0; break-inside: avoid; }
+  figure img { max-width: 100%; border-radius: 4pt; }
+  figure svg { width: 100%; height: auto; }
+  figcaption {
+    font-family: var(--sans);
+    font-size: 9pt;
+    color: var(--stone);
+    margin-top: 6pt;
+    text-align: center;
+  }
+
+  a { color: var(--brand); text-decoration: none; border-bottom: 0.5pt solid var(--border); }
+
+  /* CHAPTER BREAK */
+  .chapter { break-before: page; }
+</style>
+</head>
+<body>
+
+<!-- COVER -->
+<section class="cover">
+  <div>
+    <div class="cover-eyebrow">Growth Plan · Internal</div>
+    <div class="cover-title">What Totem<br>Hasn&rsquo;t Done Yet</div>
+    <div class="cover-sub">A selective growth plan for the Totem Chrome extension &mdash; six net-new moves, ranked against what actually grows an extension in July 2026. Everything already shipped or drafted is excluded by design.</div>
+  </div>
+  <div class="cover-meta">
+    <strong>Totem</strong><br>
+    Version 1.0 · 2026.07<br>
+    Research base: /last30days engine (50 items, Reddit · YouTube · GitHub) + 8 supplemental web sources
+  </div>
+</section>
+
+<!-- TOC -->
+<section class="toc">
+  <h2>Contents</h2>
+  <div class="toc-item"><span class="toc-num">01</span><span class="toc-title">Executive Summary</span><span class="toc-page">03</span></div>
+  <div class="toc-item"><span class="toc-num">02</span><span class="toc-title">The 2026 Playing Field</span><span class="toc-page">04</span></div>
+  <div class="toc-item"><span class="toc-num">03</span><span class="toc-title">Already Done &mdash; Excluded from This Plan</span><span class="toc-page">06</span></div>
+  <div class="toc-item"><span class="toc-num">04</span><span class="toc-title">The Six Moves</span><span class="toc-page">07</span></div>
+  <div class="toc-item"><span class="toc-num">05</span><span class="toc-title">Positioning: The Only Reader in a Category of Filers</span><span class="toc-page">10</span></div>
+  <div class="toc-item"><span class="toc-num">06</span><span class="toc-title">Sequencing &amp; Kill List</span><span class="toc-page">11</span></div>
+  <div class="toc-item"><span class="toc-num">07</span><span class="toc-title">Appendix: Sources</span><span class="toc-page">12</span></div>
+</section>
+
+<!-- Chapter 01 -->
+<section class="chapter">
+  <div class="chapter-num">01 · Executive Summary</div>
+  <h1>Executive Summary</h1>
+
+  <p class="lead">
+    Totem&rsquo;s growth constraint is not the product and not the content. It is that <span class="hl">every distribution asset built so far is passive</span> &mdash; 17 blog posts waiting for Google, a rewritten store listing waiting in a drafts folder, launch research that never became launches &mdash; while every channel the 2026 evidence says works for extensions is <span class="hl">active</span>: shipping the listing, posting in one community at a time, getting picked up by newsletters, and being the answer AI assistants give. This plan is six moves. Five cost days, not weeks. None require writing new code beyond copy and one settings page.
+  </p>
+
+  <h2>Key Takeaways</h2>
+  <ul>
+    <li><strong>The store algorithm is a two-stage machine.</strong> Listing keywords decide which ranking bucket you enter; weekly <em>active</em> users, fresh-review velocity, and listing conversion decide your position inside it. Totem&rsquo;s rewritten keyword-first listing is drafted and deliberately frozen &mdash; the freeze is now the single most expensive decision in the repo.</li>
+    <li><strong>The proven zero-to-first-thousand channel is one community post at a time.</strong> The best-documented postmortem of the last 30 days found a single focused community post outperformed every broad channel combined. Totem has launch research for Show HN, r/SideProject, and Product Hunt &mdash; and has posted none of them.</li>
+    <li><strong>AI answers are a discovery channel with almost no overlap with Google.</strong> Only 11&ndash;12% of pages ChatGPT cites also rank on Google; 28.3% of its most-cited pages have zero Google visibility. Totem&rsquo;s 17 posts are optimized for the channel that is shrinking, not the one that is growing.</li>
+  </ul>
+
+  <div class="takeaway">
+    <div class="takeaway-label">Questions this document answers</div>
+    Which growth work matters that we have <em>not</em> already done? Why is the drafted-but-held store listing the first domino, not the last? And what is the positioning only Totem can claim in a month when the Chrome Web Store&rsquo;s trust problem made international news?
+  </div>
+</section>
+
+<!-- Chapter 02 -->
+<section class="chapter">
+  <div class="chapter-num">02 · The Playing Field</div>
+  <h1>The 2026 Playing Field</h1>
+
+  <p class="lead">
+    Four findings from the last-30-days research window define what works for extensions right now. Each one maps directly onto something Totem has not yet done.
+  </p>
+
+  <h2>Store rank: keywords pick the bucket, engagement sorts it</h2>
+  <p>
+    A 120K-data-point study of Chrome Web Store rankings (Extension Ranker, 2026) describes a two-stage system: title, summary, and description <span class="hl">relevance decides which tier you qualify for</span>; then weekly active users, a steady stream of fresh 4.5+ reviews, update recency, and verified-publisher status sort you within that tier. Listing conversion (installs per view) feeds back into rank. Roughly <span class="hl">40% of new users arrive through store discovery</span> &mdash; the channel Totem&rsquo;s frozen listing is invisible in. Review <em>recency</em> now beats lifetime review count, and one r/chrome_extensions developer won the Featured badge by self-nominating at just <span class="hl">150 installs and 12 ratings</span> &mdash; the badge is not gated on scale.
+  </p>
+
+  <h2>Distribution: one community at a time, then newsletters</h2>
+  <p>
+    The most concrete indie postmortem in the window (&ldquo;1.3K installs in 5 weeks,&rdquo; Indie Hackers) found that a single post in one relevant community outperformed every broad channel combined, and that a keyword-first listing rewrite moved organic installs from 2/week to 11/week. On r/chrome_extensions the winning format is visible in real time: a &ldquo;just hit 3,000 users&rdquo; journey post drew 84 comments this week; a solo dev&rsquo;s &ldquo;#10 on Product Hunt&rdquo; postmortem is the community&rsquo;s reference launch story. Numbers and lessons, never promo. Community insights collected from the same subreddit call newsletter pickups <span class="hl">&ldquo;the game changer&rdquo;</span> for consistent growth.
+  </p>
+
+  <blockquote>
+    &ldquo;At about like 20 to $30,000 MRR &hellip; I&rsquo;m the only person who&rsquo;s been working on the extension.&rdquo; The arc behind that number: free for nine months, then reviewers &ldquo;started writing reviews about like top 10 ChatGPT extensions&rdquo; &mdash; listicles, not ads, drove ~270K downloads and 150K weekly active users.
+    <span class="cite"> &mdash; Solo extension founder, Starter Story interview (298K views)</span>
+  </blockquote>
+
+  <h2>Discovery is migrating to AI answers &mdash; and it doesn&rsquo;t follow Google</h2>
+  <p>
+    ChatGPT now handles roughly <span class="hl">17% of global digital queries</span>, and 51% of B2B software buyers start research in an AI chatbot more often than in Google. The structural fact that matters for Totem: a 2-million-session study (Search Engine Land, 2026) found only <span class="hl">11&ndash;12% overlap</span> between what Google ranks and what ChatGPT cites, and 28.3% of ChatGPT&rsquo;s most-cited pages have <em>zero</em> Google visibility. Vercel attributes 10% of new signups to ChatGPT referrals. Being the answer to &ldquo;how do I manage my X bookmarks&rdquo; inside an AI assistant is a different game from ranking for it &mdash; and nobody in the tiny X-bookmarks category is playing it yet.
+  </p>
+
+  <h2>The trust crisis is the backdrop of every install decision</h2>
+  <p>
+    In June alone: a 10M-install, <em>Featured-badge</em> ad blocker was caught with dormant script-injection capability; a fake Perplexity extension was caught recording searches; and on June 30, Chrome 150 permanently disabled uBlock Origin and every remaining Manifest V2 extension. Meanwhile Google&rsquo;s I/O 2026 recap reports 17% of new store extensions use AI and developer registrations doubled year over year &mdash; more competition, less trust. The r/chrome_extensions community response is explicit: it consistently favors <span class="hl">single-purpose, privacy-first extensions</span>. Totem is local-first, account-free, server-free, and analytics-free &mdash; and currently says so quietly instead of leading with it.
+  </p>
+
+  <div class="callout">
+    New-tab extensions carry a specific stigma &mdash; the &ldquo;new tab hijacker&rdquo; is the canonical Chrome-extension abuse story. For a product that <em>lives</em> on the new tab, trust is not a compliance line. It is the positioning.
+  </div>
+</section>
+
+<!-- Chapter 03 -->
+<section class="chapter">
+  <div class="chapter-num">03 · Already Done</div>
+  <h1>Already Done &mdash; Excluded from This Plan</h1>
+
+  <p class="lead">
+    This plan only contains net-new work. Everything below exists in the repo and is deliberately out of scope &mdash; with one exception that Chapter 04 promotes from &ldquo;drafted&rdquo; to &ldquo;ship this week.&rdquo;
+  </p>
+
+  <table class="striped">
+    <thead>
+      <tr>
+        <th style="width:22%">Status</th>
+        <th>Work</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="tag">Shipped</span></td>
+        <td>Extension live on CWS (v1.2.6) · marketing site at usetotem.xyz · 17 published blog posts with an SEO loop · IndexNow submission · UTM/ref link decoration · CWS screenshots and promo tiles · in-extension review prompt · uninstall-feedback page</td>
+      </tr>
+      <tr>
+        <td><span class="tag">Drafted, held</span></td>
+        <td>Keyword-first CWS listing rewrite (title, description, screenshot direction) · Featured-badge nomination plan · $19 lifetime premium plan (Lemon Squeezy/Polar research done, no code) · full GTM research incl. Product Hunt and Show HN analysis · &ldquo;Today&rsquo;s Read&rdquo; calm-engagement prototypes</td>
+      </tr>
+      <tr>
+        <td><span class="tag">Decided</span></td>
+        <td>Edge Add-ons launch as a low-effort secondary channel (same ZIP, $0 fee, near-zero organic discovery expected) &mdash; already green-lit July 2, runs in parallel, not part of this plan&rsquo;s critical path</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>The one honest criticism</h2>
+  <p>
+    The listing rewrite was held back on a defensible-sounding rule: &ldquo;push after the install spike has 7&ndash;10 days of stable funnel data.&rdquo; But there is no install spike &mdash; because the launches that would create one were never posted, and the launches were implicitly waiting on the listing. Two halves of the growth engine have spent a month waiting for each other. <span class="hl">The deferral logic is inverted:</span> a launch pointed at a weak listing wastes the launch; a strong listing with no traffic wastes nothing. Listing first, launches immediately after.
+  </p>
+</section>
+
+<!-- Chapter 04 -->
+<section class="chapter">
+  <div class="chapter-num">04 · The Six Moves</div>
+  <h1>The Six Moves</h1>
+
+  <p class="lead">
+    Ranked by evidence strength times install impact. Each move names its cost, its metric, and the condition under which it gets killed. Nothing here requires building product &mdash; Totem&rsquo;s highlights, search, export, and thread reader are already built and under-marketed.
+  </p>
+
+  <figure>
+    <svg viewBox="0 0 820 540" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+          <polygon points="0 0, 8 3, 0 6" fill="#504e49"/>
+        </marker>
+      </defs>
+
+      <rect width="100%" height="100%" fill="#f5f4ed"/>
+
+      <!-- Quadrant zones (subtle background tint on the "preferred" quadrant) -->
+      <rect x="80" y="60" width="660" height="380" fill="none" stroke="#DEDED7" stroke-width="0.8"/>
+      <rect x="410" y="60" width="330" height="190" fill="#F3EEE6"/>
+
+      <!-- Cross axes (through midpoint) -->
+      <line x1="80" y1="250" x2="740" y2="250" stroke="#CCCCC6" stroke-width="0.8"/>
+      <line x1="410" y1="60" x2="410" y2="440" stroke="#CCCCC6" stroke-width="0.8"/>
+
+      <!-- Axis arrows + labels -->
+      <line x1="80" y1="460" x2="740" y2="460" stroke="#504e49" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <line x1="60" y1="440" x2="60" y2="60" stroke="#504e49" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+      <text x="410" y="480" fill="#141413" font-size="11" font-weight="500" font-family="inherit" text-anchor="middle" letter-spacing="0.08em">Evidence strength · low to high</text>
+      <text x="30" y="250" fill="#141413" font-size="11" font-weight="500" font-family="inherit" text-anchor="middle" letter-spacing="0.08em" transform="rotate(-90 30 250)">Install impact · low to high</text>
+
+      <!-- Quadrant labels -->
+      <text x="244" y="88" fill="#6b6a64" font-size="8.5" font-family="'JetBrains Mono', monospace" text-anchor="middle" letter-spacing="0.22em">HIGH IMPACT · EMERGING</text>
+      <text x="244" y="102" fill="#504e49" font-size="10" font-family="inherit" text-anchor="middle">incubate</text>
+
+      <text x="576" y="88" fill="#1B365D" font-size="8.5" font-family="'JetBrains Mono', monospace" text-anchor="middle" letter-spacing="0.22em">HIGH IMPACT · PROVEN</text>
+      <text x="576" y="102" fill="#1B365D" font-size="10" font-family="inherit" text-anchor="middle" font-weight="500">do first</text>
+
+      <text x="244" y="428" fill="#6b6a64" font-size="8.5" font-family="'JetBrains Mono', monospace" text-anchor="middle" letter-spacing="0.22em">LOW IMPACT · UNPROVEN</text>
+      <text x="244" y="420" fill="#6b6a64" font-size="10" font-family="inherit" text-anchor="middle">drop</text>
+
+      <text x="576" y="428" fill="#6b6a64" font-size="8.5" font-family="'JetBrains Mono', monospace" text-anchor="middle" letter-spacing="0.22em">LOW IMPACT · PROVEN</text>
+      <text x="576" y="420" fill="#504e49" font-size="10" font-family="inherit" text-anchor="middle">secondary</text>
+
+      <!-- Plotted points -->
+      <!-- Focal: ship the listing -->
+      <circle cx="548" cy="140" r="6.5" fill="#1B365D" stroke="#1B365D" stroke-width="1"/>
+      <text x="560" y="145" fill="#1B365D" font-size="11" font-family="inherit" font-weight="500">1 · Ship listing + Featured</text>
+
+      <!-- Near-focal: launch calendar -->
+      <circle cx="492" cy="164" r="5" fill="#EEF2F7" stroke="#1B365D" stroke-width="1"/>
+      <text x="504" y="168" fill="#141413" font-size="10" font-family="inherit" font-weight="500">2 · Community launches</text>
+
+      <!-- GEO -->
+      <circle cx="300" cy="148" r="5" fill="#faf9f5" stroke="#141413" stroke-width="1"/>
+      <text x="312" y="152" fill="#141413" font-size="10" font-family="inherit" font-weight="500">3 · AI-answer presence</text>
+
+      <!-- Newsletters -->
+      <circle cx="620" cy="208" r="5" fill="#EEF2F7" stroke="#1B365D" stroke-width="1"/>
+      <text x="632" y="212" fill="#141413" font-size="10" font-family="inherit" font-weight="500">4 · Newsletter pitching</text>
+
+      <!-- Trust positioning -->
+      <circle cx="560" cy="232" r="5" fill="#faf9f5" stroke="#141413" stroke-width="1"/>
+      <text x="572" y="236" fill="#141413" font-size="10" font-family="inherit">5 · Trust as marketing</text>
+
+      <!-- X-native presence -->
+      <circle cx="380" cy="268" r="5" fill="#faf9f5" stroke="#141413" stroke-width="1"/>
+      <text x="392" y="272" fill="#141413" font-size="10" font-family="inherit">6 · X-native presence</text>
+
+      <!-- Edge (secondary, already decided) -->
+      <circle cx="580" cy="348" r="4.5" fill="#EAE9E2" stroke="#504e49" stroke-width="1"/>
+      <text x="590" y="352" fill="#504e49" font-size="10" font-family="inherit">Edge Add-ons (decided)</text>
+
+      <!-- Drop quadrant -->
+      <circle cx="180" cy="380" r="4" fill="#EEEDE6" stroke="#B2B1AC" stroke-width="1"/>
+      <text x="190" y="384" fill="#6b6a64" font-size="10" font-family="inherit">Paid ads</text>
+
+      <circle cx="280" cy="340" r="4" fill="#EEEDE6" stroke="#B2B1AC" stroke-width="1"/>
+      <text x="290" y="344" fill="#6b6a64" font-size="10" font-family="inherit">TikTok / IG</text>
+
+      <!-- Legend -->
+      <line x1="40" y1="502" x2="780" y2="502" stroke="#DEDED7" stroke-width="0.8"/>
+      <text x="40" y="518" fill="#504e49" font-size="8" font-family="'JetBrains Mono', monospace" letter-spacing="0.22em">LEGEND</text>
+
+      <circle cx="180" cy="514" r="5" fill="#1B365D" stroke="#1B365D" stroke-width="1"/>
+      <text x="192" y="518" fill="#504e49" font-size="8.5" font-family="inherit">Focal · do first</text>
+
+      <circle cx="328" cy="514" r="5" fill="#EEF2F7" stroke="#1B365D" stroke-width="1"/>
+      <text x="340" y="518" fill="#504e49" font-size="8.5" font-family="inherit">Near-focal</text>
+
+      <circle cx="450" cy="514" r="5" fill="#faf9f5" stroke="#141413" stroke-width="1"/>
+      <text x="462" y="518" fill="#504e49" font-size="8.5" font-family="inherit">Standard</text>
+
+      <circle cx="555" cy="514" r="5" fill="#EAE9E2" stroke="#504e49" stroke-width="1"/>
+      <text x="567" y="518" fill="#504e49" font-size="8.5" font-family="inherit">Secondary</text>
+
+      <circle cx="660" cy="514" r="5" fill="#EEEDE6" stroke="#B2B1AC" stroke-width="1"/>
+      <text x="672" y="518" fill="#504e49" font-size="8.5" font-family="inherit">Drop</text>
+    </svg>
+    <figcaption>The six moves plotted by evidence strength &times; install impact. Moves 1&ndash;2 are proven and compounding; move 3 is the highest-upside bet in the emerging quadrant; Edge is already decided and correctly parked as secondary.</figcaption>
+  </figure>
+
+  <h2>Move 1 &mdash; Ship the listing, verify the domain, nominate for Featured</h2>
+  <p>
+    Everything is already written: the keyword-first title (&ldquo;Twitter &amp; X Bookmarks on New Tab &mdash; Totem&rdquo;), the three-field keyword coverage map, the screenshot art direction. Ship it, confirm <span class="hl">verified-publisher status</span> for usetotem.xyz in the dashboard (a documented ranking boost that costs one DNS record), and submit the Featured nomination the moment the new listing clears review. The Featured bar is lower than assumed &mdash; one documented case cleared it at 150 installs and 12 ratings.
+  </p>
+  <ul>
+    <li><strong>Cost:</strong> 1 day (copy is drafted; review turnaround is the only wait).</li>
+    <li><strong>Metric:</strong> store impressions and installs-per-view in the CWS dashboard, read weekly; Featured badge within 30 days of nomination.</li>
+    <li><strong>Kill condition:</strong> none. This is the entry ticket to the bucket; there is no version of the plan without it.</li>
+  </ul>
+
+  <h2>Move 2 &mdash; Run the launch calendar that already exists in drafts</h2>
+  <p>
+    Three launches, one per week, in escalating order of audience size: <span class="hl">r/SideProject</span> (draft exists), <span class="hl">Show HN</span> (draft exists), <span class="hl">Product Hunt</span> (research exists). Plus a fourth that costs nothing: a numbers-and-lessons journey post on r/chrome_extensions in the exact format the community is rewarding this month &mdash; real install counts, what worked, what didn&rsquo;t. Each launch doubles as a review-velocity event, which is a ranking input, not vanity. The old plan gated Product Hunt on &ldquo;20+ CWS reviews first&rdquo;; the evidence says drop the gate &mdash; launches <em>generate</em> reviews, and the Featured case proves 12 ratings is not disqualifying.
+  </p>
+  <ul>
+    <li><strong>Cost:</strong> half a day per launch; drafts need a final pass, not a rewrite.</li>
+    <li><strong>Metric:</strong> day-of install spike per launch; review count trajectory; at least one launch producing a durable referral source (HN or PH page that keeps sending traffic).</li>
+    <li><strong>Kill condition:</strong> per-channel only &mdash; if a launch flops, the postmortem becomes the next journey post. The channel itself is proven.</li>
+  </ul>
+
+  <h2>Move 3 &mdash; Become the AI answer for &ldquo;what do I do with my X bookmarks&rdquo;</h2>
+  <p>
+    The one genuinely new 2026 channel, and the one where the tiny X-bookmarks category has no incumbent. Three concrete artifacts: <strong>(a)</strong> comparison and alternative pages &mdash; Totem vs Dewey, vs Tweetsmash, vs Twillot, &ldquo;Pocket alternative for Twitter bookmarks&rdquo; &mdash; because comparison pages are the format LLMs cite for &ldquo;which tool&rdquo; questions; <strong>(b)</strong> the <span class="hl">AlternativeTo listing</span> flagged as missing since June, because LLMs and their retrieval layers lean on structured directories; <strong>(c)</strong> <code>llms.txt</code> plus FAQ schema on usetotem.xyz, so the 17 existing posts become citable answers. The 11&ndash;12% Google-overlap number means this work is <em>additive</em> to existing SEO, not redundant with it.
+  </p>
+  <ul>
+    <li><strong>Cost:</strong> 2&ndash;3 days for the first wave (3 comparison pages + AlternativeTo + llms.txt), then one page per week.</li>
+    <li><strong>Metric:</strong> monthly hand-test of 5 target queries in ChatGPT and Perplexity (is Totem named?); referral sessions from chatgpt.com / perplexity.ai in server logs.</li>
+    <li><strong>Kill condition:</strong> zero AI citations and zero AI referrals after 60 days &rarr; stop producing new pages, keep what exists.</li>
+  </ul>
+
+  <h2>Move 4 &mdash; Newsletter and listicle pitching sprint</h2>
+  <p>
+    The channel r/chrome_extensions calls &ldquo;the game changer,&rdquo; and the mechanism behind the best-documented $20&ndash;30K MRR extension (listicle pickups compounding into store rank). Totem has done zero pitching. Build a list of 15 targets across three angles: productivity/tools newsletters, X-creator and audience-building newsletters, and authors of existing &ldquo;best Twitter tools&rdquo; listicles who can add one line. Every pitch leads with the hook, not the product: <em>the posts you bookmark on X disappear into a void; Totem puts them on your new tab so you actually read them.</em>
+  </p>
+  <ul>
+    <li><strong>Cost:</strong> 1&ndash;2 days for list plus pitches; minutes per follow-up.</li>
+    <li><strong>Metric:</strong> 15 pitches &rarr; &ge;2 placements in 45 days; installs attributed via per-newsletter UTM links (plumbing already shipped).</li>
+    <li><strong>Kill condition:</strong> 0 placements from 15 pitches &rarr; rework the hook and the target list before sending more; do not silently keep pitching the same angle.</li>
+  </ul>
+
+  <h2>Move 5 &mdash; Weaponize trust</h2>
+  <p>
+    June&rsquo;s news cycle (a Featured ad blocker with dormant injection, a fake Perplexity extension, MV2&rsquo;s final death) makes every install a small act of trust &mdash; doubly so for a new-tab extension. Totem&rsquo;s architecture is already the answer; it just isn&rsquo;t said loudly. Ship a <span class="hl">&ldquo;What Totem can&rsquo;t see&rdquo;</span> page: every permission listed, what it is for, and what the extension structurally cannot do (no server, no account, no analytics &mdash; the existing no-analytics post is the seed). Put the trust line (&ldquo;local-first &middot; no account &middot; no server&rdquo;) in the store description, the site header, and every launch post from Move 2.
+  </p>
+  <ul>
+    <li><strong>Cost:</strong> 1 day, all copy.</li>
+    <li><strong>Metric:</strong> qualitative &mdash; the trust line appears in every surface; the page becomes the standard reply to any permissions question in launch threads.</li>
+    <li><strong>Kill condition:</strong> none; this is positioning maintenance, not a bet.</li>
+  </ul>
+
+  <h2>Move 6 &mdash; Show up on X, where every single user already is</h2>
+  <p>
+    Totem&rsquo;s entire audience is on one platform, complaining about the exact problem Totem solves &mdash; &ldquo;X bookmarks are useless,&rdquo; &ldquo;I never look at my bookmarks again&rdquo; is a recurring public complaint. Two motions, 30 minutes a day: <strong>(a)</strong> search-and-reply on bookmark complaints with a genuinely helpful answer (not a link-drop &mdash; the link lives in the profile); <strong>(b)</strong> build-in-public posts reusing Move 2&rsquo;s journey-post material. This is the slowest-compounding move and the easiest to do badly; the evidence for community-native presence is strong, the evidence for founder-brand X growth specifically is thinner &mdash; hence its middle position on the quadrant.
+  </p>
+  <ul>
+    <li><strong>Cost:</strong> 30 min/day, capped.</li>
+    <li><strong>Metric:</strong> profile-link clicks and installs on reply days vs quiet days, read monthly.</li>
+    <li><strong>Kill condition:</strong> 4 weeks with no measurable click-through &rarr; cut to launch-announcements only.</li>
+  </ul>
+</section>
+
+<!-- Chapter 05 -->
+<section class="chapter">
+  <div class="chapter-num">05 · Positioning</div>
+  <h1>Positioning: The Only Reader in a Category of Filers</h1>
+
+  <p class="lead">
+    Every rival in the X-bookmarks niche &mdash; Dewey, Tweetsmash, Twillot, XSaved, BookmarkSave &mdash; files, exports, and retrieves saves. <span class="hl">None of them make you read what you saved.</span> Totem&rsquo;s new-tab reading queue is the only product in the category built around the moment after saving. That is the wedge every move in this plan should repeat.
+  </p>
+
+  <h2>The one-line position</h2>
+  <div class="callout">
+    Totem is the read-it-later for X: the posts you bookmark stop disappearing into a list and start showing up on your new tab &mdash; local-first, no account, no server.
+  </div>
+
+  <h2>Why this position is defensible in 2026 specifically</h2>
+  <p>
+    <strong>The trust climate rewards it.</strong> The community explicitly favors single-purpose, privacy-first extensions in a month when Featured badges stopped being sufficient proof of safety. A filer needs your data; a local-first reader needs nothing.
+  </p>
+  <p>
+    <strong>The read-it-later vacuum is real.</strong> Pocket&rsquo;s shutdown orphaned the &ldquo;save now, read later&rdquo; behavior, and Totem&rsquo;s existing blog traffic already arrives on that intent. The category language to use is retrieval pain (&ldquo;can&rsquo;t find the tweet&rdquo;) plus reading guilt (&ldquo;saved and never opened&rdquo;) &mdash; both phrasings people actually type, in both Google and ChatGPT.
+  </p>
+  <p>
+    <strong>The new tab is a structural ranking advantage.</strong> The store sorts by weekly <em>active</em> users, and a new-tab product registers activity every time the browser opens. Rivals living in a popup or a separate dashboard cannot match that engagement shape without rebuilding their product. Retention work &mdash; the researched &ldquo;Today&rsquo;s Read&rdquo; calm-reading mechanics, a 30-second first-run &mdash; is therefore not product polish; <span class="hl">it is store SEO</span>. It compounds every install the other five moves generate.
+  </p>
+
+  <h2>Monetization footnote</h2>
+  <p>
+    The drafted $19 lifetime premium stays sequenced <em>after</em> Moves 1&ndash;2 produce install flow. The 2026 benchmark data is clear that in the 2K&ndash;20K user range the lever is conversion rate, not more features &mdash; and the features to gate (export, highlights, batch hydration) are already built. Premium is how this plan pays for itself; it is not how it grows.
+  </p>
+</section>
+
+<!-- Chapter 06 -->
+<section class="chapter">
+  <div class="chapter-num">06 · Sequencing</div>
+  <h1>Sequencing &amp; Kill List</h1>
+
+  <p class="lead">
+    Four weeks, one keystone move per week, with Moves 5 and 6 running as background threads. Baselines are read from the CWS dashboard on day zero &mdash; before the listing ships &mdash; so every later number has a denominator.
+  </p>
+
+  <table class="striped">
+    <thead>
+      <tr>
+        <th style="width:14%">Week</th>
+        <th>Keystone</th>
+        <th>Background</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>1</strong></td>
+        <td>Record baselines &middot; ship listing rewrite &middot; verify publisher domain &middot; ship &ldquo;What Totem can&rsquo;t see&rdquo; page (Moves 1 + 5)</td>
+        <td>Start X search-and-reply (Move 6)</td>
+      </tr>
+      <tr>
+        <td><strong>2</strong></td>
+        <td>r/SideProject launch &middot; r/chrome_extensions journey post &middot; AlternativeTo listing (Moves 2 + 3)</td>
+        <td>Submit Featured nomination once listing clears review</td>
+      </tr>
+      <tr>
+        <td><strong>3</strong></td>
+        <td>Show HN &middot; newsletter pitch wave (15 pitches) (Moves 2 + 4)</td>
+        <td>First comparison page live; llms.txt shipped</td>
+      </tr>
+      <tr>
+        <td><strong>4</strong></td>
+        <td>Product Hunt launch &middot; comparison pages 2&ndash;3 (Moves 2 + 3)</td>
+        <td>First AI-citation hand-test; newsletter follow-ups</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>30-day success metrics</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Dimension</th>
+        <th>Day 0</th>
+        <th>Day 30 target</th>
+        <th>Source of truth</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>Weekly installs</td><td>Dashboard baseline</td><td>3&times; baseline</td><td>CWS dashboard</td></tr>
+      <tr><td>Listing conversion (installs / view)</td><td>Dashboard baseline</td><td>Up, week over week, post-rewrite</td><td>CWS dashboard</td></tr>
+      <tr><td>Launches executed</td><td>0</td><td>3 of 4 posted</td><td>This document</td></tr>
+      <tr><td>Fresh reviews (30-day window)</td><td>Dashboard baseline</td><td>+10, steady cadence over spike</td><td>CWS listing</td></tr>
+      <tr><td>Featured badge</td><td>Not nominated</td><td>Nominated; decision pending or won</td><td>CWS dashboard</td></tr>
+      <tr><td>Newsletter placements</td><td>0</td><td>&ge;2 of 15 pitches</td><td>UTM-tagged referrals</td></tr>
+      <tr><td>AI-assistant citations (5 target queries)</td><td>0</td><td>Named in &ge;1 assistant for &ge;2 queries</td><td>Monthly hand-test log</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Kill list &mdash; what this plan deliberately does not do</h2>
+  <ul>
+    <li><strong>No paid ads.</strong> No evidence in the research window of paid acquisition working at indie-extension economics; every documented win was earned distribution.</li>
+    <li><strong>No TikTok or Instagram.</strong> The engine found zero extension-growth signal on either platform in 30 days; the audience for an X power tool is, definitionally, on X.</li>
+    <li><strong>No Firefox port.</strong> Edge is already decided as the low-effort secondary; a third store before the first one is optimized is diffusion.</li>
+    <li><strong>No new generic blog posts.</strong> Seventeen published posts is a sufficient base; the only new pages this month are comparison/alternative pages that serve Move 3.</li>
+    <li><strong>No open-sourcing for distribution.</strong> The GraphQL query-ID resolution and auth capture are the technical moat; stars are not installs.</li>
+    <li><strong>No new features in the name of growth.</strong> Highlights, full-text search, export, and thread reading are built and under-marketed. The deferred bets (semantic search, MCP, universal preview) stay deferred until premium data argues otherwise.</li>
+  </ul>
+
+  <div class="takeaway">
+    <div class="takeaway-label">Call to Action</div>
+    Monday morning: read the baseline numbers off the CWS dashboard into a note, push the drafted listing rewrite to the dashboard, and start the publisher-domain verification. Everything else in this plan is downstream of that hour.
+  </div>
+</section>
+
+<!-- Chapter 07 -->
+<section class="chapter">
+  <div class="chapter-num">07 · Appendix</div>
+  <h1>Appendix: Sources</h1>
+
+  <h2>A. Research base</h2>
+  <p>
+    Findings synthesized from a /last30days engine run (2026-06-02 &rarr; 2026-07-02: 18 Reddit threads, 17 YouTube videos, 15 GitHub items) plus eight supplemental web sources. Raw data: <code>~/Documents/Last30Days/chrome-extension-growth-marketing-chrome-web-store-raw-v3.md</code>.
+  </p>
+
+  <h2>B. References</h2>
+  <ul>
+    <li><a href="https://extensionranker.com/blog/chrome-web-store-ranking-patterns">Extension Ranker &mdash; Chrome Web Store rankings: patterns across 120K data points</a> (two-stage ranking, verified publisher, review recency)</li>
+    <li><a href="https://www.extensionfast.com/blog/how-to-rank-your-chrome-extension-on-the-chrome-web-store-in-2026">ExtensionFast &mdash; How to rank on the Chrome Web Store in 2026</a> (40% store discovery, update-cadence decay)</li>
+    <li><a href="https://www.indiehackers.com/post/we-hit-1-3k-chrome-extension-installs-in-5-weeks-heres-what-actually-moved-the-needle-and-what-was-a-complete-waste-of-time-cebd3e4a5a">Indie Hackers &mdash; 1.3K installs in 5 weeks postmortem</a> (single-community posts, listing rewrite 2&rarr;11 installs/week)</li>
+    <li><a href="https://tryinhouse.co/blog/article/chrome-extension-growth-tips">InHouse &mdash; r/chrome_extensions community growth insights</a> (Featured at 150 installs / 12 ratings; newsletters as &ldquo;game changer&rdquo;)</li>
+    <li><a href="https://www.youtube.com/watch?v=ty9ZcimL6VE">Starter Story &mdash; $20K/month Chrome extension interview</a> (free-first arc, listicle-driven discovery, 150K WAU)</li>
+    <li><a href="https://www.reddit.com/r/chrome_extensions/comments/1uk7gyb/just_hit_3000_users_on_my_free_chrome_extension/">r/chrome_extensions &mdash; &ldquo;Just hit 3,000+ users&rdquo; journey thread</a> and <a href="https://www.reddit.com/r/chrome_extensions/comments/1uadbax/i_ranked_10_on_product_hunt_with_a_solo_chrome/">&ldquo;#10 on Product Hunt&rdquo; postmortem</a> (the launch-post format that works)</li>
+    <li><a href="https://searchengineland.com/2-million-llm-sessions-ai-discovery-468115">Search Engine Land &mdash; What 2 million LLM sessions reveal about AI discovery</a> (11&ndash;12% Google overlap, 28.3% zero-visibility citations)</li>
+    <li><a href="https://quickseo.ai/blog/chatgpt-vs-google-search-in-2026-market-share-user-data-what-it-means-for-seo">QuickSEO &mdash; ChatGPT vs Google Search in 2026</a> (query-share and buyer-behavior data)</li>
+    <li><a href="https://developer.chrome.com/blog/extensions-io-2026">Chrome for Developers &mdash; What&rsquo;s new in web extensions, I/O 2026</a> (17% AI extensions, registrations doubled)</li>
+    <li><a href="https://thehackernews.com/2026/06/chrome-ad-blocker-with-10m-installs.html">The Hacker News &mdash; 10M-install Featured ad blocker with dormant injection</a> and <a href="https://thenextweb.com/news/chrome-manifest-v3-ublock-origin-content-blockers-disabled">TNW &mdash; Chrome 150 disables Manifest V2</a> (the June trust crisis)</li>
+    <li><a href="https://chromegoldmine.com/blog/chrome-extension-monetization/chrome-extension-revenue-benchmarks/">Chrome Goldmine &mdash; Extension revenue benchmarks by user count</a> (conversion &gt; installs in the 2K&ndash;20K range)</li>
+  </ul>
+
+  <h2>C. Related internal documents</h2>
+  <ul>
+    <li><code>plans/chrome-web-store-dashboard-update-packet.md</code> &mdash; the drafted listing rewrite Move 1 ships</li>
+    <li><code>plans/chrome-web-store-featured-badge-plan.md</code> &mdash; the nomination Move 1 submits</li>
+    <li><code>plans/research/totem-cws-listing-positioning-2026-06-26.html</code> &mdash; listing keyword and art-direction study</li>
+    <li><code>plans/research/totem-gtm-research-2026-06-16.html</code> &mdash; GTM research behind Move 2&rsquo;s launch drafts</li>
+    <li><code>plans/premium-conversion-plan.md</code> &mdash; the sequenced-after monetization plan</li>
+    <li><code>docs/blog-pipeline.md</code> &mdash; where Move 3&rsquo;s comparison pages get tracked</li>
+  </ul>
+</section>
+
+</body>
+</html>

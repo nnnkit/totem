@@ -1,5 +1,5 @@
 import { XIcon } from "@phosphor-icons/react";
-import { CHROME_WEB_STORE_REVIEW_URL } from "../lib/constants/growth";
+import { getStoreReviewUrl } from "../lib/constants/growth";
 
 interface Props {
   onDismiss: () => void;
@@ -14,7 +14,7 @@ export function ReviewPrompt({ onDismiss, onReview }: Props) {
           Enjoying Totem? A quick review helps others find it.
         </p>
         <a
-          href={CHROME_WEB_STORE_REVIEW_URL}
+          href={getStoreReviewUrl()}
           target="_blank"
           rel="noopener noreferrer"
           onClick={onReview}

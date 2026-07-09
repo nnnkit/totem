@@ -221,3 +221,65 @@ Once all the above is done:
 - [ ] Submit for review
 - [ ] Expected review time: 1-3 business days (can be longer for extensions with sensitive permissions — ours will likely take longer)
 - [ ] After approval, run `pnpm cws:featured:live` and only submit the Featured badge nomination after it passes.
+
+---
+
+# Microsoft Edge Add-ons Publishing
+
+Edge is Chromium-based, so **the same `release/totem-v{version}.zip` you upload to
+the Chrome Web Store is the package here** — no separate build, no separate
+manifest. A single manifest + `check-version-sync.mjs` keeps the Chrome and Edge
+versions aligned automatically. All listing copy, screenshots, tiles, and legal
+URLs live in `plans/edge-add-ons-listing.md`.
+
+## Already satisfied (no action)
+
+- Microsoft's two required cert changes — strip `update_url` and remove "Chrome"
+  from the manifest `name`/`description` — are already met: the manifest has
+  neither.
+- The in-extension "Review" button auto-switches to the Edge Add-ons listing at
+  runtime on Edge (`getStoreReviewUrl()` in `src/lib/constants/growth.ts`). After
+  the first Edge submission, fill `EDGE_ADDONS_PRODUCT_ID` there with the product
+  GUID from Partner Center → Overview, then ship the next release. Until then it
+  safely falls back to the Chrome reviews URL.
+
+## Developer Account Setup
+
+- [ ] Register at Partner Center: https://partner.microsoft.com/dashboard/microsoftedge/public/login
+- [ ] Use a **Microsoft account (MSA)** as Primary Owner (personal Outlook/Live/Hotmail or GitHub account; work/school Entra accounts can't register).
+- [ ] Choose an **Individual** account (free, light verification). Do NOT choose Company unless needed — that adds days-to-weeks of business verification and is irreversible.
+- [ ] Registration fee: **$0** (vs Chrome's $5).
+- [ ] Accept the Microsoft Store App Developer Agreement (the Edge extension program waives the fee).
+
+## Assets & Copy
+
+Everything is prepared in `plans/edge-add-ons-listing.md`:
+
+- [ ] **Store logo 300×300** — `images-for-promotions/edge-add-ons/store-logo-300.png` (already generated).
+- [ ] **5 screenshots @ 1280×800** — reuse from `images-for-promotions/chrome-web-store/screenshots/`.
+- [ ] **Small promo tile 440×280** and **large promo tile 1400×560** — reuse from `images-for-promotions/chrome-web-store/`.
+- [ ] **Detailed description** — "Chrome new tab" → "browser new tab" swap already done in the Edge doc.
+- [ ] **Search terms** (Edge-only, max 7 / ≤30 chars each) — 7 terms listed in the Edge doc.
+- [ ] **Single purpose** statement — in the Edge doc.
+- [ ] **Privacy policy URL** — `https://usetotem.xyz/privacy` (live, reused).
+- [ ] **Permission justifications** — one box per permission, in the Edge doc (Chrome→browser swaps applied).
+
+## Submission (manual, in Partner Center)
+
+1. [ ] Extensions → **Create new extension** → upload `release/totem-v{version}.zip`.
+2. [ ] **Availability**: Visibility = Public, Markets = all.
+3. [ ] **Properties**: Category = Productivity; Website + Support URL.
+4. [ ] **Privacy** page: Single purpose, per-permission justifications, remote-code = none, data-use disclosures + certifications, Privacy policy URL.
+5. [ ] **Store listing**: paste name (read-only from manifest), detailed description, upload logo + screenshots + tiles, add the 7 search terms.
+6. [ ] **Certification notes**: reuse the Chrome review-risk justifications (MAIN-world `mutation-hook.js`, `webRequest` auth-header capture, x.com bundle-fetch for GraphQL query IDs) — Edge review is comparable-to-slightly-stricter on aggressive host behavior.
+7. [ ] Publish. Expected certification: **up to 7 business days** (often faster; expedited queue for high-quality extensions).
+8. [ ] After approval: copy the product GUID (Overview page) into `EDGE_ADDONS_PRODUCT_ID` in `src/lib/constants/growth.ts`, and add the live Edge listing URL to the website (`apps/site/src/react/site-content.ts`, JSON-LD `sameAs`) if you add an Edge CTA.
+
+## Later (optional automation)
+
+The Edge **Update REST API** (v1.1, base `https://api.addons.microsoftedge.microsoft.com`;
+API key + Client ID from Partner Center → Publish API; keys expire every 72 days)
+can automate **package updates** in CI — but NOT the initial submission or any
+metadata. Mirror the GitHub Release step in `.github/workflows/release-extension.yml`
+with an opt-in `edge:publish` step (secrets: client ID, API key, product ID) that
+POSTs `release/*.zip` after the release is cut.
