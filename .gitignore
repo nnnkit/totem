@@ -10,3 +10,4 @@ chrome/
 
 apps/site/.astro/
 tmp/
+.vercel
