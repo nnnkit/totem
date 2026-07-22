@@ -317,6 +317,13 @@ chrome.runtime.onMessage.addListener(createMessageRouter(allHandlers));
 
 // ── Auth header capture from x.com traffic ───────────────────
 
+// Dedupe storage writes from the onSendHeaders listener: every write re-fires
+// storage.onChanged → checkAuth in every open Totem tab, and this listener
+// fires for every x.com GraphQL request. (In-memory only — worst case after
+// an SW restart is one redundant write.)
+let lastCapturedTwidUserId: string | null = null;
+let lastCapturedAuthHeadersJson: string | null = null;
+
 chrome.webRequest.onSendHeaders.addListener(
   (details) => {
     if (!details.requestHeaders) return;
@@ -333,7 +340,8 @@ chrome.webRequest.onSendHeaders.addListener(
     // Extract user ID from cookie
     const twidRaw = getCookieHeaderValue(headers["cookie"], "twid");
     const userIdFromHeader = parseTwidUserId(twidRaw);
-    if (userIdFromHeader) {
+    if (userIdFromHeader && userIdFromHeader !== lastCapturedTwidUserId) {
+      lastCapturedTwidUserId = userIdFromHeader;
       chrome.storage.local
         .set({
           totem_user_id: userIdFromHeader,
@@ -364,10 +372,18 @@ chrome.webRequest.onSendHeaders.addListener(
 
     // Store auth headers (only from real user browsing, not extension requests)
     if (!extensionInitiated && hasAuthTrio) {
-      chrome.storage.local.set({
-        totem_auth_headers: headers,
-        totem_auth_time: Date.now(),
-      });
+      const headersJson = JSON.stringify(headers);
+      // Skip identical rewrites — but never skip after the stored headers
+      // were cleared (see the onChanged reset below): the auth-capture flow
+      // detects success via the totem_auth_headers change event, so a
+      // re-capture of identical headers must still write.
+      if (headersJson !== lastCapturedAuthHeadersJson) {
+        lastCapturedAuthHeadersJson = headersJson;
+        chrome.storage.local.set({
+          totem_auth_headers: headers,
+          totem_auth_time: Date.now(),
+        });
+      }
       discoverAllMissingQueryIds().catch(() => {});
     }
 
@@ -389,6 +405,19 @@ chrome.webRequest.onSendHeaders.addListener(
   { urls: ["https://x.com/i/api/graphql/*"] },
   ["requestHeaders", "extraHeaders"],
 );
+
+// If the stored auth headers are cleared (401/403 expiry, logout), the next
+// identical capture must write again so the capture flow's change listener
+// fires — drop the dedupe cache.
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName !== "local") return;
+  if (
+    changes.totem_auth_headers &&
+    changes.totem_auth_headers.newValue === undefined
+  ) {
+    lastCapturedAuthHeadersJson = null;
+  }
+});
 
 // ── Bookmark mutation capture (before request) ───────────────
 

@@ -6,9 +6,11 @@ import {
   getAuthDiagnosticLog,
   getSessionSnapshot,
   deriveAuthPhaseFromSession,
+  markAuthAuthenticated,
   startAuthCaptureSession,
   type AuthDeps,
 } from "../auth";
+import { CS_ACCOUNT_CONTEXT_ID } from "../../lib/storage-keys";
 import {
   createMessageRouter,
   handleTwidCookieChange,
@@ -24,6 +26,19 @@ function makeDeps(
     storage: fakeChrome.storage.local as unknown as typeof chrome.storage.local,
     tabs: fakeChrome.tabs as unknown as typeof chrome.tabs,
   };
+}
+
+function twidCookies(): typeof chrome.cookies {
+  return {
+    get: async ({ name }: { name: string }) =>
+      name === "twid" ? { value: "u%3D777" } : null,
+  } as unknown as typeof chrome.cookies;
+}
+
+function makeDepsWithTwid(
+  fakeChrome: ReturnType<typeof createFakeChrome>,
+): AuthDeps {
+  return { ...makeDeps(fakeChrome), cookies: twidCookies() };
 }
 
 function setupRouter(fakeChrome: ReturnType<typeof createFakeChrome>) {
@@ -654,6 +669,172 @@ describe("auth module", () => {
       const firstResult = await first;
       expect(firstResult.started).toBe(true);
       expect(firstResult.tabId).toBe(42);
+    });
+
+    it("interactive timeout surfaces the tab instead of closing it", async () => {
+      vi.useFakeTimers();
+      try {
+        const deps = makeDepsWithTwid(fakeChrome);
+        const updateSpy = vi.spyOn(fakeChrome.tabs, "update");
+        const removeSpy = vi.spyOn(fakeChrome.tabs, "remove");
+
+        const start = await startAuthCaptureSession(deps, {
+          interactive: true,
+          force: true,
+        });
+        expect(start.started).toBe(true);
+
+        await vi.advanceTimersByTimeAsync(15_000);
+
+        expect(updateSpy).toHaveBeenCalledWith(start.tabId, { active: true });
+        expect(removeSpy).not.toHaveBeenCalled();
+        expect(
+          getAuthDiagnosticLog().some(
+            (e) => e.reason === "auth_capture_failed:capture_timeout",
+          ),
+        ).toBe(true);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("silent timeout still closes the background tab", async () => {
+      vi.useFakeTimers();
+      try {
+        const deps = makeDepsWithTwid(fakeChrome);
+        const removeSpy = vi.spyOn(fakeChrome.tabs, "remove");
+
+        const start = await startAuthCaptureSession(deps, {
+          interactive: false,
+        });
+        expect(start.started).toBe(true);
+
+        await vi.advanceTimersByTimeAsync(15_000);
+
+        expect(removeSpy).toHaveBeenCalledWith(start.tabId);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("opens the capture tab in the foreground after a recent failure", async () => {
+      const deps = makeDepsWithTwid(fakeChrome);
+      const createSpy = vi.spyOn(fakeChrome.tabs, "create");
+
+      const first = await startAuthCaptureSession(deps, {
+        interactive: false,
+      });
+      expect(first.started).toBe(true);
+      // User closes the background tab → capture fails.
+      await fakeChrome.tabs.remove(first.tabId as number);
+      await Promise.resolve();
+
+      await startAuthCaptureSession(deps, { interactive: true, force: true });
+
+      expect(createSpy).toHaveBeenLastCalledWith({
+        url: "https://x.com/i/bookmarks",
+        active: true,
+      });
+    });
+  });
+
+  // ── Storage-write dedupe (onChanged → checkAuth storm) ──────
+
+  describe("storage write dedupe", () => {
+    it("setAuthState skips rewriting an unchanged state+reason", async () => {
+      const storage = fakeChrome.storage
+        .local as unknown as typeof chrome.storage.local;
+      await markAuthAuthenticated("detail_ok", storage);
+
+      const setSpy = vi.spyOn(fakeChrome.storage.local, "set");
+      await markAuthAuthenticated("detail_ok", storage);
+
+      const authStateWrites = setSpy.mock.calls.filter(
+        ([items]) =>
+          items !== null &&
+          typeof items === "object" &&
+          "totem_auth_state" in items,
+      );
+      expect(authStateWrites).toHaveLength(0);
+    });
+
+    it("setAuthState writes when the reason changes", async () => {
+      const storage = fakeChrome.storage
+        .local as unknown as typeof chrome.storage.local;
+      await markAuthAuthenticated("detail_ok", storage);
+
+      const setSpy = vi.spyOn(fakeChrome.storage.local, "set");
+      await markAuthAuthenticated("headers_trio", storage);
+
+      const authStateWrites = setSpy.mock.calls.filter(
+        ([items]) =>
+          items !== null &&
+          typeof items === "object" &&
+          "totem_auth_state" in items,
+      );
+      expect(authStateWrites).toHaveLength(1);
+    });
+
+    it("getSessionSnapshot does not rewrite an unchanged identity", async () => {
+      const storage = fakeChrome.storage
+        .local as unknown as typeof chrome.storage.local;
+      await storage.set({
+        totem_user_id: "777",
+        [CS_ACCOUNT_CONTEXT_ID]: "777",
+        totem_auth_headers: {
+          authorization: "Bearer token",
+          "x-csrf-token": "csrf",
+          cookie: "twid=u%3D777; ct0=csrf",
+        },
+      });
+
+      const setSpy = vi.spyOn(fakeChrome.storage.local, "set");
+      const snapshot = await getSessionSnapshot(storage, twidCookies());
+
+      expect(snapshot.sessionState).toBe("logged_in");
+      const identityWrites = setSpy.mock.calls.filter(
+        ([items]) =>
+          items !== null &&
+          typeof items === "object" &&
+          ("totem_user_id" in items || CS_ACCOUNT_CONTEXT_ID in items),
+      );
+      expect(identityWrites).toHaveLength(0);
+    });
+
+    it("getSessionSnapshot writes the identity when it changed", async () => {
+      const storage = fakeChrome.storage
+        .local as unknown as typeof chrome.storage.local;
+
+      await getSessionSnapshot(storage, twidCookies());
+
+      const stored = await storage.get([
+        "totem_user_id",
+        CS_ACCOUNT_CONTEXT_ID,
+      ]);
+      expect(stored.totem_user_id).toBe("777");
+      expect(stored[CS_ACCOUNT_CONTEXT_ID]).toBe("777");
+    });
+  });
+
+  // ── Diagnostics dedupe ──────────────────────────────────────
+
+  describe("diagnostics dedupe", () => {
+    it("collapses consecutive identical entries", async () => {
+      setupRouter(fakeChrome);
+      await fakeChrome.runtime.sendMessage({ type: "CHECK_AUTH" });
+      await fakeChrome.runtime.sendMessage({ type: "CHECK_AUTH" });
+      await fakeChrome.runtime.sendMessage({ type: "CHECK_AUTH" });
+
+      const log = getAuthDiagnosticLog();
+      for (let i = 1; i < log.length; i++) {
+        const prev = log[i - 1];
+        const curr = log[i];
+        const identical =
+          prev.stage === curr.stage &&
+          prev.status === curr.status &&
+          prev.reason === curr.reason;
+        expect(identical).toBe(false);
+      }
     });
   });
 

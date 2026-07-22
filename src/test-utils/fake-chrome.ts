@@ -180,6 +180,11 @@ export function createFakeChrome() {
       return { id: tabIdCounter++, url: props.url };
     },
 
+    async update(
+      _tabId: number,
+      _props: { active?: boolean; url?: string },
+    ): Promise<void> {},
+
     async remove(tabId: number): Promise<void> {
       for (const listener of tabRemoveListeners) {
         listener(tabId);

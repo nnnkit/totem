@@ -47,6 +47,10 @@ const AUTH_WEAK_NEGATIVE_WINDOW_MS = 10_000;
 const AUTH_WEAK_NEGATIVE_THRESHOLD = 2;
 const AUTH_CAPTURE_TIMEOUT_MS = 15_000;
 const AUTH_CAPTURE_SILENT_COOLDOWN_MS = 5_000;
+// After a failed capture, an interactive (button-click) retry opens x.com in
+// the foreground so the user can see what's wrong instead of waiting on a
+// hidden background tab.
+const AUTH_INTERACTIVE_FOREGROUND_AFTER_FAILURE_MS = 60_000;
 const X_AUTH_CAPTURE_URL = "https://x.com/i/bookmarks";
 
 const CACHE_SUMMARY_KEYS = [
@@ -65,6 +69,7 @@ let authTabCleanup: (() => void) | null = null;
 let authCapturePromise: Promise<AuthCaptureResult> | null = null;
 let authCaptureCancel: ((reason: string) => void) | null = null;
 let authCaptureLastCompletedAt = 0;
+let authCaptureLastFailedAt = 0;
 
 function runAuthTabCleanup() {
   if (authTabCleanup) {
@@ -83,6 +88,14 @@ function logDiagnostic(
   status: AuthDiagnosticStatus,
   reason?: string,
 ): void {
+  // Collapse runs of identical entries (the 500ms connecting poll otherwise
+  // fills the 50-entry buffer with snapshot_build spam in seconds, evicting
+  // the failure entries that explain what actually happened).
+  const last = diagnosticLog[diagnosticLog.length - 1];
+  if (last && last.stage === stage && last.status === status && last.reason === reason) {
+    last.timestamp = Date.now();
+    return;
+  }
   diagnosticLog.push({ stage, status, timestamp: Date.now(), reason });
   if (diagnosticLog.length > MAX_DIAGNOSTIC_ENTRIES) {
     diagnosticLog.splice(0, diagnosticLog.length - MAX_DIAGNOSTIC_ENTRIES);
@@ -159,6 +172,23 @@ async function setAuthState(
   const now = Date.now();
   const safeReason =
     typeof reason === "string" && reason ? reason.slice(0, 120) : "";
+  if (!options.clearAuth) {
+    // Skip no-op writes: this runs on every authed API call and every x.com
+    // GraphQL request, and each write re-fires storage.onChanged → checkAuth
+    // in every open Totem tab.
+    const current = await storage.get([
+      "totem_auth_state",
+      "totem_auth_state_reason",
+    ]);
+    if (
+      current.totem_auth_state === state &&
+      (typeof current.totem_auth_state_reason === "string"
+        ? current.totem_auth_state_reason
+        : "") === safeReason
+    ) {
+      return;
+    }
+  }
   const updates: Record<string, unknown> = {
     totem_auth_state: state,
     totem_auth_state_at: now,
@@ -259,12 +289,18 @@ export async function getSessionSnapshot(
 
   if (effectiveUserId) {
     userId = effectiveUserId;
-    storage
-      .set({
-        totem_user_id: effectiveUserId,
-        [CS_ACCOUNT_CONTEXT_ID]: effectiveUserId,
-      })
-      .catch(() => {});
+    // Only write on change — an unconditional set() re-fires storage.onChanged
+    // and re-triggers checkAuth in every open Totem tab on every snapshot.
+    const identityUpdates: Record<string, unknown> = {};
+    if (stored.totem_user_id !== effectiveUserId) {
+      identityUpdates.totem_user_id = effectiveUserId;
+    }
+    if (stored[CS_ACCOUNT_CONTEXT_ID] !== effectiveUserId) {
+      identityUpdates[CS_ACCOUNT_CONTEXT_ID] = effectiveUserId;
+    }
+    if (Object.keys(identityUpdates).length > 0) {
+      storage.set(identityUpdates).catch(() => {});
+    }
   } else if (liveTwidUserId === null && userId) {
     userId = null;
   }
@@ -575,6 +611,16 @@ export async function startAuthCaptureSession(
     };
   }
 
+  // A silent/background capture assumes x.com will produce authenticated
+  // GraphQL traffic on its own. Once that assumption has failed recently,
+  // hiding the tab from the user just looks like the login button does
+  // nothing — open it in the foreground instead.
+  const openInForeground =
+    interactive &&
+    (!liveUserId ||
+      now - authCaptureLastFailedAt <
+        AUTH_INTERACTIVE_FOREGROUND_AFTER_FAILURE_MS);
+
   let resolveCapture: (result: AuthCaptureResult) => void = () => {};
   authCapturePromise = new Promise<AuthCaptureResult>((resolve) => {
     resolveCapture = resolve;
@@ -584,7 +630,7 @@ export async function startAuthCaptureSession(
   try {
     tab = await tabs.create({
       url: X_AUTH_CAPTURE_URL,
-      active: interactive && !liveUserId,
+      active: openInForeground,
     });
   } catch {
     authCapturePromise = null;
@@ -632,6 +678,15 @@ export async function startAuthCaptureSession(
       settled = true;
       cleanup(closeTab);
       authCaptureLastCompletedAt = Date.now();
+      if (result.ok) {
+        authCaptureLastFailedAt = 0;
+      } else {
+        authCaptureLastFailedAt = Date.now();
+        if (result.reason === "capture_timeout" || result.reason === "tab_closed") {
+          logDiagnostic("capture", "error", `auth_capture_failed:${result.reason}`);
+          persistDiagnostics(storage).catch(() => {});
+        }
+      }
       authCapturePromise = null;
       resolveCapture(result);
     };
@@ -691,6 +746,11 @@ export async function startAuthCaptureSession(
     };
 
     timeout = setTimeout(() => {
+      // Interactive timeout: surface the tab (x.com login wall, rate limit,
+      // whatever is actually wrong) instead of silently closing it.
+      if (interactive && safeTabId !== null) {
+        tabs.update(safeTabId, { active: true }).catch(() => {});
+      }
       settle(
         {
           ok: false,
@@ -699,7 +759,7 @@ export async function startAuthCaptureSession(
           reason: "capture_timeout",
           liveUserId: liveUserId ?? null,
         },
-        true,
+        !interactive,
       );
     }, timeoutMs);
   }
@@ -921,6 +981,7 @@ export function _resetForTesting(): void {
   authCapturePromise = null;
   authCaptureCancel = null;
   authCaptureLastCompletedAt = 0;
+  authCaptureLastFailedAt = 0;
   runAuthTabCleanup();
   diagnosticLog.length = 0;
 }
