@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.7] - 2026-07-22
+
+- fix: infinate loop
+- fix: performace
+- fix(site): restore public/demo-data.json as compat shim for stale demo-page fetch loops
+- fix: stop demo page infinite refetch of demo-data.json, bundle it instead
+- udpate: images
+
 ## [1.2.6] - 2026-06-26
 
 - update: promotion images
