@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Twitter & X Bookmarks on New Tab — Totem",
   "short_name": "Totem",
-  "version": "1.2.7",
+  "version": "1.2.8",
   "description": "Your Twitter & X bookmarks, waiting on every new tab — finally read what you saved. Search, highlight, export. Local-first.",
   "homepage_url": "https://usetotem.xyz/",
   "offline_enabled": true,

@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.8] - 2026-07-27
+
+- fix(export): scope highlights export to annotated bookmarks and route retry by mode
+- feat(export): Obsidian-compatible highlights & notes export
+
 ## [1.2.7] - 2026-07-22
 
 - fix: infinate loop
