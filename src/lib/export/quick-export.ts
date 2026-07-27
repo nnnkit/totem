@@ -542,13 +542,18 @@ async function* bookmarksForYear(
   }
 }
 
-async function collectBookmarkMarkdownFiles(): Promise<{ files: BookmarkMarkdownFile[]; years: string[] }> {
+async function collectBookmarkMarkdownFiles(
+  tweetIdFilter?: Set<string>,
+): Promise<{ files: BookmarkMarkdownFile[]; years: string[] }> {
   const files: BookmarkMarkdownFile[] = [];
   const years = new Set<string>();
   const usedPaths = new Set<string>();
   const bookmarkSnapshots: Bookmark[] = [];
 
   for await (const bookmark of iterateBookmarks()) {
+    // Filtering on the snapshot's tweetId avoids per-bookmark detail reads for
+    // the whole library when only annotated bookmarks are wanted.
+    if (tweetIdFilter && !tweetIdFilter.has(bookmark.tweetId)) continue;
     bookmarkSnapshots.push(bookmark);
   }
 
@@ -960,10 +965,10 @@ export async function runHighlightsExport(
   const now = exportDate;
 
   try {
-    const [bookmarkFilesResult, highlightsByTweetId] = await Promise.all([
-      collectBookmarkMarkdownFiles(),
-      collectHighlightsByTweetId(),
-    ]);
+    const highlightsByTweetId = await collectHighlightsByTweetId();
+    const bookmarkFilesResult = await collectBookmarkMarkdownFiles(
+      new Set(highlightsByTweetId.keys()),
+    );
 
     const annotated = bookmarkFilesResult.files.filter(
       (file) => (highlightsByTweetId.get(file.bookmark.tweetId)?.length ?? 0) > 0,

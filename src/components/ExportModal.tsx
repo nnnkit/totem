@@ -161,7 +161,7 @@ export function ExportModal({
       ) : quickState.phase === "error" ? (
         <ErrorView
           message={quickState.message}
-          onRetry={handleQuickExport}
+          onRetry={handleStart}
           onClose={handleClose}
         />
       ) : isFullExportActive ? (
