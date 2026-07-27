@@ -160,8 +160,9 @@ describe("article render golden", () => {
       "---
       title: "The Comprehensive Title"
       source: https://x.com/someone/status/123
+      author: "[[Jane Doe]]"
+      handle: "@janedoe"
       exported: "June 24, 2026"
-      author: "Jane Doe (@janedoe)"
       ---
       # The Comprehensive Title
 

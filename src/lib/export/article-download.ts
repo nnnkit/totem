@@ -1,4 +1,4 @@
-import type { ArticleContent } from "../../types";
+import type { ArticleContent, Highlight } from "../../types";
 import {
   articleToAgentMarkdown,
   articleToMarkdown,
@@ -26,11 +26,13 @@ export function getArticleMarkdownString(
   options?: {
     authorProfileImageUrl?: string;
     metadata?: ArticleMarkdownMetadata;
+    highlights?: Highlight[];
   },
 ): string {
   return articleToMarkdown(article, {
     authorProfileImageUrl: options?.authorProfileImageUrl,
     metadata: options?.metadata,
+    highlights: options?.highlights,
   });
 }
 
@@ -64,6 +66,7 @@ export async function copyArticleMarkdownToClipboard(
   options?: {
     authorProfileImageUrl?: string;
     metadata?: ArticleMarkdownMetadata;
+    highlights?: Highlight[];
   },
 ): Promise<boolean> {
   return copyTextToClipboard(getArticleMarkdownString(article, options));
@@ -97,6 +100,7 @@ export function downloadArticleMarkdown(
   options?: {
     authorProfileImageUrl?: string;
     metadata?: ArticleMarkdownMetadata;
+    highlights?: Highlight[];
     filename?: string;
   },
 ): void {

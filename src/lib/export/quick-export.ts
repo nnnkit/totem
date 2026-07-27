@@ -11,6 +11,12 @@ import { getArticleMarkdownString } from "./article-download";
 import { slugifyArticleBasename } from "./article-filename";
 import { deriveExportTitle, resolveReaderExportArticle } from "./tweet-export";
 import {
+  buildHighlightsDigest,
+  countHighlightsAndNotes,
+  type HighlightsDigestSource,
+} from "./highlights-markdown";
+import {
+  getAllHighlights,
   getBookmarkById,
   getHighlightById,
   getReadingProgress,
@@ -144,29 +150,23 @@ function bookmarkMarkdownTitle(bookmark: Bookmark): string {
   );
 }
 
+// Filenames are keyed on tweetId (unique per bookmark) so re-exports overwrite
+// the same file in a vault instead of piling up duplicates. The slug is only a
+// human-readable prefix; the tweetId is what makes the path stable.
 function makeBookmarkMarkdownPath(
   bookmark: Bookmark,
   title: string,
-  index: number,
-  ordinalWidth: number,
   usedPaths: Set<string>,
 ): string {
   const titleSlug = slugifyArticleBasename({
     title,
     plainText: stripCardUrlsFromTweetText(bookmark.text, bookmark.urls),
   });
-  const ordinal = String(index + 1).padStart(ordinalWidth, "0");
-  const base = `${ordinal}-${titleSlug}`;
+  const base = `${titleSlug}-${bookmark.tweetId}`;
   let path = `bookmarks/${base}.md`;
-  if (!usedPaths.has(path)) {
-    usedPaths.add(path);
-    return path;
-  }
-
-  path = `bookmarks/${base}-${bookmark.tweetId}.md`;
   let suffix = 2;
   while (usedPaths.has(path)) {
-    path = `bookmarks/${base}-${bookmark.tweetId}-${suffix}.md`;
+    path = `bookmarks/${base}-${suffix}.md`;
     suffix++;
   }
   usedPaths.add(path);
@@ -189,10 +189,18 @@ function getBookmarkMarkdownMetadata(
   return { exportBookmark, sourceUrl, title };
 }
 
+function bookmarkTags(handle: string): string[] {
+  const tags = ["totem/bookmark"];
+  const clean = handle.replace(/^@/, "").trim();
+  if (clean) tags.push(`twitter/${clean}`);
+  return tags;
+}
+
 function buildBookmarkMarkdown(
   bookmark: Bookmark,
   detail: TweetDetailCache | null,
   exportedAtLabel: string,
+  highlights: Highlight[],
 ): { body: string; title: string; sourceUrl: string; exportBookmark: Bookmark } {
   const metadata = getBookmarkMarkdownMetadata(bookmark, detail);
   const article = resolveReaderExportArticle(
@@ -200,6 +208,7 @@ function buildBookmarkMarkdown(
     detail?.thread ?? [],
     { includeThreadInExport: true },
   );
+  const counts = countHighlightsAndNotes(highlights);
   const body = getArticleMarkdownString(article, {
     authorProfileImageUrl: metadata.exportBookmark.author.profileImageUrl,
     metadata: {
@@ -207,7 +216,12 @@ function buildBookmarkMarkdown(
       exportedAtLabel,
       authorName: metadata.exportBookmark.author.name,
       authorHandle: metadata.exportBookmark.author.screenName,
+      savedDate: dateFromMs(bookmarkSavedAtMs(metadata.exportBookmark)),
+      tags: bookmarkTags(metadata.exportBookmark.author.screenName),
+      highlightCount: counts.highlights,
+      noteCount: counts.notes,
     },
+    highlights,
   });
   return { ...metadata, body };
 }
@@ -235,8 +249,10 @@ Generated ${today} from @${handle}.
 | File | Purpose |
 |------|---------|
 | bookmarks.csv | Opens in Excel, Sheets, Notion — one row per bookmark |
+| highlights.csv | One row per highlight and note — for Notion or spreadsheets |
+| highlights.md | Every highlight and note in one file, grouped by source |
 | readme.md | Index of every exported bookmark |
-| bookmarks/*.md | One Markdown file per bookmark, rendered like the reader's Copy Markdown export |
+| bookmarks/*.md | One Markdown file per bookmark (Obsidian-ready), with your highlights and notes appended |
 | data/*.jsonl | Canonical data — used for re-import into Totem |
 | manifest.json | Export metadata, checksums, counts |
 
@@ -434,6 +450,78 @@ async function collectHighlightIds(): Promise<string[]> {
   return ids;
 }
 
+async function collectHighlightsByTweetId(): Promise<Map<string, Highlight[]>> {
+  const all = await getAllHighlights();
+  const byTweetId = new Map<string, Highlight[]>();
+  for (const highlight of all) {
+    const list = byTweetId.get(highlight.tweetId);
+    if (list) list.push(highlight);
+    else byTweetId.set(highlight.tweetId, [highlight]);
+  }
+  return byTweetId;
+}
+
+const HIGHLIGHT_CSV_COLUMNS = [
+  "tweet_id",
+  "source_url",
+  "author_handle",
+  "author_name",
+  "type",
+  "color",
+  "selected_text",
+  "note",
+  "created_at",
+] as const;
+
+function highlightType(highlight: Highlight): string {
+  if (highlight.type) return highlight.type;
+  return highlight.selectedText?.trim() ? "highlight" : "note";
+}
+
+async function* highlightCsvLines(
+  files: BookmarkMarkdownFile[],
+  highlightsByTweetId: Map<string, Highlight[]>,
+): AsyncIterable<string> {
+  yield BOM + csvRow([...HIGHLIGHT_CSV_COLUMNS]);
+  for (const file of files) {
+    const highlights = highlightsByTweetId.get(file.bookmark.tweetId);
+    if (!highlights || highlights.length === 0) continue;
+    const sorted = [...highlights].sort((a, b) => a.createdAt - b.createdAt);
+    for (const highlight of sorted) {
+      yield csvRow([
+        highlight.tweetId,
+        file.sourceUrl,
+        file.bookmark.author.screenName,
+        file.bookmark.author.name,
+        highlightType(highlight),
+        highlight.color,
+        highlight.selectedText ?? "",
+        highlight.note ?? "",
+        isoFromMs(highlight.createdAt),
+      ]);
+    }
+  }
+}
+
+function buildHighlightDigestSources(
+  files: BookmarkMarkdownFile[],
+  highlightsByTweetId: Map<string, Highlight[]>,
+): HighlightsDigestSource[] {
+  const sources: HighlightsDigestSource[] = [];
+  for (const file of files) {
+    const highlights = highlightsByTweetId.get(file.bookmark.tweetId);
+    if (!highlights || highlights.length === 0) continue;
+    sources.push({
+      title: file.title,
+      sourceUrl: file.sourceUrl,
+      authorName: file.bookmark.author.name,
+      authorHandle: file.bookmark.author.screenName,
+      highlights,
+    });
+  }
+  return sources;
+}
+
 async function collectReadingProgressIds(): Promise<string[]> {
   const ids: string[] = [];
   for await (const progress of iterateReadingProgress()) {
@@ -464,9 +552,6 @@ async function collectBookmarkMarkdownFiles(): Promise<{ files: BookmarkMarkdown
     bookmarkSnapshots.push(bookmark);
   }
 
-  const ordinalWidth = Math.max(2, String(bookmarkSnapshots.length).length);
-  let index = 0;
-
   for (const snapshot of bookmarkSnapshots) {
     const bookmark = await getBookmarkById(snapshot.id);
     if (!bookmark) continue; // row removed between snapshot and read; skip it
@@ -476,8 +561,6 @@ async function collectBookmarkMarkdownFiles(): Promise<{ files: BookmarkMarkdown
     const path = makeBookmarkMarkdownPath(
       rendered.exportBookmark,
       rendered.title,
-      index,
-      ordinalWidth,
       usedPaths,
     );
     years.add(year);
@@ -489,7 +572,6 @@ async function collectBookmarkMarkdownFiles(): Promise<{ files: BookmarkMarkdown
       title: rendered.title,
       sourceUrl: rendered.sourceUrl,
     });
-    index++;
   }
 
   return { files, years: Array.from(years).toSorted() };
@@ -570,14 +652,25 @@ export async function runQuickExport(
   const exportedAtLabel = exportDate.toLocaleString();
 
   try {
-    const [bookmarkFilesResult, detailSummary, highlightIds, readingProgressIds] = await Promise.all([
+    const [
+      bookmarkFilesResult,
+      detailSummary,
+      highlightIds,
+      highlightsByTweetId,
+      readingProgressIds,
+    ] = await Promise.all([
       collectBookmarkMarkdownFiles(),
       collectDetailSummary(),
       collectHighlightIds(),
+      collectHighlightsByTweetId(),
       collectReadingProgressIds(),
     ]);
     const bookmarkMarkdownFiles = bookmarkFilesResult.files;
     const bookmarkYears = bookmarkFilesResult.years;
+    const highlightDigestSources = buildHighlightDigestSources(
+      bookmarkMarkdownFiles,
+      highlightsByTweetId,
+    );
     const encoder = new TextEncoder();
     const checksums: Record<string, string> = {};
     const shardNames = bookmarkYears.map((year) => `data/bookmarks-${year}.jsonl`);
@@ -616,6 +709,28 @@ export async function runQuickExport(
       );
       yield csv.entry;
       await csv.done;
+
+      const highlightsCsv = hashingTextEntry(
+        "highlights.csv",
+        highlightCsvLines(bookmarkMarkdownFiles, highlightsByTweetId),
+        checksums,
+        now,
+      );
+      yield highlightsCsv.entry;
+      await highlightsCsv.done;
+
+      if (highlightDigestSources.length > 0) {
+        const highlightsDigest = hashingTextEntry(
+          "highlights.md",
+          singleTextLine(() =>
+            buildHighlightsDigest(highlightDigestSources, today),
+          ),
+          checksums,
+          now,
+        );
+        yield highlightsDigest.entry;
+        await highlightsDigest.done;
+      }
 
       for (const year of bookmarkYears) {
         const name = `data/bookmarks-${year}.jsonl`;
@@ -689,6 +804,7 @@ export async function runQuickExport(
           file.bookmark,
           detail,
           exportedAtLabel,
+          highlightsByTweetId.get(file.bookmark.tweetId) ?? [],
         ).body;
         const markdown = hashingTextEntry(
           file.path,
@@ -737,6 +853,9 @@ export async function runQuickExport(
         },
         derived: {
           csv: "bookmarks.csv",
+          highlights_csv: "highlights.csv",
+          highlights_digest:
+            highlightDigestSources.length > 0 ? "highlights.md" : null,
           markdown_index: "readme.md",
           markdown_files: writtenMarkdownPaths,
         },
@@ -766,6 +885,145 @@ export async function runQuickExport(
       todayQueueSnapshotCount: queueSnapshotCounter.n,
       queueMetadataCount: queueMetadataCounter.n,
       todayQueueExposureCount: queueExposureCounter.n,
+    };
+  } catch (error) {
+    if (target.kind === "fsa") {
+      await target.dest.abort().catch(() => {});
+    }
+    throw error;
+  }
+}
+
+export interface HighlightsExportResult {
+  annotatedBookmarkCount: number;
+  highlightCount: number;
+  noteCount: number;
+}
+
+function plainTextEntry(
+  name: string,
+  text: string,
+  lastModified: Date,
+): StreamZipEntry {
+  return {
+    name,
+    input: textStream(singleTextLine(() => text)),
+    lastModified,
+  };
+}
+
+function buildHighlightsReadme(
+  handle: string,
+  files: BookmarkMarkdownFile[],
+  generatedAtMs: number,
+): string {
+  const count = files.length.toLocaleString("en-US");
+  const today = dateFromMs(generatedAtMs);
+  const links = files
+    .map(
+      (file) =>
+        `- [${readmeLinkText(file.title)}](${file.path}) · [Open on X](${file.sourceUrl})`,
+    )
+    .join("\n");
+
+  return `# Totem highlights & notes — ${count} sources
+
+Generated ${today} from @${handle}.
+
+## What's inside
+
+| File | Purpose |
+|------|---------|
+| highlights.md | Every highlight and note in one file, grouped by source |
+| highlights.csv | One row per highlight and note — for Notion or spreadsheets |
+| bookmarks/*.md | One Markdown file per annotated bookmark (Obsidian-ready), with its highlights and notes |
+
+Only bookmarks you highlighted or added notes to are included. Drop the
+\`bookmarks/\` folder into an Obsidian vault, or import \`highlights.csv\` into
+Notion.
+
+## Sources
+
+${links || "No highlights or notes yet."}
+`;
+}
+
+export async function runHighlightsExport(
+  account: ExportAccountInfo,
+): Promise<HighlightsExportResult> {
+  const today = dateFromMs(Date.now());
+  const filename = `totem-highlights-${today}.zip`;
+  const target = await openWritable(filename);
+  const exportDate = new Date();
+  const generatedAtMs = exportDate.getTime();
+  const exportedAtLabel = exportDate.toLocaleString();
+  const now = exportDate;
+
+  try {
+    const [bookmarkFilesResult, highlightsByTweetId] = await Promise.all([
+      collectBookmarkMarkdownFiles(),
+      collectHighlightsByTweetId(),
+    ]);
+
+    const annotated = bookmarkFilesResult.files.filter(
+      (file) => (highlightsByTweetId.get(file.bookmark.tweetId)?.length ?? 0) > 0,
+    );
+    const digestSources = buildHighlightDigestSources(
+      annotated,
+      highlightsByTweetId,
+    );
+
+    let highlightCount = 0;
+    let noteCount = 0;
+    for (const file of annotated) {
+      const counts = countHighlightsAndNotes(
+        highlightsByTweetId.get(file.bookmark.tweetId) ?? [],
+      );
+      highlightCount += counts.highlights;
+      noteCount += counts.notes;
+    }
+
+    async function* entries(): AsyncIterable<StreamZipEntry> {
+      yield plainTextEntry(
+        "readme.md",
+        buildHighlightsReadme(account.handle, annotated, generatedAtMs),
+        now,
+      );
+      yield plainTextEntry(
+        "highlights.md",
+        buildHighlightsDigest(digestSources, today),
+        now,
+      );
+      yield {
+        name: "highlights.csv",
+        input: textStream(highlightCsvLines(annotated, highlightsByTweetId)),
+        lastModified: now,
+      };
+
+      for (const file of annotated) {
+        const detail = await getTweetDetailCache(file.bookmark.tweetId);
+        const body = buildBookmarkMarkdown(
+          file.bookmark,
+          detail,
+          exportedAtLabel,
+          highlightsByTweetId.get(file.bookmark.tweetId) ?? [],
+        ).body;
+        yield plainTextEntry(file.path, body, now);
+      }
+    }
+
+    const zipStream = makeZipEntriesStream(entries());
+    if (target.kind === "fsa") {
+      await zipStream.pipeTo(target.dest);
+    } else {
+      const blob = await new Response(zipStream).blob();
+      downloadBlob(blob, filename);
+    }
+
+    return {
+      annotatedBookmarkCount: annotated.length,
+      highlightCount,
+      noteCount,
     };
   } catch (error) {
     if (target.kind === "fsa") {

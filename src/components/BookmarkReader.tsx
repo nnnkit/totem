@@ -34,6 +34,9 @@ import {
   printArticleAsPdf,
 } from "../lib/export/article-download";
 import { resolveReaderExportArticle } from "../lib/export/tweet-export";
+import { countHighlightsAndNotes } from "../lib/export/highlights-markdown";
+import { getHighlightsByTweetId } from "../db";
+import { sortIndexToTimestamp } from "../lib/time";
 
 interface Props {
   bookmark: Bookmark;
@@ -296,31 +299,58 @@ function useBookmarkReaderModel({
     [displayBookmark, detailState.thread],
   );
 
-  const exportMetadata = useMemo(
-    () => ({
-      postUrl: `https://x.com/${displayBookmark.author.screenName}/status/${displayBookmark.tweetId}`,
+  const exportMetadata = useMemo(() => {
+    const handle = displayBookmark.author.screenName;
+    let savedDate: string | undefined;
+    try {
+      const savedAt = sortIndexToTimestamp(displayBookmark.sortIndex);
+      if (Number.isFinite(savedAt)) {
+        savedDate = new Date(savedAt).toISOString().slice(0, 10);
+      }
+    } catch {
+      savedDate = undefined;
+    }
+    const tags = ["totem/bookmark"];
+    if (handle) tags.push(`twitter/${handle}`);
+    return {
+      postUrl: `https://x.com/${handle}/status/${displayBookmark.tweetId}`,
       authorName: displayBookmark.author.name,
-      authorHandle: displayBookmark.author.screenName,
-    }),
-    [
-      displayBookmark.author.name,
-      displayBookmark.author.screenName,
-      displayBookmark.tweetId,
-    ],
+      authorHandle: handle,
+      savedDate,
+      tags,
+    };
+  }, [
+    displayBookmark.author.name,
+    displayBookmark.author.screenName,
+    displayBookmark.sortIndex,
+    displayBookmark.tweetId,
+  ]);
+
+  const buildMarkdownMetadata = useCallback(
+    (highlights: Highlight[]) => {
+      const counts = countHighlightsAndNotes(highlights);
+      return {
+        ...exportMetadata,
+        exportedAtLabel: new Date().toLocaleString(),
+        highlightCount: counts.highlights,
+        noteCount: counts.notes,
+      };
+    },
+    [exportMetadata],
   );
 
   const handleCopyArticleMarkdown = useCallback(async () => {
+    const highlights = await getHighlightsByTweetId(displayBookmark.tweetId);
     return copyArticleMarkdownToClipboard(exportArticle, {
       authorProfileImageUrl: displayBookmark.author.profileImageUrl,
-      metadata: {
-        ...exportMetadata,
-        exportedAtLabel: new Date().toLocaleString(),
-      },
+      metadata: buildMarkdownMetadata(highlights),
+      highlights,
     });
   }, [
     exportArticle,
     displayBookmark.author.profileImageUrl,
-    exportMetadata,
+    displayBookmark.tweetId,
+    buildMarkdownMetadata,
   ]);
 
   const handleCopyArticleForAgent = useCallback(async () => {
@@ -334,25 +364,27 @@ function useBookmarkReaderModel({
     exportMetadata,
   ]);
 
-  const handleDownloadArticleMarkdown = useCallback(() => {
+  const handleDownloadArticleMarkdown = useCallback(async () => {
+    const highlights = await getHighlightsByTweetId(displayBookmark.tweetId);
     downloadArticleMarkdown(exportArticle, {
       authorProfileImageUrl: displayBookmark.author.profileImageUrl,
-      metadata: {
-        ...exportMetadata,
-        exportedAtLabel: new Date().toLocaleString(),
-      },
+      metadata: buildMarkdownMetadata(highlights),
+      highlights,
     });
   }, [
     exportArticle,
     displayBookmark.author.profileImageUrl,
-    exportMetadata,
+    displayBookmark.tweetId,
+    buildMarkdownMetadata,
   ]);
 
   const handlePrintArticlePdf = useCallback(() => {
     printArticleAsPdf(exportArticle, {
       authorProfileImageUrl: displayBookmark.author.profileImageUrl,
       metadata: {
-        ...exportMetadata,
+        postUrl: exportMetadata.postUrl,
+        authorName: exportMetadata.authorName,
+        authorHandle: exportMetadata.authorHandle,
         exportedAtLabel: new Date().toLocaleString(),
       },
     });

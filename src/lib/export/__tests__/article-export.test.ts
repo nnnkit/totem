@@ -113,8 +113,8 @@ describe("articleToMarkdown", () => {
     expect(md).toContain("---");
     expect(md).toContain("source: https://x.com/u/status/1");
     expect(md).toContain("exported:");
-    expect(md).toContain("author:");
-    expect(md).toContain("A (@b)");
+    expect(md).toContain('author: "[[A]]"');
+    expect(md).toContain('handle: "@b"');
   });
 });
 
@@ -619,7 +619,8 @@ describe("articleToMarkdown edge cases", () => {
         },
       },
     );
-    expect(md).toContain('author: "Name [bracketed] (@handle)"');
+    expect(md).toContain('author: "[[Name bracketed]]"');
+    expect(md).toContain('handle: "@handle"');
     expect(md).toContain('exported: "2026-04-16, 11:30"');
   });
 
@@ -636,7 +637,8 @@ describe("articleToMarkdown edge cases", () => {
       },
     );
     expect(md).toContain('title: "Line1 Line2"');
-    expect(md).toContain('author: "Crash Carriage (@handle)"');
+    expect(md).toContain('author: "[[Crash Carriage]]"');
+    expect(md).toContain('handle: "@handle"');
     expect(md).toContain('exported: "first second"');
     expect(md).not.toMatch(/title: "[^"]*\n/);
     expect(md).not.toMatch(/exported: "[^"]*\n/);

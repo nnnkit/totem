@@ -82,7 +82,11 @@ function compactMetadata(metadata: Record<string, string>): string {
     lines.push(`Source: ${metadata.source}`);
   }
   if (metadata.author) {
-    lines.push(`Author: ${metadata.author}`);
+    // Frontmatter stores the author as an Obsidian wikilink (`[[Name]]`) with the
+    // handle on a separate line. Agents want plain "Name (@handle)".
+    const name = metadata.author.replace(/^\[\[/, "").replace(/\]\]$/, "");
+    const handle = metadata.handle ? ` (${metadata.handle})` : "";
+    lines.push(`Author: ${name}${handle}`);
   }
   return lines.join("\n");
 }

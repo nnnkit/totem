@@ -1,12 +1,15 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { ExportIcon } from "@phosphor-icons/react";
 import { Modal } from "./ui/Modal";
 import { Button } from "./ui/Button";
 import {
   runQuickExport,
+  runHighlightsExport,
   type ExportAccountInfo,
   type QuickExportResult,
+  type HighlightsExportResult,
 } from "../lib/export/quick-export";
+import { getAllHighlights } from "../db";
 import {
   estimateHydrationDurationMs,
   useHydrationStore,
@@ -25,12 +28,13 @@ interface Props {
   onLogin?: () => void;
 }
 
-type ExportMode = "quick" | "full";
+type ExportMode = "quick" | "full" | "highlights";
 
 type QuickExportState =
   | { phase: "idle" }
   | { phase: "exporting" }
   | { phase: "done"; result: QuickExportResult }
+  | { phase: "highlights-done"; result: HighlightsExportResult }
   | { phase: "error"; message: string };
 
 export function ExportModal({
@@ -43,6 +47,25 @@ export function ExportModal({
 }: Props) {
   const [quickState, setQuickState] = useState<QuickExportState>({ phase: "idle" });
   const [mode, setMode] = useState<ExportMode>("quick");
+  const [annotatedCount, setAnnotatedCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const highlights = await getAllHighlights();
+        if (cancelled) return;
+        const tweetIds = new Set(highlights.map((h) => h.tweetId));
+        setAnnotatedCount(tweetIds.size);
+      } catch {
+        if (!cancelled) setAnnotatedCount(0);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
 
   const hydrationStatus = useHydrationStore((s) => s.status);
   const hydrationTotal = useHydrationStore((s) => s.total);
@@ -75,6 +98,24 @@ export function ExportModal({
     }
   }, [account]);
 
+  const handleHighlightsExport = useCallback(async () => {
+    if (!account) return;
+    setQuickState({ phase: "exporting" });
+    try {
+      const result = await runHighlightsExport(account);
+      setQuickState({ phase: "highlights-done", result });
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        setQuickState({ phase: "idle" });
+        return;
+      }
+      setQuickState({
+        phase: "error",
+        message: error instanceof Error ? error.message : "Export failed",
+      });
+    }
+  }, [account]);
+
   const handleStartFullExport = useCallback(() => {
     getHydrationStore().getState().start();
   }, []);
@@ -82,6 +123,8 @@ export function ExportModal({
   const handleStart = () => {
     if (mode === "quick") {
       handleQuickExport();
+    } else if (mode === "highlights") {
+      handleHighlightsExport();
     } else {
       handleStartFullExport();
     }
@@ -113,6 +156,8 @@ export function ExportModal({
     >
       {quickState.phase === "done" ? (
         <DoneView result={quickState.result} onClose={handleClose} />
+      ) : quickState.phase === "highlights-done" ? (
+        <HighlightsDoneView result={quickState.result} onClose={handleClose} />
       ) : quickState.phase === "error" ? (
         <ErrorView
           message={quickState.message}
@@ -151,10 +196,15 @@ export function ExportModal({
           detailSummary={detailSummary}
           bookmarkCount={bookmarkCount}
           detailCount={detailCount}
+          annotatedCount={annotatedCount}
           mode={mode}
           onModeChange={setMode}
           exporting={quickState.phase === "exporting"}
-          canExport={bookmarkCount > 0 && account !== null}
+          canExport={
+            (mode === "highlights"
+              ? (annotatedCount ?? 0) > 0
+              : bookmarkCount > 0) && account !== null
+          }
           onStart={handleStart}
           onCancel={handleClose}
         />
@@ -168,6 +218,7 @@ function IdleView({
   detailSummary,
   bookmarkCount,
   detailCount,
+  annotatedCount,
   mode,
   onModeChange,
   exporting,
@@ -179,6 +230,7 @@ function IdleView({
   detailSummary: string;
   bookmarkCount: number;
   detailCount: number;
+  annotatedCount: number | null;
   mode: ExportMode;
   onModeChange: (mode: ExportMode) => void;
   exporting: boolean;
@@ -188,7 +240,12 @@ function IdleView({
 }) {
   const needingHydration = Math.max(0, bookmarkCount - detailCount);
   const estimateMs = estimateHydrationDurationMs(needingHydration);
-  const primaryLabel = mode === "quick" ? "Download ZIP" : "Start full export";
+  const primaryLabel =
+    mode === "quick"
+      ? "Download ZIP"
+      : mode === "highlights"
+        ? "Download highlights"
+        : "Start full export";
 
   return (
     <>
@@ -286,6 +343,56 @@ function IdleView({
             </div>
           </div>
         </label>
+
+        <label
+          htmlFor="export-mode-highlights"
+          aria-label="Highlights and notes export"
+          className={`flex rounded border p-4 transition-colors ${
+            (annotatedCount ?? 0) === 0
+              ? "cursor-not-allowed border-border bg-surface opacity-60"
+              : mode === "highlights"
+                ? "cursor-pointer border-accent/30 bg-accent-surface/50"
+                : "cursor-pointer border-border bg-surface hover:bg-surface-hover"
+          }`}
+        >
+          <input
+            type="radio"
+            id="export-mode-highlights"
+            name="export-mode"
+            value="highlights"
+            checked={mode === "highlights"}
+            disabled={(annotatedCount ?? 0) === 0}
+            onChange={() => onModeChange("highlights")}
+            className="sr-only"
+          />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-foreground">
+                Highlights &amp; notes
+              </span>
+            </div>
+            <p className="text-xs text-muted mt-1 leading-snug">
+              {annotatedCount === null ? (
+                <>Checking your highlights…</>
+              ) : annotatedCount === 0 ? (
+                <>No highlights or notes yet. Highlight while reading to use this.</>
+              ) : (
+                <>
+                  Just the {annotatedCount.toLocaleString("en-US")} bookmark
+                  {annotatedCount === 1 ? "" : "s"} you highlighted — Obsidian-ready
+                  Markdown plus a CSV.
+                </>
+              )}
+            </p>
+          </div>
+          <div className="flex items-center ml-3">
+            <div className={`size-4 rounded-full border-2 flex items-center justify-center ${
+              mode === "highlights" ? "border-accent" : "border-muted/40"
+            }`}>
+              {mode === "highlights" && <div className="size-2 rounded-full bg-accent" />}
+            </div>
+          </div>
+        </label>
       </div>
 
       <p className="text-xxs text-muted/60 leading-snug mb-4">
@@ -301,7 +408,7 @@ function IdleView({
           onClick={onStart}
           disabled={!canExport || exporting}
         >
-          {mode === "quick" && <ExportIcon className="size-4" />}
+          {mode !== "full" && <ExportIcon className="size-4" />}
           {exporting ? "Exporting…" : primaryLabel}
         </Button>
       </div>
@@ -558,6 +665,42 @@ function DoneView({
           : ""}
         {result.readingProgressCount > 0
           ? ` · ${result.readingProgressCount.toLocaleString("en-US")} reading progress`
+          : ""}
+      </p>
+      <div className="flex justify-end">
+        <Button variant="primary" onClick={onClose}>
+          Close export summary
+        </Button>
+      </div>
+    </>
+  );
+}
+
+function HighlightsDoneView({
+  result,
+  onClose,
+}: {
+  result: HighlightsExportResult;
+  onClose: () => void;
+}) {
+  return (
+    <>
+      <div className="flex items-center gap-2 mb-3">
+        <div className="size-8 rounded-full bg-success/15 flex items-center justify-center">
+          <span className="text-success text-lg">&#10003;</span>
+        </div>
+        <span className="text-sm font-medium text-foreground">
+          Highlights exported
+        </span>
+      </div>
+      <p className="text-xs text-muted leading-snug mb-4">
+        {result.annotatedBookmarkCount.toLocaleString("en-US")} bookmark
+        {result.annotatedBookmarkCount === 1 ? "" : "s"}
+        {result.highlightCount > 0
+          ? ` · ${result.highlightCount.toLocaleString("en-US")} highlight${result.highlightCount === 1 ? "" : "s"}`
+          : ""}
+        {result.noteCount > 0
+          ? ` · ${result.noteCount.toLocaleString("en-US")} note${result.noteCount === 1 ? "" : "s"}`
           : ""}
       </p>
       <div className="flex justify-end">

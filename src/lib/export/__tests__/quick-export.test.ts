@@ -7,14 +7,15 @@ import {
   closeDb,
   recordTodayQueueExposures,
   upsertBookmarks,
+  upsertHighlights,
   upsertQueueBookmarkMetadata,
   upsertTodayQueueSnapshot,
   upsertTweetDetailCache,
 } from "../../../db";
-import type { Bookmark, ThreadTweet } from "../../../types";
+import type { Bookmark, Highlight, ThreadTweet } from "../../../types";
 import { sha256hex } from "../../crypto";
 import { makeQueueExposure } from "../../today-queue";
-import { runQuickExport } from "../quick-export";
+import { runHighlightsExport, runQuickExport } from "../quick-export";
 
 const SNOWFLAKE_EPOCH = 1288834974657n;
 
@@ -47,6 +48,24 @@ function makeBookmark(
     hasVideo: false,
     hasLink: false,
     quotedTweet: null,
+  };
+}
+
+function makeHighlightRow(
+  id: string,
+  overrides: Partial<Highlight> = {},
+): Highlight {
+  return {
+    id,
+    tweetId: "tweet-1",
+    sectionId: "1",
+    startOffset: 0,
+    endOffset: 10,
+    selectedText: "highlighted text",
+    note: null,
+    color: "yellow",
+    createdAt: Date.UTC(2024, 0, 4),
+    ...overrides,
   };
 }
 
@@ -173,15 +192,17 @@ describe("runQuickExport", () => {
     const manifest = JSON.parse(strFromU8(entries["manifest.json"]));
     const csv = strFromU8(entries["bookmarks.csv"]);
     const readme = strFromU8(entries["readme.md"]);
-    const tweetMarkdown = strFromU8(entries["bookmarks/02-bookmark-tweet-1.md"]);
+    const tweetMarkdown = strFromU8(
+      entries["bookmarks/bookmark-tweet-1-tweet-1.md"],
+    );
     const queueSnapshots = strFromU8(entries["data/today-queue-snapshots.jsonl"]);
     const queueMetadata = strFromU8(entries["data/bookmark-queue-metadata.jsonl"]);
     const queueExposures = strFromU8(entries["data/today-queue-exposures.jsonl"]);
 
     expect(Object.keys(entries).sort()).toEqual([
       "bookmarks.csv",
-      "bookmarks/01-bookmark-tweet-2.md",
-      "bookmarks/02-bookmark-tweet-1.md",
+      "bookmarks/bookmark-tweet-1-tweet-1.md",
+      "bookmarks/bookmark-tweet-2-tweet-2.md",
       "data/bookmark-queue-metadata.jsonl",
       "data/bookmarks-2021.jsonl",
       "data/bookmarks-2024.jsonl",
@@ -190,6 +211,7 @@ describe("runQuickExport", () => {
       "data/reading-progress.jsonl",
       "data/today-queue-exposures.jsonl",
       "data/today-queue-snapshots.jsonl",
+      "highlights.csv",
       "manifest.json",
       "readme.md",
     ]);
@@ -223,12 +245,16 @@ describe("runQuickExport", () => {
     expect(tweet1Line?.endsWith(",false,true")).toBe(true);
     expect(tweet2Line).toContain(new Date(unavailable.createdAt).toISOString());
     expect(tweet2Line?.endsWith(",false,false")).toBe(true);
-    expect(readme).toContain("[Bookmark tweet-1](bookmarks/02-bookmark-tweet-1.md)");
+    expect(readme).toContain(
+      "[Bookmark tweet-1](bookmarks/bookmark-tweet-1-tweet-1.md)",
+    );
     expect(readme).toContain("Use the Import link shown when your library is empty");
     expect(readme).toContain("https://x.com/test/status/tweet-1");
     expect(manifest.derived.markdown_index).toBe("readme.md");
+    expect(manifest.derived.highlights_csv).toBe("highlights.csv");
+    expect(manifest.derived.highlights_digest).toBeNull();
     expect(manifest.derived.markdown_files).toContain(
-      "bookmarks/02-bookmark-tweet-1.md",
+      "bookmarks/bookmark-tweet-1-tweet-1.md",
     );
     expect(tweetMarkdown).toContain("source: https://x.com/test/status/tweet-1");
     expect(tweetMarkdown).toContain("# Bookmark tweet-1");
@@ -335,5 +361,93 @@ describe("runQuickExport", () => {
     expect(manifest.counts.bookmarks).toBe(ROW_COUNT);
     expect(bookmarkLines).toHaveLength(ROW_COUNT);
     expect(manifest.derived.markdown_files).toHaveLength(ROW_COUNT);
+  });
+
+  it("embeds highlights in the library ZIP and adds a digest when present", async () => {
+    const bookmark = makeBookmark("tweet-1", {
+      createdAt: Date.UTC(2024, 0, 2, 12),
+      sortIndex: sortIndexFromMs(Date.UTC(2024, 0, 3, 9)),
+      text: "A thoughtful post worth highlighting",
+    });
+    await upsertBookmarks([bookmark]);
+    await upsertHighlights([
+      makeHighlightRow("h1", {
+        selectedText: "worth highlighting",
+        note: "remember this",
+      }),
+      makeHighlightRow("h2", { selectedText: "", note: "a standalone note", type: "note" }),
+    ]);
+
+    const zipBytes = await runExportThroughFilePicker();
+    const entries = unzipSync(zipBytes);
+    const manifest = JSON.parse(strFromU8(entries["manifest.json"]));
+    const markdown = strFromU8(
+      entries["bookmarks/a-thoughtful-post-worth-highlighting-tweet-1.md"],
+    );
+    const digest = strFromU8(entries["highlights.md"]);
+    const highlightsCsv = strFromU8(entries["highlights.csv"]);
+
+    expect(manifest.counts.highlights).toBe(2);
+    expect(manifest.derived.highlights_digest).toBe("highlights.md");
+    expect(markdown).toContain("tags: [totem/bookmark, twitter/test]");
+    expect(markdown).toContain("highlights: 1");
+    expect(markdown).toContain("notes: 2");
+    expect(markdown).toContain("## Highlights");
+    expect(markdown).toContain("> worth highlighting");
+    expect(markdown).toContain("**Note:** remember this");
+    expect(markdown).toContain("## Notes");
+    expect(markdown).toContain("- a standalone note ^h-h2");
+    expect(digest).toContain("# Highlights & notes");
+    expect(digest).toContain("worth highlighting");
+    expect(highlightsCsv).toContain("tweet_id,source_url,author_handle");
+    expect(highlightsCsv).toContain("worth highlighting");
+    expect(highlightsCsv).toContain("a standalone note");
+  });
+});
+
+describe("runHighlightsExport", () => {
+  it("exports only annotated bookmarks with a digest and CSV", async () => {
+    const annotated = makeBookmark("tweet-1", {
+      createdAt: Date.UTC(2024, 0, 2, 12),
+      sortIndex: sortIndexFromMs(Date.UTC(2024, 0, 3, 9)),
+      text: "Highlighted post",
+    });
+    const plain = makeBookmark("tweet-2", {
+      createdAt: Date.UTC(2024, 0, 4, 12),
+      sortIndex: sortIndexFromMs(Date.UTC(2024, 0, 5, 9)),
+      text: "Not highlighted",
+    });
+    await upsertBookmarks([annotated, plain]);
+    await upsertHighlights([
+      makeHighlightRow("h1", { tweetId: "tweet-1", selectedText: "Highlighted" }),
+    ]);
+
+    const sink = collectingWritable();
+    vi.stubGlobal("window", {
+      showSaveFilePicker: vi.fn(async () => ({
+        createWritable: vi.fn(async () => sink.stream),
+      })),
+    });
+
+    const result = await runHighlightsExport({
+      userId: "user-123",
+      handle: "yourhandle",
+    });
+
+    expect(result).toEqual({
+      annotatedBookmarkCount: 1,
+      highlightCount: 1,
+      noteCount: 0,
+    });
+
+    const entries = unzipSync(sink.bytes());
+    expect(Object.keys(entries).sort()).toEqual([
+      "bookmarks/highlighted-post-tweet-1.md",
+      "highlights.csv",
+      "highlights.md",
+      "readme.md",
+    ]);
+    const markdown = strFromU8(entries["bookmarks/highlighted-post-tweet-1.md"]);
+    expect(markdown).toContain("> Highlighted");
   });
 });

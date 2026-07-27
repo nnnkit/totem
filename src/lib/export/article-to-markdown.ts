@@ -1,4 +1,4 @@
-import type { ArticleContent, ArticleContentBlock } from "../../types";
+import type { ArticleContent, ArticleContentBlock, Highlight } from "../../types";
 import {
   detectArticleHeadings,
   headingBlockMatchesArticleTitle,
@@ -12,18 +12,30 @@ import { renderBlockInlineMarkdown } from "./block-inline-markdown";
 import { richTextArticleMarkdown } from "./article-plain-markdown";
 import { splitPlainTextByHeadings } from "./article-heading-chunks";
 import { optimizeMarkdownForAgent } from "./agent-markdown-optimizer";
+import { buildHighlightsSection, sanitizeWikiLinkText } from "./highlights-markdown";
 
 export interface ArticleMarkdownMetadata {
   postUrl?: string;
   exportedAtLabel?: string;
   authorName?: string;
   authorHandle?: string;
+  savedDate?: string;
+  tags?: string[];
+  highlightCount?: number;
+  noteCount?: number;
 }
 
 interface ArticleMarkdownOptions {
   authorProfileImageUrl?: string;
   metadata?: ArticleMarkdownMetadata;
   includeCoverImage?: boolean;
+  highlights?: Highlight[];
+}
+
+function assembleMarkdown(combined: string, highlightsSection: string): string {
+  const trimmed = combined.trimEnd();
+  if (!highlightsSection) return trimmed ? trimmed + "\n" : "";
+  return [trimmed, highlightsSection].filter(Boolean).join("\n\n") + "\n";
 }
 
 function yamlScalar(s: string): string {
@@ -42,19 +54,34 @@ function buildYamlFrontmatter(
   if (metadata.postUrl) {
     lines.push(`source: ${metadata.postUrl}`);
   }
+  const name = metadata.authorName?.trim() ?? "";
+  const handle = metadata.authorHandle?.replace(/^@/, "").trim() ?? "";
+  if (name || handle) {
+    // Wikilink so Obsidian's graph clusters notes by author. Fall back to the
+    // handle when no display name is available.
+    const linkText = sanitizeWikiLinkText(name || `@${handle}`);
+    if (linkText) {
+      lines.push(`author: ${yamlScalar(`[[${linkText}]]`)}`);
+    }
+    if (handle) {
+      lines.push(`handle: ${yamlScalar(`@${handle}`)}`);
+    }
+  }
+  if (metadata.savedDate) {
+    lines.push(`saved: ${metadata.savedDate}`);
+  }
   if (metadata.exportedAtLabel) {
     lines.push(`exported: ${yamlScalar(metadata.exportedAtLabel)}`);
   }
-  if (metadata.authorName?.trim() || metadata.authorHandle?.trim()) {
-    const name = metadata.authorName?.trim() ?? "";
-    const handle = metadata.authorHandle?.replace(/^@/, "").trim() ?? "";
-    const author =
-      name && handle
-        ? `${name} (@${handle})`
-        : name || (handle ? `@${handle}` : "");
-    if (author) {
-      lines.push(`author: ${yamlScalar(author)}`);
-    }
+  const tags = metadata.tags?.filter((tag) => tag.trim());
+  if (tags && tags.length > 0) {
+    lines.push(`tags: [${tags.map((tag) => tag.trim()).join(", ")}]`);
+  }
+  if (typeof metadata.highlightCount === "number" && metadata.highlightCount > 0) {
+    lines.push(`highlights: ${metadata.highlightCount}`);
+  }
+  if (typeof metadata.noteCount === "number" && metadata.noteCount > 0) {
+    lines.push(`notes: ${metadata.noteCount}`);
   }
   lines.push("---", "");
   return lines.join("\n");
@@ -209,7 +236,9 @@ export function articleToMarkdown(
     (meta.postUrl ||
       meta.exportedAtLabel ||
       meta.authorName ||
-      meta.authorHandle)
+      meta.authorHandle ||
+      meta.savedDate ||
+      (meta.tags && meta.tags.length > 0))
       ? buildYamlFrontmatter(article.title, meta)
       : "";
 
@@ -224,6 +253,10 @@ export function articleToMarkdown(
     ? `${markdownImage(coverImageUrl, coverAlt)}\n\n`
     : "";
 
+  const highlightsSection = options?.highlights?.length
+    ? buildHighlightsSection(options.highlights)
+    : "";
+
   if (hasBlocks) {
     const body = blocksToMarkdown(
       article.contentBlocks!,
@@ -231,14 +264,18 @@ export function articleToMarkdown(
       article.title?.trim(),
       meta?.postUrl,
     );
-    const combined = `${metaBlock}${titlePart}${coverPart}${body}`.trimEnd();
-    return combined ? combined + "\n" : "";
+    return assembleMarkdown(
+      `${metaBlock}${titlePart}${coverPart}${body}`,
+      highlightsSection,
+    );
   }
 
   if (headings.length === 0) {
     const body = richTextArticleMarkdown(plainText);
-    const combined = `${metaBlock}${titlePart}${coverPart}${body}`.trimEnd();
-    return combined ? combined + "\n" : "";
+    return assembleMarkdown(
+      `${metaBlock}${titlePart}${coverPart}${body}`,
+      highlightsSection,
+    );
   }
 
   const body = buildHeadingChunksMarkdown(
@@ -246,8 +283,10 @@ export function articleToMarkdown(
     headings,
     article.title?.trim(),
   );
-  const combined = `${metaBlock}${titlePart}${coverPart}${body}`.trimEnd();
-  return combined ? combined + "\n" : "";
+  return assembleMarkdown(
+    `${metaBlock}${titlePart}${coverPart}${body}`,
+    highlightsSection,
+  );
 }
 
 export function articleToAgentMarkdown(
