@@ -2,6 +2,8 @@
 
 A Chrome extension that replaces your new tab with a calm reading queue built from your X (Twitter) bookmarks. No servers, no passwords, local-first.
 
+https://chromewebstore.google.com/detail/twitter-x-bookmarks-on-ne/acpkgdfhoaalmnhjifhneghcgfnjkglo
+
 ## Project structure
 
 ```
