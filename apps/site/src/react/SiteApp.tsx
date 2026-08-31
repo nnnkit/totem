@@ -877,6 +877,34 @@ function LandingPage({ recentPosts }: { recentPosts: BlogSummary[] }) {
                   </span>
                 ))}
               </div>
+
+              <div className="mt-6 flex flex-wrap items-center gap-4">
+                <a
+                  href="https://www.producthunt.com/products/totem-5?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-totem-9f559682-9d40-4768-991c-921b6ff46a75"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <img
+                    alt="Totem - Your Twitter bookmarks organized to make you read them | Product Hunt"
+                    width={250}
+                    height={54}
+                    className="h-9 w-auto"
+                    src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1208746&theme=light&t=1788167337195"
+                  />
+                </a>
+                <a
+                  href="https://www.tinyshelf.co/?ref=usetotem.xyz"
+                  title="Featured on tinyshelf"
+                >
+                  <img
+                    src="https://www.tinyshelf.co/badge/tinyshelf-badge-light-5ca4026a.svg"
+                    alt="Featured on tinyshelf"
+                    width={216}
+                    height={64}
+                    className="h-9 w-auto"
+                  />
+                </a>
+              </div>
             </div>
 
             <aside className="site-hero-aside lg:pt-2">
