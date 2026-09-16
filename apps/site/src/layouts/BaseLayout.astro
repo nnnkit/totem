@@ -76,6 +76,28 @@ const foundationJsonLd = {
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
+    {import.meta.env.PROD && (
+      <>
+        <script is:inline>
+          window.totemBeforeSend = function (type, payload) {
+            if (window.top !== window.self || new URLSearchParams(location.search).has('embed')) return null;
+            return payload;
+          };
+          document.addEventListener('click', function (event) {
+            var link = event.target instanceof Element ? event.target.closest('a[href]') : null;
+            if (!link) return;
+            var name = link.hostname === 'chromewebstore.google.com' ? 'install_click'
+              : link.pathname.endsWith('.zip') ? 'download_click' : null;
+            if (name) window.umami?.track(name, { destination: link.hostname });
+          }, true);
+        </script>
+        <script is:inline defer src="https://analytics.holdon.site/script.js"
+          data-website-id="2f44899e-dc0e-47e0-840d-931b1d8f6559"
+          data-domains="usetotem.xyz,www.usetotem.xyz" data-before-send="totemBeforeSend"
+          data-exclude-search="true" data-exclude-hash="true" />
+      </>
+    )}
+
     {
       embedGuardGa ? (
         <script is:inline set:html={`(function () {

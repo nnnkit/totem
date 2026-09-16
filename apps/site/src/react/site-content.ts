@@ -366,11 +366,11 @@ export const SITE_COPY = {
   },
   privacy: {
     eyebrow: "Privacy Policy",
-    title: "Your data never leaves your browser.",
+    title: "How Totem handles your data.",
     lastUpdatedLabel: "Last updated:",
-    lastUpdated: "March 11, 2026",
+    lastUpdated: "September 16, 2026",
     introTitle:
-      "Totem is local-first. There is no Totem backend, no account to create, and no data to sync to our servers — because we don't have any.",
+      "The Totem extension keeps your reading queue on your device. You do not need an account, and your bookmark storage lives in your browser.",
     introBody:
       "Totem reads your own X bookmarks from your existing browser session and turns them into a reading queue right inside your new tab. Everything stays on your device.",
     summaryTitle: "Short version",
@@ -392,10 +392,10 @@ export const SITE_COPY = {
         body: "Quick Links uses optional topSites and favicon permissions. Default-search integration uses the optional search permission.",
       },
     ] satisfies PrivacySummaryItem[],
-    reassuranceTitle: "No backend. No tracking. No exceptions.",
+    reassuranceTitle: "No analytics inside the extension.",
     reassuranceItems: [
-      "No Totem-operated server ever sees your data.",
-      "No analytics or behavioral telemetry is collected.",
+      "Website analytics never receives your extension data.",
+      "The extension does not collect analytics or behavioral telemetry.",
       "No personal data is sold or shared with third parties.",
       "No X password is ever requested — Totem uses your existing session.",
     ] as const,
@@ -486,8 +486,16 @@ export const SITE_COPY = {
           "Totem sends authenticated API requests to x.com to fetch bookmarks and tweet details, and to delete bookmarks when you choose to unbookmark inside Totem.",
           "Totem may fetch x.com or abs.twimg.com bundles to discover GraphQL query IDs when needed to stay compatible with X.",
           "Search queries are sent directly to your chosen search provider, or to Chrome's default search if you enable that integration and submit a search.",
-          "Totem does not send analytics or behavioral telemetry to a Totem-operated server.",
+          "The Totem extension does not send analytics or behavioral telemetry to a Totem-operated server.",
           "Totem does not sell personal data or share it with advertising or tracking platforms.",
+        ],
+      },
+      {
+        title: "Website analytics",
+        items: [
+          "The public website, usetotem.xyz, uses Google Analytics 4 and Umami hosted on our own server to count pageviews, referrers, and install or download clicks.",
+          "Google Analytics may set cookies. Umami does not use analytics cookies, and we exclude URL query strings and fragments from Umami page tracking. Embedded website previews do not send Umami events.",
+          "Website analytics does not receive your extension bookmarks, notes, X session, or search queries.",
         ],
       },
       {
