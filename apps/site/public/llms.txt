@@ -12,6 +12,7 @@ Use the official product and schema pages first. Use blog articles for topic-spe
 - [Live demo](https://usetotem.xyz/demo/): Interactive demo of the Totem new-tab bookmark reader experience.
 - [How Totem works](https://usetotem.xyz/how-it-works/): Interactive map of the extension data flow, storage keys, and implementation files.
 - [Privacy policy](https://usetotem.xyz/privacy/): Plain-English policy covering X access, local browser storage, permissions, and what stays on the device.
+- [Contact](https://usetotem.xyz/contact/): Email, X, and GitHub for questions, bugs, and store listing follow-up.
 
 ## Documentation
 

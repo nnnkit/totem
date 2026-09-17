@@ -18,6 +18,7 @@ Rationale and options: plans/research/totem-cws-listing-positioning-2026-06-26.h
 - Homepage URL: `https://usetotem.xyz/`
 - Privacy policy URL: `https://usetotem.xyz/privacy/`
 - Support email: `iankit17@gmail.com`
+- Support URL: `https://usetotem.xyz/contact/`
 - Package to upload: `release/totem-v1.2.5.zip`
 
 ## Store Listing

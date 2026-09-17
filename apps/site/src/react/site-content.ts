@@ -176,11 +176,13 @@ export const SITE_LINKS = {
   demoPageUrl: "/demo/",
   howItWorksUrl: "/how-it-works/",
   privacyUrl: "/privacy/",
+  contactUrl: "/contact/",
   supportEmail: SUPPORT_EMAIL,
   supportEmailUrl: SUPPORT_EMAIL_URL,
   supportXHandle: SUPPORT_X_HANDLE,
   supportXUrl: SUPPORT_X_URL,
   githubRepoUrl: "https://github.com/nnnkit/totem",
+  githubIssuesUrl: "https://github.com/nnnkit/totem/issues",
 } as const;
 
 export const SITE_COPY = {
@@ -195,6 +197,7 @@ export const SITE_COPY = {
     brandAriaLabel: "Totem homepage",
     navAriaLabel: "Footer links",
     privacyLabel: "Privacy Policy",
+    contactLabel: "Contact",
     githubLabel: "GitHub",
     copyright: "© 2026 Totem",
   },

@@ -5,7 +5,7 @@ import SiteFooter from "../components/SiteFooter.astro";
 import Favicon from "../components/Favicon.astro";
 import { SITE_LINKS } from "../react/site-content";
 
-export type SitePageKey = "landing" | "privacy" | "how-it-works" | "blog-index" | "blog-post";
+export type SitePageKey = "landing" | "privacy" | "how-it-works" | "blog-index" | "blog-post" | "contact";
 
 type OGType = "website" | "article";
 
@@ -56,7 +56,18 @@ const foundationJsonLd = {
         "@type": "ImageObject",
         url: "https://usetotem.xyz/icons/icon-128.png",
       },
-      sameAs: [SITE_LINKS.githubRepoUrl, SITE_LINKS.chromeWebStoreListingUrl],
+      email: SITE_LINKS.supportEmail,
+      sameAs: [
+        SITE_LINKS.githubRepoUrl,
+        SITE_LINKS.chromeWebStoreListingUrl,
+        SITE_LINKS.supportXUrl,
+      ],
+      contactPoint: {
+        "@type": "ContactPoint",
+        contactType: "customer support",
+        email: SITE_LINKS.supportEmail,
+        url: "https://usetotem.xyz/contact/",
+      },
     },
     {
       "@type": "WebSite",

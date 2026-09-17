@@ -1,0 +1,104 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { SITE_LINKS } from "../react/site-content";
+
+const pageUrl = "https://usetotem.xyz/contact/";
+const title = "Totem — Contact";
+const description =
+  "Email, X, and GitHub for Totem questions, bugs, and Chrome Web Store follow-up.";
+
+const contactJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "ContactPage",
+  "@id": `${pageUrl}#page`,
+  url: pageUrl,
+  name: "Contact Totem",
+  description,
+  isPartOf: { "@id": "https://usetotem.xyz/#website" },
+  about: { "@id": "https://usetotem.xyz/#organization" },
+  mainEntity: { "@id": "https://usetotem.xyz/#organization" },
+};
+
+const methods = [
+  {
+    label: "Email",
+    value: SITE_LINKS.supportEmail,
+    href: SITE_LINKS.supportEmailUrl,
+    external: false,
+  },
+  {
+    label: "X",
+    value: SITE_LINKS.supportXHandle,
+    href: SITE_LINKS.supportXUrl,
+    external: true,
+  },
+  {
+    label: "GitHub",
+    value: "Open an issue",
+    href: SITE_LINKS.githubIssuesUrl,
+    external: true,
+  },
+] as const;
+---
+
+<BaseLayout
+  page="contact"
+  title={title}
+  description={description}
+  canonical={pageUrl}
+  og={{
+    type: "website",
+    image: "https://usetotem.xyz/icons/icon-128.png",
+  }}
+  twitter={{
+    image: "https://usetotem.xyz/icons/icon-128.png",
+  }}
+>
+  <Fragment slot="head">
+    <script is:inline type="application/ld+json" set:html={JSON.stringify(contactJsonLd)} />
+  </Fragment>
+
+  <main class="mx-auto w-full max-w-2xl px-6 pb-16 pt-12 sm:pt-16">
+    <p class="mb-3 text-xs font-semibold uppercase tracking-widest text-neutral-400">
+      Contact
+    </p>
+    <h1 class="font-serif text-balance text-4xl leading-tight tracking-tight text-neutral-900">
+      How to reach Totem.
+    </h1>
+    <p class="mt-4 text-pretty text-base leading-7 text-neutral-600">
+      Email is fastest. Bugs, questions, Chrome Web Store follow-up — all fine.
+      One person, so replies can take a day or two.
+    </p>
+
+    <ul class="mt-10 divide-y divide-neutral-200 border-y border-neutral-200">
+      {
+        methods.map((method) => (
+          <li>
+            <a
+              href={method.href}
+              class="group flex items-baseline justify-between gap-6 py-5 no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30"
+              {...(method.external
+                ? { target: "_blank", rel: "noopener noreferrer" }
+                : {})}
+            >
+              <span class="text-xs font-semibold uppercase tracking-widest text-neutral-400">
+                {method.label}
+              </span>
+              <span class="text-right text-base font-medium text-neutral-900 transition-colors group-hover:text-neutral-600">
+                {method.value}
+              </span>
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+
+    <p class="mt-10 text-sm leading-6 text-neutral-500">
+      For what Totem stores and what it doesn't, read the{" "}
+      <a
+        href={SITE_LINKS.privacyUrl}
+        class="text-neutral-700 underline underline-offset-4 hover:text-neutral-900"
+      >privacy policy</a>.
+    </p>
+  </main>
+</BaseLayout>
