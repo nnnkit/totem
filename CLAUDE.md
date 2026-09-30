@@ -34,3 +34,19 @@ It contains:
 When the user asks to "add a blog idea," "draft a post," or anything blog-adjacent: update `docs/blog-pipeline.md` first, then do the work. Never write a post that hasn't passed the topic filter.
 
 Original keyword research lives in [`docs/seo-blog-research.md`](docs/seo-blog-research.md) — historical context for the first three published posts.
+
+## Feedback And Analytics MCPs
+
+Site: Totem (usetotem.xyz). Pick this project/site in each MCP; don't guess IDs.
+
+- **Huddle:** user feedback, feature requests, signups, and alert subscriptions.
+- **Sightline:** Google Search Console, Bing Webmaster Tools, and Google Analytics.
+- **Umami:** detailed pageviews, visits, referrers, custom events, tool usage, and downloads.
+
+Use connected MCP tools directly and select the correct project. For traffic
+declines, compare Sightline and Umami over matching completed dates and timezone.
+
+If unavailable, use Claude or Codex's built-in MCP login/reconnect flow,
+reloading the client if needed. Let the user authenticate or enter secrets
+in connector settings; never request secrets in chat or read stored
+credentials. Report any remaining access blocker.
