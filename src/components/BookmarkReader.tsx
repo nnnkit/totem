@@ -30,9 +30,12 @@ import { Button } from "./ui/Button";
 import {
   copyArticleForAgentToClipboard,
   copyArticleMarkdownToClipboard,
+  copyTextToClipboard,
   downloadArticleMarkdown,
   printArticleAsPdf,
 } from "../lib/export/article-download";
+import { buildShareUrl } from "../lib/share/link";
+import type { ShareLinkResult } from "./reader/ShareLinkButton";
 import { resolveReaderExportArticle } from "../lib/export/tweet-export";
 import { countHighlightsAndNotes } from "../lib/export/highlights-markdown";
 import { getHighlightsByTweetId } from "../db";
@@ -43,6 +46,7 @@ interface Props {
   relatedBookmarks: Bookmark[];
   getBookmarkHref: (bookmark: Bookmark) => string;
   onBack: () => void;
+  backLabel?: string;
   onShuffle?: () => void;
   prevHref?: string;
   nextHref?: string;
@@ -91,6 +95,7 @@ function useBookmarkReaderModel({
   relatedBookmarks,
   getBookmarkHref,
   onBack,
+  backLabel = "Back to bookmarks",
   onShuffle,
   prevHref,
   nextHref,
@@ -378,6 +383,14 @@ function useBookmarkReaderModel({
     buildMarkdownMetadata,
   ]);
 
+  const handleShareLink = useCallback(async (): Promise<ShareLinkResult> => {
+    const link = await buildShareUrl(displayBookmark, detailState.thread);
+    return {
+      copied: await copyTextToClipboard(link.url),
+      includesThread: link.includesThread,
+    };
+  }, [displayBookmark, detailState.thread]);
+
   const handlePrintArticlePdf = useCallback(() => {
     printArticleAsPdf(exportArticle, {
       authorProfileImageUrl: displayBookmark.author.profileImageUrl,
@@ -414,7 +427,9 @@ function useBookmarkReaderModel({
     handleDownloadArticleMarkdown,
     handlePrintArticlePdf,
     handleSaveNote,
+    handleShareLink,
     handleToggleRead,
+    backLabel,
     nextHref,
     notePanelState,
     onBack,
@@ -459,7 +474,9 @@ function renderBookmarkReader({
   handleDownloadArticleMarkdown,
   handlePrintArticlePdf,
   handleSaveNote,
+  handleShareLink,
   handleToggleRead,
+  backLabel,
   nextHref,
   notePanelState,
   onBack,
@@ -484,7 +501,7 @@ function renderBookmarkReader({
         <div
           className={cn("mx-auto flex items-center gap-3 px-6 py-2.5", containerWidthClass)}
         >
-          <Button variant="ghost" size="icon" onClick={onBack} aria-label="Back to bookmarks" title="Back">
+          <Button variant="ghost" size="icon" onClick={onBack} aria-label={backLabel} title={backLabel}>
             <ArrowLeftIcon className="size-5" />
           </Button>
           <Button
@@ -550,6 +567,7 @@ function renderBookmarkReader({
                 }
               : undefined
           }
+          onShare={canExportPost ? handleShareLink : undefined}
           onLogin={onLogin ?? (
             readerAvailability.canLogin
               ? () => { void actions.startLogin(); }

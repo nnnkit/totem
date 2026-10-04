@@ -131,3 +131,15 @@ export function useReaderAvailabilityState(
     }),
   };
 }
+
+export function useLoginMessage(): string | null {
+  return useRuntimeStoreBase((state) => {
+    if (state.loginAttempt === "timed_out") {
+      return "We couldn’t confirm your X session. Finish signing in on X, then try again.";
+    }
+    if (state.loginAttempt === "failed") {
+      return "We couldn’t connect to X. Try again, or reload Totem if this continues.";
+    }
+    return null;
+  });
+}

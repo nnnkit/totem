@@ -40,12 +40,12 @@ import {
   CS_SYNC_ORCHESTRATOR_STATE,
   CS_RUNTIME_STATE_V2,
 } from "./storage-keys-sw";
+import { AUTH_CAPTURE_TIMEOUT_MS } from "../lib/constants/timing";
 
 // ── Constants ───────────────────────────────────────────────────
 
 const AUTH_WEAK_NEGATIVE_WINDOW_MS = 10_000;
 const AUTH_WEAK_NEGATIVE_THRESHOLD = 2;
-const AUTH_CAPTURE_TIMEOUT_MS = 15_000;
 const AUTH_CAPTURE_SILENT_COOLDOWN_MS = 5_000;
 // After a failed capture, an interactive (button-click) retry opens x.com in
 // the foreground so the user can see what's wrong instead of waiting on a
@@ -123,6 +123,7 @@ interface AuthCaptureOptions {
 }
 
 interface AuthCaptureStartResult {
+  completion?: Promise<AuthCaptureResult>;
   authReady: boolean;
   inProgress: boolean;
   started: boolean;
@@ -585,6 +586,7 @@ export async function startAuthCaptureSession(
 
   if (authCapturePromise) {
     return {
+      completion: authCapturePromise,
       authReady: false,
       inProgress: true,
       started: false,
@@ -622,9 +624,10 @@ export async function startAuthCaptureSession(
         AUTH_INTERACTIVE_FOREGROUND_AFTER_FAILURE_MS);
 
   let resolveCapture: (result: AuthCaptureResult) => void = () => {};
-  authCapturePromise = new Promise<AuthCaptureResult>((resolve) => {
+  const completion = new Promise<AuthCaptureResult>((resolve) => {
     resolveCapture = resolve;
   });
+  authCapturePromise = completion;
 
   let tab: chrome.tabs.Tab;
   try {
@@ -773,6 +776,7 @@ export async function startAuthCaptureSession(
   );
 
   return {
+    completion,
     authReady: false,
     inProgress: true,
     started: true,
@@ -805,7 +809,7 @@ export async function ensureAuthCapture(
       liveUserId: start.liveUserId,
     };
   }
-  return authCapturePromise ??
+  return start.completion ??
     {
       ok: false,
       started: start.started,
@@ -935,7 +939,25 @@ export function createAuthHandlers(deps?: AuthDeps): HandlerMap {
       const msg = message as MessageRequest & {
         interactive?: boolean;
         force?: boolean;
+        waitForCompletion?: boolean;
       };
+      if (msg.waitForCompletion) {
+        const result = await ensureAuthCapture(
+          { storage, storageChanges, tabs, cookies },
+          {
+            interactive: msg.interactive === true,
+            force: msg.force === true,
+            reason: "auth_capture_interactive",
+          },
+        );
+        logDiagnostic("capture", result.ok ? "ok" : "error", `auth_capture_result:${result.reason}`);
+        await persistDiagnostics(storage);
+        return {
+          authReady: result.ok,
+          inProgress: false,
+          reason: result.reason,
+        };
+      }
       const result = await startAuthCaptureSession(
         { storage, storageChanges, tabs, cookies },
         {
@@ -945,7 +967,8 @@ export function createAuthHandlers(deps?: AuthDeps): HandlerMap {
         },
       );
       await persistDiagnostics(storage);
-      return result;
+      const { completion: _completion, ...response } = result;
+      return response;
     },
 
     CLOSE_AUTH_TAB: async () => {

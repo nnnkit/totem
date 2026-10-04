@@ -47,10 +47,22 @@ export function RuntimeProvider({ children }: PropsWithChildren) {
 
   useEffect(() => {
     if (typeof authRetryDelayMs !== "number" || authRetryDelayMs <= 0) return;
-    const id = setTimeout(() => {
-      void actions.checkAuth();
-    }, authRetryDelayMs);
-    return () => clearTimeout(id);
+    let cancelled = false;
+    let id: ReturnType<typeof setTimeout>;
+    const schedule = () => {
+      id = setTimeout(async () => {
+        try {
+          await actions.checkAuth();
+        } finally {
+          if (!cancelled) schedule();
+        }
+      }, authRetryDelayMs);
+    };
+    schedule();
+    return () => {
+      cancelled = true;
+      clearTimeout(id);
+    };
   }, [actions, authRetryDelayMs]);
 
   useEffect(() => {

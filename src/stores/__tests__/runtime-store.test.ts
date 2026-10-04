@@ -6,7 +6,7 @@ import {
 } from "../runtime-store";
 import type { Bookmark, RuntimeSnapshot } from "../../types";
 import type { RuntimeState } from "../runtime-store";
-import { CREATE_EVENT_DELAY_MS } from "../../lib/constants/timing";
+import { AUTH_CAPTURE_RPC_TIMEOUT_MS, CREATE_EVENT_DELAY_MS } from "../../lib/constants/timing";
 
 const mocks = vi.hoisted(() => {
   const detailCacheListeners = new Set<(tweetId: string) => void>();
@@ -661,6 +661,142 @@ describe("runtime-store sync", () => {
 // ---------------------------------------------------------------------------
 
 describe("runtime-store auth flows", () => {
+  it("does not let an old logged-out response overwrite a newer signed-in push", async () => {
+    const store = createRuntimeStore();
+    await store.getState().actions.boot();
+    const delayed = deferred<RuntimeSnapshot>();
+    mocks.getRuntimeSnapshot.mockReturnValueOnce(delayed.promise);
+    const checking = store.getState().actions.checkAuth();
+    const ready = runtimeSnapshot({ sessionState: "logged_in", authPhase: "ready" });
+    mocks.getRuntimeSnapshot.mockResolvedValue(ready);
+    await store.getState().actions.applyRuntimeSnapshot(ready);
+    delayed.resolve(runtimeSnapshot());
+    await checking;
+    expect(store.getState().authPhase).toBe("ready");
+    store.getState().actions.dispose();
+  });
+
+  it("bounds a disconnected capture RPC instead of leaving login pending forever", async () => {
+    vi.useFakeTimers();
+    const store = createRuntimeStore();
+    try {
+      await store.getState().actions.boot();
+      mocks.startAuthCapture.mockReturnValue(new Promise(() => {}));
+      const login = store.getState().actions.startLogin();
+      await vi.advanceTimersByTimeAsync(AUTH_CAPTURE_RPC_TIMEOUT_MS);
+      await login;
+      expect(store.getState().authPhase).toBe("need_login");
+      expect(store.getState().loginAttempt).toBe("failed");
+    } finally {
+      store.getState().actions.dispose();
+      vi.useRealTimers();
+    }
+  });
+
+  it("deduplicates clicks and ignores a capture failure arriving after authentication", async () => {
+    const store = createRuntimeStore();
+    await store.getState().actions.boot();
+    const capture = deferred<{ started: boolean; inProgress: boolean }>();
+    mocks.startAuthCapture.mockReturnValue(capture.promise);
+    const first = store.getState().actions.startLogin();
+    await store.getState().actions.startLogin();
+    expect(mocks.startAuthCapture).toHaveBeenCalledTimes(1);
+    await store.getState().actions.applyRuntimeSnapshot(runtimeSnapshot({ sessionState: "logged_in", authPhase: "ready" }));
+    capture.reject(new Error("late transport error"));
+    await first;
+    expect(store.getState().authPhase).toBe("ready");
+    expect(store.getState().loginAttempt).toBe("idle");
+    store.getState().actions.dispose();
+  });
+
+  it("keeps timeout actionable across partial snapshots and transport failures, then recovers", async () => {
+    const store = createRuntimeStore();
+    await store.getState().actions.boot();
+    mocks.startAuthCapture.mockResolvedValue({ authReady: false, reason: "capture_timeout" });
+    await store.getState().actions.startLogin();
+    await store.getState().actions.applyRuntimeSnapshot(runtimeSnapshot({ sessionState: "unknown", authPhase: "connecting" }));
+    mocks.getRuntimeSnapshot.mockRejectedValue(new Error("offline"));
+    mocks.checkAuth.mockRejectedValue(new Error("offline"));
+    await store.getState().actions.checkAuth();
+    expect(store.getState().authPhase).toBe("need_login");
+    expect(store.getState().loginAttempt).toBe("timed_out");
+    expect(store.getState().authRetryDelayMs).toBe(15_000);
+    expect(mocks.startAuthCapture).toHaveBeenCalledTimes(1);
+    mocks.getRuntimeSnapshot.mockResolvedValue(runtimeSnapshot({ sessionState: "logged_in", authPhase: "ready" }));
+    await store.getState().actions.checkAuth();
+    expect(store.getState().authPhase).toBe("ready");
+    expect(store.getState().loginAttempt).toBe("idle");
+    store.getState().actions.dispose();
+  });
+
+  it.each(["rejected", "not_started"])("surfaces %s capture startup and permits retry", async (failure) => {
+    const store = createRuntimeStore();
+    await store.getState().actions.boot();
+    if (failure === "rejected") mocks.startAuthCapture.mockRejectedValueOnce(new Error("disconnected"));
+    await store.getState().actions.startLogin();
+    expect(store.getState().authPhase).toBe("need_login");
+    expect(store.getState().loginAttempt).toBe("failed");
+    const retry = deferred<{ authReady: boolean }>();
+    mocks.startAuthCapture.mockReturnValue(retry.promise);
+    const retrying = store.getState().actions.startLogin();
+    expect(store.getState().authPhase).toBe("connecting");
+    expect(store.getState().loginAttempt).toBe("pending");
+    store.getState().actions.dispose();
+    retry.resolve({ authReady: false });
+    await retrying;
+  });
+
+  it("ignores an auth check started before the login attempt", async () => {
+    const store = createRuntimeStore();
+    await store.getState().actions.boot();
+    const oldCheck = deferred<RuntimeSnapshot>();
+    mocks.getRuntimeSnapshot.mockReturnValueOnce(oldCheck.promise);
+    const checking = store.getState().actions.checkAuth();
+    mocks.startAuthCapture.mockResolvedValue({ authReady: true });
+    mocks.getRuntimeSnapshot.mockResolvedValue(runtimeSnapshot({ sessionState: "logged_in", authPhase: "ready" }));
+    await store.getState().actions.startLogin();
+    oldCheck.resolve(runtimeSnapshot());
+    await checking;
+    expect(store.getState().authPhase).toBe("ready");
+    store.getState().actions.dispose();
+  });
+
+  it("ignores a late capture response after disposal", async () => {
+    const store = createRuntimeStore();
+    await store.getState().actions.boot();
+    const capture = deferred<{ started: boolean }>();
+    mocks.startAuthCapture.mockReturnValue(capture.promise);
+    const login = store.getState().actions.startLogin();
+    store.getState().actions.dispose();
+    const calls = mocks.getRuntimeSnapshot.mock.calls.length;
+    capture.resolve({ started: false });
+    await login;
+    expect(mocks.getRuntimeSnapshot).toHaveBeenCalledTimes(calls);
+    expect(store.getState().loginAttempt).toBe("idle");
+  });
+
+  it("keeps login connecting while X still reports logged out, then accepts success", async () => {
+    const store = createRuntimeStore();
+    await store.getState().actions.boot();
+    const capture = deferred<{ authReady: boolean }>();
+    mocks.startAuthCapture.mockReturnValue(capture.promise);
+    const login = store.getState().actions.startLogin();
+    expect(store.getState().authPhase).toBe("connecting");
+    await store.getState().actions.checkAuth();
+    await store.getState().actions.applyRuntimeSnapshot(runtimeSnapshot());
+    store.getState().actions.connectingTimeout();
+    expect(store.getState().authPhase).toBe("connecting");
+
+    mocks.getRuntimeSnapshot.mockResolvedValue(runtimeSnapshot({
+      sessionState: "logged_in", authPhase: "ready",
+    }));
+    await store.getState().actions.checkAuth();
+    capture.resolve({ authReady: true });
+    await login;
+    expect(store.getState().authPhase).toBe("ready");
+    store.getState().actions.dispose();
+  });
+
   function primeReadyState(
     store: ReturnType<typeof createRuntimeStore>,
     overrides: Partial<RuntimeState> = {},
@@ -710,6 +846,7 @@ describe("runtime-store auth flows", () => {
     expect(mocks.startAuthCapture).toHaveBeenCalledWith({
       interactive: true,
       force: true,
+      waitForCompletion: true,
     });
     expect(state.authPhase).toBe("ready");
     expect(state.sessionState).toBe("logged_in");
@@ -823,6 +960,7 @@ describe("runtime-store auth flows", () => {
     expect(mocks.startAuthCapture).toHaveBeenCalledWith({
       interactive: true,
       force: true,
+      waitForCompletion: true,
     });
     expect(store.getState().authPhase).toBe("ready");
     expect(store.getState().sessionState).toBe("logged_in");

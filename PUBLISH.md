@@ -62,7 +62,7 @@ A public privacy policy URL is **mandatory** given the permissions we request. M
 
 ### Support Page
 
-- [ ] Create a support/contact page or link to GitHub issues
+- [x] Create a support/contact page or link to GitHub issues (`https://usetotem.xyz/contact/`)
 - [ ] Add URL to manifest as homepage_url
 
 ---
@@ -215,6 +215,7 @@ Once all the above is done:
 - [ ] Zip the dist/ folder (or use existing release script)
 - [ ] Upload to Chrome Web Store developer console
 - [ ] Fill in all store listing fields (description, screenshots, category, language)
+- [ ] Mature content = unchecked (not mature, not a kids' product — answers in `plans/submission-kit.html#age`)
 - [ ] Fill in privacy practices disclosures
 - [ ] Paste permission justifications in the submission notes
 - [ ] Link privacy policy URL
@@ -268,7 +269,7 @@ Everything is prepared in `plans/edge-add-ons-listing.md`:
 
 1. [ ] Extensions → **Create new extension** → upload `release/totem-v{version}.zip`.
 2. [ ] **Availability**: Visibility = Public, Markets = all.
-3. [ ] **Properties**: Category = Productivity; Website + Support URL.
+3. [ ] **Properties**: Category = Productivity; Website + Support URL; Mature content = unchecked (not a kids' product — answers in `plans/submission-kit.html#age`).
 4. [ ] **Privacy** page: Single purpose, per-permission justifications, remote-code = none, data-use disclosures + certifications, Privacy policy URL.
 5. [ ] **Store listing**: paste name (read-only from manifest), detailed description, upload logo + screenshots + tiles, add the 7 search terms.
 6. [ ] **Certification notes**: reuse the Chrome review-risk justifications (MAIN-world `mutation-hook.js`, `webRequest` auth-header capture, x.com bundle-fetch for GraphQL query IDs) — Edge review is comparable-to-slightly-stricter on aggressive host behavior.

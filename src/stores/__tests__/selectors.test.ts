@@ -10,6 +10,7 @@ const noop = async () => {};
 
 function makeState(overrides: Partial<RuntimeState> = {}): RuntimeState {
   return {
+    loginAttempt: "idle",
     authPhase: "ready",
     authState: "authenticated",
     sessionState: "logged_in",

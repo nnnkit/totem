@@ -49,7 +49,7 @@ export function getArticleAgentMarkdownString(
   });
 }
 
-async function copyTextToClipboard(text: string): Promise<boolean> {
+export async function copyTextToClipboard(text: string): Promise<boolean> {
   if (!navigator.clipboard?.writeText) {
     return false;
   }

@@ -30,6 +30,7 @@ import {
 import { CS_ACCOUNT_CONTEXT_ID, CS_RESET_EPOCH, SYNC_SETTINGS } from "../lib/storage-keys";
 import { UNINSTALL_FEEDBACK_URL } from "../lib/constants/growth";
 import { closeDb } from "../db";
+import { createShareExternalListener } from "./share";
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -314,6 +315,25 @@ registerReleaseFoundationHooks(chrome.runtime, chrome.tabs);
 // ── Message router ───────────────────────────────────────────
 
 chrome.runtime.onMessage.addListener(createMessageRouter(allHandlers));
+
+// ── Share-link handoff from usetotem.xyz ─────────────────────
+
+chrome.runtime.onMessageExternal.addListener(
+  createShareExternalListener({
+    getVersion: () => chrome.runtime.getManifest().version,
+    getSessionSnapshot: () => getSessionSnapshot(chrome.storage.local),
+    openReader: async (tweetId, tabId) => {
+      const url = chrome.runtime.getURL(
+        `reader.html?read=${encodeURIComponent(tweetId)}`,
+      );
+      if (tabId !== undefined) {
+        await chrome.tabs.update(tabId, { url });
+        return;
+      }
+      await chrome.tabs.create({ url, active: true });
+    },
+  }),
+);
 
 // ── Auth header capture from x.com traffic ───────────────────
 

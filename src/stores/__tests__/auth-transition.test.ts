@@ -10,6 +10,7 @@ const REAUTH_DELAY = 500; // AUTH_QUICK_CHECK_MS
 
 function input(overrides: Partial<AuthTransitionInput> = {}): AuthTransitionInput {
   return {
+    loginAttempt: "idle",
     authPhase: "ready",
     activeAccountId: "acct-A",
     bookmarksLoaded: true,

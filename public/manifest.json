@@ -26,6 +26,12 @@
   "host_permissions": [
     "https://x.com/*"
   ],
+  "externally_connectable": {
+    "matches": [
+      "https://usetotem.xyz/*",
+      "https://*.usetotem.xyz/*"
+    ]
+  },
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://*.twimg.com; media-src 'self' https://*.twimg.com"
   },

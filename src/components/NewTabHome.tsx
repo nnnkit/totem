@@ -59,6 +59,7 @@ import { useWallpaper } from "../hooks/useWallpaper";
 import { useTopSites } from "../hooks/useTopSites";
 import {
   useFooterState,
+  useLoginMessage,
   useIsOffline,
   useRuntimeActions,
   useSyncButtonState,
@@ -244,6 +245,7 @@ function FooterCard({
   onMoveNext,
   onArchive,
 }: FooterCardProps) {
+  const loginMessage = useLoginMessage();
   switch (footerState) {
     case "loading":
       return (
@@ -261,7 +263,7 @@ function FooterCard({
             <TotemLogo loading className="size-10" />
           </div>
           <p className="mt-4 text-pretty text-base text-home-empty">
-            Syncing your session in the background.
+            Waiting for your X session. Complete sign-in if X asks you to.
           </p>
         </article>
       );
@@ -269,16 +271,16 @@ function FooterCard({
       return (
         <article className={cardCentered}>
           <p className="text-xs font-semibold uppercase tracking-extra-wide text-accent">
-            Log in to start reading
+            {loginMessage ? "Connection needs attention" : "Log in to start reading"}
           </p>
           <p className="mt-4 text-pretty text-base text-home-empty">
-            Sign in to your X account to sync and read your saved posts.
+            {loginMessage ?? "Sign in to your X account to sync and read your saved posts."}
           </p>
           <Button
             className="mt-6 border-0 bg-home-accent text-white hover:opacity-90"
             onClick={handleLoginButton}
           >
-            Log in to X
+            {loginMessage ? "Try again" : "Log in to X"}
           </Button>
         </article>
       );
@@ -705,7 +707,7 @@ function FooterCard({
             onClick={handleLoginButton}
             className="mt-6 border-0 bg-home-accent text-white hover:opacity-90"
           >
-            Log in to X
+            {loginMessage ? "Try again" : "Log in to X"}
           </Button>
         </article>
       );

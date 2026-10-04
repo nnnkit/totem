@@ -25,6 +25,7 @@ import { cn } from "../../lib/cn";
 import { Button } from "../ui/Button";
 import { OfflineBanner } from "../ui/OfflineBanner";
 import { ArticleExportMenu } from "./ArticleExportMenu";
+import { ShareLinkButton, type ShareLinkResult } from "./ShareLinkButton";
 
 interface TweetBodyProps {
   tweet: ReaderTweet;
@@ -195,6 +196,7 @@ interface ActionBarProps {
     onDownloadMarkdown: () => void;
     onPrintPdf: () => void;
   };
+  onShare?: () => Promise<ShareLinkResult>;
 }
 
 function ActionBar({
@@ -203,6 +205,7 @@ function ActionBar({
   isMarkedRead,
   bookmarkAction,
   articleExport,
+  onShare,
 }: ActionBarProps) {
   const grokUrl = buildGrokUrl(viewOnXUrl);
 
@@ -217,6 +220,8 @@ function ActionBar({
         <LightningIcon weight="bold" className="size-3.5" />
         Grok
       </Button>
+
+      {onShare && <ShareLinkButton onShare={onShare} />}
 
       {articleExport && (
         <ArticleExportMenu
@@ -321,6 +326,7 @@ interface Props {
   isMarkedRead?: boolean;
   bookmarkAction?: ActionBarProps["bookmarkAction"];
   articleExport?: ActionBarProps["articleExport"];
+  onShare?: ActionBarProps["onShare"];
   onLogin?: () => void;
 }
 
@@ -339,6 +345,7 @@ export const TweetContent = memo(function TweetContent({
   isMarkedRead,
   bookmarkAction,
   articleExport,
+  onShare,
   onLogin,
 }: Props) {
   const viewOnXUrl = `https://x.com/${displayBookmark.author.screenName}/status/${displayBookmark.tweetId}`;
@@ -361,6 +368,7 @@ export const TweetContent = memo(function TweetContent({
           isMarkedRead={isMarkedRead}
           bookmarkAction={bookmarkAction}
           articleExport={articleExport}
+          onShare={onShare}
         />
       </div>
 
@@ -389,6 +397,7 @@ export const TweetContent = memo(function TweetContent({
           isMarkedRead={isMarkedRead}
           bookmarkAction={bookmarkAction}
           articleExport={articleExport}
+          onShare={onShare}
         />
       </div>
 

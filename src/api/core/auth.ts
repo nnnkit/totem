@@ -56,6 +56,7 @@ export async function setAccountContext(accountId: string): Promise<string> {
 interface StartAuthCaptureOptions {
   interactive?: boolean;
   force?: boolean;
+  waitForCompletion?: boolean;
 }
 
 export async function startAuthCapture(
@@ -71,6 +72,7 @@ export async function startAuthCapture(
     type: "START_AUTH_CAPTURE",
     interactive: options.interactive === true,
     force: options.force === true,
+    waitForCompletion: options.waitForCompletion === true,
   });
 }
 

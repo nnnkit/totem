@@ -53,6 +53,7 @@ export interface StartAuthCaptureRequest {
   type: "START_AUTH_CAPTURE";
   interactive?: boolean;
   force?: boolean;
+  waitForCompletion?: boolean;
 }
 
 export interface CloseAuthTabRequest {

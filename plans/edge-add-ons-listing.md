@@ -42,10 +42,22 @@ Totem shows your own Twitter/X bookmarks on the browser's new tab page as a calm
 Productivity
 ```
 
+## Age / Mature content (Properties page)
+
+Partner Center → Properties → **Mature content**. Leave the checkbox **unchecked**.
+
+Totem is not mature: the extension has no sexual content, violence, strong language, drugs, alcohol, tobacco, gambling, ads, or adult links. Bookmarked posts are the user's own private library, shown only to that user — not a public UGC feed. Edge policy §2.12.2 is satisfied by requiring the user's existing X account.
+
+Directed at children under 13 (COPPA, policy §1.10.6): **No**. Do not notify Microsoft. X itself is 13+; Totem is not a kids' product.
+
+If an IARC questionnaire appears (unusual for Edge extensions): App, not Game; every content and interactive-element question is **No**. Copyable sheet: `plans/submission-kit.html#age`.
+
 ## Detailed Description
 
 Paste exactly (min 250 / max 10,000 chars). This is the Chrome long description
-with the single "Chrome new tab" reference changed to "browser new tab":
+with other-browser and search-engine names removed: "Chrome new tab" →
+"browser's new tab", and the search-box line names no engines (Edge rejects
+listings that name Chrome, Brave, DuckDuckGo, or other search engines).
 
 ```text
 Totem is a local-first bookmark manager for Twitter and X, built around the one thing the others skip: actually reading what you save. It turns your browser's new tab into a calm reading queue for your Twitter/X bookmarks — a read-it-later for tweets, threads, and X articles — so the posts you save come back to you instead of vanishing.
@@ -100,7 +112,7 @@ Totem prefetches your saved posts so you can keep reading on a plane or a weak c
 
 
 A CALMER NEW TAB
-• A quiet clock and an optional web-search box (Google, Bing, DuckDuckGo, Brave, Ecosia, Yahoo, or your browser default)
+• A quiet clock and an optional web-search box
 • Optional Quick Links to your most-visited sites
 • Curated wallpapers or generated gradients
 • Light, dark, and system themes
@@ -168,7 +180,7 @@ Edge allows up to 6 screenshots; the 5 above are the same order used on Chrome.
 ## Store URLs
 
 - Website: `https://usetotem.xyz/`
-- Support contact: `https://usetotem.xyz/` (or `iankit17@gmail.com`)
+- Support contact: `https://usetotem.xyz/contact/` (or `iankit17@gmail.com`)
 - Privacy policy URL (required): `https://usetotem.xyz/privacy`
 
 ## Privacy / Data Use (Partner Center Privacy page)

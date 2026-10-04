@@ -601,6 +601,53 @@ describe("auth module", () => {
   // ── START_AUTH_CAPTURE handler ──────────────────────────────
 
   describe("START_AUTH_CAPTURE handler", () => {
+    it.each(["success", "timeout", "tab_closed"])(
+      "waits for the worker's final %s outcome for interactive login",
+      async (outcome) => {
+        vi.useFakeTimers();
+        try {
+          const handlers = createAuthHandlers(makeDepsWithTwid(fakeChrome));
+          const createSpy = vi.spyOn(fakeChrome.tabs, "create");
+          let completed = false;
+          const response = handlers.START_AUTH_CAPTURE({
+            type: "START_AUTH_CAPTURE",
+            interactive: true,
+            force: true,
+            waitForCompletion: true,
+          }, {}).then((result) => {
+            completed = true;
+            return result;
+          });
+          await vi.advanceTimersByTimeAsync(0);
+          expect(createSpy).toHaveBeenCalledTimes(1);
+          expect(completed).toBe(false);
+
+          if (outcome === "success") {
+            await fakeChrome.storage.local.set({
+              totem_auth_headers: {
+                authorization: "Bearer test",
+                "x-csrf-token": "test",
+                cookie: "twid=u%3D777; ct0=test",
+              },
+            });
+          } else if (outcome === "timeout") {
+            await vi.advanceTimersByTimeAsync(15_000);
+          } else {
+            const tab = await createSpy.mock.results[0].value;
+            await fakeChrome.tabs.remove(tab.id!);
+          }
+          expect(await response).toEqual({
+            authReady: outcome === "success",
+            inProgress: false,
+            reason: outcome === "success" ? "auth_headers_captured"
+              : outcome === "timeout" ? "capture_timeout" : "tab_closed",
+          });
+        } finally {
+          vi.useRealTimers();
+        }
+      },
+    );
+
     it("creates a tab and returns tabId", async () => {
       setupRouter(fakeChrome);
       const response = (await fakeChrome.runtime.sendMessage({

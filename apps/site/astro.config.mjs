@@ -17,7 +17,14 @@ export default defineConfig({
   integrations: [
     react(),
     sitemap({
-      filter: (page) => !new URL(page).pathname.startsWith("/uninstall-feedback/"),
+      filter: (page) => {
+        const pathname = new URL(page).pathname;
+        return (
+          !pathname.startsWith("/uninstall-feedback/") &&
+          pathname !== "/t" &&
+          !pathname.startsWith("/t/")
+        );
+      },
       serialize(item) {
         const pathname = new URL(item.url).pathname;
         const isHome = pathname === "/";

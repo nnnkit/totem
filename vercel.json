@@ -20,6 +20,12 @@
       ]
     }
   ],
+  "rewrites": [
+    {
+      "source": "/t/:tweetId",
+      "destination": "/t"
+    }
+  ],
   "redirects": [
     {
       "source": "/website/:path*",

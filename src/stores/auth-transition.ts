@@ -25,7 +25,7 @@ import type {
   SyncStatus,
 } from "../types";
 import type { SyncJobKind } from "./runtime-store";
-import { AUTH_QUICK_CHECK_MS } from "../lib/constants/timing";
+import { AUTH_QUICK_CHECK_MS, AUTH_STALE_RECHECK_MS } from "../lib/constants/timing";
 
 export interface AuthPayload {
   hasUser: boolean;
@@ -39,8 +39,11 @@ export interface AuthPayload {
   lastSyncAt: number;
 }
 
+export type LoginAttempt = "idle" | "pending" | "timed_out" | "failed";
+
 /** The read-subset of RuntimeState the derivation depends on. */
 export interface AuthTransitionInput {
+  loginAttempt: LoginAttempt;
   authPhase: AuthPhase;
   activeAccountId: string | null;
   bookmarksLoaded: boolean;
@@ -133,6 +136,19 @@ export function deriveAuthTransition(
     authRetryDelayMs = AUTH_QUICK_CHECK_MS;
   }
 
+  // Session facts may remain logged out while the user signs in on X.
+  // The worker's capture result owns completion; snapshots only confirm success.
+  if (phase !== "ready" && prev.loginAttempt === "pending") {
+    phase = "connecting";
+    authRetryDelayMs = AUTH_QUICK_CHECK_MS;
+  } else if (
+    phase !== "ready" &&
+    (prev.loginAttempt === "timed_out" || prev.loginAttempt === "failed")
+  ) {
+    phase = "need_login";
+    authRetryDelayMs = AUTH_STALE_RECHECK_MS;
+  }
+
   const accountChanged = nextAccountId !== prev.activeAccountId;
   const needsHydration =
     options.allowHydration &&
@@ -199,7 +215,11 @@ export function deriveAuthTransition(
   if (accountChanged || (phaseChanged && phase === "ready")) {
     effects.push({ kind: "clearScheduledAutoRetry" });
   }
-  if (phase === "connecting" && shouldStartAuthCapture(payload)) {
+  if (
+    phase === "connecting" &&
+    prev.loginAttempt !== "pending" &&
+    shouldStartAuthCapture(payload)
+  ) {
     effects.push({ kind: "startAuthCapture", interactive: false });
   }
   if (needsHydration) {

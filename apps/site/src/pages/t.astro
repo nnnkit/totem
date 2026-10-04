@@ -1,0 +1,15 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { SharedThreadApp } from "../react/share/SharedThreadApp";
+---
+
+<BaseLayout
+  title="Shared thread — Totem"
+  description="Read a thread shared with Totem, the X bookmarks reader for your new tab."
+  canonical="https://usetotem.xyz/t"
+  spaceGrotesk={false}
+  showChrome={false}
+  robots="noindex, follow"
+>
+  <SharedThreadApp client:only="react" />
+</BaseLayout>

@@ -26,6 +26,7 @@ import { FetchQueue } from "../lib/fetch-queue";
 import { resolveBookmarkEventPlan } from "../lib/bookmark-event-plan";
 import { reconcileBookmarks } from "../lib/reconcile";
 import {
+  AUTH_CAPTURE_RPC_TIMEOUT_MS,
   AUTH_QUICK_CHECK_MS,
   AUTH_RETRY_MS,
   AUTH_STALE_RECHECK_MS,
@@ -58,7 +59,7 @@ import type {
   SyncStatus,
 } from "../types";
 import { createPrefetchController } from "./prefetch-controller";
-import { deriveAuthTransition, type AuthPayload } from "./auth-transition";
+import { deriveAuthTransition, type AuthPayload, type LoginAttempt } from "./auth-transition";
 
 export type RuntimeMode =
   | "initializing"
@@ -137,6 +138,7 @@ export interface RuntimeActions {
 }
 
 export interface RuntimeState {
+  loginAttempt: LoginAttempt;
   authPhase: AuthPhase;
   authState: SessionAuthState;
   sessionState: SessionState;
@@ -332,6 +334,7 @@ function shouldAutoSync(state: RuntimeState): boolean {
 
 function createInitialState(actions: RuntimeActions): RuntimeState {
   return {
+    loginAttempt: "idle",
     authPhase: "loading",
     authState: "stale",
     sessionState: "unknown",
@@ -366,6 +369,8 @@ export function createRuntimeStore() {
   let accountDb: AccountDb = openAccountDb(null);
   let processingBookmarkEvents = false;
   let authRequestId = 0;
+  let loginAttemptId = 0;
+  let latestAuthPush: AuthPayload | null = null;
   let cleanupStarted = false;
   let unsubscribeDetailCache: (() => void) | null = null;
   // Scheduled auto-retry for when an auto-sync was blocked by auto_backoff.
@@ -602,7 +607,11 @@ export function createRuntimeStore() {
       },
     ): Promise<void> => {
       const { patch, effects } = deriveAuthTransition(get(), payload, options);
-      setRuntimeState(patch);
+      if (patch.authPhase === "ready") loginAttemptId += 1;
+      setRuntimeState({
+        ...patch,
+        loginAttempt: patch.authPhase === "ready" ? "idle" : get().loginAttempt,
+      });
 
       for (const effect of effects) {
         switch (effect.kind) {
@@ -639,12 +648,21 @@ export function createRuntimeStore() {
     const runAuthCheck = (): Promise<void> => {
       const requestId = authRequestId + 1;
       authRequestId = requestId;
-
-      if (requestId !== authRequestId) return Promise.resolve();
+      const pushAtStart = latestAuthPush;
 
       return loadAuthPayload()
         .then(async (payload) => {
           if (requestId !== authRequestId) return;
+          // A push can overtake this RPC. Re-read conflicting session/account
+          // facts so the stale response cannot undo success or an account switch.
+          if (
+            latestAuthPush && latestAuthPush !== pushAtStart &&
+            (payload.sessionState !== latestAuthPush.sessionState ||
+              payload.accountContextId !== latestAuthPush.accountContextId)
+          ) {
+            await runAuthCheck();
+            return;
+          }
           await applyAuthPayload(payload, {
             allowHydration: true,
             allowAutoSync: true,
@@ -660,6 +678,9 @@ export function createRuntimeStore() {
               };
             }
 
+            if (state.loginAttempt === "failed" || state.loginAttempt === "timed_out") {
+              return { authRetryDelayMs: AUTH_STALE_RECHECK_MS };
+            }
             return {
               authState: state.authState === "authenticated" ? "stale" : state.authState,
               authPhase: "connecting",
@@ -950,8 +971,10 @@ export function createRuntimeStore() {
       boot: async () => {
         const bootGeneration = get().bootGeneration + 1;
         authRequestId += 1;
+        loginAttemptId += 1;
         setRuntimeState({
           bootGeneration,
+          loginAttempt: "idle",
           authPhase: "loading",
           authRetryDelayMs: null,
           bookmarksLoaded: false,
@@ -992,10 +1015,12 @@ export function createRuntimeStore() {
         stopSync();
         clearScheduledAutoRetry();
         authRequestId += 1;
+        loginAttemptId += 1;
         setRuntimeState((state) => ({
           bootGeneration: state.bootGeneration + 1,
           syncGeneration: state.syncGeneration + 1,
           readerActive: false,
+          loginAttempt: "idle",
           authRetryDelayMs: null,
         }));
         void releaseActiveLease("skipped");
@@ -1006,24 +1031,55 @@ export function createRuntimeStore() {
       },
 
       connectingTimeout: () => {
-        setRuntimeState((state) => {
-          if (state.authPhase !== "connecting") return {};
-          return {
-            authPhase: "need_login",
-            sessionState: "unknown",
-            authRetryDelayMs: AUTH_STALE_RECHECK_MS,
-          };
+        // Interactive capture has its own worker-owned completion and RPC deadline.
+        if (get().authPhase !== "connecting" || get().loginAttempt === "pending") return;
+        loginAttemptId += 1;
+        setRuntimeState({
+          authPhase: "need_login",
+          loginAttempt: "timed_out",
+          authRetryDelayMs: AUTH_STALE_RECHECK_MS,
         });
       },
 
       startLogin: async () => {
+        if (get().loginAttempt === "pending") return;
+        const attemptId = ++loginAttemptId;
+        authRequestId += 1;
         setRuntimeState({
+          loginAttempt: "pending",
           authPhase: "connecting",
-          sessionState: "unknown",
           authRetryDelayMs: AUTH_QUICK_CHECK_MS,
         });
-        void startAuthCapture({ interactive: true, force: true }).catch(() => {});
+        try {
+          const result = await withTimeout(
+            startAuthCapture({ interactive: true, force: true, waitForCompletion: true }),
+            AUTH_CAPTURE_RPC_TIMEOUT_MS,
+            new Error("AUTH_CAPTURE_TIMEOUT"),
+          );
+          if (attemptId !== loginAttemptId) return;
+          if (!result?.authReady) {
+            setRuntimeState({
+              loginAttempt: result?.reason === "capture_timeout" ? "timed_out" : "failed",
+              authPhase: "need_login",
+              authRetryDelayMs: AUTH_STALE_RECHECK_MS,
+            });
+          }
+        } catch {
+          if (attemptId !== loginAttemptId) return;
+          setRuntimeState({
+            loginAttempt: "failed",
+            authPhase: "need_login",
+            authRetryDelayMs: AUTH_STALE_RECHECK_MS,
+          });
+        }
         await runAuthCheck();
+        if (attemptId === loginAttemptId && get().loginAttempt === "pending") {
+          setRuntimeState({
+            loginAttempt: "failed",
+            authPhase: "need_login",
+            authRetryDelayMs: AUTH_STALE_RECHECK_MS,
+          });
+        }
       },
 
       refresh: async () => sync({ trigger: "manual" }),
@@ -1081,6 +1137,7 @@ export function createRuntimeStore() {
        */
       applyRuntimeSnapshot: async (snapshot: RuntimeSnapshot) => {
         const payload = normalizeAuthPayloadFromSnapshot(snapshot);
+        latestAuthPush = payload;
         await applyAuthPayload(payload, {
           allowHydration: false,
           allowAutoSync: false,
@@ -1158,6 +1215,7 @@ export function createRuntimeStore() {
         void releaseActiveLease("skipped");
         clearScheduledAutoRetry();
         authRequestId += 1;
+        loginAttemptId += 1;
         setRuntimeState((state) => ({
           syncGeneration: state.syncGeneration + 1,
           syncStatus: "idle",

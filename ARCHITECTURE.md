@@ -218,11 +218,21 @@ stateDiagram-v2
   loading --> connecting: stale / partial auth
   loading --> need_login: logged_out
   connecting --> ready: auth recovered
-  connecting --> need_login: timeout or explicit logged_out
+  connecting --> need_login: timeout / capture startup failure
   ready --> need_login: logout
   ready --> connecting: auth goes stale
   need_login --> connecting: startLogin()
 ```
+
+`loginAttempt` tracks the UI interaction separately from the service worker's
+session facts. While an interactive attempt is pending, logged-out or partial
+snapshots keep the UI connecting until authentication succeeds or the worker
+returns the capture outcome. Interactive calls await that outcome, with a bounded
+RPC deadline for disconnected workers; the UI's bootstrap timeout does not end
+an interactive attempt. A failed or timed-out attempt shows recovery copy
+and remains actionable across background checks; only success or an explicit
+retry clears it. Auth polling repeats after each completed check, without
+overlapping requests, and stops when no retry delay is requested.
 
 ### Meaning of online states
 
@@ -433,6 +443,47 @@ When the app is offline or reconnecting, visible bookmarks are restricted to boo
 - online: show all bookmarks
 - offline/connecting/reauthing: show only bookmarks whose `tweetId` exists in `detailedTweetIds`
 
+## 9.5. Share Links and Extension Handoff
+
+A shared thread is a link to the marketing site, not to the extension:
+
+```
+https://usetotem.xyz/t/<tweetId>#s=<gzip+base64url payload>
+```
+
+The path carries the identity; the fragment carries a trimmed copy of the
+thread for people who do not have Totem. The fragment never reaches the server
+— shared threads are not stored anywhere.
+
+```mermaid
+flowchart TD
+  READER["Reader — Share button<br/>buildShareUrl()"] --> LINK["usetotem.xyz/t/id#s=payload"]
+  LINK --> PAGE["Site /t page<br/>SharedThreadApp"]
+  PAGE --> PING{"pingExtension()<br/>TOTEM_SHARE_PING"}
+  PING -->|installed + X session| SW["SW onMessageExternal<br/>chrome.tabs.update"]
+  SW --> EXT["reader.html?read=id<br/>fetched fresh from X"]
+  PING -->|no extension, no session,<br/>or ping times out| WEB["Decode fragment →<br/>BookmarkReader on the web"]
+  WEB -->|fragment missing| CTA["Install prompt + View on X"]
+```
+
+Load-bearing details:
+
+- The site cannot navigate itself to a `chrome-extension://` URL, so the
+  service worker performs the navigation. This is why no
+  `web_accessible_resources` entry and no `tabs` permission are needed.
+- `externally_connectable` in the manifest is what exposes `chrome.runtime` to
+  the site. It is not a permission, so adding it does not disable the
+  extension for existing users on update.
+- The ping answers `canOpenThread`, not just `installed`. The reader fetches
+  thread detail with the viewer's own X session; without one the handoff would
+  land on an error state, so the site keeps them on the web render instead.
+- A handoff marker in `sessionStorage` stops the page from re-opening the
+  reader when the user presses Back.
+- Article bodies ship as `plainText` only, and the builder drops alt text,
+  link cards, then article bodies until the URL fits `SHARE_URL_MAX_LENGTH`.
+  If it still does not fit, the link ships without a payload rather than
+  shipping a URL that breaks in plain-text clients.
+
 ## 10. Prefetch Controller
 
 Prefetch loop mechanics live in `src/stores/prefetch-controller.ts`, not inside the store itself.
@@ -596,6 +647,7 @@ This keeps home, reading list, and reader aligned.
 - `src/service-worker/sync.ts` — reservation/completion/reset handlers, self-heal mode
 - `src/service-worker/api-proxy.ts` — tweet detail + bookmark mutation proxies
 - `src/service-worker/query-id.ts` — GraphQL query-ID discovery
+- `src/service-worker/share.ts` — `onMessageExternal` handoff for share links
 - `src/api/core/auth.ts`, `bookmarks.ts`, `posts.ts`, `sync.ts` — runtime-side RPC wrappers
 
 ### Persistence
@@ -618,6 +670,8 @@ This keeps home, reading list, and reader aligned.
 - `src/components/BookmarksList.tsx`
 - `src/components/BookmarkReader.tsx`
 - `src/components/reader/detail-error.ts` — classifier (module-load assertion forces exhaustive coverage)
+- `src/lib/share/` — share payload shape, gzip fragment codec, link builder
+- `apps/site/src/react/share/` — public `/t` page and its extension bridge
 
 ### Invariant enforcement
 

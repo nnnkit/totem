@@ -125,6 +125,14 @@ Use exactly five screenshots:
 
 Keep screenshot captions descriptive and feature-specific. Do not use search-keyword captions such as "pocket alternative", "instapaper alternative", "bookmark manager chrome extension", or "custom new tab".
 
+## Content Rating (Mature content)
+
+Chrome Web Store listing → Additional fields → **Mature content**.
+
+Leave the checkbox **unchecked**. Totem is not mature: the extension has no sexual content, violence, strong language, drugs, alcohol, tobacco, gambling, ads, or adult links. Bookmarked posts are the user's own private library, shown only to that user — not a public UGC feed.
+
+Do not mark Mature just because a saved tweet could theoretically contain anything. Same class as a read-it-later or RSS reader. X itself is 13+; Totem is not directed at children.
+
 ## Promo Tile Copy
 
 Small promo tile:
