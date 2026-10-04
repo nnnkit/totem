@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.9] - 2026-10-04
+
+- feat: add share link, auth recovery fixes, and externally_connectable for usetotem.xyz
+- fix: center image preview modal
+- Add feedback and analytics MCP guidance
+- feat: add /contact page
+- feat: add self-hosted umami analytics
+- feat: add Product Hunt and TinyShelf badges to homepage hero
+- Update README.md
+
 ## [1.2.8] - 2026-07-27
 
 - fix(export): scope highlights export to annotated bookmarks and route retry by mode
