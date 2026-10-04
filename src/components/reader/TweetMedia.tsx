@@ -108,7 +108,12 @@ export function TweetMedia({ items, bleed = false, compact = false }: Props) {
         </div>
       </div>
 
-      <Modal open={!!previewImage} onClose={closePreview} className="flex items-center justify-center bg-black/80">
+      <Modal
+        open={!!previewImage}
+        onClose={closePreview}
+        className="bg-black/80"
+        popupClassName="flex items-center justify-center"
+      >
         {previewRef.current && (
           <>
             <button

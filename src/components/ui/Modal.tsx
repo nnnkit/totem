@@ -8,6 +8,7 @@ interface Props {
   open: boolean;
   onClose: () => void;
   className?: string;
+  popupClassName?: string;
   ariaLabelledBy?: string;
   title?: ReactNode;
   titleId?: string;
@@ -22,6 +23,7 @@ export function Modal({
   open,
   onClose,
   className,
+  popupClassName,
   ariaLabelledBy,
   title,
   titleId,
@@ -50,7 +52,10 @@ export function Modal({
           )}
         />
         <Dialog.Popup
-          className="fixed inset-0 z-50 transition-[opacity,transform] duration-200 data-[starting-style]:scale-95 data-[starting-style]:opacity-0 data-[ending-style]:scale-[0.97] data-[ending-style]:opacity-0"
+          className={cn(
+            "fixed inset-0 z-50 transition-[opacity,transform] duration-200 data-[starting-style]:scale-95 data-[starting-style]:opacity-0 data-[ending-style]:scale-[0.97] data-[ending-style]:opacity-0",
+            popupClassName,
+          )}
           aria-labelledby={resolvedTitleId}
           onClick={(e) => {
             if (e.target === e.currentTarget) onClose();
