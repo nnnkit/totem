@@ -496,8 +496,8 @@ export const SITE_COPY = {
       {
         title: "Website analytics",
         items: [
-          "The public website, usetotem.xyz, uses Google Analytics 4 and Umami hosted on our own server to count pageviews, referrers, and install or download clicks.",
-          "Google Analytics may set cookies. Umami does not use analytics cookies, and we exclude URL query strings and fragments from Umami page tracking. Embedded website previews do not send Umami events.",
+          "The public website, usetotem.xyz, uses Google Analytics 4, plus Umami and OpenPanel hosted on our own servers, to count pageviews, referrers, outbound link clicks, and install or download clicks.",
+          "Google Analytics may set cookies. Umami and OpenPanel do not use analytics cookies. We exclude URL fragments and query strings from their page tracking; OpenPanel keeps only campaign tags such as utm_source. Embedded website previews do not send Umami or OpenPanel events.",
           "Website analytics does not receive your extension bookmarks, notes, X session, or search queries.",
         ],
       },
