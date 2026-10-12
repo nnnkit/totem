@@ -9,3 +9,8 @@ allowBuilds:
 
 onlyBuiltDependencies:
   - esbuild
+
+overrides:
+  devalue: ^5.8.1
+  picomatch: ^4.0.4
+  rollup: ^4.59.0
