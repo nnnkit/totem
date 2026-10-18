@@ -332,3 +332,50 @@ describe("parseTweetDetailPayload", () => {
     expect(result.thread).toEqual([]);
   });
 });
+
+describe("note tweet rich text", () => {
+  function parseNote(note: Record<string, unknown>) {
+    const tweet = makeTweetResult("tweet-7", true) as Record<string, unknown>;
+    tweet.note_tweet = { note_tweet_results: { result: note } };
+    const payload = makePayload([
+      {
+        type: "TimelineAddEntries",
+        entries: [
+          {
+            entryId: "tweet-7",
+            sortIndex: "7",
+            content: { itemContent: { tweet_results: { result: tweet } } },
+          },
+        ],
+      },
+    ]);
+    return parseBookmarkPagePayload(payload).bookmarks[0];
+  }
+
+  it("maps bold/italic ranges onto the expanded, decoded text", () => {
+    const bookmark = parseNote({
+      text: "Tom &amp; Jerry https://t.co/x Bold end",
+      entity_set: { urls: [{ url: "https://t.co/x", expanded_url: "https://example.com/long" }] },
+      richtext: {
+        richtext_tags: [
+          { from_index: 0, to_index: 15, richtext_types: ["Bold"] },
+          { from_index: 31, to_index: 35, richtext_types: ["Bold", "Italic"] },
+        ],
+      },
+    });
+    expect(bookmark.text).toBe("Tom & Jerry https://example.com/long Bold end");
+    const slices = bookmark.textStyles!.map((r) => [r.style, bookmark.text.slice(r.start, r.end)]);
+    expect(slices).toHaveLength(3);
+    expect(slices).toEqual(
+      expect.arrayContaining([
+        ["bold", "Tom & Jerry"],
+        ["bold", "Bold"],
+        ["italic", "Bold"],
+      ]),
+    );
+  });
+
+  it("omits styles when the note has no rich text", () => {
+    expect(parseNote({ text: "plain", entity_set: {} }).textStyles).toBeUndefined();
+  });
+});

@@ -257,7 +257,8 @@ describe("runQuickExport", () => {
       "bookmarks/bookmark-tweet-1-tweet-1.md",
     );
     expect(tweetMarkdown).toContain("source: https://x.com/test/status/tweet-1");
-    expect(tweetMarkdown).toContain("# Bookmark tweet-1");
+    expect(tweetMarkdown).toContain('title: "Bookmark tweet-1"');
+    expect(tweetMarkdown).not.toContain("# Bookmark tweet-1");
     expect(tweetMarkdown).toContain("Full context continuation");
     expect(queueSnapshots).toContain('"key":"2026-06-08:15:v1"');
     expect(queueMetadata).toContain('"intent":"read_soon"');

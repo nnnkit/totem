@@ -25,6 +25,12 @@ export interface ArticleMarkdownMetadata {
   noteCount?: number;
 }
 
+// Synthetic tweet exports render their body from structured tweet data, so the
+// article heuristics (heading detection, paragraph re-flow) must not touch it.
+export interface ExportArticle extends ArticleContent {
+  markdownBody?: string;
+}
+
 interface ArticleMarkdownOptions {
   authorProfileImageUrl?: string;
   metadata?: ArticleMarkdownMetadata;
@@ -212,7 +218,7 @@ export function hasExportableArticle(article: ArticleContent | null | undefined)
 }
 
 export function articleToMarkdown(
-  article: ArticleContent,
+  article: ExportArticle,
   options?: ArticleMarkdownOptions,
 ): string {
   const plainText = article.plainText?.trim() || "";
@@ -257,6 +263,10 @@ export function articleToMarkdown(
     ? buildHighlightsSection(options.highlights)
     : "";
 
+  if (article.markdownBody) {
+    return assembleMarkdown(`${metaBlock}${article.markdownBody}`, highlightsSection);
+  }
+
   if (hasBlocks) {
     const body = blocksToMarkdown(
       article.contentBlocks!,
@@ -290,7 +300,7 @@ export function articleToMarkdown(
 }
 
 export function articleToAgentMarkdown(
-  article: ArticleContent,
+  article: ExportArticle,
   options?: ArticleMarkdownOptions,
 ): string {
   const metadata = options?.metadata

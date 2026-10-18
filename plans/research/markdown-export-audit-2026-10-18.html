@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Markdown Export Audit</title>
+<style>
+  :root { --bg:#fbfaf7; --fg:#1d1d1b; --muted:#6b6a65; --line:#e4e1d9; --ok:#1f7a3f; --warn:#a15c00; --bad:#b3261e; --code:#f1eee7; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#161614; --fg:#ecebe6; --muted:#9a988f; --line:#2c2b27; --ok:#5cc485; --warn:#e2a54a; --bad:#ef7b72; --code:#22211e; } }
+  :root[data-theme="dark"] { --bg:#161614; --fg:#ecebe6; --muted:#9a988f; --line:#2c2b27; --ok:#5cc485; --warn:#e2a54a; --bad:#ef7b72; --code:#22211e; }
+  body { background:var(--bg); color:var(--fg); font:15px/1.55 system-ui, sans-serif; margin:0; padding:32px 16px; }
+  main { max-width:960px; margin:0 auto; }
+  h1 { font-size:24px; margin:0 0 4px; } h2 { font-size:17px; margin:32px 0 8px; }
+  p.sub { color:var(--muted); margin:0 0 24px; }
+  .scroll { overflow-x:auto; }
+  table { border-collapse:collapse; width:100%; font-size:14px; }
+  th, td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { color:var(--muted); font-weight:600; }
+  .ok { color:var(--ok); font-weight:600; } .warn { color:var(--warn); font-weight:600; } .bad { color:var(--bad); font-weight:600; }
+  code { background:var(--code); padding:1px 5px; border-radius:4px; font-size:13px; }
+  ul { padding-left:20px; }
+</style>
+</head>
+<body>
+<main>
+<h1>Markdown export audit</h1>
+<p class="sub">2026-10-18 · Tested against 60 real bookmarks and 2 TweetDetail payloads captured from a logged-in X session, run through the real parser and exporter (<code>parseBookmarkPagePayload</code>, then <code>resolveReaderExportArticle</code>, then <code>articleToMarkdown</code>).</p>
+
+<h2>Root cause</h2>
+<p>Plain tweets and threads were first turned into markdown-ish text. That text was then fed back through the <em>article</em> pipeline, which ran heading detection, paragraph re-flow, escaping and link regexes over it a second time. Most of the visible breakage came from this second pass. Tweets now get a dedicated renderer (<code>src/lib/export/tweet-markdown.ts</code>) that works from structured data and skips the article heuristics.</p>
+
+<h2>Support matrix</h2>
+<div class="scroll">
+<table>
+<tr><th>Element</th><th>Before</th><th>After</th></tr>
+<tr><td>Line breaks / list-like lines</td><td class="bad">Random lines promoted to <code>####</code> headings</td><td class="ok">Exact line breaks, block syntax escaped</td></tr>
+<tr><td>Title</td><td class="bad">First line repeated as an H1 and again in the body</td><td class="ok">Frontmatter title only</td></tr>
+<tr><td>Bold/italic in long posts</td><td class="bad">Dropped (parser ignored <code>richtext_tags</code>)</td><td class="ok">Parsed into <code>textStyles</code>, rendered as <code>**</code>/<code>*</code></td></tr>
+<tr><td>Mentions with <code>_</code></td><td class="bad"><code>[@kevin](…)\_t\_ngo</code></td><td class="ok"><code>[@kevin_t_ngo](…)</code> (articles too)</td></tr>
+<tr><td>Hashtags / cashtags</td><td class="warn"><code>#1</code> linked, <code>#日本</code> and <code>$TSLA</code> not</td><td class="ok">Unicode hashtags and cashtags linked; numeric-only left as text</td></tr>
+<tr><td>URLs with <code>( ) _</code></td><td class="warn">Escaped label, fragile</td><td class="ok">Bare URL, or <code>&lt;url&gt;</code> autolink when needed</td></tr>
+<tr><td>Link cards</td><td class="bad">URL deleted, card dropped, so the link was lost</td><td class="ok">Quoted block with title link, description and domain. Inline card URLs are kept.</td></tr>
+<tr><td>Quoted posts</td><td class="bad">Text only, no name, link or media. Media-only quotes vanished.</td><td class="ok">Blockquote with author, post link, text, media and card</td></tr>
+<tr><td>Reposts</td><td class="warn">Banner text</td><td class="ok">"Reposted from Name (@handle)" plus the original content</td></tr>
+<tr><td>Replies / threads</td><td class="bad">Focal post first, parent after it, <code>---</code> glued to images</td><td class="ok">Chronological, authors labelled when mixed</td></tr>
+<tr><td>Images</td><td class="bad">Broken markdown when alt text has <code>]</code>, image glued to text</td><td class="ok">Own paragraph, alt escaped, <code>?name=large</code></td></tr>
+<tr><td>Video / GIF</td><td class="ok">Thumbnail plus "Watch on X"</td><td class="ok">Same, and quoted videos link to the quoted post</td></tr>
+<tr><td>X Articles (blocks)</td><td class="warn">Bold ending in a space (<code>**Label - **</code>) was invalid markdown</td><td class="ok">Whitespace moved outside the markers</td></tr>
+<tr><td>Copy for agent</td><td class="warn">Generic image lines inside quotes leaked, and the alt regex broke on <code>]</code></td><td class="ok">Handled</td></tr>
+</table>
+</div>
+
+<h2>Still not supported</h2>
+<ul>
+  <li><b>Polls:</b> the parser doesn't read poll cards (<code>poll2choice_*</code>). None of the 60 sampled bookmarks had one.</li>
+  <li><b>Non-summary cards</b> (player, app, unified_card) are ignored by <code>parseCard</code>.</li>
+  <li><b>Direct MP4 links:</b> the parser stores <code>videoUrl</code>, but export only links to the post on X.</li>
+  <li><b>Reply prefixes:</b> leading <code>@a @b</code> handles stay in the text. X hides them using <code>display_text_range</code>.</li>
+  <li><b>Not verified on real data:</b> article image galleries and embedded-post entities. Only LINK, header and list blocks appeared in the sample.</li>
+  <li><b>Reader UI</b> still doesn't show bold/italic for long posts. Only export uses <code>textStyles</code>.</li>
+  <li><b>PDF export</b> still goes through the old plain-text path.</li>
+  <li><b>Bold/italic for posts already saved:</b> it only shows up once the post's detail is fetched again. The stored rows were parsed before <code>textStyles</code> existed.</li>
+  <li><b>ZIP export of X Articles never opened in the reader:</b> these export only the Bookmarks-feed preview, which is truncated and runs through the heading heuristics. This was already the case before this change.</li>
+</ul>
+</main>
+</body>
+</html>

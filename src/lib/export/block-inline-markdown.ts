@@ -112,12 +112,15 @@ export function renderBlockInlineMarkdown(
           ? escapeMarkdownPlain(seg.text)
           : linkifyMarkdown(seg.text);
 
-      if (seg.bold && seg.italic) {
-        inner = `***${inner}***`;
-      } else if (seg.bold) {
-        inner = `**${inner}**`;
-      } else if (seg.italic) {
-        inner = wrapItalic(inner);
+      // CommonMark ignores a closing ** that follows whitespace, so X's habit of
+      // bolding "Label - " needs the spaces moved outside the markers.
+      const [, lead, core, trail] = /^(\s*)([\s\S]*?)(\s*)$/.exec(inner)!;
+      if (core && seg.bold && seg.italic) {
+        inner = `${lead}***${core}***${trail}`;
+      } else if (core && seg.bold) {
+        inner = `${lead}**${core}**${trail}`;
+      } else if (core && seg.italic) {
+        inner = `${lead}${wrapItalic(core)}${trail}`;
       }
 
       if (seg.entityKey >= 0) {

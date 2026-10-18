@@ -53,10 +53,11 @@ function isGenericMediaAlt(alt: string): boolean {
 
 function mediaLineToAgentText(line: string): string {
   return line.replace(
-    /^(?:#{2,6}\s*)?!\[([^\]]*)\]\(([^)]*)\)\s*$/gm,
-    (_match, rawAlt: string) => {
-      const alt = rawAlt.replace(/\\]/g, "]").replace(/\\\\/g, "\\").trim();
-      return isGenericMediaAlt(alt) ? "" : `Media: ${alt}`;
+    /^((?:> ?)*)(?:#{2,6}\s*)?!\[((?:\\.|[^\]\\])*)\]\(([^)]*)\)\s*$/gm,
+    (_match, quote: string, rawAlt: string) => {
+      const alt = rawAlt.replace(/\\([\\[\]])/g, "$1").trim();
+      if (isGenericMediaAlt(alt)) return quote.trimEnd();
+      return `${quote}Media: ${alt}`;
     },
   );
 }

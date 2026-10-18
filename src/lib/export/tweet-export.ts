@@ -9,7 +9,8 @@ import type {
   TweetKind,
   TweetUrl,
 } from "../../types";
-import { hasExportableArticle } from "./article-to-markdown";
+import { type ExportArticle, hasExportableArticle } from "./article-to-markdown";
+import { tweetNodeToMarkdown, tweetThreadToMarkdown } from "./tweet-markdown";
 
 type TweetExportNode = {
   tweetId: string;
@@ -186,18 +187,20 @@ export function resolveReaderExportArticle(
   bookmark: Bookmark,
   thread: ThreadTweet[],
   options?: { includeThreadInExport?: boolean },
-): ArticleContent {
+): ExportArticle {
   if (bookmark.article && hasExportableArticle(bookmark.article)) {
     return bookmark.article;
   }
-  const plainText = buildSyntheticExportPlainText(
-    bookmark,
-    thread,
-    options?.includeThreadInExport ?? false,
-  );
+  const includeThread = options?.includeThreadInExport ?? false;
+  const plainText = buildSyntheticExportPlainText(bookmark, thread, includeThread);
+  const markdownBody =
+    (includeThread && thread.length > 0
+      ? tweetThreadToMarkdown(bookmark, thread, bookmark.createdAt)
+      : tweetNodeToMarkdown(bookmark)) || "(No text in this post.)";
   const title = deriveExportTitle(bookmark);
   return {
     plainText,
+    markdownBody,
     ...(title ? { title } : {}),
   };
 }

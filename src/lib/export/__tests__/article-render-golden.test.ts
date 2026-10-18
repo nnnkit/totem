@@ -168,7 +168,7 @@ describe("article render golden", () => {
 
       ![Cover image for The Comprehensive Title](https://img.example.com/cover.jpg)
 
-      First paragraph with a** l**[**ink **](https://link.example.com)**entit**y here.
+      First paragraph with a **l**[**ink** ](https://link.example.com)**entit**y here.
 
 
 

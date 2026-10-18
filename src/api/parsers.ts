@@ -7,6 +7,7 @@ import type {
   Media,
   ThreadTweet,
   TweetKind,
+  TextStyleRange,
   TweetUrl,
 } from "../types";
 import {
@@ -592,6 +593,64 @@ function attachCardToUrls(tweet: UnknownRecord, urls: TweetUrl[]): void {
   if (match) match.card = parsed.card;
 }
 
+const STYLE_MARKERS = {
+  bold: ["\uE000", "\uE001"],
+  italic: ["\uE002", "\uE003"],
+} as const;
+
+// note_tweet richtext indices point into the raw note text (code points, before
+// t.co expansion and entity decoding). Markers are threaded through the same
+// transforms so the ranges land on the final display text.
+function parseNoteTextStyles(
+  noteResult: UnknownRecord,
+  rawText: string,
+  mappings: { url: string; expanded_url: string }[],
+  expectedText: string,
+): TextStyleRange[] {
+  const tags = asRecords(asRecord(noteResult.richtext)?.richtext_tags);
+  if (tags.length === 0) return [];
+
+  const chars = Array.from(rawText);
+  const before: string[] = new Array(chars.length + 1).fill("");
+  const after: string[] = new Array(chars.length + 1).fill("");
+  for (const tag of tags) {
+    const from = toNumber(tag.from_index);
+    const to = toNumber(tag.to_index);
+    if (!(from >= 0 && to > from && to <= chars.length)) continue;
+    const types = Array.isArray(tag.richtext_types) ? tag.richtext_types : [];
+    for (const type of types) {
+      const style = type === "Bold" ? "bold" : type === "Italic" ? "italic" : null;
+      if (!style) continue;
+      after[from] += STYLE_MARKERS[style][0];
+      before[to] = STYLE_MARKERS[style][1] + before[to];
+    }
+  }
+
+  let marked = "";
+  for (let i = 0; i <= chars.length; i++) {
+    marked += before[i] + after[i] + (chars[i] ?? "");
+  }
+  const transformed = decodeHtmlEntities(expandText(marked, mappings));
+
+  const ranges: TextStyleRange[] = [];
+  const open: Partial<Record<TextStyleRange["style"], number>> = {};
+  let clean = "";
+  for (const ch of transformed) {
+    if (ch === STYLE_MARKERS.bold[0]) open.bold = clean.length;
+    else if (ch === STYLE_MARKERS.italic[0]) open.italic = clean.length;
+    else if (ch === STYLE_MARKERS.bold[1] || ch === STYLE_MARKERS.italic[1]) {
+      const style = ch === STYLE_MARKERS.bold[1] ? "bold" : "italic";
+      const start = open[style];
+      if (start !== undefined && clean.length > start) {
+        ranges.push({ start, end: clean.length, style });
+      }
+      delete open[style];
+    } else clean += ch;
+  }
+
+  return clean === expectedText ? ranges : [];
+}
+
 function parseTweetText(tweet: UnknownRecord, legacy: UnknownRecord) {
   const noteTweet = asRecord(tweet.note_tweet);
   const noteResult = asRecord(asRecord(noteTweet?.note_tweet_results)?.result);
@@ -602,9 +661,13 @@ function parseTweetText(tweet: UnknownRecord, legacy: UnknownRecord) {
     if (noteText) {
       const urls = parseUrls(noteEntities);
       attachCardToUrls(tweet, urls);
+      const mappings = parseUrlMappings(noteEntities);
+      const text = decodeHtmlEntities(expandText(noteText, mappings));
+      const textStyles = parseNoteTextStyles(noteResult, noteText, mappings, text);
       return {
-        text: decodeHtmlEntities(expandText(noteText, parseUrlMappings(noteEntities))),
+        text,
         urls,
+        ...(textStyles.length > 0 ? { textStyles } : {}),
       };
     }
   }
@@ -732,7 +795,7 @@ function parseEmbeddedTweet(result: UnknownRecord | null): Bookmark["quotedTweet
   const author = parseAuthor(core);
   if (!author) return null;
 
-  const { text, urls } = parseTweetText(embedded, legacy);
+  const { text, urls, textStyles } = parseTweetText(embedded, legacy);
   const tweetId = asString(legacy.id_str) || asString(embedded.rest_id) || "";
   if (!tweetId) return null;
 
@@ -743,6 +806,7 @@ function parseEmbeddedTweet(result: UnknownRecord | null): Bookmark["quotedTweet
     author,
     media: parseMedia(legacy),
     urls,
+    ...(textStyles ? { textStyles } : {}),
     article: extractArticle(embedded),
   };
 }
@@ -799,7 +863,7 @@ function parseTweetRecord(
     const author = parseAuthor(core);
     if (!author) return null;
 
-    const { text, urls } = parseTweetText(tweet, legacy);
+    const { text, urls, textStyles } = parseTweetText(tweet, legacy);
     const media = parseMedia(legacy);
     const views = asRecord(tweet.views);
     const quotedTweet = parseQuotedTweet(tweet);
@@ -839,6 +903,7 @@ function parseTweetRecord(
       },
       media,
       urls,
+      ...(textStyles && displayText === text ? { textStyles } : {}),
       isThread,
       hasImage: media.some((item) => item.type === "photo"),
       hasVideo: media.some(
@@ -1217,6 +1282,7 @@ function toThreadTweet(bookmark: Bookmark): ThreadTweet {
     author: bookmark.author,
     media: bookmark.media,
     urls: bookmark.urls,
+    ...(bookmark.textStyles ? { textStyles: bookmark.textStyles } : {}),
     article: bookmark.article || null,
     quotedTweet: bookmark.quotedTweet || null,
     retweetedTweet: bookmark.retweetedTweet || null,

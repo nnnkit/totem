@@ -81,6 +81,12 @@ export interface LinkCard {
   cardType?: string;
 }
 
+export interface TextStyleRange {
+  start: number;
+  end: number;
+  style: "bold" | "italic";
+}
+
 export interface TweetUrl {
   url: string;
   displayUrl: string;
@@ -128,6 +134,7 @@ export interface QuotedTweet {
   author: Author;
   media: Media[];
   urls?: TweetUrl[];
+  textStyles?: TextStyleRange[];
   article?: ArticleContent | null;
 }
 
@@ -138,6 +145,7 @@ export interface ThreadTweet {
   author: Author;
   media: Media[];
   urls: TweetUrl[];
+  textStyles?: TextStyleRange[];
   article?: ArticleContent | null;
   quotedTweet?: QuotedTweet | null;
   retweetedTweet?: QuotedTweet | null;
@@ -160,6 +168,7 @@ export interface Bookmark {
   metrics: Metrics;
   media: Media[];
   urls: TweetUrl[];
+  textStyles?: TextStyleRange[];
   isThread: boolean;
   hasImage: boolean;
   hasVideo: boolean;

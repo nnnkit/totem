@@ -5,10 +5,8 @@ import {
 } from "../../components/reader/utils";
 
 const URL_REGEX = /https?:\/\/[^\s<]+/g;
-const MENTION_REGEX =
-  /(^|[^A-Za-z0-9_])@([A-Za-z0-9_]{1,15})(?=$|[^A-Za-z0-9_])/g;
-const HASHTAG_REGEX =
-  /(^|[^A-Za-z0-9_])#([A-Za-z0-9_]+)(?=$|[^A-Za-z0-9_])/g;
+const ENTITY_REGEX =
+  /(^|[^A-Za-z0-9_])(?:@([A-Za-z0-9_]{1,15})|#([A-Za-z0-9_]*[A-Za-z_][A-Za-z0-9_]*))(?=$|[^A-Za-z0-9_])/g;
 const MD_LINK = /\[([^\]]*)\]\(([^)]*)\)/g;
 
 export function escapeMarkdownPlain(s: string): string {
@@ -45,18 +43,18 @@ export function wrapItalic(inner: string): string {
   return `*${inner}*`;
 }
 
-function applyMentionsAndHashtags(s: string): string {
-  const withMentions = s.replace(
-    MENTION_REGEX,
-    (_match, prefix: string, handle: string) =>
-      `${prefix}[@${escapeMarkdownPlain(handle)}](https://x.com/${handle})`,
-  );
-
-  return withMentions.replace(
-    HASHTAG_REGEX,
-    (_match, prefix: string, tag: string) =>
-      `${prefix}[#${escapeMarkdownPlain(tag)}](https://x.com/hashtag/${tag})`,
-  );
+function applyMentionsAndHashtags(raw: string): string {
+  let out = "";
+  let last = 0;
+  for (const m of raw.matchAll(ENTITY_REGEX)) {
+    const [whole, prefix, handle, tag] = m;
+    out += escapeMarkdownPlain(raw.slice(last, m.index) + prefix);
+    out += handle
+      ? `[@${handle}](https://x.com/${handle})`
+      : `[#${tag}](https://x.com/hashtag/${tag})`;
+    last = m.index + whole.length;
+  }
+  return out + escapeMarkdownPlain(raw.slice(last));
 }
 
 function linkifyUrlsAndMentions(text: string): string {
@@ -69,7 +67,7 @@ function linkifyUrlsAndMentions(text: string): string {
   while ((m = re.exec(text)) !== null) {
     if (m.index > lastIndex) {
       const plain = text.slice(lastIndex, m.index);
-      parts.push(applyMentionsAndHashtags(escapeMarkdownPlain(plain)));
+      parts.push(applyMentionsAndHashtags(plain));
     }
     const url = m[0];
     const safe = sanitizeUrl(url);
@@ -79,9 +77,7 @@ function linkifyUrlsAndMentions(text: string): string {
     lastIndex = m.index + url.length;
   }
   if (lastIndex < text.length) {
-    parts.push(
-      applyMentionsAndHashtags(escapeMarkdownPlain(text.slice(lastIndex))),
-    );
+    parts.push(applyMentionsAndHashtags(text.slice(lastIndex)));
   }
 
   return parts.join("");

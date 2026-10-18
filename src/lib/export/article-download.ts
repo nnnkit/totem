@@ -3,6 +3,7 @@ import {
   articleToAgentMarkdown,
   articleToMarkdown,
   type ArticleMarkdownMetadata,
+  type ExportArticle,
 } from "./article-to-markdown";
 import {
   articleToPrintDocumentHtml,
@@ -22,7 +23,7 @@ export function suggestedArticleFilename(
 }
 
 export function getArticleMarkdownString(
-  article: ArticleContent,
+  article: ExportArticle,
   options?: {
     authorProfileImageUrl?: string;
     metadata?: ArticleMarkdownMetadata;
@@ -37,7 +38,7 @@ export function getArticleMarkdownString(
 }
 
 export function getArticleAgentMarkdownString(
-  article: ArticleContent,
+  article: ExportArticle,
   options?: {
     authorProfileImageUrl?: string;
     metadata?: ArticleMarkdownMetadata;
@@ -62,7 +63,7 @@ export async function copyTextToClipboard(text: string): Promise<boolean> {
 }
 
 export async function copyArticleMarkdownToClipboard(
-  article: ArticleContent,
+  article: ExportArticle,
   options?: {
     authorProfileImageUrl?: string;
     metadata?: ArticleMarkdownMetadata;
@@ -73,7 +74,7 @@ export async function copyArticleMarkdownToClipboard(
 }
 
 export async function copyArticleForAgentToClipboard(
-  article: ArticleContent,
+  article: ExportArticle,
   options?: {
     authorProfileImageUrl?: string;
     metadata?: ArticleMarkdownMetadata;
@@ -96,7 +97,7 @@ export function downloadMarkdownFile(body: string, filename: string): void {
 }
 
 export function downloadArticleMarkdown(
-  article: ArticleContent,
+  article: ExportArticle,
   options?: {
     authorProfileImageUrl?: string;
     metadata?: ArticleMarkdownMetadata;
