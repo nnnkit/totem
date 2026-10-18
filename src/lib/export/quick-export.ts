@@ -7,6 +7,7 @@ import type {
   TodayQueueSnapshot,
   TweetDetailCache,
 } from "../../types";
+import { prefetchMissingArticleDetails } from "./article-detail-prefetch";
 import { getArticleMarkdownString } from "./article-download";
 import { slugifyArticleBasename } from "./article-filename";
 import { deriveExportTitle, resolveReaderExportArticle } from "./tweet-export";
@@ -657,6 +658,9 @@ export async function runQuickExport(
   const exportedAtLabel = exportDate.toLocaleString();
 
   try {
+    // After openWritable: the save picker needs the click's user activation,
+    // which any awaited network round-trip before it would consume.
+    await prefetchMissingArticleDetails();
     const [
       bookmarkFilesResult,
       detailSummary,
