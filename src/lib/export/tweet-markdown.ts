@@ -2,6 +2,7 @@ import type {
   ArticleContent,
   Author,
   Media,
+  Poll,
   QuotedTweet,
   TextStyleRange,
   TweetUrl,
@@ -14,9 +15,12 @@ export interface TweetMarkdownNode {
   urls?: TweetUrl[];
   textStyles?: TextStyleRange[];
   media: Media[];
+  poll?: Poll;
   article?: ArticleContent | null;
   quotedTweet?: QuotedTweet | null;
   retweetedTweet?: QuotedTweet | null;
+  inReplyToTweetId?: string;
+  inReplyToScreenName?: string;
 }
 
 type TokenKind = "url" | "mention" | "hashtag" | "cashtag" | "drop";
@@ -263,10 +267,50 @@ function mediaToMarkdown(media: Media[], node: { author: { screenName: string };
       if (m.url) {
         parts.push(`![${imageAlt(alt || `Video preview from @${handle}'s post`)}](${m.url})`);
       }
-      parts.push(`[Watch on X](${statusUrl(handle, node.tweetId)})`);
+      const watch = `[Watch on X](${statusUrl(handle, node.tweetId)})`;
+      parts.push(m.videoUrl ? `${watch} · [MP4](${renderLinkTarget(m.videoUrl)})` : watch);
     }
   }
   return parts;
+}
+
+function renderLinkTarget(url: string): string {
+  return url.replace(/[\s()]/g, encodeURIComponent);
+}
+
+function formatPollDate(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  const label = date.toLocaleString("en-US", {
+    timeZone: "UTC",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  });
+  return `${label} UTC`;
+}
+
+function pluralVotes(count: number): string {
+  return `${count.toLocaleString("en-US")} ${count === 1 ? "vote" : "votes"}`;
+}
+
+export function pollToMarkdown(poll: Poll, now = Date.now()): string {
+  const total = poll.choices.reduce((sum, choice) => sum + choice.count, 0);
+  const endsAt = poll.endsAt ? Date.parse(poll.endsAt) : NaN;
+  const status = poll.ended
+    ? "Final results"
+    : poll.endsAt
+      ? `${endsAt <= now ? "Ended" : "Ends"} ${formatPollDate(poll.endsAt)}`
+      : "";
+  const header = ["**Poll**", pluralVotes(total), status].filter(Boolean).join(" · ");
+  const rows = poll.choices.map((choice) => {
+    const share = total > 0 ? ((choice.count / total) * 100).toFixed(1) : "0.0";
+    return `- ${escapeLineStart(escapeInline(choice.label.trim()))} — ${pluralVotes(choice.count)} (${share}%)`;
+  });
+  return [header, "", ...rows].join("\n");
 }
 
 function cardsToMarkdown(urls: TweetUrl[]): string[] {
@@ -277,11 +321,11 @@ function cardsToMarkdown(urls: TweetUrl[]): string[] {
     const href = u.expandedUrl || u.url;
     if (!card?.title || !href || seen.has(href)) continue;
     seen.add(href);
-    const lines = [`> [${escapeInline(card.title)}](${href.replace(/[\s()]/g, encodeURIComponent)})`];
+    const lines = [`> [${escapeInline(card.title)}](${renderLinkTarget(href)})`];
     const description = card.description?.replace(/\s+/g, " ").trim();
     if (description) lines.push(`> ${escapeInline(description)}`);
     const domain = card.domain?.trim();
-    if (domain) lines.push(`> ${escapeInline(domain)}`);
+    if (domain && domain !== card.title.trim()) lines.push(`> ${escapeInline(domain)}`);
     parts.push(lines.join("  \n"));
   }
   return parts;
@@ -307,14 +351,25 @@ function articleTeaser(article: ArticleContent | null | undefined, href: string)
   return title ? `**Article:** [${escapeInline(title)}](${href})` : "";
 }
 
-function contentParts(node: TweetMarkdownNode): string[] {
+// The parser drops the leading reply handles, so say who the post answers
+// unless the parent is already part of the export.
+function replyContext(node: TweetMarkdownNode): string {
+  const target = node.inReplyToScreenName;
+  if (!target || target.toLowerCase() === node.author.screenName.toLowerCase()) return "";
+  return `Replying to [@${target}](https://x.com/${target})`;
+}
+
+function contentParts(node: TweetMarkdownNode, parentShown = false): string[] {
   const urls = node.urls ?? [];
   const parts: string[] = [];
+  const reply = parentShown ? "" : replyContext(node);
+  if (reply) parts.push(reply);
   const text = tweetTextToMarkdown(node.text, urls, node.textStyles);
   if (text) parts.push(text);
   const teaser = articleTeaser(node.article, statusUrl(node.author.screenName, node.tweetId));
   if (teaser && !node.text.includes(node.article?.title?.trim() ?? "\0")) parts.push(teaser);
   parts.push(...mediaToMarkdown(node.media, node));
+  if (node.poll) parts.push(pollToMarkdown(node.poll));
   parts.push(...cardsToMarkdown(urls));
   return parts;
 }
@@ -325,7 +380,7 @@ function quotedToMarkdown(quoted: QuotedTweet): string {
   return blockquote(parts.join("\n\n"));
 }
 
-export function tweetNodeToMarkdown(node: TweetMarkdownNode): string {
+export function tweetNodeToMarkdown(node: TweetMarkdownNode, parentShown = false): string {
   const reposted = node.retweetedTweet;
   if (reposted) {
     const href = statusUrl(reposted.author.screenName, reposted.tweetId);
@@ -336,7 +391,7 @@ export function tweetNodeToMarkdown(node: TweetMarkdownNode): string {
     return [`Reposted from ${attributedHandle(reposted.author, href)}`, ...contentParts(inner)].join("\n\n");
   }
 
-  const parts = contentParts(node);
+  const parts = contentParts(node, parentShown);
   if (node.quotedTweet) parts.push(quotedToMarkdown(node.quotedTweet));
   return parts.join("\n\n");
 }
@@ -354,9 +409,11 @@ export function tweetThreadToMarkdown(
   const focalHandle = focal.author.screenName.toLowerCase();
   const multiAuthor = nodes.some((n) => n.author.screenName.toLowerCase() !== focalHandle);
 
+  const shownIds = new Set(nodes.map((n) => n.tweetId));
   return nodes
     .map((node) => {
-      const body = tweetNodeToMarkdown(node);
+      const parentShown = Boolean(node.inReplyToTweetId && shownIds.has(node.inReplyToTweetId));
+      const body = tweetNodeToMarkdown(node, parentShown);
       if (!multiAuthor) return body;
       const header = attributedHandle(node.author, statusUrl(node.author.screenName, node.tweetId));
       return body ? `${header}\n\n${body}` : header;

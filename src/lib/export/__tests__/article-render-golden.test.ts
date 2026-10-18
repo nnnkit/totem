@@ -135,7 +135,9 @@ describe("article render golden", () => {
         }),
         { includeCoverImage: false },
       ),
-    ).toBe(`# Video Without Source\n\n${VIDEO_NO_SOURCE_FALLBACK}\n`);
+    ).toBe(
+      `# Video Without Source\n\n${VIDEO_NO_SOURCE_FALLBACK} · [MP4](https://video.example.com/clip.mp4)\n`,
+    );
   });
 
   it("markdown — video without a source keeps the poster preview above the fallback", () => {
@@ -199,9 +201,9 @@ describe("article render golden", () => {
 
       ![Video preview](https://img.example.com/poster.jpg)
 
-      [Watch on X](https://x.com/someone/status/123)
+      [Watch on X](https://x.com/someone/status/123) · [MP4](https://video.example.com/v.mp4)
 
-      [Watch on X](https://x.com/someone/status/123)
+      [Watch on X](https://x.com/someone/status/123) · [MP4](https://video.example.com/v2.mp4)
 
       \`\`\`
       const x = 1;

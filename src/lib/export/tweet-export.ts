@@ -143,9 +143,9 @@ function tweetNodeToPlainExport(tweet: TweetExportNode): string {
 export function deriveExportTitle(bookmark: Bookmark): string | undefined {
   const fromArticle = bookmark.article?.title?.trim();
   if (fromArticle) return fromArticle;
-  const preview = stripCardUrlsFromTweetText(bookmark.text, bookmark.urls)
-    .trim()
-    .split("\n")[0];
+  const preview =
+    stripCardUrlsFromTweetText(bookmark.text, bookmark.urls).trim().split("\n")[0] ||
+    bookmark.urls.find((u) => u.card?.title)?.card?.title?.trim();
   if (!preview) return undefined;
   return preview.length <= 200 ? preview : `${preview.slice(0, 197)}…`;
 }

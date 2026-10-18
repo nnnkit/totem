@@ -66,13 +66,16 @@ export function renderBlockInlineMarkdown(
   const segments: Segment[] = [];
 
   for (let i = 0; i < length; i++) {
+    // Emphasis and links can't span a blank line, so a newline always closes
+    // the current run and the style reopens on the next line.
+    const plain = text[i] === "\n";
     const seg: Segment = {
       text: text[i],
-      bold: bold[i] === 1,
-      italic: italic[i] === 1,
-      code: code[i] === 1,
-      entityKey: entityKey[i],
-      linkHref: linkHref[i],
+      bold: !plain && bold[i] === 1,
+      italic: !plain && italic[i] === 1,
+      code: !plain && code[i] === 1,
+      entityKey: plain ? -1 : entityKey[i],
+      linkHref: plain ? "" : linkHref[i],
     };
     const last = segments[segments.length - 1];
     if (

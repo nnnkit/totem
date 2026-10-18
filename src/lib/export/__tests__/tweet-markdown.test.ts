@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Bookmark, QuotedTweet, ThreadTweet } from "../../../types";
 import { optimizeMarkdownForAgent } from "../agent-markdown-optimizer";
 import {
+  pollToMarkdown,
   tweetNodeToMarkdown,
   tweetTextToMarkdown,
   tweetThreadToMarkdown,
@@ -185,5 +186,182 @@ describe("tweet export through articleToMarkdown", () => {
       "> ![Image attached to @bob's post](https://x/a.jpg)\n> ![a \\[chart\\]](https://x/b.jpg)\n",
     );
     expect(md).toBe(">\n> Media: a [chart]\n");
+  });
+});
+
+// Values below are trimmed from real Search/TweetDetail payloads.
+describe("polls, video links and reply context", () => {
+  it("renders a closed poll with counts and percentages", () => {
+    expect(
+      pollToMarkdown({
+        choices: [
+          { label: "BOYNEXTDOOR", count: 1034 },
+          { label: "SOYEON", count: 10 },
+          { label: "ALLDAY PROJECT", count: 20 },
+        ],
+        ended: true,
+        endsAt: "2026-10-04T11:28:08Z",
+      }),
+    ).toBe(
+      [
+        "**Poll** · 1,064 votes · Final results",
+        "",
+        "- BOYNEXTDOOR — 1,034 votes (97.2%)",
+        "- SOYEON — 10 votes (0.9%)",
+        "- ALLDAY PROJECT — 20 votes (1.9%)",
+      ].join("\n"),
+    );
+  });
+
+  it("renders an open poll with no votes yet and its end time in UTC", () => {
+    const poll = {
+      choices: [
+        { label: "deepseek v4.1 flash", count: 0 },
+        { label: "none, chatgpt for life", count: 0 },
+      ],
+      ended: false,
+      endsAt: "2026-10-19T07:10:47Z",
+    };
+    expect(pollToMarkdown(poll, Date.parse("2026-10-18T07:31:07Z"))).toBe(
+      [
+        "**Poll** · 0 votes · Ends Oct 19, 2026, 07:10 UTC",
+        "",
+        "- deepseek v4.1 flash — 0 votes (0.0%)",
+        "- none, chatgpt for life — 0 votes (0.0%)",
+      ].join("\n"),
+    );
+    expect(pollToMarkdown(poll, Date.parse("2026-10-20T00:00:00Z"))).toContain(
+      "Ended Oct 19, 2026, 07:10 UTC",
+    );
+  });
+
+  it("escapes poll labels that would start a list or heading", () => {
+    const md = pollToMarkdown({
+      choices: [
+        { label: "1. yes", count: 1 },
+        { label: "# no", count: 1 },
+      ],
+      ended: true,
+    });
+    expect(md).toContain("- 1\\. yes — 1 vote (50.0%)");
+    expect(md).toContain("- \\# no — 1 vote (50.0%)");
+  });
+
+  it("puts the poll after the post text, inside quotes too", () => {
+    const poll = { choices: [{ label: "A", count: 1 }, { label: "B", count: 3 }], ended: true };
+    const quoted: QuotedTweet = {
+      tweetId: "2", text: "Pick one", createdAt: 0, author: bob, media: [], poll,
+    };
+    const md = tweetNodeToMarkdown(bookmark({ text: "Look", quotedTweet: quoted }));
+    expect(md).toContain("> Pick one\n>\n> **Poll** · 4 votes · Final results\n>\n> - A — 1 vote (25.0%)");
+  });
+
+  it("adds a direct MP4 link next to Watch on X", () => {
+    const md = tweetNodeToMarkdown(
+      bookmark({
+        tweetId: "2104937926593487309",
+        author: { ...author, screenName: "calebporzio" },
+        media: [
+          {
+            type: "video",
+            url: "https://pbs.twimg.com/amplify_video_thumb/2104936481328345088/img/vGaphvdi3ztmfSPe.jpg",
+            videoUrl: "https://video.twimg.com/amplify_video/2104936481328345088/vid/avc1/1920x1080/TJa1R6h-zdqKlEv8.mp4?tag=29",
+            width: 1920,
+            height: 1080,
+          },
+        ],
+      }),
+    );
+    expect(md).toContain(
+      "[Watch on X](https://x.com/calebporzio/status/2104937926593487309) · [MP4](https://video.twimg.com/amplify_video/2104936481328345088/vid/avc1/1920x1080/TJa1R6h-zdqKlEv8.mp4?tag=29)",
+    );
+    expect(
+      optimizeMarkdownForAgent(
+        `---\nsource: https://x.com/calebporzio/status/2104937926593487309\n---\n${md}`,
+      ),
+    ).toContain("\n[MP4](https://video.twimg.com/");
+  });
+
+  it("says who a reply answers unless the parent is exported too", () => {
+    const reply = bookmark({
+      tweetId: "2087615755701653952",
+      text: "fixed!",
+      inReplyToTweetId: "2087579979181887989",
+      inReplyToScreenName: "0xblacklight",
+    });
+    expect(tweetNodeToMarkdown(reply)).toBe(
+      "Replying to [@0xblacklight](https://x.com/0xblacklight)\n\nfixed!",
+    );
+    const parent: ThreadTweet = {
+      tweetId: "2087579979181887989",
+      text: "broken link",
+      createdAt: 500,
+      author: { ...bob, screenName: "0xblacklight" },
+      media: [],
+      urls: [],
+    };
+    expect(tweetThreadToMarkdown(reply, [parent], reply.createdAt)).not.toContain("Replying to");
+    expect(tweetNodeToMarkdown({ ...reply, inReplyToScreenName: "jane" })).toBe("fixed!");
+  });
+
+  it("does not repeat a card domain that doubles as its title", () => {
+    const md = tweetNodeToMarkdown(
+      bookmark({
+        urls: [
+          {
+            url: "https://www.mahindra.com/mymahindrastory",
+            displayUrl: "mahindra.com",
+            expandedUrl: "https://www.mahindra.com/mymahindrastory",
+            card: { title: "mahindra.com", domain: "mahindra.com", cardType: "unified_card" },
+          },
+        ],
+      }),
+    );
+    expect(md).toBe("> [mahindra.com](https://www.mahindra.com/mymahindrastory)");
+  });
+});
+
+describe("article embedded posts", () => {
+  it("renders a TWEET entity as a quote link", () => {
+    const md = articleToMarkdown({
+      title: "/show-me",
+      plainText: "The former CEO of reddit:",
+      contentBlocks: [
+        { type: "unstyled", text: "The former CEO of reddit:", inlineStyleRanges: [], entityRanges: [], depth: 0 },
+        { type: "atomic", text: " ", inlineStyleRanges: [], entityRanges: [{ key: 2, length: 1, offset: 0 }], depth: 0 },
+      ],
+      entityMap: {
+        "2": {
+          type: "TWEET",
+          data: { entityKey: "4db2e813-01fd-4240-a2c8-d2effc911a48", tweetId: "2086534431075098628" },
+        },
+      },
+    });
+    expect(md).toContain(
+      "The former CEO of reddit:\n\n> [Embedded post on X](https://x.com/i/status/2086534431075098628)",
+    );
+  });
+});
+
+describe("article inline styles across line breaks", () => {
+  it("closes and reopens bold at each newline inside a block", () => {
+    // Trimmed from a real Article block whose Bold range spans "\n\n".
+    const text =
+      "Last thing, if you want me to continue doing these, I need your support.\n\nSo a like, a quote or a bookmark would help me continue 🙏";
+    const md = articleToMarkdown({
+      plainText: text,
+      contentBlocks: [
+        {
+          type: "unstyled",
+          text,
+          inlineStyleRanges: [{ offset: 0, length: text.length, style: "Bold" }],
+          entityRanges: [],
+          depth: 0,
+        },
+      ],
+    });
+    expect(md).toContain(
+      "**Last thing, if you want me to continue doing these, I need your support.**\n\n**So a like, a quote or a bookmark would help me continue 🙏**",
+    );
   });
 });

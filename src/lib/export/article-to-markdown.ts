@@ -139,17 +139,21 @@ const markdownEmit: ArticleBlockEmit<string> = {
   mediaImage(url, alt) {
     return markdownImage(url, alt);
   },
-  mediaVideo(imageUrl, postUrl) {
+  mediaVideo(imageUrl, postUrl, videoUrl) {
     const parts: string[] = [];
     if (imageUrl) {
       parts.push(markdownImage(imageUrl, "Video preview"));
     }
-    if (postUrl) {
-      parts.push(`[Watch on X](${postUrl})`);
-    } else {
-      parts.push("*Video — open the source URL in the front matter on X.*");
-    }
+    const mp4 = `[MP4](${videoUrl.replace(/[\s()]/g, encodeURIComponent)})`;
+    parts.push(
+      postUrl
+        ? `[Watch on X](${postUrl}) · ${mp4}`
+        : `*Video — open the source URL in the front matter on X.* · ${mp4}`,
+    );
     return parts.join("\n\n");
+  },
+  embeddedPost(url) {
+    return `> [Embedded post on X](${url})`;
   },
   markdownEntity(code) {
     return fenceCodeBlock(code);

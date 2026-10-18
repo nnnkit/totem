@@ -13,7 +13,12 @@ export interface ArticleBlockEmit<T> {
   unorderedList(items: ArticleContentBlock[], entityMap: EntityMap): T;
   orderedList(items: ArticleContentBlock[], entityMap: EntityMap): T;
   mediaImage(url: string, alt: string): T | null;
-  mediaVideo(imageUrl: string | undefined, postUrl: string | undefined): T;
+  mediaVideo(
+    imageUrl: string | undefined,
+    postUrl: string | undefined,
+    videoUrl: string,
+  ): T;
+  embeddedPost(url: string): T;
   markdownEntity(code: string): T;
   divider(): T;
   empty(): T;
@@ -50,6 +55,7 @@ function emitAtomic<T>(
           emit.mediaVideo(
             typeof imageUrl === "string" && imageUrl ? imageUrl : undefined,
             postUrl,
+            videoUrl,
           ),
         );
         break;
@@ -73,6 +79,13 @@ function emitAtomic<T>(
       const markdown = String(entity.data?.markdown || "");
       if (markdown) {
         out.push(emit.markdownEntity(stripMarkdownEntityCode(markdown)));
+        break;
+      }
+    }
+    if (entity?.type === "TWEET") {
+      const tweetId = String(entity.data?.tweetId ?? "");
+      if (/^\d+$/.test(tweetId)) {
+        out.push(emit.embeddedPost(`https://x.com/i/status/${tweetId}`));
         break;
       }
     }

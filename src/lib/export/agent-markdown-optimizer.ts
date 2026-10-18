@@ -66,7 +66,7 @@ function removeRepeatedSourceLinks(markdown: string, source: string | undefined)
   if (!source) return markdown;
   const escapedSource = source.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   return markdown.replace(
-    new RegExp(`^(?:#{2,6}\\s*)?\\[Watch on X\\]\\(${escapedSource}\\)\\s*$`, "gm"),
+    new RegExp(`^(?:#{2,6}\\s*)?\\[Watch on X\\]\\(${escapedSource}\\)(?: · |\\s*$)`, "gm"),
     "",
   );
 }

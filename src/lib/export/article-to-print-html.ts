@@ -60,6 +60,10 @@ const htmlEmit: ArticleBlockEmit<string> = {
       : `<p class="print-video-link"><em>Video</em> — use the source link above.</p>`;
     return `<figure class="print-video">${imgPart}${linkPart}</figure>`;
   },
+  embeddedPost(url) {
+    const href = safeHref(url);
+    return href ? `<blockquote><a href="${href}">Embedded post on X</a></blockquote>` : "";
+  },
   markdownEntity(code) {
     return `<pre><code>${escapeHtml(code)}</code></pre>`;
   },
