@@ -24,7 +24,7 @@
 <body>
 <main>
 <h1>Markdown export audit</h1>
-<p class="sub">2026-10-18 · Tested against 60 real bookmarks and 2 TweetDetail payloads captured from a logged-in X session, run through the real parser and exporter (<code>parseBookmarkPagePayload</code>, then <code>resolveReaderExportArticle</code>, then <code>articleToMarkdown</code>).</p>
+<p class="sub">2026-10-18 · Tested against 60 real bookmarks and 2 TweetDetail payloads captured from a logged-in X session, then a second pass over 271 posts (search, home and Bookmarks timelines plus 7 TweetDetail payloads covering polls, player and unified cards, Articles with embedded posts, replies and a self-thread), run through the real parser and exporter (<code>parseBookmarkPagePayload</code>, then <code>resolveReaderExportArticle</code>, then <code>articleToMarkdown</code>).</p>
 
 <h2>Root cause</h2>
 <p>Plain tweets and threads were first turned into markdown-ish text. That text was then fed back through the <em>article</em> pipeline, which ran heading detection, paragraph re-flow, escaping and link regexes over it a second time. Most of the visible breakage came from this second pass. Tweets now get a dedicated renderer (<code>src/lib/export/tweet-markdown.ts</code>) that works from structured data and skips the article heuristics.</p>
@@ -44,7 +44,15 @@
 <tr><td>Reposts</td><td class="warn">Banner text</td><td class="ok">"Reposted from Name (@handle)" plus the original content</td></tr>
 <tr><td>Replies / threads</td><td class="bad">Focal post first, parent after it, <code>---</code> glued to images</td><td class="ok">Chronological, authors labelled when mixed</td></tr>
 <tr><td>Images</td><td class="bad">Broken markdown when alt text has <code>]</code>, image glued to text</td><td class="ok">Own paragraph, alt escaped, <code>?name=large</code></td></tr>
-<tr><td>Video / GIF</td><td class="ok">Thumbnail plus "Watch on X"</td><td class="ok">Same, and quoted videos link to the quoted post</td></tr>
+<tr><td>Video / GIF</td><td class="ok">Thumbnail plus "Watch on X"</td><td class="ok">Same, plus a direct <code>[MP4]</code> link when the payload has one (articles too). Quoted videos link to the quoted post.</td></tr>
+<tr><td>Polls</td><td class="bad">Dropped (card ignored)</td><td class="ok">List with votes and percentages, then "Final results" or "Ends &lt;date&gt; UTC". Works inside quotes. Text, 3-, 4-choice and image polls.</td></tr>
+<tr><td>Player cards (YouTube etc.)</td><td class="bad">Card dropped, bare URL as title</td><td class="ok">Same link block as summary cards, title used as export title when the post is just the URL</td></tr>
+<tr><td><code>unified_card</code> (website)</td><td class="bad">Dropped: no URL entity to attach to</td><td class="ok">Link block to the destination URL; domain not repeated when it is the title</td></tr>
+<tr><td>Reply prefixes</td><td class="warn">Leading <code>@a @b</code> kept in text</td><td class="ok">Hidden via <code>display_text_range</code>; "Replying to @a" shown in export (unless the parent is exported) and in the reader</td></tr>
+<tr><td>Article embedded posts (<code>TWEET</code>)</td><td class="bad">Dropped</td><td class="ok"><code>&gt; [Embedded post on X](https://x.com/i/status/…)</code></td></tr>
+<tr><td>Article bold across a line break</td><td class="bad"><code>**a\n\nb**</code> left an unclosed <code>**</code></td><td class="ok">Markers close and reopen at each newline</td></tr>
+<tr><td>ZIP export of unopened Articles</td><td class="bad">Feed preview only, through heading heuristics</td><td class="ok">Fetches up to 25 missing TweetDetails first (1.5 s apart, stops on 429 or auth errors, skips while hydration is paused)</td></tr>
+<tr><td>Reader bold/italic</td><td class="bad">Export only</td><td class="ok">Rendered as <code>&lt;strong&gt;</code>/<code>&lt;em&gt;</code> elements; paragraph text unchanged so highlights keep their offsets</td></tr>
 <tr><td>X Articles (blocks)</td><td class="warn">Bold ending in a space (<code>**Label - **</code>) was invalid markdown</td><td class="ok">Whitespace moved outside the markers</td></tr>
 <tr><td>Copy for agent</td><td class="warn">Generic image lines inside quotes leaked, and the alt regex broke on <code>]</code></td><td class="ok">Handled</td></tr>
 </table>
@@ -52,15 +60,13 @@
 
 <h2>Still not supported</h2>
 <ul>
-  <li><b>Polls:</b> the parser doesn't read poll cards (<code>poll2choice_*</code>). None of the 60 sampled bookmarks had one.</li>
-  <li><b>Non-summary cards</b> (player, app, unified_card) are ignored by <code>parseCard</code>.</li>
-  <li><b>Direct MP4 links:</b> the parser stores <code>videoUrl</code>, but export only links to the post on X.</li>
-  <li><b>Reply prefixes:</b> leading <code>@a @b</code> handles stay in the text. X hides them using <code>display_text_range</code>.</li>
-  <li><b>Not verified on real data:</b> article image galleries and embedded-post entities. Only LINK, header and list blocks appeared in the sample.</li>
-  <li><b>Reader UI</b> still doesn't show bold/italic for long posts. Only export uses <code>textStyles</code>.</li>
+  <li><b>Article image galleries and nested list depth:</b> not implemented. 27 real Articles were scanned. None had an atomic block with several entities, a MEDIA entity with several <code>mediaItems</code>, or a <code>depth</code> above 0. Consecutive single-image blocks already export every image.</li>
+  <li><b>App-install cards:</b> none were found (App Store links come back as plain <code>summary</code> cards). Unified cards with an app destination are skipped, since there is no shape to follow.</li>
+  <li><b><code>poll2choice_text_only</code></b> wasn't captured. The parser reads any <code>choiceN_label</code> set, so it should work, but it is untested on real data.</li>
+  <li><b>Embedded posts in Articles</b> link out only. The post itself isn't in the Article payload, so there is no author or text.</li>
+  <li><b>Replies to several people</b> show only the first handle ("Replying to @a"), because the parser keeps <code>in_reply_to_screen_name</code>.</li>
   <li><b>PDF export</b> still goes through the old plain-text path.</li>
-  <li><b>Bold/italic for posts already saved:</b> it only shows up once the post's detail is fetched again. The stored rows were parsed before <code>textStyles</code> existed.</li>
-  <li><b>ZIP export of X Articles never opened in the reader:</b> these export only the Bookmarks-feed preview, which is truncated and runs through the heading heuristics. This was already the case before this change.</li>
+  <li><b>Posts already saved:</b> bold/italic, polls, cards and reply prefixes appear only once the post is synced or its detail is fetched again. The stored rows were parsed by the old parser.</li>
 </ul>
 </main>
 </body>
