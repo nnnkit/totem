@@ -8,6 +8,6 @@ release
 .pnpm-store/
 chrome/
 
-apps/site/.astro/
+.astro/
 tmp/
 .vercel
