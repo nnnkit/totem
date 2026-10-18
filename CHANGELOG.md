@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.10] - 2026-10-18
+
+- feat(reader): show bold/italic in long posts and who a reply answers
+- feat(export): fetch missing Article details before ZIP export
+- feat(export): render polls, MP4 links, reply context and Article embedded posts in markdown
+- feat(parser): parse polls, player and unified cards, and hide reply handle prefixes
+- fix(export): render tweets to markdown with note styles, quotes, cards and escaping
+- fix(build): restore pnpm overrides in the lockfile (#77)
+- feat(site): send website analytics to OpenPanel beside Umami
+
 ## [1.2.9] - 2026-10-04
 
 - feat: add share link, auth recovery fixes, and externally_connectable for usetotem.xyz
