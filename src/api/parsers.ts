@@ -5,6 +5,7 @@ import type {
   Bookmark,
   LinkCard,
   Media,
+  Poll,
   ThreadTweet,
   TweetKind,
   TextStyleRange,
@@ -536,30 +537,43 @@ function extractArticle(tweet: UnknownRecord): ArticleContent | null {
   return best;
 }
 
-function parseCard(
-  tweet: UnknownRecord,
-): { cardUrl: string; card: LinkCard } | null {
-  const cardRecord = asRecord(tweet.card);
-  const cardLegacy = asRecord(cardRecord?.legacy);
+interface CardBindings {
+  name: string;
+  str(key: string): string;
+  img(key: string): string;
+  bool(key: string): boolean;
+  has(key: string): boolean;
+}
+
+function readCardBindings(tweet: UnknownRecord): CardBindings | null {
+  const cardLegacy = asRecord(asRecord(tweet.card)?.legacy);
   if (!cardLegacy) return null;
 
-  const cardName = asString(cardLegacy.name) || "";
-  if (cardName !== "summary" && cardName !== "summary_large_image") return null;
-
-  const bindingValues = asRecords(cardLegacy.binding_values);
-  if (bindingValues.length === 0) return null;
-
   const lookup = new Map<string, UnknownRecord>();
-  for (const entry of bindingValues) {
+  for (const entry of asRecords(cardLegacy.binding_values)) {
     const key = asString(entry.key);
     const value = asRecord(entry.value);
     if (key && value) lookup.set(key, value);
   }
+  if (lookup.size === 0) return null;
 
-  const str = (key: string): string =>
-    asString(lookup.get(key)?.string_value) || "";
-  const img = (key: string): string =>
-    asString(asRecord(lookup.get(key)?.image_value)?.url) || "";
+  return {
+    name: asString(cardLegacy.name) || "",
+    str: (key) => asString(lookup.get(key)?.string_value) || "",
+    img: (key) => asString(asRecord(lookup.get(key)?.image_value)?.url) || "",
+    bool: (key) => lookup.get(key)?.boolean_value === true,
+    has: (key) => lookup.has(key),
+  };
+}
+
+const LINK_CARD_NAMES = new Set(["summary", "summary_large_image", "player"]);
+
+function parseCard(
+  tweet: UnknownRecord,
+): { cardUrl: string; card: LinkCard } | null {
+  const bindings = readCardBindings(tweet);
+  if (!bindings || !LINK_CARD_NAMES.has(bindings.name)) return null;
+  const { str, img } = bindings;
 
   const cardUrl = str("card_url");
   if (!cardUrl) return null;
@@ -571,7 +585,9 @@ function parseCard(
     img("thumbnail_image_original") ||
     img("summary_photo_image_large") ||
     img("photo_image_full_size_large") ||
-    img("thumbnail_image_large");
+    img("thumbnail_image_large") ||
+    img("player_image_original") ||
+    img("player_image_large");
 
   return {
     cardUrl,
@@ -581,16 +597,80 @@ function parseCard(
       imageUrl: imageUrl || undefined,
       imageAlt: str("photo_image_full_size_alt_text") || undefined,
       domain: str("vanity_url") || str("domain") || undefined,
-      cardType: cardName,
+      cardType: bindings.name,
     },
+  };
+}
+
+// unified_card has no url entity in the text (card_url is just twitter.com);
+// the real link lives in the JSON blob's details -> destination object.
+function parseUnifiedCard(tweet: UnknownRecord): TweetUrl | null {
+  const bindings = readCardBindings(tweet);
+  if (bindings?.name !== "unified_card") return null;
+
+  const unified = asRecord(parseMaybeJson(bindings.str("unified_card")));
+  const details = Object.values(asRecord(unified?.component_objects) ?? {})
+    .map(asRecord)
+    .find((component) => asString(component?.type) === "details");
+  const detailsData = asRecord(details?.data);
+  const destinationKey = asString(detailsData?.destination);
+  const destination = destinationKey
+    ? asRecord(asRecord(asRecord(unified?.destination_objects)?.[destinationKey])?.data)
+    : null;
+  const urlData = asRecord(destination?.url_data);
+  const url = asString(urlData?.url) || "";
+  if (!/^https?:\/\//i.test(url)) return null;
+
+  const domain =
+    asString(urlData?.vanity) || asString(asRecord(detailsData?.subtitle)?.content) || "";
+  const title =
+    decodeHtmlEntities(asString(asRecord(detailsData?.title)?.content) || "")
+      .replace(/[\s\u200b]+/g, " ")
+      .trim() || domain;
+  if (!title) return null;
+
+  return {
+    url,
+    displayUrl: domain || url,
+    expandedUrl: url,
+    card: { title, domain: domain || undefined, cardType: bindings.name },
   };
 }
 
 function attachCardToUrls(tweet: UnknownRecord, urls: TweetUrl[]): void {
   const parsed = parseCard(tweet);
-  if (!parsed) return;
-  const match = urls.find((u) => u.url === parsed.cardUrl);
-  if (match) match.card = parsed.card;
+  if (parsed) {
+    const match = urls.find((u) => u.url === parsed.cardUrl);
+    if (match) match.card = parsed.card;
+    return;
+  }
+  const unified = parseUnifiedCard(tweet);
+  if (unified && !urls.some((u) => u.expandedUrl === unified.expandedUrl)) {
+    urls.push(unified);
+  }
+}
+
+const POLL_CARD_NAME = /(?:^|:)poll(?:\dchoice|_choice)_\w+$/;
+
+function parsePoll(tweet: UnknownRecord): Poll | undefined {
+  const bindings = readCardBindings(tweet);
+  if (!bindings || !POLL_CARD_NAME.test(bindings.name)) return undefined;
+
+  const choices: Poll["choices"] = [];
+  for (let i = 1; bindings.has(`choice${i}_label`); i++) {
+    choices.push({
+      label: decodeHtmlEntities(bindings.str(`choice${i}_label`)),
+      count: toNumber(bindings.str(`choice${i}_count`)),
+    });
+  }
+  if (choices.length < 2) return undefined;
+
+  const endsAt = bindings.str("end_datetime_utc");
+  return {
+    choices,
+    ended: bindings.bool("counts_are_final"),
+    ...(endsAt ? { endsAt } : {}),
+  };
 }
 
 const STYLE_MARKERS = {
@@ -651,6 +731,18 @@ function parseNoteTextStyles(
   return clean === expectedText ? ranges : [];
 }
 
+// X hides the leading "@a @b" reply handles via display_text_range (code-point
+// indices into the raw full_text). note_tweet text already excludes them.
+function stripReplyPrefix(legacy: UnknownRecord): string {
+  const fullText = asString(legacy.full_text) || "";
+  const range = Array.isArray(legacy.display_text_range) ? legacy.display_text_range : [];
+  const start = toNumber(range[0]);
+  if (start <= 0) return fullText;
+  const chars = Array.from(fullText);
+  const prefix = chars.slice(0, start).join("");
+  return /^(?:\s*@\w{1,15})+\s*$/.test(prefix) ? chars.slice(start).join("") : fullText;
+}
+
 function parseTweetText(tweet: UnknownRecord, legacy: UnknownRecord) {
   const noteTweet = asRecord(tweet.note_tweet);
   const noteResult = asRecord(asRecord(noteTweet?.note_tweet_results)?.result);
@@ -673,7 +765,7 @@ function parseTweetText(tweet: UnknownRecord, legacy: UnknownRecord) {
   }
 
   const entities = asRecord(legacy.entities);
-  const fullText = asString(legacy.full_text) || "";
+  const fullText = stripReplyPrefix(legacy);
   const expanded = decodeHtmlEntities(expandText(fullText, parseUrlMappings(entities)));
   const urls = parseUrls(entities);
   attachCardToUrls(tweet, urls);
@@ -798,6 +890,7 @@ function parseEmbeddedTweet(result: UnknownRecord | null): Bookmark["quotedTweet
   const { text, urls, textStyles } = parseTweetText(embedded, legacy);
   const tweetId = asString(legacy.id_str) || asString(embedded.rest_id) || "";
   if (!tweetId) return null;
+  const poll = parsePoll(embedded);
 
   return {
     tweetId,
@@ -807,6 +900,7 @@ function parseEmbeddedTweet(result: UnknownRecord | null): Bookmark["quotedTweet
     media: parseMedia(legacy),
     urls,
     ...(textStyles ? { textStyles } : {}),
+    ...(poll ? { poll } : {}),
     article: extractArticle(embedded),
   };
 }
@@ -865,6 +959,7 @@ function parseTweetRecord(
 
     const { text, urls, textStyles } = parseTweetText(tweet, legacy);
     const media = parseMedia(legacy);
+    const poll = parsePoll(tweet);
     const views = asRecord(tweet.views);
     const quotedTweet = parseQuotedTweet(tweet);
     const retweetedTweet = parseRetweetedTweet(tweet);
@@ -904,6 +999,7 @@ function parseTweetRecord(
       media,
       urls,
       ...(textStyles && displayText === text ? { textStyles } : {}),
+      ...(poll ? { poll } : {}),
       isThread,
       hasImage: media.some((item) => item.type === "photo"),
       hasVideo: media.some(
@@ -1283,6 +1379,7 @@ function toThreadTweet(bookmark: Bookmark): ThreadTweet {
     media: bookmark.media,
     urls: bookmark.urls,
     ...(bookmark.textStyles ? { textStyles: bookmark.textStyles } : {}),
+    ...(bookmark.poll ? { poll: bookmark.poll } : {}),
     article: bookmark.article || null,
     quotedTweet: bookmark.quotedTweet || null,
     retweetedTweet: bookmark.retweetedTweet || null,

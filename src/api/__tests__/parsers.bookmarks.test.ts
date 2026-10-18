@@ -379,3 +379,176 @@ describe("note tweet rich text", () => {
     expect(parseNote({ text: "plain", entity_set: {} }).textStyles).toBeUndefined();
   });
 });
+
+// Card and reply fixtures are trimmed from real Bookmarks/Search/Home payloads.
+describe("cards, polls and reply prefixes", () => {
+  type Binding = [string, string | boolean];
+
+  function parseWith(patch: (tweet: Record<string, any>) => void) {
+    const tweet = makeTweetResult("tweet-9", true) as Record<string, any>;
+    patch(tweet);
+    const payload = makePayload([
+      {
+        type: "TimelineAddEntries",
+        entries: [
+          {
+            entryId: "tweet-9",
+            sortIndex: "9",
+            content: { itemContent: { tweet_results: { result: tweet } } },
+          },
+        ],
+      },
+    ]);
+    return parseBookmarkPagePayload(payload).bookmarks[0];
+  }
+
+  function card(name: string, bindings: Binding[]) {
+    return {
+      legacy: {
+        name,
+        binding_values: bindings.map(([key, value]) => ({
+          key,
+          value: typeof value === "boolean" ? { type: "BOOLEAN", boolean_value: value } : { type: "STRING", string_value: value },
+        })),
+      },
+    };
+  }
+
+  it("parses a closed poll with final counts", () => {
+    const bookmark = parseWith((tweet) => {
+      tweet.card = card("poll3choice_text_only", [
+        ["choice1_label", "BOYNEXTDOOR"],
+        ["choice2_label", "SOYEON"],
+        ["end_datetime_utc", "2026-10-04T11:28:08Z"],
+        ["counts_are_final", true],
+        ["choice2_count", "10"],
+        ["choice1_count", "1034"],
+        ["choice3_count", "20"],
+        ["choice3_label", "ALLDAY PROJECT"],
+        ["api", "capi://passthrough/1"],
+        ["card_url", "https://twitter.com"],
+      ]);
+    });
+    expect(bookmark.poll).toEqual({
+      choices: [
+        { label: "BOYNEXTDOOR", count: 1034 },
+        { label: "SOYEON", count: 10 },
+        { label: "ALLDAY PROJECT", count: 20 },
+      ],
+      ended: true,
+      endsAt: "2026-10-04T11:28:08Z",
+    });
+  });
+
+  it("parses an open poll and keeps zero counts", () => {
+    const bookmark = parseWith((tweet) => {
+      tweet.card = card("poll4choice_text_only", [
+        ["choice1_label", "deepseek v4.1 flash"],
+        ["choice2_label", "reflection beam"],
+        ["end_datetime_utc", "2026-10-19T07:10:47Z"],
+        ["counts_are_final", false],
+        ["choice2_count", "0"],
+        ["choice1_count", "0"],
+        ["choice4_label", "none, chatgpt for life"],
+        ["choice3_count", "0"],
+        ["choice4_count", "0"],
+        ["choice3_label", "gemini 4 argon"],
+      ]);
+    });
+    expect(bookmark.poll?.ended).toBe(false);
+    expect(bookmark.poll?.choices.map((c) => c.label)).toEqual([
+      "deepseek v4.1 flash",
+      "reflection beam",
+      "gemini 4 argon",
+      "none, chatgpt for life",
+    ]);
+    expect(bookmark.urls).toEqual([]);
+  });
+
+  it("attaches player cards like summary cards", () => {
+    const bookmark = parseWith((tweet) => {
+      tweet.legacy.full_text = "https://t.co/XYt9IE6unA";
+      tweet.legacy.entities.urls = [
+        {
+          url: "https://t.co/XYt9IE6unA",
+          display_url: "youtube.com/watch?v=P0TE0p…",
+          expanded_url: "https://www.youtube.com/watch?v=P0TE0pJQBEs",
+        },
+      ];
+      tweet.card = card("player", [
+        ["player_url", "https://www.youtube.com/embed/P0TE0pJQBEs"],
+        ["description", "AEW Women's World Champion Mercedes Moné defends against former cha..."],
+        ["domain", "www.youtube.com"],
+        ["vanity_url", "youtube.com"],
+        ["title", "Mercedes Moné vs Thekla - AEW Women's World Championship | AEW..."],
+        ["card_url", "https://t.co/XYt9IE6unA"],
+      ]);
+      tweet.card.legacy.binding_values.push({
+        key: "player_image_original",
+        value: { type: "IMAGE", image_value: { url: "https://pbs.twimg.com/card_img/2111723264058052608/-iuOW1-h?format=jpg&name=orig" } },
+      });
+    });
+    expect(bookmark.urls[0].card).toMatchObject({
+      title: "Mercedes Moné vs Thekla - AEW Women's World Championship | AEW...",
+      domain: "youtube.com",
+      cardType: "player",
+      imageUrl: "https://pbs.twimg.com/card_img/2111723264058052608/-iuOW1-h?format=jpg&name=orig",
+    });
+  });
+
+  it("turns a unified_card website destination into a link card", () => {
+    const unified = {
+      type: "image_website",
+      component_objects: {
+        details_1: {
+          type: "details",
+          data: {
+            title: { content: "Buy Now!", is_rtl: false },
+            subtitle: { content: "amazon.in", is_rtl: false },
+            destination: "browser_1",
+          },
+        },
+        media_1: { type: "media", data: { id: "3_2111465050452185088", destination: "browser_1" } },
+      },
+      destination_objects: {
+        browser_1: {
+          type: "browser",
+          data: { url_data: { url: "https://link.amazon/B09xLtApZ", vanity: "amazon.in" } },
+        },
+      },
+    };
+    const bookmark = parseWith((tweet) => {
+      tweet.card = card("unified_card", [
+        ["unified_card", JSON.stringify(unified)],
+        ["card_url", "https://twitter.com"],
+      ]);
+    });
+    expect(bookmark.urls).toEqual([
+      {
+        url: "https://link.amazon/B09xLtApZ",
+        displayUrl: "amazon.in",
+        expandedUrl: "https://link.amazon/B09xLtApZ",
+        card: { title: "Buy Now!", domain: "amazon.in", cardType: "unified_card" },
+      },
+    ]);
+  });
+
+  it("drops leading reply handles hidden by display_text_range", () => {
+    const bookmark = parseWith((tweet) => {
+      tweet.legacy.full_text = "@0xblacklight @mattpocockuk fixed!";
+      tweet.legacy.display_text_range = [28, 34];
+      tweet.legacy.in_reply_to_screen_name = "0xblacklight";
+      tweet.legacy.in_reply_to_status_id_str = "2087579979181887989";
+    });
+    expect(bookmark.text).toBe("fixed!");
+    expect(bookmark.inReplyToScreenName).toBe("0xblacklight");
+  });
+
+  it("keeps the text when the hidden prefix is not just handles", () => {
+    const bookmark = parseWith((tweet) => {
+      tweet.legacy.full_text = "RT this @a: hi";
+      tweet.legacy.display_text_range = [11, 14];
+    });
+    expect(bookmark.text).toBe("RT this @a: hi");
+  });
+});

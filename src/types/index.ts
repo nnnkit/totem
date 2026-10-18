@@ -87,6 +87,18 @@ export interface TextStyleRange {
   style: "bold" | "italic";
 }
 
+export interface PollChoice {
+  label: string;
+  count: number;
+  imageUrl?: string;
+}
+
+export interface Poll {
+  choices: PollChoice[];
+  ended: boolean;
+  endsAt?: string;
+}
+
 export interface TweetUrl {
   url: string;
   displayUrl: string;
@@ -135,6 +147,7 @@ export interface QuotedTweet {
   media: Media[];
   urls?: TweetUrl[];
   textStyles?: TextStyleRange[];
+  poll?: Poll;
   article?: ArticleContent | null;
 }
 
@@ -146,6 +159,7 @@ export interface ThreadTweet {
   media: Media[];
   urls: TweetUrl[];
   textStyles?: TextStyleRange[];
+  poll?: Poll;
   article?: ArticleContent | null;
   quotedTweet?: QuotedTweet | null;
   retweetedTweet?: QuotedTweet | null;
@@ -169,6 +183,7 @@ export interface Bookmark {
   media: Media[];
   urls: TweetUrl[];
   textStyles?: TextStyleRange[];
+  poll?: Poll;
   isThread: boolean;
   hasImage: boolean;
   hasVideo: boolean;
