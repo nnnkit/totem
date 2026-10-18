@@ -1,0 +1,739 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Totem — Store Submission Kit</title>
+    <style>
+      :root {
+        --paper: #f5f4ed;
+        --card: #faf9f3;
+        --tint: #efede3;
+        --ink: #211d17;
+        --muted: #726b5e;
+        --line: #ddd8ca;
+        --brand: #1b365d;
+        --brand-soft: #e7ebf1;
+        --brand-line: #c3ccda;
+        --good: #3f6d4e;
+        --warn: #8a6d1f;
+        --bad: #8c3b2a;
+        --serif: Charter, "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+      }
+      * { box-sizing: border-box; }
+      html { scroll-behavior: smooth; }
+      body {
+        margin: 0; background: var(--paper); color: var(--ink);
+        font-family: system-ui, -apple-system, "Segoe UI", sans-serif; line-height: 1.55;
+      }
+      .storebarwrap {
+        position: sticky; top: 0; z-index: 20;
+        background: rgba(245, 244, 237, 0.93);
+        backdrop-filter: saturate(1.4) blur(8px);
+        border-bottom: 1px solid var(--line);
+      }
+      .storebarinner {
+        max-width: 860px; margin: 0 auto; padding: 10px 24px;
+        display: flex; align-items: center; gap: 12px;
+      }
+      .storebarlabel {
+        font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase;
+        color: var(--muted); font-weight: 600;
+      }
+      .storebar { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+      .storebtn {
+        border: 0; background: var(--card); color: var(--muted);
+        font: inherit; font-size: 0.85rem; padding: 6px 16px; cursor: pointer;
+        transition: background .15s, color .15s;
+      }
+      .storebtn + .storebtn { border-left: 1px solid var(--line); }
+      .storebtn:hover { background: var(--tint); color: var(--ink); }
+      .storebtn.on { background: var(--brand); color: #fff; }
+      .wrap { max-width: 860px; margin: 0 auto; padding: 40px 24px 120px; }
+      header.masthead { border-bottom: 2px solid var(--line); padding-bottom: 24px; margin-bottom: 8px; }
+      h1 { font-family: var(--serif); font-size: 2rem; margin: 0 0 6px; letter-spacing: -0.01em; }
+      .sub { color: var(--muted); margin: 0; }
+      h2 {
+        font-family: var(--serif); font-size: 1.35rem; margin: 40px 0 4px;
+        padding-top: 12px; border-top: 1px solid var(--line);
+      }
+      h2 .num { display: inline-block; min-width: 1.6em; color: var(--brand); font-weight: 700; }
+      h3 { font-size: 1rem; margin: 22px 0 6px; }
+      p.note { color: var(--muted); font-size: 0.9rem; margin: 4px 0 14px; }
+      .muted { color: var(--muted); font-weight: 400; }
+      .card {
+        background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+        margin: 12px 0 18px; overflow: hidden;
+      }
+      .card-head {
+        display: flex; justify-content: space-between; align-items: center; gap: 12px;
+        padding: 8px 14px; background: var(--tint); border-bottom: 1px solid var(--line);
+        font-size: 0.8rem; color: var(--muted);
+      }
+      .card-head .meta { font-variant-numeric: tabular-nums; white-space: nowrap; }
+      .field { padding: 14px 16px; white-space: pre-wrap; font-size: 0.95rem; }
+      .field.mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 0.85rem; }
+      button.copy {
+        border: 1px solid var(--line); background: var(--card); color: var(--ink);
+        border-radius: 6px; padding: 4px 12px; font: inherit; font-size: 0.8rem;
+        cursor: pointer; transition: background .15s, color .15s; white-space: nowrap;
+      }
+      button.copy:hover { background: var(--brand); color: #fff; border-color: var(--brand); }
+      button.copy.done { background: var(--good); color: #fff; border-color: var(--good); }
+      code { background: var(--brand-soft); color: #24344a; padding: 1px 5px; border-radius: 4px; font-size: 0.85em; }
+      table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 0.9rem; }
+      th, td { text-align: left; padding: 8px 10px; border: 1px solid var(--line); vertical-align: top; }
+      th { background: var(--tint); }
+      ul { padding-left: 22px; } li { margin: 4px 0; }
+      .pill {
+        display: inline-block; font-size: 0.72rem; font-weight: 600;
+        padding: 2px 9px; border-radius: 999px; vertical-align: middle;
+      }
+      .pill.ready { background: #e4efe6; color: var(--good); }
+      .pill.human { background: #f3ecd6; color: var(--warn); }
+      .pill.block { background: #f4ddd6; color: var(--bad); }
+      .callout {
+        border-left: 3px solid var(--warn); background: #f7f1df;
+        padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 14px 0; font-size: 0.92rem;
+      }
+      .callout.block { border-color: var(--bad); background: #f7e6e0; }
+      .callout.info { border-color: var(--brand); background: var(--brand-soft); }
+      .toc { columns: 2; font-size: 0.9rem; margin: 20px 0 0; padding: 0; list-style: none; }
+      .toc a { color: var(--brand); text-decoration: none; }
+      .toc a:hover { text-decoration: underline; }
+      a { color: var(--brand); }
+      /* Per-store copy. The span's text is swapped by the switcher, so a Copy button
+         still reads one clean string out of textContent. Deliberately unstyled: the
+         page should read as the kit for the store you picked. */
+      .v:empty { display: none; }
+      body[data-store="chrome"] [data-only="edge"],
+      body[data-store="edge"] [data-only="chrome"] { display: none !important; }
+      @media (max-width: 640px) { .toc { columns: 1; } }
+    </style>
+  </head>
+  <body data-store="chrome">
+    <div class="storebarwrap">
+      <div class="storebarinner">
+        <span class="storebarlabel">Submitting to</span>
+        <div class="storebar" role="group" aria-label="Which store">
+          <button type="button" class="storebtn" data-set-store="chrome">Chrome Web Store</button>
+          <button type="button" class="storebtn" data-set-store="edge">Microsoft Edge Add-ons</button>
+        </div>
+      </div>
+    </div>
+    <div class="wrap">
+      <header class="masthead">
+        <h1>Totem — <span class="v" data-chrome="Chrome Web Store" data-edge="Microsoft Edge Add-ons">Chrome Web Store</span> Submission Kit</h1>
+        <p class="sub">
+          Every field the <span class="v" data-chrome="Developer Dashboard" data-edge="Partner Center">Developer Dashboard</span> asks for, ready to copy-paste. Copy is
+          pulled from <code>plans/edge-add-ons-listing.md</code> and <code>plans/chrome-web-store-listing.md</code>;
+          steps track <code>PUBLISH.md</code>.
+        </p>
+        <ul class="toc">
+          <li><a href="#status">0 · Before you submit</a></li>
+          <li><a href="#identity">1 · Store identity</a></li>
+          <li><a href="#age">· Age / mature content</a></li>
+          <li><a href="#purpose">2 · Single purpose</a></li>
+          <li><a href="#detailed">3 · Detailed description</a></li>
+          <li><a href="#perms">4 · Permission justifications</a></li>
+          <li><a href="#privacy">5 · Data use &amp; privacy</a></li>
+          <li><a href="#cert">6 · <span class="v" data-chrome="Reviewer note" data-edge="Notes for certification">Reviewer note</span></a></li>
+          <li data-only="edge"><a href="#search">· Search terms</a></li>
+          <li><a href="#assets">7 · Images &amp; assets</a></li>
+          <li><a href="#after">8 · After approval</a></li>
+        </ul>
+      </header>
+
+      <h2 id="status"><span class="num">0</span>Before you submit</h2>
+      <div class="callout info">
+        <strong>One package, both stores.</strong> Edge is Chromium, the manifest has no Chrome-only
+        fields, and the in-extension Review button picks its store at runtime via <code>isEdge()</code>.
+        Upload <code>release/totem-v1.2.8.zip</code> — the same artifact the Chrome listing serves.
+      </div>
+      <div class="callout" data-only="edge">
+        <strong>Already clear on Microsoft's two certification rules.</strong> The manifest carries no
+        <code>update_url</code>, and neither the name nor the description contains the word
+        <em>Chrome</em>, <em>Brave</em>, <em>DuckDuckGo</em>, or any other browser or search engine.
+        Set to Edge, the long description reads "your browser's new tab" and the search box
+        is named with no engines listed.
+      </div>
+      <div class="callout" data-only="edge">
+        <strong>This is a first submission.</strong> Registration is free but verification has to clear
+        before you can publish, so start the Partner Center account before anything else. Individual,
+        not Company — country and account type are permanent.
+      </div>
+      <div class="callout block">
+        <strong>Version sync.</strong> <code>package.json</code> and <code>public/manifest.json</code> both
+        read <code>1.2.8</code> and <code>release/totem-v1.2.8.zip</code> exists. If you cut a release
+        first, upload the new zip, not this one.
+      </div>
+
+      <h2 id="identity"><span class="num">1</span>Store identity</h2>
+      <div class="callout" data-only="edge">
+        <strong>Partner Center takes these from the manifest.</strong> <em>Extension name</em> and
+        <em>Short description</em> are read-only on the Store listings page. Changing either needs a
+        re-zip and a fresh submission.
+      </div>
+      <div class="card">
+        <div class="card-head"><span>Extension name <span class="muted">· from manifest <code>name</code></span></span>
+          <span class="meta"><span data-count-for="f-name">—</span> chars</span>
+          <button class="copy" data-copy="f-name">Copy</button></div>
+        <div class="field" id="f-name">Twitter &amp; X Bookmarks on New Tab — Totem</div>
+      </div>
+      <div class="card">
+        <div class="card-head"><span>Short description <span class="muted">· from manifest <code>description</code></span></span>
+          <span class="meta"><span data-count-for="f-short">—</span>/132</span>
+          <button class="copy" data-copy="f-short">Copy</button></div>
+        <div class="field" id="f-short">Your Twitter &amp; X bookmarks, waiting on every new tab — finally read what you saved. Search, highlight, export. Local-first.</div>
+      </div>
+      <table>
+        <tr><th>Field</th><th>Value</th></tr>
+        <tr><td>Category</td><td>Productivity</td></tr>
+        <tr><td>Language</td><td>English</td></tr>
+        <tr><td>Mature content</td><td><strong>No</strong> — leave the checkbox unchecked. Copyable answers in <a href="#age">Age / mature content</a>.</td></tr>
+        <tr><td>Website</td><td><code>https://usetotem.xyz/</code></td></tr>
+        <tr><td>Support contact</td><td><code>https://usetotem.xyz/contact/</code> or <code>iankit17@gmail.com</code></td></tr>
+        <tr><td>Privacy policy URL</td><td><code>https://usetotem.xyz/privacy</code></td></tr>
+      </table>
+
+      <h2 id="age">Age / mature content</h2>
+      <p class="note">
+        Both stores ask this as a checkbox, not a typed rating like "Everyone" or "12+".
+        Leave it off. Chrome: Store listing → Additional fields → <em>Mature content</em>.
+        Edge: Properties → <em>Mature content</em>.
+      </p>
+      <table>
+        <tr><th>Field</th><th>Answer</th><th>Where</th></tr>
+        <tr>
+          <td>Mature content</td>
+          <td><strong>No</strong> — leave unchecked</td>
+          <td><span class="v" data-chrome="Store listing → Additional fields" data-edge="Properties page">Store listing → Additional fields</span></td>
+        </tr>
+        <tr data-only="edge">
+          <td>Directed at children under 13 (COPPA, Edge policy §1.10.6)</td>
+          <td><strong>No</strong> — do not notify Microsoft</td>
+          <td>Properties / account notices. Totem is not a kids' product; X itself is 13+.</td>
+        </tr>
+      </table>
+      <div class="card">
+        <div class="card-head"><span>Mature content — the checkbox answer</span>
+          <button class="copy" data-copy="f-mature">Copy</button></div>
+        <div class="field" id="f-mature">No</div>
+      </div>
+      <div class="card">
+        <div class="card-head"><span>Why it is not mature — paste if a notes field appears</span>
+          <button class="copy" data-copy="f-age-why">Copy</button></div>
+        <div class="field" id="f-age-why">Totem is not mature content. The extension itself has no sexual content, violence, strong language, drugs, alcohol, tobacco, gambling, ads, or adult links.
+
+It is a private reading queue for the user's own Twitter/X bookmarks. Those posts are shown only to the same user who saved them. Totem does not host a public feed, comments, chat, or sharing between users.
+
+Accessing X content requires the user's existing X account (X is 13+). Totem is not directed at children under 13.</div>
+      </div>
+      <div class="callout info">
+        <strong>Don't mark Mature just because a saved tweet could be anything.</strong>
+        Chrome and Edge both say to consider user-generated content and linked pages, but Totem is not a social network: it only shows the user's own private library, and Edge policy §2.12.2 is satisfied by requiring a pre-existing X account. Same class as a read-it-later or RSS reader.
+      </div>
+      <h3>If an IARC / age-ratings questionnaire appears</h3>
+      <p class="note">
+        Chrome extensions do not use IARC. Edge Add-ons normally only have the Mature checkbox.
+        If Partner Center still opens an IARC questionnaire, pick <strong>App</strong> (not Game) and use this sheet.
+      </p>
+      <table>
+        <tr><th>Question</th><th>Answer</th><th>Why</th></tr>
+        <tr><td>App type</td><td><strong>App</strong> (not a Game)</td><td>Productivity reader. No gameplay.</td></tr>
+        <tr><td>Violence</td><td><strong>No</strong></td><td>Not in the extension.</td></tr>
+        <tr><td>Sexual / suggestive content</td><td><strong>No</strong></td><td>Not in the extension.</td></tr>
+        <tr><td>Nudity</td><td><strong>No</strong></td><td>Not in the extension.</td></tr>
+        <tr><td>Language / profanity</td><td><strong>No</strong></td><td>UI copy is clean.</td></tr>
+        <tr><td>Alcohol, tobacco, drugs</td><td><strong>No</strong></td><td>Not in the extension.</td></tr>
+        <tr><td>Gambling</td><td><strong>No</strong></td><td>No betting, loot boxes, or simulated gambling.</td></tr>
+        <tr><td>Horror / fear</td><td><strong>No</strong></td><td>Not in the extension.</td></tr>
+        <tr><td>Users can interact or communicate with each other</td><td><strong>No</strong></td><td>No chat, comments, or sharing between Totem users.</td></tr>
+        <tr><td>Shares location with other users or third parties</td><td><strong>No</strong></td><td>No location permission, nothing leaves the device.</td></tr>
+        <tr><td>In-app / digital purchases</td><td><strong>No</strong></td><td>The listed build is free. No storefront inside the extension.</td></tr>
+        <tr><td>Unrestricted internet / in-app browser</td><td><strong>No</strong></td><td>The optional search box opens a search engine as a normal tab. There is no embedded unrestricted browser.</td></tr>
+        <tr><td>User-generated content shared with other users</td><td><strong>No</strong></td><td>Bookmarks, highlights, and notes stay on-device and are visible only to that user. Totem is not a social network; connecting to X to sync the user's own saves does not make it one.</td></tr>
+        <tr><td>Collects personal information from children</td><td><strong>No</strong></td><td>Not directed at children. No Totem account. Nothing is collected onto a Totem server.</td></tr>
+      </table>
+
+      <h2 id="purpose"><span class="num">2</span>Single purpose <span class="pill ready">Privacy page · required</span></h2>
+      <div class="card">
+        <div class="card-head"><span>Single-purpose statement</span>
+          <button class="copy" data-copy="f-purpose">Copy</button></div>
+        <div class="field" id="f-purpose">Totem shows your own Twitter/X bookmarks on the browser's new tab page as a calm reading queue, and lets you read, search, highlight, annotate, and export those saved posts.</div>
+      </div>
+
+      <h2 id="detailed"><span class="num">3</span>Detailed description</h2>
+      <p class="note">
+        Plain-text box, min 250 and max 10,000 characters. Paste the whole block unedited.
+        Edge names no other browser and no search engine.
+      </p>
+      <div class="callout" data-only="edge">
+        <strong>Never name another browser or search engine here.</strong> Microsoft's porting
+        rule rejects <em>Chrome</em>, <em>Brave</em>, <em>DuckDuckGo</em>, and the rest of the
+        search-engine list. Set to Edge, this block reads "your browser's new tab" and "an
+        optional web-search box" with no engines named.
+      </div>
+      <div class="card">
+        <div class="card-head"><span>Detailed description — paste whole block</span>
+          <span class="meta"><span data-count-for="f-detail">—</span> chars</span>
+          <button class="copy" data-copy="f-detail">Copy</button></div>
+        <div class="field" id="f-detail">Totem is a local-first bookmark manager for Twitter and X, built around the one thing the others skip: actually reading what you save. It turns <span class="v" data-chrome="your Chrome new tab" data-edge="your browser's new tab">your Chrome new tab</span> into a calm reading queue for your Twitter/X bookmarks — a read-it-later for tweets, threads, and X articles — so the posts you save come back to you instead of vanishing.
+
+Most people bookmark tweets and never return. And opening X to "check your bookmarks" turns into twenty minutes of doom-scrolling. Totem fixes both: your saved posts wait for you on every new tab. No feed, no algorithm, no noise.
+
+
+EVERY NEW TAB IS YOUR READING QUEUE
+• Your Twitter/X bookmarks appear automatically each time you open a tab
+• Today's Read — a small, finite set of saved posts sized to your time (5, 15, or 30 minutes a day) so you make progress instead of drowning
+• Clear reading states — Unread, Reading, and Read — with your scroll position saved and restored, right where you left off
+• Snooze a post for later, file one as a reference, flag one as "action needed," or pull in "two more" when you're on a roll
+• Pin up to 6 favorites; sort by recent, oldest, or annotated
+• Keyboard-friendly throughout (j/k to move, / to search, Space to open)
+
+
+A CLEAN READER FOR TWEETS &amp; THREADS
+• Distraction-free reader for single tweets and full Twitter threads, rebuilt in order so you read the whole thing in one place
+• Reads X long-form Articles in full — headings, lists, images, and video
+• Rich link previews, quoted tweets, reposts, images, and video
+• Jump to the next or previous bookmark, or hit "Surprise me" for a random unread
+• Add an "Open in Totem" button right on X to send any tweet straight to the reader
+
+
+SEARCH EVERY TWITTER BOOKMARK YOU'VE SAVED
+Full-text search across your entire library, with fuzzy matching and did-you-mean. Narrow it with real operators:
+• from: / to: — by author
+• since: / until: / within: — by date
+• has:image, has:video, has:link, has:thread, has:article — by content type
+• min_faves:, min_retweets:, min_replies: — by engagement
+• Combine with AND / OR / NOT, "quoted phrases," and ( ) groups
+
+
+HIGHLIGHT &amp; ANNOTATE
+• Highlight any passage in a tweet or article, in four colors
+• Add private notes to anything you save
+• Send a highlight to Grok with one click
+• Highlights and notes stay on your device
+
+
+EXPORT TWITTER BOOKMARKS &amp; OWN YOUR LIBRARY
+Your bookmarks are yours to take. Export the whole library to a single ZIP with:
+• Markdown — one clean file per bookmark, threads included
+• CSV — opens in Excel, Google Sheets, and Notion
+• JSON (JSONL) — complete, re-importable data
+• A manifest with SHA-256 checksums so you can verify the archive
+You can also copy any post as Markdown, copy it for an AI assistant, or Print to PDF — and back up and restore your full library anytime.
+
+
+WORKS OFFLINE
+Totem prefetches your saved posts so you can keep reading on a plane or a weak connection. Your library lives in your browser, not on a server.
+
+
+A CALMER NEW TAB
+• A quiet clock and an optional web-search box<span class="v" data-chrome=" (Google, Bing, DuckDuckGo, Brave, Ecosia, Yahoo, or your browser default)" data-edge=""> (Google, Bing, DuckDuckGo, Brave, Ecosia, Yahoo, or your browser default)</span>
+• Optional Quick Links to your most-visited sites
+• Curated wallpapers or generated gradients
+• Light, dark, and system themes
+• A focus mode that dims everything but what you're reading
+
+
+PRIVATE BY DESIGN
+• Local-first: no Totem account, no login, no server
+• Your bookmarks, highlights, and notes are stored in your browser's IndexedDB
+• We can't see your data, because we never receive it
+• Signed into more than one X account? Each gets its own separate local library
+• Totem uses your existing X session only to sync your own bookmarks — no X Premium required
+
+
+WHY TOTEM vs other Twitter bookmark managers
+• It lives on your new tab. Other bookmark managers are websites you have to remember to open — Totem shows up on its own, every time you start browsing.
+• It's built for reading, not just filing. Most tools help you store and export; Totem helps you actually finish what you saved.
+• No bookmark limit, and no subscription to search your own saves.
+• Local-first and private by default.
+
+
+WHO IT'S FOR
+• Heavy Twitter/X readers who save threads and never get back to them
+• Anyone who wants a read-it-later for the posts they save on X
+• People who want a calmer, more intentional new tab
+• Privacy-conscious users who don't want a third-party server holding their saves
+
+Open a new tab and start reading what you saved. That's Totem.</div>
+      </div>
+      <div class="callout">
+        <strong>Do not add.</strong> No <code>KEYWORDS</code> block, no comma-separated keyword lists, no
+        competitor or "alternative" terms outside a real sentence.<span data-only="edge"> The search
+        phrases belong in the <a href="#search">search terms</a> field, which is structured metadata.</span>
+      </div>
+
+      <h2 id="perms"><span class="num">4</span>Permission justifications <span class="pill ready">Privacy page · one box per permission</span></h2>
+      <p class="note">
+        The manifest declares five install-time permissions plus one host permission, and three optional
+        permissions the user grants by turning a feature on. Totem's justifications are the same on both
+        stores; only the two that name the browser swap.
+      </p>
+      <div class="card">
+        <div class="card-head"><span><code>storage</code> justification <span class="muted">· permissions</span></span>
+          <button class="copy" data-copy="f-perm-storage">Copy</button></div>
+        <div class="field" id="f-perm-storage">Stores bookmarks, tweet detail cache, reading progress, highlights, notes, runtime state, and user settings locally in the browser.</div>
+      </div>
+      <div class="card">
+        <div class="card-head"><span><code>webRequest</code> justification <span class="muted">· permissions</span></span>
+          <button class="copy" data-copy="f-perm-webRequest">Copy</button></div>
+        <div class="field" id="f-perm-webRequest">Observes x.com GraphQL requests from the user's own browser session to capture the auth headers required to sync that user's bookmarks. Totem does not block or modify requests with webRequest.</div>
+      </div>
+      <div class="card">
+        <div class="card-head"><span><code>declarativeNetRequest</code> justification <span class="muted">· permissions</span></span>
+          <button class="copy" data-copy="f-perm-declarativeNetRequest">Copy</button></div>
+        <div class="field" id="f-perm-declarativeNetRequest">Sets the required request header on Totem's own x.com GraphQL requests so they match the authenticated browser session. Rules are bundled in the extension (public/rules.json), not fetched remotely.</div>
+      </div>
+      <div class="card">
+        <div class="card-head"><span><code>scripting</code> justification <span class="muted">· permissions</span></span>
+          <button class="copy" data-copy="f-perm-scripting">Copy</button></div>
+        <div class="field" id="f-perm-scripting">Registers or removes the optional "Open in Totem" content script on x.com when the user enables or disables that setting.</div>
+      </div>
+      <div class="card">
+        <div class="card-head"><span><code>cookies</code> justification <span class="muted">· permissions</span></span>
+          <button class="copy" data-copy="f-perm-cookies">Copy</button></div>
+        <div class="field" id="f-perm-cookies">Reads the x.com session/account cookie locally to identify the active X account, scope the local bookmark cache, and detect logout or account changes.</div>
+      </div>
+      <div class="card">
+        <div class="card-head"><span><code>https://x.com/*</code> justification <span class="muted">· host_permissions</span></span>
+          <button class="copy" data-copy="f-perm-httpsxcom">Copy</button></div>
+        <div class="field" id="f-perm-httpsxcom">Runs Totem's x.com content scripts and sync logic only on x.com so the extension can detect account context and keep the local bookmark library in sync.</div>
+      </div>
+      <h3>Optional permissions — requested only when the user enables the feature</h3>
+      <div class="card">
+        <div class="card-head"><span><code>topSites</code> justification <span class="muted">· optional_permissions</span></span>
+          <button class="copy" data-copy="f-perm-topSites">Copy</button></div>
+        <div class="field" id="f-perm-topSites">Shows <span class="v" data-chrome="Chrome" data-edge="browser">Chrome</span> quick links on the new tab page only after the user enables Quick Links.</div>
+      </div>
+      <div class="card">
+        <div class="card-head"><span><code>favicon</code> justification <span class="muted">· optional_permissions</span></span>
+          <button class="copy" data-copy="f-perm-favicon">Copy</button></div>
+        <div class="field" id="f-perm-favicon">Shows favicons for Quick Links only after the user enables Quick Links.</div>
+      </div>
+      <div class="card">
+        <div class="card-head"><span><code>search</code> justification <span class="muted">· optional_permissions</span></span>
+          <button class="copy" data-copy="f-perm-search">Copy</button></div>
+        <div class="field" id="f-perm-search">Lets Totem submit a new-tab search to <span class="v" data-chrome="Chrome's" data-edge="the browser's">Chrome's</span> default search engine only after the user chooses "Browser default".</div>
+      </div>
+      <h3>Are you using remote code? → <strong>No</strong></h3>
+      <p class="note">
+        Manifest V3, everything bundled. The <code>declarativeNetRequest</code> ruleset ships at
+        <code>public/rules.json</code> — one rule, setting <code>Origin: https://x.com</code> on Totem's own
+        x.com GraphQL XHRs. Nothing is fetched and evaluated as code.
+      </p>
+
+      <h2 id="privacy"><span class="num">5</span>Data use &amp; privacy <span class="pill ready">Privacy page</span></h2>
+      <table>
+        <tr><th>Category</th><th>Check?</th><th>Why</th></tr>
+        <tr><td>Personally identifiable information</td><td><strong>No</strong></td><td>Totem reads no name, email or address. The X account id is derived locally to scope the local library.</td></tr>
+        <tr><td>Health information</td><td><strong>No</strong></td><td>Not touched.</td></tr>
+        <tr><td>Financial &amp; payment information</td><td><strong>No</strong></td><td>Totem takes no payment.</td></tr>
+        <tr><td>Authentication information</td><td><strong>Yes</strong></td><td>x.com session headers and cookies are read from the user's own signed-in session so Totem's bookmark requests to x.com are authenticated as that user. They stay on the device and go nowhere but back to x.com.</td></tr>
+        <tr><td>Personal communications</td><td><strong>Yes</strong></td><td>Bookmarked posts are the user's own saved content. They are stored locally in IndexedDB and never transmitted to any Totem service.</td></tr>
+        <tr><td>Location</td><td><strong>No</strong></td><td>Not touched.</td></tr>
+        <tr><td>Web history</td><td><strong>No</strong></td><td>No <code>history</code> or <code>tabs</code> permission. Optional <code>topSites</code> renders Quick Links locally and only when the user enables them.</td></tr>
+        <tr><td>User activity</td><td><strong>No</strong></td><td>No analytics, no telemetry, no click or keystroke monitoring.</td></tr>
+        <tr><td>Website content</td><td><strong>No</strong></td><td>x.com responses are processed locally and written to the user's own browser storage; nothing is sent off-device.</td></tr>
+      </table>
+      <h3>Certifications → all three <strong>Yes</strong></h3>
+      <table>
+        <tr><th>Certification</th><th>Answer</th></tr>
+        <tr><td>I do not sell or transfer user data to third parties</td><td><strong>Yes — certified.</strong> There is no Totem server; nothing leaves the device.</td></tr>
+        <tr><td>I do not use or transfer user data for purposes unrelated to the single purpose</td><td><strong>Yes — certified.</strong></td></tr>
+        <tr><td>I do not use or transfer user data to determine creditworthiness or for lending</td><td><strong>Yes — certified.</strong></td></tr>
+      </table>
+      <div class="card">
+        <div class="card-head"><span>Privacy policy URL</span>
+          <button class="copy" data-copy="f-privurl">Copy</button></div>
+        <div class="field mono" id="f-privurl">https://usetotem.xyz/privacy</div>
+      </div>
+      <div class="callout">
+        <strong>Do not claim "no data".</strong> Totem handles the user's own content locally, and the
+        dashboard asks whether the extension handles it at all — not whether it uploads it. Equally, do not
+        claim mobile sync, cross-device library sync, or server-side backup. None exist.
+      </div>
+
+      <h2 id="cert"><span class="num">6</span><span class="v" data-chrome="Reviewer note" data-edge="Notes for certification">Reviewer note</span> <span class="pill human"><span class="v" data-chrome="Test-instructions field" data-edge="Last step before Publish">Test-instructions field</span></span></h2>
+      <p class="note">
+        Totem's MAIN-world hook, passive auth-header capture and new-tab override are what reviewers ask
+        about. Saying it first, plainly, is what got it through Chrome; Edge review is a human pass and
+        comparable-to-slightly-stricter on aggressive host behaviour.
+      </p>
+      <div class="card">
+        <div class="card-head"><span><span class="v" data-chrome="Reviewer note" data-edge="Notes for certification">Reviewer note</span> — paste the whole block</span>
+          <span class="meta"><span data-count-for="f-cert">—</span> chars</span>
+          <button class="copy" data-copy="f-cert">Copy</button></div>
+        <div class="field" id="f-cert">WHAT TOTEM DOES
+Totem replaces the new tab page with the user's own Twitter/X bookmarks, as a reading queue.
+It reads, searches, highlights, annotates and exports those saved posts. Everything is stored
+locally in the browser (IndexedDB and storage.local). There is no Totem account and no Totem
+server.
+
+TESTING THE EXTENSION
+We cannot supply a test account — Totem reads the reviewer's OWN x.com session, and a shared
+login would breach X's terms and trip its bot protection.
+
+1. Sign in to x.com normally, with any account. If it has no bookmarks, bookmark two or three
+   posts first.
+2. Install Totem and open a new tab. The saved posts appear as a reading queue.
+3. Click one to open the reader. Press / to search the library. Select text to highlight it.
+4. Settings -&gt; Export downloads the whole library as a ZIP (Markdown, CSV, JSONL).
+
+NEW TAB OVERRIDE - DISCLOSED
+Totem sets chrome_url_overrides.newtab. The browser shows its own one-time "an extension
+changed your new tab page" prompt, and the change is reversed by disabling or removing the
+extension. The takeover is stated plainly in the listing description, under
+"EVERY NEW TAB IS YOUR READING QUEUE".
+
+THE THREE BEHAVIOURS THAT USUALLY DRAW QUESTIONS
+
+1. MAIN-world content script (content/mutation-hook.js). Runs on x.com at document_start and
+   wraps fetch and XMLHttpRequest. It reads only the x.com GraphQL calls the page itself makes,
+   for two reasons: to notice when the user bookmarks or unbookmarks a post on X so the local
+   library stays in step, and to learn the GraphQL query ids x.com is currently using. It does
+   not modify requests or responses, does not run on any other origin, and sends nothing
+   off-device.
+
+2. Passive auth-header capture (webRequest, observational only - never blocking). Totem reads
+   the authorization, cookie and CSRF headers the browser is already sending to x.com from the
+   user's own signed-in session, so that Totem's own bookmark requests to x.com are
+   authenticated as that user. The headers stay on the device, are refreshed from the live
+   session rather than archived, and are never sent anywhere except back to x.com.
+
+3. GraphQL query-id discovery. x.com rotates the query ids on its own endpoints. Totem resolves
+   them in this order: a catalog built passively from real x.com traffic, a 10-minute in-memory
+   cache, and only as a fallback, reading x.com's own JavaScript bundle. Every step targets
+   x.com and nothing else.
+
+NO REMOTE CODE
+Manifest V3, everything executable ships inside the package. The declarativeNetRequest ruleset
+is bundled at public/rules.json and contains exactly one rule: set Origin: https://x.com on
+Totem's own x.com GraphQL XHRs so they match the authenticated session. Nothing is fetched and
+evaluated as code.
+
+DATA AND NETWORK
+Bookmarks, tweet cache, reading progress, highlights, notes and runtime state live in the
+browser's IndexedDB and storage.local. Theme and preference values use storage.sync, which is
+the browser's own sync, not a Totem service. There is no analytics and no telemetry. Totem
+itself makes network requests to x.com only; "Send to Grok" opens grok.com in a tab when the
+user clicks it, which is an ordinary navigation.
+
+OPTIONAL PERMISSIONS
+topSites, favicon and search are optional and are requested only when the user turns on Quick
+Links or chooses "Browser default" as the new-tab search engine. A fresh install holds none of
+them.
+
+PRIVACY POLICY
+https://usetotem.xyz/privacy</div>
+      </div>
+
+      <h2 id="search" data-only="edge">Search terms <span class="pill ready">Edge only · Store listings page</span></h2>
+      <p class="note" data-only="edge">
+        No Chrome equivalent. Seven terms, 21 words total, 30 characters each, never shown to users — so
+        this is where real search phrases belong, not the description. The set below is 7 terms, 15 words.
+      </p>
+      <div class="card" data-only="edge">
+        <div class="card-head"><span>Search terms — 7 terms, 15 words</span>
+          <button class="copy" data-copy="f-search">Copy</button></div>
+        <div class="field mono" id="f-search">twitter bookmarks
+x bookmarks
+bookmark manager
+new tab
+read it later
+thread reader
+export bookmarks</div>
+      </div>
+
+      <h2 id="assets"><span class="num">7</span>Images &amp; assets</h2>
+      <p class="note">
+        Everything reuses the Chrome set except the Edge store logo. Screenshot source:
+        <code>images-for-promotions/chrome-web-store/screenshots/</code>. Before re-shooting anything, read
+        <code>docs/extension-screenshot-workflow.md</code> — it owns order, dimensions and copy.
+      </p>
+      <table>
+        <tr><th>Asset</th><th>Spec</th><th>File</th></tr>
+        <tr data-only="chrome">
+          <td>Store icon</td>
+          <td>128×128 PNG</td>
+          <td><span class="pill ready">In the zip</span> <code>icons/icon-128.png</code></td>
+        </tr>
+        <tr data-only="edge">
+          <td>Store logo</td>
+          <td>1:1 PNG, 300×300 recommended, 128×128 minimum</td>
+          <td><span class="pill ready">Ready</span> <code>images-for-promotions/edge-add-ons/store-logo-300.png</code></td>
+        </tr>
+        <tr>
+          <td>Screenshot 1 — New tab reading queue</td>
+          <td>1280×800 PNG. <span class="v" data-chrome="Min 1, max 5." data-edge="Min 1, max 6. Edge also takes 640×480.">Min 1, max 5.</span></td>
+          <td><span class="pill ready">Ready</span> <code>01-twitter-bookmarks-on-every-new-tab.png</code></td>
+        </tr>
+        <tr>
+          <td>Screenshot 2 — Thread reader</td>
+          <td>1280×800 PNG</td>
+          <td><span class="pill ready">Ready</span> <code>02-read-twitter-threads-without-the-feed.png</code></td>
+        </tr>
+        <tr>
+          <td>Screenshot 3 — Search</td>
+          <td>1280×800 PNG</td>
+          <td><span class="pill ready">Ready</span> <code>03-search-saved-posts-authors-links-threads.png</code></td>
+        </tr>
+        <tr>
+          <td>Screenshot 4 — Export</td>
+          <td>1280×800 PNG</td>
+          <td><span class="pill ready">Ready</span> <code>04-export-twitter-bookmarks-markdown-csv-notion.png</code></td>
+        </tr>
+        <tr>
+          <td>Screenshot 5 — Local-first privacy</td>
+          <td>1280×800 PNG</td>
+          <td><span class="pill ready">Ready</span> <code>05-local-first-no-account-no-server.png</code></td>
+        </tr>
+        <tr>
+          <td>Small promo tile</td>
+          <td>440×280 PNG — <span class="v" data-chrome="recommended" data-edge="optional on Edge">recommended</span></td>
+          <td><span class="pill ready">Ready</span> <code>chrome-web-store/small-promo-tile.png</code></td>
+        </tr>
+        <tr>
+          <td><span class="v" data-chrome="Marquee promo tile" data-edge="Large promotional tile">Marquee promo tile</span></td>
+          <td>1400×560 PNG — optional</td>
+          <td><span class="pill ready">Ready</span> <code>chrome-web-store/marquee-promo-tile.png</code></td>
+        </tr>
+      </table>
+      <div class="callout" data-only="edge">
+        <strong>Edge has a sixth screenshot slot Chrome doesn't.</strong> Only five exist today, and five
+        is a complete story — leave it unless there is a real sixth screen worth showing.
+      </div>
+
+      <h3 id="imagecopy">Per-image copy — alt text off the store</h3>
+      <div class="callout">
+        <strong>Neither store has a caption or alt field for screenshots.</strong> Both take the PNG and
+        nothing else, and none of this text is indexed by store search. The column below is for
+        <code>usetotem.xyz</code>, where alt text is real SEO. Keep screenshot captions descriptive and
+        feature-specific — never search-keyword captions like "pocket alternative" or
+        "bookmark manager chrome extension".
+      </div>
+      <table>
+        <tr><th>Asset</th><th>Shows</th><th>Alt text (site use)</th></tr>
+        <tr><td><code>01</code></td><td>New tab reading queue</td><td>Saved Twitter and X bookmarks waiting on a new tab.</td></tr>
+        <tr><td><code>02</code></td><td>Thread reader</td><td>Reading a Twitter thread in Totem, without the feed.</td></tr>
+        <tr><td><code>03</code></td><td>Search</td><td>Searching saved posts by author, link and thread.</td></tr>
+        <tr><td><code>04</code></td><td>Export</td><td>Exporting Twitter bookmarks as Markdown, CSV and JSON.</td></tr>
+        <tr><td><code>05</code></td><td>Local-first privacy</td><td>Totem stores bookmarks locally, with no account or server.</td></tr>
+        <tr><td><code>small-promo-tile</code></td><td>Read your saved posts from a calm new tab.</td><td>Totem: Twitter and X bookmarks on every new tab.</td></tr>
+      </table>
+
+      <h2 id="after"><span class="num">8</span>After approval</h2>
+      <table>
+        <tr><th>#</th><th>Step</th><th></th></tr>
+        <tr data-only="edge"><td>1</td><td>Copy the product GUID from Partner Center → Overview into <code>EDGE_ADDONS_PRODUCT_ID</code> in <code>src/lib/constants/growth.ts</code> (currently <code>""</code>), then ship the next release. Until it is filled, the in-extension Review button falls back to the Chrome listing.</td><td><span class="pill human">Code</span></td></tr>
+        <tr data-only="edge"><td>2</td><td>Add the live Edge listing URL to the site — <code>apps/site/src/react/site-content.ts</code> and the JSON-LD <code>sameAs</code> — and add a browser-detected "Add to Edge" CTA. The site shows "Add to Chrome" to every visitor today.</td><td><span class="pill human">Site</span></td></tr>
+        <tr data-only="edge"><td>3</td><td>Optional: wire the Edge Update REST API (v1.1) into <code>.github/workflows/release-extension.yml</code> as an opt-in <code>edge:publish</code> step. It automates package updates only, never the first submission or metadata. API keys expire every 72 days.</td><td><span class="pill ready">Later</span></td></tr>
+        <tr data-only="chrome"><td>1</td><td>Certification and rollout are handled in the CWS dashboard; nothing in the repo needs to change after a Chrome approval.</td><td><span class="pill ready">None</span></td></tr>
+      </table>
+      <p class="note" data-only="edge">
+        Certification takes up to <strong>seven business days</strong>. Background, market sizing and the
+        full readiness audit: <code>plans/research/totem-edge-launch-analysis-2026-07-02.html</code>.
+      </p>
+
+      <p class="note" style="margin-top: 40px; text-align: center;">
+        Generated from <code>plans/edge-add-ons-listing.md</code>, <code>plans/chrome-web-store-listing.md</code>
+        and <code>PUBLISH.md</code>. Re-check field limits at submission.
+      </p>
+    </div>
+
+    <script>
+      // textContent is the exact source text between the tags: entities decoded,
+      // line breaks intact, nothing re-wrapped by layout.
+      function fieldText(el) {
+        return el.textContent.replace(/^\n+/, '').replace(/\s+$/, '');
+      }
+
+      function flash(btn, label, ok) {
+        var original = btn.dataset.label || btn.textContent;
+        btn.dataset.label = original;
+        btn.textContent = label;
+        btn.classList.toggle('done', ok !== false);
+        setTimeout(function () {
+          btn.textContent = original;
+          btn.classList.remove('done');
+        }, 1600);
+      }
+
+      // Fallback for file:// contexts where the async clipboard API is blocked.
+      function legacyCopy(text) {
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        ta.setAttribute('readonly', '');
+        ta.style.cssText = 'position:fixed;top:-1000px;opacity:0';
+        document.body.appendChild(ta);
+        ta.select();
+        var ok = false;
+        try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+        document.body.removeChild(ta);
+        return ok;
+      }
+
+      document.querySelectorAll('button.copy').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var el = document.getElementById(btn.dataset.copy);
+          if (!el) return;
+          var text = fieldText(el);
+          var done = function () { flash(btn, 'Copied ✓', true); };
+          var failed = function () {
+            if (legacyCopy(text)) return done();
+            var range = document.createRange();
+            range.selectNodeContents(el);
+            var sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(range);
+            flash(btn, 'Press ⌘C', false);
+          };
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(done, failed);
+          } else {
+            failed();
+          }
+        });
+      });
+
+      // Character counts read from the field they name, so they cannot drift from
+      // the copy. Re-run on every store switch: the Edge wording is a different length.
+      function refreshCounts() {
+        document.querySelectorAll('[data-count-for]').forEach(function (span) {
+          var el = document.getElementById(span.dataset.countFor);
+          if (el) span.textContent = fieldText(el).length;
+        });
+      }
+
+      // One document, two stores. Everything that differs is either a <span class="v">
+      // whose text is swapped here, or a block tagged data-only that CSS hides. Copy
+      // buttons read textContent, so the clipboard always holds the selected store's
+      // wording with no markers in it.
+      function setStore(store) {
+        if (store !== 'edge') store = 'chrome';
+        document.body.dataset.store = store;
+        document.querySelectorAll('.v').forEach(function (el) {
+          el.textContent = el.dataset[store] || '';
+        });
+        document.querySelectorAll('.storebtn').forEach(function (b) {
+          b.classList.toggle('on', b.dataset.setStore === store);
+        });
+        document.title = store === 'edge'
+          ? 'Totem — Microsoft Edge Add-ons Submission Kit'
+          : 'Totem — Chrome Web Store Submission Kit';
+        try { localStorage.setItem('totem-kit-store', store); } catch (e) {}
+        refreshCounts();
+      }
+
+      document.querySelectorAll('.storebtn').forEach(function (b) {
+        b.addEventListener('click', function () { setStore(b.dataset.setStore); });
+      });
+
+      var saved = null;
+      try { saved = localStorage.getItem('totem-kit-store'); } catch (e) {}
+      setStore(saved || 'chrome');
+    </script>
+  </body>
+</html>
