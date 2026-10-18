@@ -103,7 +103,12 @@ function TweetQuoteContent({
   return (
     <>
       {showTweetText && (
-        <RichTextBlock text={text} compact style="tweet" />
+        <RichTextBlock
+          text={text}
+          textStyles={text === quotedTweet.text ? quotedTweet.textStyles : undefined}
+          compact
+          style="tweet"
+        />
       )}
 
       {article == null && quotedTweet.media.length > 0 && (

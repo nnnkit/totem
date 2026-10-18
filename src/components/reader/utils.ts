@@ -1,4 +1,4 @@
-import type { ArticleContentBlock } from "../../types";
+import type { ArticleContentBlock, TextStyleRange } from "../../types";
 import type { ReaderTweet } from "./types";
 import type { TweetKind } from "../../types";
 import { cn } from "../../lib/cn";
@@ -418,6 +418,45 @@ function inlineCode(html: string): string {
     if (tag) return tag;
     return `<code>${code}</code>`;
   });
+}
+
+export interface StyledSegment {
+  text: string;
+  bold: boolean;
+  italic: boolean;
+}
+
+// Paragraphs are trimmed slices of `text`, so each one is located in order to
+// map textStyles (offsets into `text`) onto it. Returns null when a paragraph
+// can't be located, so callers fall back to unstyled rendering.
+export function styleParagraphSegments(
+  text: string,
+  paragraphs: string[],
+  styles: TextStyleRange[],
+): StyledSegment[][] | null {
+  const bold = new Uint8Array(text.length);
+  const italic = new Uint8Array(text.length);
+  for (const range of styles) {
+    (range.style === "bold" ? bold : italic).fill(1, Math.max(0, range.start), Math.min(range.end, text.length));
+  }
+
+  const out: StyledSegment[][] = [];
+  let cursor = 0;
+  for (const paragraph of paragraphs) {
+    const start = text.indexOf(paragraph, cursor);
+    if (start === -1) return null;
+    cursor = start + paragraph.length;
+    const segments: StyledSegment[] = [];
+    for (let i = start; i < cursor; i++) {
+      const b = bold[i] === 1;
+      const it = italic[i] === 1;
+      const last = segments[segments.length - 1];
+      if (last && last.bold === b && last.italic === it) last.text += text[i];
+      else segments.push({ text: text[i], bold: b, italic: it });
+    }
+    out.push(segments);
+  }
+  return out;
 }
 
 export function paragraphHtml(text: string): string {

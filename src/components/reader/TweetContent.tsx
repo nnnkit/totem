@@ -67,12 +67,34 @@ function TweetBody({
   const { showArticle, showText } = resolveTweetBodyVisibility(tweet, kind);
 
   const displayText = stripCardUrlsFromTweetText(tweet.text, tweet.urls);
+  // textStyles index tweet.text; only a trailing-URL strip keeps them aligned.
+  const textStyles = tweet.text.startsWith(displayText) ? tweet.textStyles : undefined;
+  const replyTarget =
+    !compact &&
+    tweet.inReplyToScreenName &&
+    tweet.inReplyToScreenName.toLowerCase() !== tweet.author?.screenName.toLowerCase()
+      ? tweet.inReplyToScreenName
+      : null;
 
   return (
     <>
+      {replyTarget && (
+        <p className="mb-3 text-sm text-muted">
+          Replying to{" "}
+          <a
+            href={`https://x.com/${replyTarget}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-accent hover:underline"
+          >
+            @{replyTarget}
+          </a>
+        </p>
+      )}
       {showText && (
         <RichTextBlock
           text={displayText}
+          textStyles={textStyles}
           compact={compact}
           style="tweet"
           sectionIdPrefix={sectionIdPrefix}

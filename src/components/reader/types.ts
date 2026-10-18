@@ -1,4 +1,4 @@
-import type { Bookmark, Media, TweetKind, TweetUrl } from "../../types";
+import type { Bookmark, Media, TextStyleRange, TweetKind, TweetUrl } from "../../types";
 
 export type TocSection = {
   id: string;
@@ -11,6 +11,7 @@ export type ReaderTweet = {
   author?: Bookmark["author"];
   media: Media[];
   urls: TweetUrl[];
+  textStyles?: TextStyleRange[];
   article?: Bookmark["article"];
   quotedTweet?: Bookmark["quotedTweet"];
   retweetedTweet?: Bookmark["retweetedTweet"];
